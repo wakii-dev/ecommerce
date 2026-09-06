@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# GATEWAY ROUTE TABLE — file riêng, import qua spring.config.import.
+#
+# QUY TẮC (shared-file ownership §6c): APPEND-ONLY BLOCK PER SERVICE —
+# SF sở hữu service mình thêm block cho mình, KHÔNG sửa block người khác.
+# Un-comment block service khi service đó ra đời (SF-3+), không đổi id format.
+#
+# Convention: id = <service> · uri = http://localhost:<port> (dev, host JVM)
+#             predicate Path=/api/<service>/** + StripPrefix=1
+#             (service nhận path còn lại sau /api/<service>)
+# ═══════════════════════════════════════════════════════════════════════════
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        # Smoke route — qua chain để global filter (X-Request-Id) chạy, rồi
+        # ForwardRoutingFilter đưa về SmokeController nội bộ (/internal/smoke —
+        # path nội bộ ĐỂ controller không nuốt request trước route chain). ĐỪNG XÓA.
+        - id: smoke
+          uri: forward:///internal/smoke
+          predicates: [ "Path=/api/smoke" ]
+      # ── Placeholder blocks (SF sau un-comment + append) ──────────────────
+      # - id: identity                                   # SF-3 · port 8081
+      #   uri: http://localhost:8081
+      #   predicates: [ "Path=/api/identity/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: catalog                                    # SF-4 · port 8082
+      #   uri: http://localhost:8082
+      #   predicates: [ "Path=/api/catalog/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: cart                                       # SF-6 · port 8083
+      #   uri: http://localhost:8083
+      #   predicates: [ "Path=/api/cart/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: inventory                                  # SF-5 · port 8084
+      #   uri: http://localhost:8084
+      #   predicates: [ "Path=/api/inventory/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: ordering                                   # SF-9 · port 8085
+      #   uri: http://localhost:8085
+      #   predicates: [ "Path=/api/ordering/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: payment                                    # SF-5 · port 8086
+      #   uri: http://localhost:8086
+      #   predicates: [ "Path=/api/payment/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      # - id: notification                               # SF-10 · port 8087
+      #   uri: http://localhost:8087
+      #   predicates: [ "Path=/api/notification/**" ]
+      #   filters: [ "StripPrefix=1" ]
+      #
+      # Health: gateway expose actuator của chính nó tại /actuator/health
+      # (không route riêng — service health đi qua route /api/<svc>/actuator/health
+      # hoặc check trực tiếp port service khi debug).

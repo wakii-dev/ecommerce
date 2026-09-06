@@ -234,6 +234,19 @@ class ProductApiTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void flashHetHanKhongTraFlashSaleEndsAt() throws Exception {
+        product("Flash Hết Hạn", "Expired Flash", "flash-het-han", "expired-flash",
+            "Flash đã qua", "Flash expired",
+            "FlashBrand", thoiTrang.getId(), ProductStatus.PUBLISHED, 100_000L, 200_000L,
+            Instant.now().minus(Duration.ofHours(1)), false, List.of(), "4.1", 8);
+
+        JsonNode item = find(get("/api/catalog/products"), "flash-het-han");
+        assertThat(item.has("flashSaleEndsAt")).isFalse(); // hết hạn → card render thường
+        assertThat(item.get("comparePrice").asLong()).isEqualTo(200_000L); // compare vẫn trả
+        assertThat(item.get("discountPercent").asInt()).isEqualTo(50);     // (200−100)×100/200
+    }
+
+    @Test
     void localeResolveTrenList() throws Exception {
         JsonNode en = get("/api/catalog/products?locale=en");
         JsonNode taiEn = find(en, "bluetooth-headset");
@@ -301,6 +314,28 @@ class ProductApiTest extends AbstractIntegrationTest {
         ResponseEntity<String> unknown = http.getForEntity("/api/catalog/products/khong-ton-tai", String.class);
         for (ResponseEntity<String> r : List.of(draftVi, draftEn, unknown)) {
             assertThat(r.getStatusCode().value()).isEqualTo(404);
+            assertThat(r.getHeaders().getContentType().toString()).contains("application/problem+json");
+        }
+    }
+
+    @Test
+    void softDeletedProductKhongListVaDetail404() throws Exception {
+        ProductEntity deleted = product("Đã Xóa", "Deleted Item", "da-xoa", "deleted-item",
+            "Bị xóa mềm", "Soft deleted",
+            "GoneBrand", dienTu.getId(), ProductStatus.PUBLISHED, 300_000L, null, null,
+            false, List.of(), "4.0", 5);
+        deleted.setDeletedAt(Instant.now());
+        products.save(deleted);
+
+        // list — total không tính soft-deleted, item vắng mặt
+        JsonNode body = get("/api/catalog/products");
+        assertThat(body.get("total").asInt()).isEqualTo(5);
+        assertThat(slugs(body)).doesNotContain("da-xoa");
+
+        // PDP — slug vi lẫn en đều 404 problem+json
+        for (String slug : List.of("da-xoa", "deleted-item")) {
+            ResponseEntity<String> r = http.getForEntity("/api/catalog/products/" + slug, String.class);
+            assertThat(r.getStatusCode().value()).as("slug %s", slug).isEqualTo(404);
             assertThat(r.getHeaders().getContentType().toString()).contains("application/problem+json");
         }
     }

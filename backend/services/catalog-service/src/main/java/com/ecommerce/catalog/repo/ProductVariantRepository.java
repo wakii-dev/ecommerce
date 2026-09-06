@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import com.ecommerce.catalog.domain.ProductVariantEntity;
 
@@ -15,6 +16,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariantEn
 
     List<ProductVariantEntity> findByProductIdIn(Collection<UUID> productIds);
 
-    /** Thứ tự ổn định theo thời điểm tạo. */
+    /** Thứ tự ổn định theo thời điểm tạo; tiebreak id — insert cùng timestamp không nhảy thứ tự. */
+    @Query("select v from ProductVariantEntity v where v.productId = :productId order by v.createdAt asc, v.id asc")
     List<ProductVariantEntity> findByProductIdOrderByCreatedAtAsc(UUID productId);
 }

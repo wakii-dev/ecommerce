@@ -277,14 +277,15 @@ public class CatalogQueryService {
     /**
      * Sort map (plan Task 3 + spec Q9): discount theo {@code @Formula discountRate}
      * (SQL Q9 verbatim); rating tiebreak ratingCount; newest createdAt DESC.
+     * Mọi branch kết thúc {@code id ASC} — key bằng nhau vẫn ổn định giữa các trang.
      */
     private static Sort sortSpec(String sortKey) {
         return switch (sortKey) {
-            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
-            case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
-            case "rating" -> Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"));
-            case "discount" -> Sort.by(Sort.Direction.DESC, "discountRate");
-            default -> Sort.by(Sort.Direction.DESC, "createdAt"); // newest + default khi không truyền sort
+            case "price_asc" -> Sort.by(Sort.Order.asc("price"), Sort.Order.asc("id"));
+            case "price_desc" -> Sort.by(Sort.Order.desc("price"), Sort.Order.asc("id"));
+            case "rating" -> Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"), Sort.Order.asc("id"));
+            case "discount" -> Sort.by(Sort.Order.desc("discountRate"), Sort.Order.asc("id"));
+            default -> Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id")); // newest + default khi không truyền sort
         };
     }
 

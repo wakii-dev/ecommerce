@@ -56,7 +56,7 @@ Checkout submit (stub ON):
 
 - **exposes:** `./bootstrap` (initCheckoutShell), `./CartBadge`, `./CartPage`, `./CheckoutPage`, `./ConfirmationPage`.
 - **API layer (`lib/cartApi.ts`):** fetch same-origin `/api/**` (credentials include) + local TS types mirror contract yaml (camelCase). **Không import generated client cho cart** — `cartSchema.d.ts` chưa reflect A1 (variantId vẫn `required`); pattern `executeRequest` của SF-3 là precedent xử gap, ở đây raw fetch + types tay sạch hơn. Toàn bộ mutation xong → `window.dispatchEvent('ecommerce:cart-changed')`.
-- **Guest cartToken cache:** response body `Cart.cartToken` (chỉ guest) → localStorage `ecommerce.guest_cart_token` — nguồn cho merge body (cookie httpOnly không đọc được từ JS; server vẫn nhận cookie fallback).
+- **Guest cartToken cache:** response body `Cart.cartToken` (chỉ guest) → localStorage `ecommerce.guest_cart_token`. **Lưu ý đã verify bằng browser: localStorage bị PORT-SCOPED** (PDP :3000 ghi — shell :5179 không đọc được; cookie thì port-agnostic) → merge-on-login LUÔN gọi khi auth flip guest→user, gửi token nếu có, **body rỗng nếu không** → server dùng cookie httpOnly fallback (đi kèm tự động). 400/404 = không có gì để merge → im lặng.
 - **lib/orderingStub.ts (1 file duy nhất chạm ordering — SF-10 thay):** toggle `VITE_ORDERING_STUB !== '0'`.
   - `validateCoupon(code, subtotal)` → `ValidateCouponResponse`: `WELCOME10` → valid, `discount = floor(subtotal × 10 / 100)`; code khác → `{valid:false, discount:0, message}`.
   - `createOrder(req)` → build `CreateOrderRequest` đúng shape (items chỉ item khả dụng — **line non-variant gửi `variantId: ""`** vì contract `CreateOrderItem.required` gồm variantId; ghi chú leniency stub, SF-10/SF-9 revisit cho non-variant) · address · shippingMethod `standard` · couponCode? · Idempotency-Key uuid → mock `Order` ĐỦ field required (id `mock-…`, `userId` từ authStore, status **PENDING**, timeline `[{status:'PENDING', at}]`, createdAt/updatedAt, currency VND, paymentMethod stripe, subtotal/discount/shippingFee/total tự tính) → gọi **THẬT** `POST /api/payment/intents` `{orderId, amount: total, currency:'VND', idempotencyKey}` → `clientSecret`. Payment 503/unconfigured → throw `PaymentUnavailableError` (FE rơi mock panel). Không đụng gateway route ordering (chưa tồn tại).
@@ -104,7 +104,7 @@ Checkout submit (stub ON):
 | Inventory 0 (variant) | add/patch → 409 (nếu !allowOos); GET → unavailable |
 | Guest GET chưa có giỏ | 404 → badge 0, cart page empty state |
 | Merge guest token hết hạn | 404 → FE clear token, không lỗi user |
-| Payment 503/unconfigured | mock pay panel + cảnh báo rõ |
+| Payment 503/unconfigured | stub trả `{order, clientSecret: null}` → mock panel + cảnh báo rõ (order vẫn finalize được bằng nút demo) |
 | Stripe declined (4000…0002) | message lỗi Stripe lên UI, đơn không finalize |
 | Remote mfe-checkout down | shell warn + fallback EmptyState (không trắng trang) |
 

@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { rewriteTarget } from './lib/locale-rewrite';
+import {
+  nextAffiliateCookieAction,
+  type CaptureResult,
+} from './lib/affiliate-cookie';
 
 /**
  * Locale routing (plan Task 10): `/`, `/c/**`, `/p/**`, `/search`, `/coupons`
@@ -10,10 +14,10 @@ import { rewriteTarget } from './lib/locale-rewrite';
  *
  * SF-12 (FI-322): capture link affiliate `?ref=CODE` — gọi POST
  * /api/affiliate/track/click server-side (affiliate-service ghi click +
- * trả Set-Cookie `aff_ref` 30 ngày httpOnly — cookie window do service quản
- * theo contract affiliate.yaml), forward cookie về browser và REDIRECT 307
- * bỏ `?ref` (URL sạch SEO — rewrite không đổi address bar). Gateway chết →
- * vẫn vào trang bình thường, không tracking (fire-and-forget). Click dedupe
+ * trả Set-Cookie `aff_ref` 30 ngày — cookie window do service quản theo
+ * contract), forward cookie về browser và REDIRECT 307 bỏ `?ref` (URL sạch
+ * SEO — rewrite không đổi address bar). Gateway chết → vẫn vào trang bình
+ * thường, GIỮ attribution cũ (không clear vì lỗi tạm thời). Click dedupe
  * 1/IP/10' do service lo.
  */
 export async function middleware(request: NextRequest) {
@@ -24,21 +28,25 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   if (locale) requestHeaders.set('x-app-locale', locale);
 
-  // SF-12: ?ref trên BẤT KỲ path nào → track + REDIRECT về URL sạch (rewrite
-  // KHÔNG đổi address bar — redirect 307 mới gỡ ?ref khỏi URL trình duyệt/SEO;
-  // hop thứ 2 không ref → đi đường rewrite locale bình thường)
+  // SF-12: ?ref trên BẤT KỲ path nào → track + REDIRECT về URL sạch (hop
+  // thứ 2 không ref → đi đường rewrite locale bình thường)
   const ref = request.nextUrl.searchParams.get('ref');
   if (ref !== null) {
-    const affCookie = await captureRef(ref, request);
+    const capture = await captureRef(ref, request);
     const clean = request.nextUrl.clone();
     clean.searchParams.delete('ref');
     const redirect = NextResponse.redirect(clean, 307);
-    if (affCookie) {
-      applyAffiliateCookie(redirect, affCookie);
-    } else if (request.cookies.get('aff_ref')) {
-      // ref cũ/không hợp lệ: xoá cookie attribution cũ (code REJECTED/SUSPENDED
-      // không được giữ attribution — suspend acceptance)
-      redirect.cookies.set('aff_ref', '', { httpOnly: true, path: '/', maxAge: 0 });
+    const decision = nextAffiliateCookieAction(capture, Boolean(request.cookies.get('aff_ref')));
+    if (decision.action === 'set') {
+      redirect.cookies.set(decision.plan.name, decision.plan.value, {
+        httpOnly: decision.plan.httpOnly,
+        path: decision.plan.path,
+        sameSite: decision.plan.sameSite,
+        ...(decision.plan.maxAge !== undefined ? { maxAge: decision.plan.maxAge } : {}),
+      });
+    } else if (decision.action === 'clear') {
+      // service trả 204 KHÔNG cookie (code sai/SUSPENDED) → xoá attribution cũ
+      redirect.cookies.set('aff_ref', '', { httpOnly: false, path: '/', maxAge: 0 });
     }
     return redirect;
   }
@@ -56,10 +64,12 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
- * Gọi affiliate-service track click — trả Set-Cookie header của response
- * (aff_ref=...) hoặc null khi gateway chết / không track được (code sai).
+ * Gọi affiliate-service track click — tri-state (review P1-1):
+ * - 'set'    → service trả Set-Cookie (code APPROVED) → forward lên browser
+ * - 'absent' → service trả 204 KHÔNG cookie (code sai/SUSPENDED) → clear cũ
+ * - 'error'  → gateway chết/timeout → KHÔNG đụng cookie hiện có
  */
-async function captureRef(refCode: string, request: NextRequest): Promise<string | null> {
+async function captureRef(refCode: string, request: NextRequest): Promise<CaptureResult> {
   const gateway = process.env.GATEWAY_URL || 'http://localhost:8080';
   try {
     const res = await fetch(`${gateway}/api/affiliate/track/click`, {
@@ -73,31 +83,12 @@ async function captureRef(refCode: string, request: NextRequest): Promise<string
       body: JSON.stringify({ refCode }),
       signal: AbortSignal.timeout(3000), // không treo page vì affiliate
     });
-    if (!res.ok && res.status !== 204) return null;
-    return res.headers.get('set-cookie');
+    if (res.status !== 204 && !res.ok) return { kind: 'error' };
+    const setCookie = res.headers.get('set-cookie');
+    return setCookie ? { kind: 'set', setCookie } : { kind: 'absent' };
   } catch {
-    return null; // gateway chết — vào trang bình thường, không tracking
+    return { kind: 'error' }; // gateway chết — vào trang bình thường, giữ attribution
   }
-}
-
-/** Forward Set-Cookie (aff_ref) của affiliate-service lên browser response. */
-function applyAffiliateCookie(response: NextResponse, setCookie: string): void {
-  const parts = setCookie.split(';');
-  const pair = parts[0] ?? '';
-  const eq = pair.indexOf('=');
-  if (eq <= 0) return;
-  const name = pair.slice(0, eq).trim();
-  const value = pair.slice(eq + 1).trim();
-  const maxAge = parts
-    .slice(1)
-    .map((a) => a.trim().toLowerCase())
-    .find((a) => a.startsWith('max-age='));
-  response.cookies.set(name, value, {
-    httpOnly: true,
-    path: '/',
-    sameSite: 'lax',
-    ...(maxAge ? { maxAge: Number(maxAge.slice('max-age='.length)) } : {}),
-  });
 }
 
 /** Locale cho header: /en/** → en; còn lại (path thường rewrite vi hoặc /vi/**) → vi. */

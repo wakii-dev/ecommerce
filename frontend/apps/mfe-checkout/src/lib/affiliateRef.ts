@@ -1,14 +1,14 @@
-// lib/affiliateRef.ts (SF-12) — đọc cookie attribution `aff_ref` do
-// affiliate-service set lúc capture ?ref (storefront middleware gọi
-// POST /api/affiliate/track/click). Cookie httpOnly với request TRỰC TIẾP,
-// nhưng checkout chạy cùng origin qua vite proxy/shell → document.cookie đọc
-// được trong dev-dev wiring hiện tại; httpOnly chặn đọc từ JS ở prod chéo
-// origin — SF-10 live wiring sẽ chuyển sang đọc qua middleware/proxy nếu cần.
-// Đơn KHÔNG qua affiliate → null → payload không có affiliate_code.
+// lib/affiliateRef.ts (SF-12) — đọc cookie attribution `aff_ref` để gắn
+// `affiliate_code` vào POST /orders (ordering.yaml — nullable). Cookie do
+// affiliate-service set lúc capture ?ref; storefront middleware RE-SET bản
+// JS-readable (httpOnly:false — review P0 FI-322: httpOnly chặn
+// document.cookie kể cả same-origin, affiliateCode sẽ không bao giờ vào đơn)
+// nên checkout đọc được. Đơn KHÔNG qua affiliate → null → không có field.
 
-/** Trả ref code từ cookie aff_ref, hoặc null khi không có attribution. */
-export function readAffiliateRef(): string | null {
-  const match = /(?:^|;\s*)aff_ref=([^;]+)/.exec(document.cookie);
+/** Trả ref code từ chuỗi cookie (mặc định document.cookie), hoặc null. */
+export function readAffiliateRef(cookieSource?: string): string | null {
+  const source = cookieSource ?? (typeof document !== 'undefined' ? document.cookie : '');
+  const match = /(?:^|;\s*)aff_ref=([^;]+)/.exec(source);
   const raw = match?.[1];
   if (!raw) return null;
   try {

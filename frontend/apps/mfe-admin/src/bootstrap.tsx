@@ -25,6 +25,12 @@ export function appNavigate(to: string): void {
   }
 }
 
+/** true nếu đang chạy dưới shell (navigateRef đã init) — guard guest dùng để
+ *  quyết định redirect /login hay hiện hướng dẫn standalone. */
+export function hasShellNavigate(): boolean {
+  return navigateRef !== null;
+}
+
 /**
  * Shell gọi ĐÚNG 1 lần lúc boot (eager, cùng lúc initAccountShell) — lưu
  * navigate + configureAuth (idempotent: cùng giá trị mfe-account đã set).

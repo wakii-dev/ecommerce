@@ -3,7 +3,7 @@
 # Chạy 1 lần khi volume pgdata trống (docker-entrypoint-initdb.d).
 set -euo pipefail
 
-for db in db_identity db_catalog db_ordering db_payment db_inventory db_template db_notification; do
+for db in db_identity db_catalog db_ordering db_payment db_inventory db_template db_notification db_affiliate; do
   if ! psql -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1; then
     psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $db"
     echo "[init] created $db"

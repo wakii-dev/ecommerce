@@ -259,6 +259,32 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  # SF-12 (2026-09-07): affiliate-service (D20, port 8092, db_affiliate) —
+  # KHÔNG chạy dev (infra-only; host JVM qua `make dev svc=affiliate`).
+  # Profile full (SF-10): consume order.confirmed → ledger hoa hồng.
+  affiliate-service:
+    build:
+      context: .
+      dockerfile: backend/services/affiliate-service/Dockerfile
+    container_name: ecommerce-affiliate-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_affiliate
+      RABBITMQ_HOST: rabbitmq
+      SECURITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      AFFILIATE_DEFAULT_RATE: ${AFFILIATE_DEFAULT_RATE:-5}
+    expose:
+      - "8092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:

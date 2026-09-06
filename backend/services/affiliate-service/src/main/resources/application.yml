@@ -1,0 +1,70 @@
+# affiliate-service (SF-12, D20) — fork từ template-service (SF-1).
+# Port 8092 · DB riêng db_affiliate (D8) · RabbitMQ consume order.* (ledger).
+server:
+  port: 8092
+
+spring:
+  application:
+    name: affiliate-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    # Host port 5433 — compose map 5433:5432 (máy dev có postgres khác giữ 5432)
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_affiliate}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  # JWT resource-server: JwtDecoderConfig (config/JwtDecoderConfig.java) —
+  # SECURITY_JWKS_URI set → JWKS remote (identity, qua gateway); else PEM
+  # JWT_PUBLIC_KEY_PATH (default ../infra/keys/jwt-public.pem — `make keys`).
+
+affiliate:
+  # Rate mặc định (%) khi approve — pack D20: fallback env AFFILIATE_DEFAULT_RATE=5
+  default-rate: ${AFFILIATE_DEFAULT_RATE:5}
+  # Salt hash ip/user-agent cho clicks (dev constant — production đổi qua env)
+  hash-salt: ${AFFILIATE_IP_SALT:dev-affiliate-salt}
+  # Cửa sổ dedupe click ghi nhận (pack: 1 click/IP/10')
+  click-dedupe-minutes: ${AFFILIATE_CLICK_DEDUPE_MINUTES:10}
+  # Cookie attribution (pack: 30 ngày, httpOnly, path=/)
+  cookie-name: aff_ref
+  cookie-max-age-seconds: ${AFFILIATE_COOKIE_MAX_AGE:2592000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# Outbox relay (common-lib) — affiliate KHÔNG publish event → tắt relay
+# (bảng outbox vẫn phải tồn tại — entity common-lib được @EntityScan + validate).
+outbox:
+  relay:
+    enabled: false
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

@@ -293,10 +293,10 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Modify `frontend/packages/ui-kit/src/styles/tokens.css` (+ `ui-kit.css` nếu cần), Modify `frontend/packages/i18n/src/catalogs/*` (polish nhãn theo hướng nếu cần)
 
-- [ ] Đọc hand-off doc → thay giá trị tokens v1 neutral bằng tokens hướng được chọn (giữ NGUYÊN tên biến — chỉ đổi value; thêm biến mới = additive)
-- [ ] Demo page + shell harness mở lại → 2 theme vẫn switch được, Price VND đúng, không vỡ layout
-- [ ] Snapshot so tokens.css với hand-off (spot-check ≥5 hex khớp)
-- [ ] Commit: `feat(ui-kit): tokens hoàn thiện theo hướng <tên-hướng> (hand-off fi310)`
+- [x] Đọc hand-off doc → thay giá trị tokens v1 neutral bằng tokens hướng được chọn (giữ NGUYÊN tên biến — chỉ đổi value; thêm biến mới = additive)
+- [x] Demo page + shell harness mở lại → 2 theme vẫn switch được, Price VND đúng, không vỡ layout
+- [x] Snapshot so tokens.css với hand-off (spot-check ≥5 hex khớp)
+- [x] Commit: `feat(ui-kit): tokens hoàn thiện theo hướng <tên-hướng> (hand-off fi310)`
 
 ---
 

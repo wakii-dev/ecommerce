@@ -1726,7 +1726,7 @@ class GatewayAuthIntegrationTest {
 - Modify: `frontend/packages/auth/src/AuthStore.ts` (+identityBaseUrl field + getConfig()), `src/index.ts`, `package.json` (+dep contracts)
 - Create: `frontend/packages/auth/src/api.ts`, `src/__tests__/api.test.ts`
 
-- [ ] **Step 1: AuthStore.ts — 2 chỉnh additive** (không đổi logic cũ):
+- [x] **Step 1: AuthStore.ts — 2 chỉnh additive** (không đổi logic cũ):
 
 ```ts
 export interface AuthConfig {
@@ -1747,7 +1747,7 @@ và trong class AuthStore thêm getter (cạnh getLoginPath):
   }
 ```
 
-- [ ] **Step 2: api.ts**:
+- [x] **Step 2: api.ts**:
 
 ```ts
 // api.ts — API auth user-facing: login/register(auto-login)/logout/updateProfile.
@@ -1844,9 +1844,9 @@ export async function fetchProfile(): Promise<MeProfile> {
 }
 ```
 
-- [ ] **Step 3: index.ts + package.json** — index thêm `export * from './api';` (đặt sau các export hiện có). package.json dependencies thêm `"@ecommerce/contracts": "workspace:*"`.
+- [x] **Step 3: index.ts + package.json** — index thêm `export * from './api';` (đặt sau các export hiện có). package.json dependencies thêm `"@ecommerce/contracts": "workspace:*"`.
 
-- [ ] **Step 4: api.test.ts** (pattern vitest hiện có của package — fetchImpl inject qua configureAuth):
+- [x] **Step 4: api.test.ts** (pattern vitest hiện có của package — fetchImpl inject qua configureAuth):
 
 ```ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1928,9 +1928,9 @@ describe('auth api', () => {
 });
 ```
 
-- [ ] **Step 5: Chạy** — `pnpm -C frontend install` (regen lockfile cho dep contracts mới của package) rồi `pnpm -C frontend --filter @ecommerce/auth test && pnpm -C frontend --filter @ecommerce/auth build`. Expected: PASS + tsc sạch.
+- [x] **Step 5: Chạy** — `pnpm -C frontend install` (regen lockfile cho dep contracts mới của package) rồi `pnpm -C frontend --filter @ecommerce/auth test && pnpm -C frontend --filter @ecommerce/auth build`. Expected: PASS + tsc sạch.
 
-- [ ] **Step 6: Commit** — `git add frontend/packages/auth && git commit -m "feat(auth): login/register/logout/updateProfile/fetchProfile API + identityBaseUrl config + 401-refresh-retry"`
+- [x] **Step 6: Commit** — `git add frontend/packages/auth && git commit -m "feat(auth): login/register/logout/updateProfile/fetchProfile API + identityBaseUrl config + 401-refresh-retry"`
 
 ---
 

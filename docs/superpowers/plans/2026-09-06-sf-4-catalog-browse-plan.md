@@ -80,22 +80,22 @@
 
 **Files:** Create `search/EsEngine` (phần index), `search/ProductIndexer`, `search/EsIndexConfig`, `config/RabbitMqConfig`, `search/StartupReindexRunner`; Modify pom (đã có dep ES)
 
-- [ ] `EsIndexConfig`: lúc startup nếu ES reachable → tạo index `products` if-missing với mapping: `name.vi/name.en` (text, analyzer standard), `description.vi/.en` (text), `brand` (keyword), `categorySlugs` (keyword[] — chứa cả slug_vi + slug_en của category path), `price` (long), `discount` (double — `(compare-price)/compare` khi compare>price else 0, cho sort=discount), `ratingAvg` (double), `ratingCount` (int), `official` (boolean), `status` (keyword), `tags` (keyword[]), `slugVi/slugEn` (keyword), `flashSaleEndsAt` (date), `imageUrl/imageAlt`, `createdAt` (date)
-- [ ] `ProductIndexer`: build document từ ProductEntity (published only); `@RabbitListener(queues = "q.catalog.product-changed.indexer")` consume `EventEnvelope` payload `product.changed`: idempotent tryConsume → action CREATED/UPDATED → re-load entity, nếu published → `index()` else delete doc; DELETED → `delete(productId)`; ES throw → log ERROR, KHÔNG rethrow crash app (message ack; startup reindex sẽ tự heal)
-- [ ] `StartupReindexRunner` (`ApplicationRunner`, `@ConditionalOnProperty` enable): nếu ES reachable → `reindexAll()` (xóa index + tạo lại + bulk toàn bộ published; log count); chạy SAU seed (xử lý: seed trước runner theo `@Order` — SeedDataRunner order thấp hơn)
-- [ ] Rabbit config: `TopicExchange("ecommerce.events", durable)` + 2 `Queue` durable + `Binding` routing key `product.changed` (indexer queue); common-lib relay đã publish — NHỚ khai báo exchange BEAN kiểu `TopicExchange` idle (không declare trùng conflicting args)
-- [ ] Verify: IT với `ElasticsearchContainer` (image `elasticsearch:8.17.4`, enabled security off) — tạo product published + outbox event mô phỏng → listener index doc (assert `GET /products/_doc/{id}` có name.vi + name.en); DELETED → doc biến mất; `reindexAll()` → `_count` = số published
-- [ ] Commit: `feat(catalog): ES indexer per-locale + product.changed consumer + startup reindex`
+- [x] `EsIndexConfig`: lúc startup nếu ES reachable → tạo index `products` if-missing với mapping: `name.vi/name.en` (text, analyzer standard), `description.vi/.en` (text), `brand` (keyword), `categorySlugs` (keyword[] — chứa cả slug_vi + slug_en của category path), `price` (long), `discount` (double — `(compare-price)/compare` khi compare>price else 0, cho sort=discount), `ratingAvg` (double), `ratingCount` (int), `official` (boolean), `status` (keyword), `tags` (keyword[]), `slugVi/slugEn` (keyword), `flashSaleEndsAt` (date), `imageUrl/imageAlt`, `createdAt` (date)
+- [x] `ProductIndexer`: build document từ ProductEntity (published only); `@RabbitListener(queues = "q.catalog.product-changed.indexer")` consume `EventEnvelope` payload `product.changed`: idempotent tryConsume → action CREATED/UPDATED → re-load entity, nếu published → `index()` else delete doc; DELETED → `delete(productId)`; ES throw → log ERROR, KHÔNG rethrow crash app (message ack; startup reindex sẽ tự heal)
+- [x] `StartupReindexRunner` (`ApplicationRunner`, `@ConditionalOnProperty` enable): nếu ES reachable → `reindexAll()` (xóa index + tạo lại + bulk toàn bộ published; log count); chạy SAU seed (xử lý: seed trước runner theo `@Order` — SeedDataRunner order thấp hơn)
+- [x] Rabbit config: `TopicExchange("ecommerce.events", durable)` + 2 `Queue` durable + `Binding` routing key `product.changed` (indexer queue); common-lib relay đã publish — NHỚ khai báo exchange BEAN kiểu `TopicExchange` idle (không declare trùng conflicting args)
+- [x] Verify: IT với `ElasticsearchContainer` (image `elasticsearch:8.17.4`, enabled security off) — tạo product published + outbox event mô phỏng → listener index doc (assert `GET /products/_doc/{id}` có name.vi + name.en); DELETED → doc biến mất; `reindexAll()` → `_count` = số published
+- [x] Commit: `feat(catalog): ES indexer per-locale + product.changed consumer + startup reindex`
 
 ### Task 6: es-search-query-suggest-locale
 
 **Files:** Modify `search/EsEngine` (search + suggest)
 
-- [ ] `search()`: bool query — must `multi_match` `q` trên `name.{locale}^3, description.{locale}` (operator AND, fuzziness AUTO); 0 hit → retry query `name.vi` (fallback vi, pack D15); filters: `term categorySlugs` (slug truyền vào khớp cả vi/en), `term official`, `range price`, `range ratingAvg`; sort map: price_asc/price_desc/rating (ratingAvg desc, ratingCount tiebreak)/newest (createdAt desc)/**discount (sort field index-time `discount` DESC — đã map ở Task 5)**; sau search → **hydrate ProductCard từ PG theo ids (`WHERE id = ANY`), giữ thứ tự score ES** — PG là nguồn sự thật giá/ảnh/slug resolve locale
-- [ ] `suggest()`: `match_phrase_prefix` trên `name.{locale}` size 5 + categories từ PG ilike (dùng chung query Task 4) → `SuggestResponse`
-- [ ] Runtime degradation: mọi ES call bọc try — fail → delegate `PgFtsEngine` + log WARN (state flag, không 500)
-- [ ] Verify: IT ES container — index 3 docs (vi+en names khác nhau) → search q vi khớp doc vi, `?locale=en` khớp name.en, suggest prefix đúng, ES dừng (container pause) → fallback vẫn trả kết quả
-- [ ] Commit: `feat(catalog): EsEngine search/suggest — per-locale fields + runtime fallback PgFts`
+- [x] `search()`: bool query — must `multi_match` `q` trên `name.{locale}^3, description.{locale}` (operator AND, fuzziness AUTO); 0 hit → retry query `name.vi` (fallback vi, pack D15); filters: `term categorySlugs` (slug truyền vào khớp cả vi/en), `term official`, `range price`, `range ratingAvg`; sort map: price_asc/price_desc/rating (ratingAvg desc, ratingCount tiebreak)/newest (createdAt desc)/**discount (sort field index-time `discount` DESC — đã map ở Task 5)**; sau search → **hydrate ProductCard từ PG theo ids (`WHERE id = ANY`), giữ thứ tự score ES** — PG là nguồn sự thật giá/ảnh/slug resolve locale
+- [x] `suggest()`: `match_phrase_prefix` trên `name.{locale}` size 5 + categories từ PG ilike (dùng chung query Task 4) → `SuggestResponse`
+- [x] Runtime degradation: mọi ES call bọc try — fail → delegate `PgFtsEngine` + log WARN (state flag, không 500)
+- [x] Verify: IT ES container — index 3 docs (vi+en names khác nhau) → search q vi khớp doc vi, `?locale=en` khớp name.en, suggest prefix đúng, ES dừng (container pause) → fallback vẫn trả kết quả
+- [x] Commit: `feat(catalog): EsEngine search/suggest — per-locale fields + runtime fallback PgFts`
 
 ### Task 7: redis-cache-invalidate-productchanged-outbox
 

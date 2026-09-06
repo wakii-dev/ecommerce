@@ -40,7 +40,8 @@ type ListProductsArgs = Parameters<CatalogClient['listProducts']>[0];
 type SearchArgs = Parameters<CatalogClient['searchProducts']>[0];
 /** Trang kết quả list/search — export cho PLP/search page (Task 12/14). */
 export type ProductCardPage = Awaited<ReturnType<CatalogClient['listProducts']>>;
-type ProductDetail = Awaited<ReturnType<CatalogClient['getProduct']>>;
+/** Chi tiết PDP (ProductCard + description/images/variants) — Task 13. */
+export type ProductDetail = Awaited<ReturnType<CatalogClient['getProduct']>>;
 type CategoryTree = Awaited<ReturnType<CatalogClient['getCategories']>>;
 type SuggestResponse = Awaited<ReturnType<CatalogClient['suggestProducts']>>;
 
@@ -93,6 +94,25 @@ export function categoryGradient(slug: string): string {
     if (pattern.test(normalized)) return gradient;
   }
   return 'var(--grad-electronics)';
+}
+
+/** Emoji placeholder đi kèm gradient khi ảnh rỗng (direction §2.5 gallery). */
+const EMOJI_BY_CATEGORY: ReadonlyArray<readonly [RegExp, string]> = [
+  [/(dien-thoai|phone)/, '📱'],
+  [/(laptop|may-tinh|computer)/, '💻'],
+  [/(dien-tu|electronics)/, '🔌'],
+  [/(thoi-trang|fashion)/, '👗'],
+  [/(nha-cua|home)/, '🏠'],
+  [/(sach|books?)/, '📚'],
+  [/(lam-dep|beauty)/, '💄'],
+];
+
+export function categoryEmoji(slug: string): string {
+  const normalized = slug.toLowerCase();
+  for (const [pattern, emoji] of EMOJI_BY_CATEGORY) {
+    if (pattern.test(normalized)) return emoji;
+  }
+  return '🛍️';
 }
 
 /** % giảm giá — chỉ khi comparePrice > price > 0 (guard, làm tròn nguyên). */

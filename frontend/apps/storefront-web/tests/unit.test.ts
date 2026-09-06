@@ -132,13 +132,21 @@ describe('pdpMetadata', () => {
     expect(pdpMetadata(base, 'vi').robots.index).toBe(true);
   });
 
-  it('alternates pair slug vi / slugEn', () => {
+  it('alternates pair slug vi / slugEn — en URL LUÔN mang prefix /en (Task 13 fix)', () => {
     withSiteUrl('http://test.local', () => {
       const meta = pdpMetadata(base, 'vi');
       expect(meta.alternates.languages).toEqual({
         vi: 'http://test.local/p/ao-thun',
-        en: 'http://test.local/p/t-shirt',
+        en: 'http://test.local/en/p/t-shirt',
       });
+    });
+  });
+
+  it('slugEn vắng → en alternate dùng slug vi nhưng vẫn có prefix /en', () => {
+    withSiteUrl('http://test.local', () => {
+      const meta = pdpMetadata({ name: 'X', slug: 'x' }, 'en');
+      expect(meta.alternates.languages.en).toBe('http://test.local/en/p/x');
+      expect(meta.alternates.languages.vi).toBe('http://test.local/p/x');
     });
   });
 

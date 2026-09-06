@@ -1,0 +1,147 @@
+import { describe, expect, it } from 'vitest';
+
+import type { Category } from '../lib/catalog-api';
+import { categoryPathById, collectOptions, jsonLdFor, pickVariant, priceWithDelta } from '../lib/pdp';
+
+/** Variant fixture tối giản (options + delta) — phần PDP helpers chỉ dùng 2 trường này. */
+function variant(id: string, options: Record<string, string>, priceDelta?: number) {
+  return { id, name: Object.values(options).join(' / '), options, priceDelta, stock: 5 };
+}
+
+function category(id: string, overrides: Partial<Category> = {}): Category {
+  return {
+    id,
+    slug: id,
+    slugEn: `${id}-en`,
+    name: `Danh mục ${id}`,
+    parentId: null,
+    children: [],
+    ...overrides,
+  };
+}
+
+const BASE_INPUT = {
+  name: 'Xiaomi Redmi 13C',
+  slug: 'dien-thoai-xiaomi-redmi-13c',
+  slugEn: 'xiaomi-redmi-13c-phone',
+  description: 'Điện thoại giá rẻ pin trâu',
+  brand: 'Xiaomi',
+  image: { url: '/media/a.jpg', alt: 'Redmi' },
+  price: 2900000,
+  ratingAvg: 4.5,
+  ratingCount: 120,
+};
+
+describe('jsonLdFor', () => {
+  it('đầy đủ field: name vi + image + brand + sku slug-vi + offers VND + availability', () => {
+    const jsonLd = jsonLdFor(BASE_INPUT, 'vi', 'http://test.local') as Record<string, any>;
+    expect(jsonLd['@type']).toBe('Product');
+    expect(jsonLd.name).toBe('Xiaomi Redmi 13C');
+    expect(jsonLd.image).toBe('/media/a.jpg');
+    expect(jsonLd.brand).toEqual({ '@type': 'Brand', name: 'Xiaomi' });
+    expect(jsonLd.sku).toBe('dien-thoai-xiaomi-redmi-13c');
+    expect(jsonLd.offers).toMatchObject({
+      '@type': 'Offer',
+      price: '2900000', // String(price) theo schema.org
+      priceCurrency: 'VND',
+      availability: 'https://schema.org/InStock',
+      url: 'http://test.local/p/dien-thoai-xiaomi-redmi-13c',
+    });
+  });
+
+  it('aggregateRating CHỈ khi ratingCount > 0', () => {
+    const withRating = jsonLdFor(BASE_INPUT, 'vi', 'http://test.local') as Record<string, any>;
+    expect(withRating.aggregateRating).toEqual({
+      '@type': 'AggregateRating',
+      ratingValue: 4.5,
+      reviewCount: 120,
+    });
+
+    const noRating = jsonLdFor({ ...BASE_INPUT, ratingCount: 0 }, 'vi', 'http://test.local') as Record<string, any>;
+    expect('aggregateRating' in noRating).toBe(false);
+  });
+
+  it('url rỗng → KHÔNG có key image (không nhét chuỗi rỗng)', () => {
+    const jsonLd = jsonLdFor({ ...BASE_INPUT, image: { url: '' } }, 'vi', 'http://test.local') as Record<string, any>;
+    expect('image' in jsonLd).toBe(false);
+  });
+
+  it('locale en → offers.url prefix /en; slug theo locale (contract: slug đã resolve)', () => {
+    // En page: API resolve slug = slugEn (truyền đúng shape thật của ProductDetail).
+    const jsonLd = jsonLdFor({ ...BASE_INPUT, slug: 'xiaomi-redmi-13c-phone' }, 'en', 'http://test.local') as Record<string, any>;
+    expect(jsonLd.offers.url).toBe('http://test.local/en/p/xiaomi-redmi-13c-phone');
+    expect(jsonLd.sku).toBe('xiaomi-redmi-13c-phone');
+  });
+
+  it('JSON.stringify toàn khối luôn thành công (dữ liệu API bất hợp lý cũng không ném)', () => {
+    const jsonLd = jsonLdFor({ ...BASE_INPUT, description: 'Dấu nháy " và <script>' }, 'vi', 'http://test.local');
+    expect(() => JSON.stringify(jsonLd)).not.toThrow();
+    expect(JSON.stringify(jsonLd)).toContain('<script>');
+  });
+});
+
+describe('priceWithDelta', () => {
+  it('base + delta; delta vắng → nguyên giá; delta âm được chấp nhận', () => {
+    expect(priceWithDelta(1000000, 50000)).toBe(1050000);
+    expect(priceWithDelta(1000000, undefined)).toBe(1000000);
+    expect(priceWithDelta(1000000, -20000)).toBe(980000);
+  });
+});
+
+describe('pickVariant', () => {
+  const variants = [
+    variant('v1', { color: 'Đen', size: 'M' }, 0),
+    variant('v2', { color: 'Đen', size: 'L' }, 50000),
+    variant('v3', { color: 'Trắng', size: 'L' }, 30000),
+  ];
+
+  it('khớp đủ color+size → variant đầu tiên', () => {
+    expect(pickVariant(variants, { color: 'Đen', size: 'L' })?.id).toBe('v2');
+  });
+
+  it('null = chưa chọn → khớp bất kỳ (color null + size L → v2)', () => {
+    expect(pickVariant(variants, { color: null, size: 'L' })?.id).toBe('v2');
+    expect(pickVariant(variants, {})?.id).toBe('v1');
+  });
+
+  it('combo không tồn tại → null', () => {
+    expect(pickVariant(variants, { color: 'Trắng', size: 'M' })).toBeNull();
+  });
+
+  it('options ngoài color/size không cản trở match', () => {
+    const extra = [variant('v4', { color: 'Xanh', material: ' cotton ' })];
+    expect(pickVariant(extra, { color: 'Xanh', size: null })?.id).toBe('v4');
+  });
+});
+
+describe('collectOptions', () => {
+  it('giá trị phân biệt giữ thứ tự xuất hiện; bỏ key vắng/rỗng', () => {
+    const variants = [
+      variant('a', { color: 'Đen' }),
+      variant('b', { color: 'Trắng' }),
+      variant('c', { color: 'Đen' }),
+      variant('d', {}),
+    ];
+    expect(collectOptions(variants, 'color')).toEqual(['Đen', 'Trắng']);
+    expect(collectOptions(variants, 'size')).toEqual([]);
+  });
+});
+
+describe('categoryPathById', () => {
+  const tree: Category[] = [
+    category('dien-tu', {
+      name: 'Điện Tử',
+      children: [category('dien-thoai', { name: 'Điện Thoại', parentId: 'dien-tu', children: [category('pho-thong')] })],
+    }),
+    category('thoi-trang'),
+  ];
+
+  it('path gốc → node theo ID (đệ quy)', () => {
+    expect(categoryPathById(tree, 'pho-thong')?.map((node) => node.id)).toEqual(['dien-tu', 'dien-thoai', 'pho-thong']);
+    expect(categoryPathById(tree, 'thoi-trang')?.map((node) => node.id)).toEqual(['thoi-trang']);
+  });
+
+  it('ID lạ → null (breadcrumb fallback)', () => {
+    expect(categoryPathById(tree, 'khong-co')).toBeNull();
+  });
+});

@@ -1116,3 +1116,502 @@ img {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ── PDP (direction §2.5 + §3 — plan Task 13) ──────────────────────────── */
+
+/* Layout gallery trái + info phải: minmax(380px,45%) + 1fr, gap 32 */
+.pdp-layout {
+  display: grid;
+  grid-template-columns: minmax(380px, 45%) 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+/* Gallery: ảnh chính aspect 1/1, border, radius-lg; flag -% nền primary */
+.pdp-gallery-main {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdp-gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pdp-gallery-emoji {
+  font-size: 96px;
+}
+
+.pdp-gallery-flag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--c-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+}
+
+/* Thumbs 72×72 radius-md, border 2px transparent — active border primary */
+.pdp-gallery-thumbs {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pdp-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  outline-offset: 0;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background: var(--c-surface);
+}
+
+.pdp-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pdp-thumb--active {
+  border-color: var(--c-primary);
+}
+
+/* Info: h1 23px/700/1.35 + meta (đã bán + sao) */
+.pdp-name {
+  margin: 0 0 var(--space-2);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.pdp-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.pdp-meta-count {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.pdp-meta-sold {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.pdp-meta-sold::before {
+  content: '·';
+  margin-right: var(--space-2);
+}
+
+/* Price-block: wash #FFF1F0 + viền #FBC8C2 (tints §1.6 đã là CSS vars) */
+.pdp-price-block {
+  background: var(--wash-price-bg);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pdp-price {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--c-danger);
+}
+
+.pdp-price-compare {
+  font-size: 15px;
+  color: var(--c-text-muted);
+}
+
+.pdp-price-pill {
+  background: var(--c-danger);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.pdp-price-note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--tint-primary-text);
+}
+
+/* Variants: swatch tròn 38px + chip min 46×38 (§2.5) */
+.pdp-variants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pdp-variant-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pdp-variant-label {
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.pdp-variant-label strong {
+  color: var(--c-text);
+}
+
+.pdp-swatches,
+.pdp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pdp-swatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid var(--c-border);
+  padding: 0;
+  cursor: pointer;
+}
+
+.pdp-swatch--active {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--tint-primary-bg);
+}
+
+.pdp-chip {
+  min-width: 46px;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pdp-chip--active {
+  color: var(--tint-primary-text);
+  background: var(--tint-primary-bg);
+  border-color: var(--tint-primary-border);
+  font-weight: 700;
+}
+
+/* Buy box: stepper + stock + CTA (§3 buttons) */
+.pdp-atc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pdp-atc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.pdp-stepper {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.pdp-stepper-btn {
+  width: 36px;
+  height: 100%;
+  border: 0;
+  background: var(--c-surface);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.pdp-stepper-btn:hover:not(:disabled) {
+  background: #fafafa;
+}
+
+.pdp-stepper-btn:disabled {
+  color: var(--c-text-muted);
+  cursor: not-allowed;
+}
+
+.pdp-stepper-input {
+  width: 44px;
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+  text-align: center;
+  font: inherit;
+  /* ẩn spinner mặc định — stepper đã có nút −/+ */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.pdp-stepper-input::-webkit-outer-spin-button,
+.pdp-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pdp-stock {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pdp-stock--in {
+  color: var(--tint-success-text);
+}
+
+.pdp-stock--out {
+  color: var(--c-text-muted);
+}
+
+.pdp-cta-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.pdp-cta {
+  flex: 1;
+  height: 50px;
+  text-transform: uppercase;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pdp-cta--secondary {
+  background: var(--c-surface);
+  border: 2px solid var(--c-primary);
+  color: var(--c-primary);
+}
+
+.pdp-cta--secondary:hover:not(:disabled) {
+  background: var(--tint-primary-bg);
+}
+
+.pdp-cta--primary {
+  background: var(--grad-buy);
+  border: 0;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(245, 61, 45, 0.35);
+}
+
+.pdp-cta--primary:hover:not(:disabled) {
+  background: var(--c-primary-hover);
+}
+
+.pdp-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Toast êm bottom-center (stub cart — tự dismiss 2.5s) */
+.pdp-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #212121;
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: 200;
+}
+
+/* Perks row: border-top dashed + icon tròn 30px primary-tint (§2.5) */
+.pdp-perks {
+  display: flex;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--c-border);
+}
+
+.pdp-perk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+}
+
+.pdp-perk-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--tint-primary-bg);
+  color: var(--tint-primary-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* Tabs: bar gap 24 + border-bottom 2; active chữ primary + underline 3px.
+   Panels CSS :target — cả 3 panel đều nằm sẵn trong HTML (D16), không JS:
+   mặc định hiện tab-desc; :target đổi pane; :has bắt active tab. */
+.pdp-tabs {
+  margin-top: var(--space-6);
+}
+
+.pdp-tab-bar {
+  display: flex;
+  gap: var(--space-5);
+  border-bottom: 2px solid var(--c-border);
+  margin-bottom: var(--space-4);
+}
+
+.pdp-tab-bar a {
+  padding: var(--space-3) 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+
+.pdp-tab-bar a:hover {
+  color: var(--c-primary);
+}
+
+.pdp-panel {
+  display: none;
+}
+
+.pdp-panel:target {
+  display: block;
+}
+
+/* Không panel nào :target → mặc định hiện Mô tả (tab đầu) */
+.pdp-tabs:not(:has(.pdp-panel:target)) #tab-desc {
+  display: block;
+}
+
+.pdp-tab-bar a[href='#tab-desc'] {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+.pdp-tabs:has(#tab-info:target) a[href='#tab-desc'],
+.pdp-tabs:has(#tab-reviews:target) a[href='#tab-desc'] {
+  color: var(--c-text-muted);
+  border-bottom-color: transparent;
+}
+
+.pdp-tabs:has(#tab-info:target) a[href='#tab-info'] {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+.pdp-tabs:has(#tab-reviews:target) a[href='#tab-reviews'] {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+.pdp-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--c-text);
+  white-space: pre-line;
+}
+
+/* Bảng spec: th 220px nền #FAFAFA, cell border, padding 10px 14px (§2.5) */
+.pdp-spec {
+  width: 100%;
+  max-width: 640px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.pdp-spec th,
+.pdp-spec td {
+  border: 1px solid var(--c-border);
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.pdp-spec th {
+  width: 220px;
+  background: #fafafa;
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+/* 404 page (app/not-found + [locale]/not-found) */
+.not-found {
+  padding: var(--space-8) 0;
+  text-align: center;
+}
+
+.not-found-code {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--c-primary);
+}
+
+.not-found-title {
+  margin: var(--space-2) 0;
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.not-found-desc {
+  margin: 0 0 var(--space-4);
+  color: var(--c-text-muted);
+}
+
+.not-found-home {
+  color: var(--c-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.not-found-home:hover {
+  text-decoration: underline;
+}
+
+/* ≤900px: PDP 1 cột (direction §4 — grid 2 cột tối thiểu) */
+@media (max-width: 900px) {
+  .pdp-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -102,7 +102,9 @@ export function pdpMetadata(product: SeoProduct, locale: Locale): PdpMetadataRes
   return {
     title: resolveTitle(product.seoTitle, product.name),
     description: resolveDescription(product.seoDescription, descriptionFallback),
-    alternates: buildAlternates(`/p/${product.slug}`, `/p/${product.slugEn ?? product.slug}`),
+    // enPath PHẢI mang prefix /en (Task 13 fix: buildAlternates KHÔNG tự thêm
+    // prefix khi enPath được truyền tường minh — trước đây ra /p/{slugEn} mất /en).
+    alternates: buildAlternates(`/p/${product.slug}`, `/en/p/${product.slugEn ?? product.slug}`),
     robots: {
       index: !(locale === 'en' && usedFallback),
       follow: true,

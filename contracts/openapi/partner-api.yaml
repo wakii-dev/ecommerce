@@ -1,0 +1,491 @@
+openapi: 3.1.0
+info:
+  title: Partner Open API
+  version: 1.0.0
+  description: |
+    API công khai cho đối tác tích hợp (D19) — namespace `/open-api/v1/**`, xác thực bằng
+    API key header `X-API-Key` (cấp qua admin, không liên quan JWT customer). Rate-limit
+    theo key: vượt quota → 429 problem+json.
+
+    Webhook OUTBOUND (service → partner, không phải endpoint của API này): khi đơn của
+    partner thay đổi trạng thái, service push `partner.order.changed` tới URL partner đã
+    đăng ký — schema `PartnerOrderChangedEvent` bên dưới. Header `X-Signature` =
+    HMAC-SHA256(secret, rawBody) để partner verify; sai serial/retry; quá hạn → DLQ.
+servers:
+  - url: /
+    description: API gateway — partner namespace /open-api/v1.
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: partner-products
+    description: Danh mục + tìm kiếm cho đối tác.
+  - name: partner-orders
+    description: Tạo / tra cứu đơn theo partnerRef (idempotent theo partner).
+paths:
+  /open-api/v1/products:
+    get:
+      tags:
+        - partner-products
+      operationId: listPartnerProducts
+      summary: Danh sách product (dạng tóm tắt cho partner)
+      description: Phân trang 1-based; lọc theo category slug nếu cần.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: category
+          in: query
+          required: false
+          description: Lọc theo category slug
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /open-api/v1/products/{id}:
+    get:
+      tags:
+        - partner-products
+      operationId: getPartnerProduct
+      summary: Chi tiết product (kèm description + variants)
+      description: Bổ sung mô tả và danh sách variant so với bản tóm tắt.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chi tiết product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Không tìm thấy product
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /open-api/v1/categories:
+    get:
+      tags:
+        - partner-products
+      operationId: listPartnerCategories
+      summary: Cây category dạng phẳng (parentId tự dựng cây)
+      description: Trả danh sách phẳng; partner tự dựng cây qua parentId (null = gốc).
+      responses:
+        '200':
+          description: Danh sách category phẳng
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /open-api/v1/search:
+    get:
+      tags:
+        - partner-products
+      operationId: searchPartnerProducts
+      summary: Tìm kiếm product theo từ khóa
+      description: Tìm trên tên + mô tả (full-text phía service); trả page rỗng khi không khớp.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Từ khóa tìm kiếm
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Page kết quả
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /open-api/v1/orders:
+    post:
+      tags:
+        - partner-orders
+      operationId: createPartnerOrder
+      summary: Tạo đơn từ partner
+      description: |
+        `partnerRef` là id đơn bên hệ thống partner — idempotent THEO PARTNER: partner gửi
+        lại cùng partnerRef → trả đơn đã có (không tạo trùng). Đơn vào pipeline ordering
+        chuẩn; trạng thái trả về theo enum chung §3.6.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePartnerOrderRequest'
+      responses:
+        '201':
+          description: Đơn đã tạo (hoặc replay của partnerRef cũ)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderCreated'
+        '400':
+          description: Payload không hợp lệ (items rỗng / address thiếu)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Sản phẩm/variant hết hàng hoặc ngừng bán
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /open-api/v1/orders/{id}:
+    get:
+      tags:
+        - partner-orders
+      operationId: getPartnerOrder
+      summary: Tra cứu đơn đã tạo
+      description: Chỉ thấy đơn của API key mình; đổi trạng thái partner nhận qua webhook.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: orderId trả về lúc tạo đơn
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trạng thái đơn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Không tìm thấy đơn (hoặc không thuộc partner key này)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key đối tác — cấp qua admin; sai/hết hạn → 401.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Số trang (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      description: Số item mỗi trang
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    Unauthorized:
+      description: API key sai hoặc hết hạn
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    RateLimited:
+      description: Vượt rate-limit của key
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type: { type: string, default: "about:blank" }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        timestamp: { type: string, format: date-time }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    PartnerProduct:
+      type: object
+      description: Product dạng tóm tắt cho partner (giá bán VND)
+      required:
+        - id
+        - slug
+        - name
+        - price
+        - updatedAt
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        price:
+          type: integer
+          description: Giá VND nguyên
+        stock:
+          type: integer
+          description: Tồn khả dụng — chỉ hiện khi bật expose-stock cho key
+        updatedAt:
+          type: string
+          format: date-time
+    PartnerVariant:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: Tên variant đã resolve (vd "Đỏ / 256GB")
+        price:
+          type: integer
+          description: Giá VND của variant
+        stock:
+          type: integer
+    PartnerProductDetail:
+      type: object
+      description: PartnerProduct + mô tả + variants
+      allOf:
+        - $ref: '#/components/schemas/PartnerProduct'
+        - type: object
+          required:
+            - description
+            - variants
+          properties:
+            description:
+              type: string
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/PartnerVariant'
+    PartnerCategory:
+      type: object
+      description: Category phẳng — partner tự dựng cây qua parentId
+      required:
+        - id
+        - slug
+        - name
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        parentId:
+          type: string
+          description: null = category gốc
+    PartnerCustomer:
+      type: object
+      description: Người nhận do partner cung cấp
+      required:
+        - name
+        - phone
+        - address
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+    PartnerOrderItem:
+      type: object
+      required:
+        - productId
+        - qty
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+          description: Bắt buộc với sản phẩm có variant
+        qty:
+          type: integer
+          minimum: 1
+    CreatePartnerOrderRequest:
+      type: object
+      required:
+        - partnerRef
+        - customer
+        - items
+      properties:
+        partnerRef:
+          type: string
+          description: Id đơn bên partner — idempotent theo partner
+        customer:
+          $ref: '#/components/schemas/PartnerCustomer'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PartnerOrderItem'
+    OrderStatus:
+      type: string
+      description: Trạng thái đơn — mirror enum ordering §3.6
+      enum:
+        - PENDING
+        - PAID
+        - CONFIRMED
+        - SHIPPED
+        - DELIVERED
+        - CANCELLED
+        - FAILED
+    PartnerOrderCreated:
+      type: object
+      required:
+        - orderId
+        - partnerRef
+        - status
+      properties:
+        orderId:
+          type: string
+        partnerRef:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    PartnerOrderLine:
+      type: object
+      required:
+        - productId
+        - qty
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+        name:
+          type: string
+        qty:
+          type: integer
+        unitPrice:
+          type: integer
+    PartnerOrder:
+      type: object
+      required:
+        - orderId
+        - partnerRef
+        - status
+        - items
+        - updatedAt
+      properties:
+        orderId:
+          type: string
+        partnerRef:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderLine'
+        updatedAt:
+          type: string
+          format: date-time
+    PartnerProductPage:
+      type: object
+      description: Page chuẩn {items, page, size, total}
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerProduct'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+    PartnerOrderChangedEvent:
+      type: object
+      description: |
+        Webhook OUTBOUND service → partner (KHÔNG phải endpoint): push khi đơn partner đổi
+        trạng thái. Header `X-Signature` = HMAC-SHA256(partnerSecret, rawBody); partner
+        verify trước khi tin body. Sai serial/retry với backoff; quá hạn → DLQ.
+      required:
+        - eventId
+        - orderId
+        - partnerRef
+        - status
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Id dùng để partner dedupe (idempotent nhận webhook)
+        orderId:
+          type: string
+        partnerRef:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        occurredAt:
+          type: string
+          format: date-time

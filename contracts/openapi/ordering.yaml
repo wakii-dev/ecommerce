@@ -1,0 +1,1303 @@
+openapi: 3.1.0
+info:
+  title: Ordering API
+  description: |
+    Dat hang / coupon / RMA / shipping / thong ke cua ordering-service.
+    State machine don hang pin §3.6 — xem OrderStatus.description.
+    Tao don BẮT BUỘC header `Idempotency-Key` (409 khi trung key khac payload).
+    COD (D21): saga bo buoc payment intent — don CONFIRMED ngay sau reserve,
+    tra PAID khi admin giao (clientSecret null).
+    Hoa don PDF (D18): InvoiceProvider SPI, so hoa don tuan tu.
+    Tien VND zero-decimal (integer). Moi error response: RFC 7807 problem+json
+    (khop common-lib `ApiError`).
+  version: 1.0.0
+servers:
+  - url: /
+    description: Qua API gateway (prefix /api/ordering → ordering-service)
+tags:
+  - name: orders
+    description: Tao don + don cua toi
+  - name: coupons
+    description: Coupon (validate + danh sach public cho coupon center)
+  - name: rma
+    description: Tra/doi hang (D22)
+  - name: shipping
+    description: Phuong thuc van chuyen
+  - name: admin
+    description: Quan tri don/RMA + thong ke
+paths:
+  /api/ordering/orders:
+    post:
+      tags: [orders]
+      operationId: createOrder
+      summary: Tao don hang
+      description: |
+        Header `Idempotency-Key` BẮT BUỘC (uuid do client sinh):
+        - Trung key + CUNG payload → tra lai don cu (idempotent).
+        - Trung key + KHAC payload → 409.
+        Luat nghiep vu:
+        - COD (D21): `clientSecret` = null — saga bo buoc intent, don CONFIRMED
+          ngay sau reserve inventory; PAID khi admin giao hang.
+        - Stripe: tra `clientSecret` de FE confirm payment (zero-decimal VND).
+        - Diem thuong: `usePoints` (so diem dung) → `pointsDiscount` tren Order.
+        Loi: 409 het ton kho (`insufficient[]` structured — CreateOrderConflictError), 422 coupon khong hop le.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Da tao don.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: |
+            Het ton kho (all-or-nothing — `insufficient[]` structured, mirror
+            ReservationConflictError inventory.yaml), hoac trung Idempotency-Key
+            khac payload (truong hop nay khong co `insufficient`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderConflictError'
+        '422':
+          description: Coupon khong hop le (het han / khong dat minOrderValue / sai code).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/orders/validate-coupon:
+    post:
+      tags: [coupons]
+      operationId: validateCoupon
+      summary: Kiem tra coupon truoc khi dat (khong reserve)
+      description: FE goi realtime khi nhap ma. Khong tac dong ton kho/usage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCouponRequest'
+      responses:
+        '200':
+          description: Ket qua kiem tra (valid true/false — khong loi ra 4xx).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCouponResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/ordering/coupons/public:
+    get:
+      tags: [coupons]
+      operationId: listPublicCoupons
+      summary: Danh sach coupon active (coupon center)
+      description: |
+        Chi coupon dang chay. KHONG lo usage-limit/used-count noi bo.
+        `type` PERCENT → value la %; FIXED → value la so VND.
+      responses:
+        '200':
+          description: Coupon dang active.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicCoupon'
+  /api/ordering/me/orders:
+    get:
+      tags: [orders]
+      operationId: listMyOrders
+      summary: Danh sach don cua toi
+      description: Tra OrderSummary (khong items) — moi nhat truoc.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang OrderSummary (khong items).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSummaryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/ordering/me/orders/{id}:
+    get:
+      tags: [orders]
+      operationId: getMyOrder
+      summary: Chi tiet don cua toi
+      description: Chi don cua chinh user — cua nguoi khac → 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don hang day du.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/ordering/me/orders/{id}/cancel:
+    post:
+      tags: [orders]
+      operationId: cancelMyOrder
+      summary: Huy don cua toi
+      description: |
+        User tu huy khi don con PENDING (chua tra tien).
+        Trạng thái khac → 409 (quy tren state machine §3.6).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don da CANCELLED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep huy (theo §3.6).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/me/orders/{id}/invoice:
+    get:
+      tags: [orders]
+      operationId: getMyOrderInvoice
+      summary: Tai hoa don PDF (D18)
+      description: 409 khi don chua CONFIRMED. PDF binary — so hoa don tuan tu.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: File PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Don chua CONFIRMED — chua co hoa don.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/me/orders/{id}/tracking:
+    get:
+      tags: [orders]
+      operationId: getMyOrderTracking
+      summary: Tracking van chuyen
+      description: Du lieu tu shippingMethod hien tai (MVP flat-fee; GHN SF-14 cung shape).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Trang thai tracking.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/ordering/me/rma:
+    post:
+      tags: [rma]
+      operationId: createRma
+      summary: Tao yeu cau tra/doi hang (D22)
+      description: |
+        Cua so RMA: 7 ngay ke tu DELIVERED — qua han → 409.
+        `lines[].lineId` la id cua OrderLine trong don.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RmaCreateRequest'
+      responses:
+        '202':
+          description: Da tao — dang REQUESTED, cho admin duyet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rma'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Qua 7 ngay tu DELIVERED hoac don khong dung nguoi so huu.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    get:
+      tags: [rma]
+      operationId: listMyRmas
+      summary: Danh sach RMA cua toi
+      description: Moi nhat truoc, kem status lifecycle.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang RMA.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RmaPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/ordering/shipping/methods:
+    get:
+      tags: [shipping]
+      operationId: listShippingMethods
+      summary: Cac phuong thuc van chuyen
+      description: MVP flat-fee (fee VND, etaDays du kien). GHN SF-14 cung shape.
+      responses:
+        '200':
+          description: Danh sach phuong thuc.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShippingMethod'
+  /api/ordering/admin/orders:
+    get:
+      tags: [admin]
+      operationId: adminListOrders
+      summary: Danh sach don (admin)
+      description: Can role ADMIN. Loc theo status, tim q (id/email/ten).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang don hang.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/orders/{id}:
+    get:
+      tags: [admin]
+      operationId: adminGetOrder
+      summary: Chi tiet don (admin)
+      description: Day du items + timeline + address.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don hang day du.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/ordering/admin/orders/{id}/ship:
+    post:
+      tags: [admin]
+      operationId: adminShipOrder
+      summary: Danh dau da giao hang cho carrier (admin)
+      description: CONFIRMED → SHIPPED (§3.6). Gan trackingCode khi ship.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don da SHIPPED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep ship (§3.6).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/orders/{id}/deliver:
+    post:
+      tags: [admin]
+      operationId: adminDeliverOrder
+      summary: Danh dau da giao thanh cong (admin)
+      description: SHIPPED → DELIVERED (§3.6). Don COD luc nay tra PAID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don da DELIVERED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep deliver (§3.6).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/orders/{id}/cancel:
+    post:
+      tags: [admin]
+      operationId: adminCancelOrder
+      summary: Huy don (admin)
+      description: |
+        §3.6 — PENDING/PAID/CONFIRMED → CANCELLED. Huy sau PAID tu dong refund
+        (server lo hoan tien qua payment-service, admin khong goi refund rieng).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Don da CANCELLED (refunded=true neu co hoan tien).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep huy (vd SHIPPED/DELIVERED — theo §3.6).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/orders/{id}/invoice:
+    get:
+      tags: [admin]
+      operationId: adminGetOrderInvoice
+      summary: Tai hoa don PDF cua don bat ky (admin, D18)
+      description: Cung rang buoc CONFIRMED nhu ben customer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: File PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Don chua CONFIRMED — chua co hoa don.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/rma:
+    get:
+      tags: [admin]
+      operationId: adminListRmas
+      summary: Danh sach RMA (admin)
+      description: Loc theo status (REQUESTED/APPROVED/RECEIVED/REFUNDED/REJECTED).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RmaStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang RMA.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RmaPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/rma/{id}/approve:
+    post:
+      tags: [admin]
+      operationId: adminApproveRma
+      summary: Chap nhan RMA (admin)
+      description: REQUESTED → APPROVED (cho khong gui hang ve).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RmaIdPath'
+      responses:
+        '200':
+          description: Rma da APPROVED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rma'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/rma/{id}/reject:
+    post:
+      tags: [admin]
+      operationId: adminRejectRma
+      summary: Tu choi RMA (admin)
+      description: REQUESTED → REJECTED (terminal).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RmaIdPath'
+      responses:
+        '200':
+          description: Rma da REJECTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rma'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/rma/{id}/mark-received:
+    post:
+      tags: [admin]
+      operationId: adminMarkRmaReceived
+      summary: Xac nhan da nhan hang tra ve (admin)
+      description: APPROVED → RECEIVED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RmaIdPath'
+      responses:
+        '200':
+          description: Rma da RECEIVED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rma'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/rma/{id}/refund:
+    post:
+      tags: [admin]
+      operationId: adminRefundRma
+      summary: Hoan tien RMA (admin)
+      description: RECEIVED → REFUNDED (terminal) — server goi payment-service refund.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RmaIdPath'
+      responses:
+        '200':
+          description: Rma da REFUNDED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rma'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trang thai khong cho phep.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/ordering/admin/stats/revenue-by-day:
+    get:
+      tags: [admin]
+      operationId: adminRevenueByDay
+      summary: Doanh thu theo ngay (§6.1.8)
+      description: Tu ngay `from` den `to` (yyyy-mm-dd, inclusive).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Chuoi doanh thu theo ngay (revenue VND).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RevenueByDay'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/stats/orders-summary:
+    get:
+      tags: [admin]
+      operationId: adminOrdersSummary
+      summary: Tong quan don hang cho dashboard (§6.1.8)
+      description: Counts tung status + totalRevenue/todayRevenue/todayOrders.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dem theo status + doanh thu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdersSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/stats/top-products:
+    get:
+      tags: [admin]
+      operationId: adminTopProducts
+      summary: Top san pham ban chay (§6.1.8)
+      description: Mac dinh 10 item, loc theo khoang thoi gian from/to.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: So luong (mac dinh 10).
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Top san pham theo so luong ban.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopProduct'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: So trang — 1-based.
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      description: So item moi trang (mac dinh 20, toi da 100).
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        BẮT BUỘC — uuid client sinh. Trung key + cung payload → tra don cu;
+        trung key + khac payload → 409.
+      schema:
+        type: string
+    OrderIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id don hang.
+      schema:
+        type: string
+    RmaIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id RMA.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Chua xac thuc / token het han.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Khong du quyen (can role ADMIN).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Khong tim thay tai nguyen.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    InsufficientStock:
+      type: object
+      required: [variantId, requested, available]
+      properties:
+        variantId:
+          type: string
+        requested:
+          type: integer
+          minimum: 1
+        available:
+          type: integer
+          minimum: 0
+          description: Ton kho co the mua (da tru reserved).
+    CreateOrderConflictError:
+      type: object
+      description: |
+        Body 409 cua POST /orders — mirror ReservationConflictError cua inventory.yaml
+        (all-or-nothing). Replay Idempotency-Key khac payload cung tra 409 nhung
+        KHONG co `insufficient` (vi vay field nay khong required).
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+        - type: object
+          properties:
+            insufficient:
+              type: array
+              minItems: 1
+              description: Cac variant thieu hang (chi co khi 409 do het stock).
+              items:
+                $ref: '#/components/schemas/InsufficientStock'
+    OrderStatus:
+      type: string
+      description: |
+        State machine don hang — pin §3.6. Transitions hop le:
+
+        | From      | To        | Ai                                 |
+        |-----------|-----------|------------------------------------|
+        | PENDING   | PAID      | system (payment webhook)           |
+        | PAID      | CONFIRMED | system                             |
+        | CONFIRMED | SHIPPED   | admin (POST .../ship)              |
+        | SHIPPED   | DELIVERED | admin (POST .../deliver); COD→PAID |
+        | PENDING   | CANCELLED | admin, USER (POST .../cancel), hoac SYSTEM TTL 30' |
+        | PAID / CONFIRMED | CANCELLED | admin (+ refund tu dong) |
+        | PENDING   | FAILED    | system                             |
+
+        Admin KHONG co endpoint confirm — CONFIRMED chi den tu PAID, tu dong.
+      enum: [PENDING, PAID, CONFIRMED, SHIPPED, DELIVERED, CANCELLED, FAILED]
+    Address:
+      type: object
+      required: [fullName, phone, line1, ward, district, city]
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        line1:
+          type: string
+          description: So nha + duong.
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+    OrderLine:
+      type: object
+      required: [id, productId, variantId, name, qty, unitPrice, lineTotal]
+      properties:
+        id:
+          type: string
+          description: Id dong hang — client dung de tao RMA (lineId).
+        productId:
+          type: string
+        variantId:
+          type: string
+          description: Level variant (pin §6.1).
+        name:
+          type: string
+          description: Ten DA resolve (vi) tai thoi diem dat.
+        image:
+          type: string
+        qty:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: integer
+          description: Don gia snapshot (VND).
+        lineTotal:
+          type: integer
+          description: 'qty × unitPrice (VND).'
+    Order:
+      type: object
+      required: [id, userId, status, items, subtotal, discount, shippingFee, total, currency, paymentMethod, shippingMethod, address, timeline, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        subtotal:
+          type: integer
+          description: Tong hang hoa (VND).
+        discount:
+          type: integer
+          description: Giam gia coupon (VND).
+        shippingFee:
+          type: integer
+          description: Phi van chuyen (VND).
+        pointsDiscount:
+          type: integer
+          description: So tien duoc giam tu diem thuong (VND) — neu co.
+        total:
+          type: integer
+          description: 'subtotal - discount - pointsDiscount + shippingFee (VND).'
+        currency:
+          type: string
+          enum: [VND]
+        couponCode:
+          type: string
+        affiliateCode:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [stripe, cod]
+          description: COD (D21) — CONFIRMED sau reserve, PAID khi giao.
+        shippingMethod:
+          type: string
+          description: Id phuong thuc (tu GET /shipping/methods).
+        trackingCode:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        timeline:
+          type: array
+          description: Lich su chuyen trang thai (thu tu thoi gian).
+          items:
+            type: object
+            required: [status, at]
+            properties:
+              status:
+                $ref: '#/components/schemas/OrderStatus'
+              at:
+                type: string
+                format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrderSummary:
+      type: object
+      description: Dong danh sach — khong items, co itemsCount + paymentMethod.
+      required: [id, userId, status, itemsCount, subtotal, discount, shippingFee, total, currency, paymentMethod, shippingMethod, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        itemsCount:
+          type: integer
+          description: Tong so san pham (cong qty).
+        subtotal:
+          type: integer
+        discount:
+          type: integer
+        shippingFee:
+          type: integer
+        pointsDiscount:
+          type: integer
+        total:
+          type: integer
+        currency:
+          type: string
+          enum: [VND]
+        couponCode:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [stripe, cod]
+        shippingMethod:
+          type: string
+        trackingCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateOrderItem:
+      type: object
+      required: [productId, variantId, qty]
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+        qty:
+          type: integer
+          minimum: 1
+    CreateOrderRequest:
+      type: object
+      required: [items, shippingMethod, address]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        couponCode:
+          type: string
+        usePoints:
+          type: integer
+          minimum: 0
+          description: So diem thuong muon dung (loyalty — D22).
+        paymentMethod:
+          type: string
+          enum: [stripe, cod]
+          default: stripe
+          description: D21 — mac dinh stripe; COD bo buoc intent.
+        shippingMethod:
+          type: string
+          description: Id tu GET /api/ordering/shipping/methods.
+        affiliateCode:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+    CreateOrderResponse:
+      type: object
+      required: [order, clientSecret]
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+        clientSecret:
+          type: [string, 'null']
+          description: |
+            Stripe clientSecret de FE confirm payment. NULL khi COD
+            (saga bo buoc intent — D21).
+    OrderPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    OrderSummaryPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderSummary'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    ValidateCouponRequest:
+      type: object
+      required: [code, subtotal]
+      properties:
+        code:
+          type: string
+        subtotal:
+          type: integer
+          description: Tong hang hoa hien tai de tinh discount (VND).
+    ValidateCouponResponse:
+      type: object
+      required: [valid, discount]
+      properties:
+        valid:
+          type: boolean
+        discount:
+          type: integer
+          description: So tien giam duoc (VND) — 0 khi invalid.
+        message:
+          type: string
+          description: Ly do khi invalid (vd "Don toi thieu 500.000d").
+    PublicCoupon:
+      type: object
+      description: Coupon cho coupon center — KHONG lo usage-limit/used-count noi bo.
+      required: [code, type, value, description]
+      properties:
+        code:
+          type: string
+        type:
+          type: string
+          enum: [PERCENT, FIXED]
+          description: PERCENT → value la %; FIXED → value la so VND.
+        value:
+          type: integer
+        minOrderValue:
+          type: integer
+          description: Don toi thieu (VND) — neu co.
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        description:
+          type: string
+    ShippingMethod:
+      type: object
+      required: [id, name, fee, etaDays]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fee:
+          type: integer
+          description: Phi flat (VND) — MVP.
+        etaDays:
+          type: integer
+          description: Du kien so ngay giao.
+    TrackingEvent:
+      type: object
+      required: [at, description]
+      properties:
+        at:
+          type: string
+          format: date-time
+        description:
+          type: string
+    TrackingResponse:
+      type: object
+      required: [trackingCode, carrier, status]
+      properties:
+        trackingCode:
+          type: string
+        carrier:
+          type: string
+          description: Ten don vi van chuyen (MVP "flat" — SF-14 GHN).
+        status:
+          type: string
+          description: Trang thai carrier (vd pending, in_transit, delivered).
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingEvent'
+    RmaStatus:
+      type: string
+      description: |
+        Lifecycle RMA (D22): REQUESTED → APPROVED → RECEIVED → REFUNDED,
+        nhánh REJECTED tu REQUESTED (terminal). Cua so tao: 7 ngay ke tu
+        khi don DELIVERED.
+      enum: [REQUESTED, APPROVED, RECEIVED, REFUNDED, REJECTED]
+    RmaLine:
+      type: object
+      required: [lineId, qty]
+      properties:
+        lineId:
+          type: string
+          description: Id OrderLine trong don.
+        qty:
+          type: integer
+          minimum: 1
+    Rma:
+      type: object
+      required: [id, orderId, status, lines, reason, createdAt]
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        status:
+          $ref: '#/components/schemas/RmaStatus'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/RmaLine'
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RmaPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rma'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    RmaCreateRequest:
+      type: object
+      required: [orderId, lines, reason]
+      properties:
+        orderId:
+          type: string
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RmaLine'
+        reason:
+          type: string
+          minLength: 1
+    RevenueByDay:
+      type: object
+      required: [date, revenue, orders]
+      properties:
+        date:
+          type: string
+          format: date
+        revenue:
+          type: integer
+          description: Doanh thu ngay (VND).
+        orders:
+          type: integer
+          description: So don trong ngay.
+    OrdersSummary:
+      type: object
+      description: Dem don theo tung status + doanh thu tong/quy (VND).
+      required: [pending, paid, confirmed, shipped, delivered, cancelled, failed, totalRevenue, todayRevenue, todayOrders]
+      properties:
+        pending:
+          type: integer
+        paid:
+          type: integer
+        confirmed:
+          type: integer
+        shipped:
+          type: integer
+        delivered:
+          type: integer
+        cancelled:
+          type: integer
+        failed:
+          type: integer
+        totalRevenue:
+          type: integer
+          description: Tong doanh thu (don PAID+, VND).
+        todayRevenue:
+          type: integer
+          description: Doanh thu hom nay (VND).
+        todayOrders:
+          type: integer
+          description: So don hom nay.
+    TopProduct:
+      type: object
+      required: [productId, name, qty, revenue]
+      properties:
+        productId:
+          type: string
+        name:
+          type: string
+        qty:
+          type: integer
+          description: Tong so luong ban.
+        revenue:
+          type: integer
+          description: Tong doanh thu (VND).

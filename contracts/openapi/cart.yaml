@@ -1,0 +1,327 @@
+openapi: 3.1.0
+info:
+  title: Cart API
+  description: |
+    Gio hang cua cart-service. Hai che do xac thuc cung mot response shape:
+    - Guest: cookie `cart_token` (httpOnly, server cap qua POST /api/cart).
+    - User dang nhap: JWT bearer — gio hang gan theo userId.
+    GET enrich tung item: `unavailable=true` khi san pham bi xoa / het hang
+    (spec §6.1.2) — item van giu trong gio, checkout se chan.
+    Tien VND zero-decimal (integer). Moi error response: RFC 7807 problem+json
+    (khop common-lib `ApiError`).
+  version: 1.0.0
+servers:
+  - url: /
+    description: Qua API gateway (prefix /api/cart → cart-service)
+tags:
+  - name: cart
+    description: Gio hang (guest + user)
+paths:
+  /api/cart:
+    post:
+      tags: [cart]
+      operationId: createCart
+      summary: Tao gio hang guest
+      description: |
+        Guest chua co gio — goi de tao moi (khong body). Server tra Cart +
+        Set-Cookie `cart_token` (httpOnly). Lan sau guest gui ngam cookie nay.
+      responses:
+        '201':
+          description: Gio hang moi da tao + cookie cart_token.
+          headers:
+            Set-Cookie:
+              required: true
+              description: 'cart_token=...; HttpOnly; SameSite=Lax'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [cart]
+      operationId: getCart
+      summary: Xem gio hang hien tai
+      description: |
+        Guest qua cookie `cart_token`, user qua JWT — cung response shape.
+        Moi GET deu enrich lai tung item (unavailable khi san pham xoa/het hang).
+      responses:
+        '200':
+          description: Gio hang (co the rong — items []).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Guest chua co gio (khong co/cookie cart_token sai).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/cart/items:
+    post:
+      tags: [cart]
+      operationId: addCartItem
+      summary: Them san pham vao gio
+      description: |
+        Them variant vao gio (da co thi cong qty). Server enrich gia/ten tu
+        catalog va kiem tra ton kho. Response la Cart moi nhat (enrich).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddItemRequest'
+      responses:
+        '200':
+          description: Gio hang sau khi them.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: San pham / variant khong ton tai.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: |
+            Variant het hang. ApiError.detail dien ro variant nao het hang.
+            Chi bo qua khi request co `allowOos=true` (them duong — khong giam hang).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/cart/items/{itemId}:
+    patch:
+      tags: [cart]
+      operationId: updateCartItem
+      summary: Doi so luong 1 item
+      description: qty phai ≥ 1 (muon xoa thi DELETE). Response Cart moi nhat.
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Gio hang sau khi cap nhat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: So luong vuot ton kho.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      tags: [cart]
+      operationId: removeCartItem
+      summary: Xoa 1 item khoi gio
+      description: Tra ve Cart moi nhat sau khi xoa (chu khong phai 204 rong).
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+      responses:
+        '200':
+          description: Gio hang sau khi xoa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/cart/merge:
+    post:
+      tags: [cart]
+      operationId: mergeCart
+      summary: Merge gio guest vao gio user (JWT)
+      description: |
+        Can JWT. Body la `cartToken` cua gio guest. Gop vao gio cua user:
+        dedupe theo variantId (cong qty), cap nhat gia tu catalog.
+        Sau merge, cookie guest het hieu.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeCartRequest'
+      responses:
+        '200':
+          description: Gio hang da merge cua user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Gio guest khong ton tai (cartToken sai/het han).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ItemIdPath:
+      name: itemId
+      in: path
+      required: true
+      description: Id item trong gio (khong phai productId).
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Chua xac thuc / token het han.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Khong tim thay item.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    CartItem:
+      type: object
+      description: 1 dong hang — gia/ten la snapshot enrich tu catalog tai thoi diem GET.
+      required: [id, productId, variantId, slug, name, qty, unitPrice, lineTotal, unavailable]
+      properties:
+        id:
+          type: string
+          description: Id dong hang trong gio (dung cho PATCH/DELETE).
+        productId:
+          type: string
+        variantId:
+          type: string
+          description: Level variant (pin §6.1).
+        slug:
+          type: string
+          description: Slug san pham (resolve vi) de link sang PDP.
+        name:
+          type: string
+          description: Ten san pham DA resolve (vi).
+        image:
+          type: string
+          description: URL anh dai dien (co the rong).
+        qty:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: integer
+          description: Don gia hien tai (VND).
+        lineTotal:
+          type: integer
+          description: 'qty × unitPrice (VND).'
+        unavailable:
+          type: boolean
+          description: |
+            Enrich tai GET — true khi san pham da xoa / variant het hang
+            (spec §6.1.2). Item van hien trong gio nhung checkout se chan.
+    Cart:
+      type: object
+      required: [items, subtotal]
+      properties:
+        cartToken:
+          type: string
+          description: Chi co voi gio guest (user JWT khong can).
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          type: integer
+          description: Tong cac lineTotal (VND) — tinh tren item khong unavailable.
+    AddItemRequest:
+      type: object
+      required: [productId, variantId, qty]
+      properties:
+        productId:
+          type: string
+        variantId:
+          type: string
+        qty:
+          type: integer
+          minimum: 1
+          default: 1
+        allowOos:
+          type: boolean
+          default: false
+          description: |
+            Cho phep them du san pham het hang (hien "pre-order" trong gio).
+            Mac dinh false — het hang se 409.
+    UpdateItemRequest:
+      type: object
+      required: [qty]
+      properties:
+        qty:
+          type: integer
+          minimum: 1
+    MergeCartRequest:
+      type: object
+      required: [cartToken]
+      properties:
+        cartToken:
+          type: string
+          description: Token gio guest (tu cookie truoc khi login).

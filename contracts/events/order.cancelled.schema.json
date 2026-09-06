@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "order.cancelled.schema.json",
+  "title": "order.cancelled",
+  "description": "Đơn bị hủy (user/admin qua TTL 30' — SYSTEM). Inventory release qua event này; nếu đã PAID thì refund kèm theo (server lo, flag refunded). Producer: ordering-service.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "order.cancelled",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["orderId", "reason", "cancelledBy"],
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Lý do hủy (text tự do / mã nội bộ)"
+        },
+        "cancelledBy": {
+          "type": "string",
+          "enum": ["USER", "ADMIN", "SYSTEM"],
+          "description": "SYSTEM = TTL 30' không thanh toán"
+        },
+        "refunded": {
+          "type": "boolean",
+          "description": "Optional — true khi đã PAID và refund đã khởi tạo (PAID/CONFIRMED → CANCELLED kèm refund)"
+        }
+      }
+    }
+  }
+}

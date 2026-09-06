@@ -1,0 +1,169 @@
+# Ecommerce platform — INFRA ONLY (dev mode).
+# Backend services KHÔNG containerize ở dev — chạy host qua `make dev svc=<name>`.
+# Containerize toàn bộ = profile `full` (SF-10, `make full`).
+# Append-only per SF (shared-file ownership §6): SF mới thêm service block, không sửa block người khác.
+
+name: ecommerce
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      # Host 5433 (không phải 5432): máy dev đang có postgres compose khác
+      # (hub-store) giữ 5432 — override bằng PG_HOST_PORT trong .env nếu cần.
+      - "${PG_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: ecommerce-mailpit
+    ports:
+      - "1025:1025"   # SMTP sink (services gửi mail dev vào đây)
+      - "8025:8025"   # UI xem email
+    volumes:
+      - mailpitdata:/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8025/readyz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # D14 (2026-09-06): mongo cho log-service (SF-10 build service; container từ SF-1)
+  mongo:
+    image: mongo:7
+    container_name: ecommerce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: ecommerce-mongo-express
+    ports:
+      - "8089:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"   # dev-only UI — không auth (k8s/prod sẽ không chạy mongo-express)
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    healthcheck:
+      # image node-alpine — không có wget/curl, dùng http.get của node
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8081',r=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # D15 (2026-09-06): Elasticsearch cho search (SF-4 build engine/indexer; container từ SF-1)
+  elasticsearch:
+    image: elasticsearch:8.17.4
+    container_name: ecommerce-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  # Chỉ bật khi cần test webhook Stripe thật: docker compose --profile stripe up -d stripe-cli
+  # Forward → payment-service chạy host :8086 (SF-5 sở hữu endpoint).
+  stripe-cli:
+    image: stripe/stripe-cli
+    container_name: ecommerce-stripe-cli
+    profiles:
+      - stripe
+    command: listen --forward-to host.docker.internal:8086/api/payment/webhook
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}  # thiếu key → stripe-cli lỗi rõ khi bật profile, không vỡ compose
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "stripe", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitmqdata:
+  mailpitdata:
+  mongodata:
+  esdata:
+
+networks:
+  ecommerce-net:
+    name: ecommerce-net

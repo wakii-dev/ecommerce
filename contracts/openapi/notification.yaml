@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: Notification API
+  version: 1.0.0
+  description: |
+    Notification service — CHỦ YẾU event-driven: consume `order.confirmed` (email xác nhận),
+    `order.cancelled` (email hủy), `review.moderated` (email kết quả duyệt review) từ
+    exchange `ecommerce.events`. REST dưới đây chỉ còn 2 mặt: send email nội bộ (service
+    gọi, vd identity gửi token quên mật khẩu) + log admin để debug (dev xem UI thật ở Mailpit).
+servers:
+  - url: /
+    description: Same origin — service nội bộ; baseURL inject qua config khi runtime.
+tags:
+  - name: notification
+    description: Internal email send + admin log.
+paths:
+  /api/notification/emails:
+    post:
+      tags:
+        - notification
+      operationId: sendEmail
+      summary: Gửi email theo template (internal-only)
+      description: |
+        Chỉ service nội bộ gọi (qua network trust / service token — SF-3 wiring), KHÔNG
+        route qua gateway công khai. Template là tên render nội bộ (vd `password-reset`,
+        `order-confirmed`); `params` là biến render tự do theo template.
+        `idempotencyKey` optional: cùng key → không gửi lại (tránh double-send khi retry).
+      x-internal-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+      responses:
+        '202':
+          description: Đã nhận — gửi async (SMTP sink dev là Mailpit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailAccepted'
+        '400':
+          description: Payload không hợp lệ (to/email template sai)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/notification/admin/emails:
+    get:
+      tags:
+        - notification
+      operationId: listEmails
+      summary: Log email (admin, debug dev)
+      description: |
+        Log gửi email để debug — Mailpit là UI xem nội dung thật trong dev; endpoint này
+        phục vụ admin env production/staging. Phân trang 1-based.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: to
+          in: query
+          required: false
+          description: Lọc theo email người nhận (contains)
+          schema:
+            type: string
+            maxLength: 254
+      responses:
+        '200':
+          description: Page log email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailLogPage'
+        '400':
+          description: Tham số phân trang không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Số trang (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      description: Số item mỗi trang
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type: { type: string, default: "about:blank" }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        timestamp: { type: string, format: date-time }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    SendEmailRequest:
+      type: object
+      required:
+        - to
+        - template
+        - params
+      properties:
+        to:
+          type: string
+          format: email
+          description: Địa chỉ người nhận
+        template:
+          type: string
+          description: Tên template nội bộ (vd password-reset, order-confirmed, review-moderated)
+          maxLength: 64
+        params:
+          type: object
+          description: Biến render theo template (payload tự do — mỗi template tự định nghĩa key)
+          additionalProperties: true
+        idempotencyKey:
+          type: string
+          description: Nếu trùng key đã xử lý → bỏ qua gửi lại, trả emailId cũ
+    EmailAccepted:
+      type: object
+      required:
+        - emailId
+      properties:
+        emailId:
+          type: string
+          description: Id log email — tra cứu ở GET /admin/emails
+    EmailStatus:
+      type: string
+      enum:
+        - SENT
+        - FAILED
+    EmailLog:
+      type: object
+      required:
+        - id
+        - to
+        - template
+        - subject
+        - status
+        - sentAt
+      properties:
+        id:
+          type: string
+        to:
+          type: string
+          format: email
+        template:
+          type: string
+        subject:
+          type: string
+          description: Subject đã render
+        status:
+          $ref: '#/components/schemas/EmailStatus'
+        sentAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+          description: Lỗi SMTP khi FAILED
+    EmailLogPage:
+      type: object
+      description: Page chuẩn {items, page, size, total}
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailLog'
+        page:
+          type: integer
+          description: Trang hiện tại (1-based)
+        size:
+          type: integer
+        total:
+          type: integer
+          description: Tổng số item khớp filter

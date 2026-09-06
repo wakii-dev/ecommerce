@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "product.changed.schema.json",
+  "title": "product.changed",
+  "description": "Phát khi product tạo/sửa/xóa — ES indexer index theo slug per-locale + invalidate cache catalog. Producer: catalog-service.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "product.changed",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["productId", "action", "slugVi", "slugEn", "changedAt"],
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["CREATED", "UPDATED", "DELETED"],
+          "description": "DELETED → indexer xóa doc + cache invalidate; không kèm dữ liệu sản phẩm"
+        },
+        "slugVi": {
+          "type": "string",
+          "description": "Slug tiếng Việt (ES index per-locale)"
+        },
+        "slugEn": {
+          "type": "string",
+          "description": "Slug tiếng Anh (ES index per-locale)"
+        },
+        "changedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,682 @@
+openapi: 3.1.0
+info:
+  title: Identity API
+  description: |
+    Auth + profile cua identity-service (JWT RS256).
+    Public key de gateway/services verify: `GET /api/identity/.well-known/jwks.json`
+    (JWKS path pin — SF-3 gateway + cac service verify qua day).
+    Refresh token: cookie httpOnly `refresh_token` — khong bao gio nam trong response body.
+    Login co 2FA (D22): neu user bat 2FA thi tra `twoFactorRequired` + `challengeToken`
+    thay vi access token; client goi `POST /api/identity/2fa/verify` de nhan token.
+    OAuth (D22): Google/Facebook find-or-create + link email — chi tiet flow SF-15.
+    Moi error response: RFC 7807 `application/problem+json` (khop common-lib `ApiError`).
+  version: 1.0.0
+servers:
+  - url: /
+    description: Qua API gateway (prefix /api/identity → identity-service)
+tags:
+  - name: auth
+    description: Dang ky / dang nhap / phien (register, login, refresh, logout)
+  - name: me
+    description: Profile user hien tai
+  - name: admin
+    description: Quan tri user (role ADMIN)
+  - name: password
+    description: Quen / dat lai mat khau (D21)
+  - name: oauth
+    description: Dang nhap Google / Facebook (D22)
+  - name: 2fa
+    description: Xac thuc hai lop TOTP (D22)
+paths:
+  /api/identity/auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Dang ky tai khoan
+      description: Tao tai khoan moi voi role mac dinh CUSTOMER. Email phai duy nhat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Da tao tai khoan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/identity/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Dang nhap email + mat khau
+      description: |
+        Tra `LoginSuccess` (accessToken + set cookie httpOnly refresh_token).
+        Neu user bat 2FA (D22): tra `TwoFactorChallenge` voi HTTP 200 — client goi
+        `POST /api/identity/2fa/verify` kem challengeToken de hoan tat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: |
+            Dang nhap thanh cong — hoac challenge 2FA neu user bat hai lop.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/identity/auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refresh
+      summary: Lam moi access token
+      description: |
+        KHONG co request body. Server doc cookie httpOnly `refresh_token`;
+        cookie het hạn / khong hop le → 401. Response KHONG tra refresh token moi
+        trong body (cookie xoay boi server qua Set-Cookie).
+      responses:
+        '200':
+          description: Access token moi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/identity/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Dang xuat
+      description: Vo hieu hoa refresh token + xoa cookie httpOnly (Set-Cookie Max-Age=0).
+      responses:
+        '204':
+          description: Da dang xuat; cookie refresh_token duoc xoa.
+          headers:
+            Set-Cookie:
+              description: Xoa cookie refresh_token.
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/identity/me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: Profile user hien tai
+      description: Can JWT bearer. Tra profile + trang thai 2FA.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/identity/.well-known/jwks.json:
+    get:
+      tags: [auth]
+      operationId: getJwks
+      summary: JWKS public key (RFC 7517)
+      description: |
+        JWKS path PIN — gateway (SF-3) va cac service (SF-5) verify JWT RS256 qua day.
+        Tra RFC 7517 JSON Web Key Set: `{keys: [{kty, kid, alg: RS256, use: sig, n, e}]}`.
+      responses:
+        '200':
+          description: JSON Web Key Set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+  /api/identity/admin/users:
+    get:
+      tags: [admin]
+      operationId: adminListUsers
+      summary: Danh sach user (admin)
+      description: Can JWT bearer role ADMIN. Tim kiem theo q (email/ten, chua hoa don).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: q
+          in: query
+          required: false
+          description: Tu khoa tim kiem (email hoac fullName).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trang user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/identity/password/forgot:
+    post:
+      tags: [password]
+      operationId: forgotPassword
+      summary: Yeu cau dat lai mat khau (D21)
+      description: |
+        LUON tra 202 bat ke email co ton tai hay khong (khong lo user ton tai).
+        Email chua token het han 30 phut, gui qua notification-service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Da nhan yeu cau (khong lo email ton tai hay khong).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/identity/password/reset:
+    post:
+      tags: [password]
+      operationId: resetPassword
+      summary: Dat lai mat khau bang token (D21)
+      description: Token tu email forgot, het han 30 phut, dung mot lan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Da doi mat khau.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Token sai hoac het han.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/oauth/{provider}/authorize:
+    get:
+      tags: [oauth]
+      operationId: oauthAuthorize
+      summary: Bat dau OAuth Google/Facebook (D22)
+      description: 302 redirect sang trang consent cua provider. Flow chi tiet SF-15.
+      parameters:
+        - $ref: '#/components/parameters/OAuthProvider'
+      responses:
+        '302':
+          description: Redirect sang provider.
+          headers:
+            Location:
+              required: true
+              description: URL consent cua provider.
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: Provider khong ho tro (chi google|facebook).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/oauth/{provider}/callback:
+    get:
+      tags: [oauth]
+      operationId: oauthCallback
+      summary: Callback OAuth tu provider (D22)
+      description: |
+        Provider redirect ve day voi `code` mot-lan; service doi code lay profile,
+        find-or-create user + link email, roi 302 ve FE kem code mot-lan (query)
+        hoac tham so error neu tu choi. Flow chi tiet SF-15.
+      parameters:
+        - $ref: '#/components/parameters/OAuthProvider'
+        - name: code
+          in: query
+          required: false
+          description: Authorization code tu provider.
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          description: Ma loi tu provider (vd access_denied).
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect ve FE kem one-time code (hoac error).
+          headers:
+            Location:
+              required: true
+              description: URL FE redirect URI kem code/error.
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: Provider khong ho tro hoac callback sai tham so.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/2fa/setup:
+    post:
+      tags: [2fa]
+      operationId: setup2fa
+      summary: Sinh secret TOTP (D22)
+      description: Can JWT. Tra secret + otpauthUrl de client quet QR. Chua bat 2FA.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Secret TOTP moi (chua kich hoat).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorSetupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: 2FA da bat tu truoc.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/2fa/enable:
+    post:
+      tags: [2fa]
+      operationId: enable2fa
+      summary: Kich hoat 2FA bang ma TOTP (D22)
+      description: Can JWT. Xac nhan code tu authenticator app; thanh cong thi bat 2FA.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorEnableRequest'
+      responses:
+        '200':
+          description: Da bat 2FA — tra recovery codes (hien mot lan).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorEnableResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/identity/2fa/disable:
+    post:
+      tags: [2fa]
+      operationId: disable2fa
+      summary: Tat 2FA (D22)
+      description: Can JWT. Bat buoc xac nhan lai mat khau.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorDisableRequest'
+      responses:
+        '204':
+          description: Da tat 2FA.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Mat khau sai.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/2fa/verify:
+    post:
+      tags: [2fa]
+      operationId: verify2fa
+      summary: Xac nhan challenge 2FA khi login (D22)
+      description: Khong can JWT — xac thuc bang challengeToken tu login + ma TOTP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorVerifyRequest'
+      responses:
+        '200':
+          description: Dang nhap thanh cong.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccess'
+        '401':
+          description: challengeToken het han hoac code sai.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: So trang — 1-based.
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      description: So item moi trang (mac dinh 20, toi da 100).
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    OAuthProvider:
+      name: provider
+      in: path
+      required: true
+      description: OAuth provider.
+      schema:
+        type: string
+        enum: [google, facebook]
+  responses:
+    BadRequest:
+      description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Chua xac thuc / token hoac cookie het han.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Khong du quyen (can role ADMIN...).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Xung dot trang thai (vd email da ton tai).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    RegisterRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: Toi thieu 8 ky tu.
+        fullName:
+          type: string
+          minLength: 1
+    UserSummary:
+      type: object
+      required: [id, email, fullName, roles]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+          description: Vd [CUSTOMER]; admin co them ADMIN.
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    LoginResponse:
+      description: Login thanh thuong HOAC challenge 2FA (oneOf).
+      oneOf:
+        - $ref: '#/components/schemas/LoginSuccess'
+        - $ref: '#/components/schemas/TwoFactorChallenge'
+    LoginSuccess:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn:
+          type: integer
+          description: Thoi han access token (giay).
+        user:
+          $ref: '#/components/schemas/UserSummary'
+    TwoFactorChallenge:
+      type: object
+      required: [twoFactorRequired, challengeToken]
+      properties:
+        twoFactorRequired:
+          type: boolean
+          const: true
+        challengeToken:
+          type: string
+          description: Dung mot lan, ngan han — gui lai voi ma TOTP o /2fa/verify.
+    RefreshResponse:
+      type: object
+      required: [accessToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Thoi han access token (giay).
+    Me:
+      type: object
+      required: [id, email, fullName, roles, twoFactorEnabled]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        twoFactorEnabled:
+          type: boolean
+    Jwk:
+      type: object
+      description: Mot JSON Web Key (RFC 7517) — RSA RS256.
+      required: [kty, kid, alg, use, n, e]
+      properties:
+        kty:
+          type: string
+          enum: [RSA]
+        kid:
+          type: string
+        alg:
+          type: string
+          enum: [RS256]
+        use:
+          type: string
+          enum: [sig]
+        n:
+          type: string
+          description: Modulus base64url.
+        e:
+          type: string
+          description: Exponent base64url.
+    Jwks:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
+    AdminUser:
+      type: object
+      required: [id, email, fullName, roles, createdAt]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+    AdminUserPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+    TwoFactorSetupResponse:
+      type: object
+      required: [secret, otpauthUrl]
+      properties:
+        secret:
+          type: string
+          description: Base32 secret cho authenticator app.
+        otpauthUrl:
+          type: string
+          description: otpauth://totp/... de quet QR.
+    TwoFactorEnableRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Ma TOTP 6 chu so hien tai.
+    TwoFactorEnableResponse:
+      type: object
+      required: [recoveryCodes]
+      properties:
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+          description: Ma du phong — chi hien mot lan.
+    TwoFactorDisableRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+    TwoFactorVerifyRequest:
+      type: object
+      required: [challengeToken, code]
+      properties:
+        challengeToken:
+          type: string
+        code:
+          type: string
+          description: Ma TOTP 6 chu so hoac recovery code.

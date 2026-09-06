@@ -74,7 +74,7 @@ flowchart LR
 | `inventory` | 8084 | Stock theo variant, reservation TTL 30' all-or-nothing | `db_inventory` |
 | `ordering` | 8085 | Orders, **checkout saga**, coupons, state machine, admin stats | `db_ordering` |
 | `payment` | 8086 | Stripe test (intent/webhook/refund), `PaymentProviderAdapter` SPI | `db_payment` |
-| `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | — |
+| `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | `db_notification` |
 | `log` | 8088 | Fan-in **mọi domain event** → Mongo `event_log` (audit trail) | MongoDB |
 | `invoice` 🐍 | 8090 | **Python (FastAPI + ReportLab)** — stateless PDF renderer hóa đơn VN (internal-only) | — |
 | `partner-api` | 8091 | **Open API cho đối tác** `/open-api/v1/**`: API key + rate-limit, catalog/orders, webhook HMAC, docs portal | `db_partner` |
@@ -113,16 +113,28 @@ flowchart LR
 
 ## 🚀 Getting started
 
-> ⚙️ Đang hoàn thiện bởi SF-1 — lệnh chính xác cập nhật ngay khi nền móng merge.
+> ⚙️ Services + FE apps đang được xây dần theo từng SF — dưới đây là lệnh THẬT
+> của nền móng (SF-1): infra + service template + gateway + FE workspace.
 
 ```bash
-# Yêu cầu: JDK 21 · Docker Desktop · pnpm · make
+# Yêu cầu: JDK 21 · Maven 3.9+ · Docker Desktop · Node 20+ · pnpm 10 (corepack enable)
 cp .env.example .env        # điền STRIPE_SECRET_KEY (sk_test_...) để bật payment
+
 make infra                  # postgres (5 DB) · redis · rabbitmq · mailpit · mongo · elasticsearch
-make dev                    # toàn bộ services + frontend (đang xây)
+cd backend && mvn install -DskipTests && cd ..   # lần đầu: đẩy parent + common-lib vào ~/.m2
+
+make dev svc=template-service   # chạy 1 service dev mode (template | gateway | identity | ...)
+make dev svc=gateway            # smoke: http://localhost:8080/api/smoke
+
+pnpm -C frontend install && pnpm -C frontend build   # FE workspace (turbo)
 ```
 
+**Port DB:** postgres host = **5433** (container nội bộ 5432; máy dev có postgres
+compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
+
 **Infra UIs:** RabbitMQ `:15672` · Mailpit `:8025` · mongo-express `:8089` · Elasticsearch `:9200` · stripe-cli (profile `stripe`)
+
+**Make targets khác:** `make dev-fe app=<name>` · `make keys` (RSA keypair JWT, SF-3) · `make down` · `make full` (stub — SF-10)
 
 ---
 
@@ -166,13 +178,5 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 |---|---|
 | 📐 **Epic spec** | [`docs/superpowers/specs/2026-09-06-ecommerce-platform-design.md`](docs/superpowers/specs/2026-09-06-ecommerce-platform-design.md) — kiến trúc, decision log D1-D15, success criteria, saga design |
 | 🧱 **Bracket** | [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md) — 10 SF × 5 tier |
-| 📦 **Context packs** | [`docs/superpowers/contexts/`](docs/superpowers/contexts/) — spec slice + touch map + acceptance cho từng SF |
-| 📝 **ADRs** | [`docs/adr/`](docs/adr/) — saga, contracts, auth, service boundaries (hoàn thiện ở SF-10) |
-
----
-
-<div align="center">
-
-*Xây dựng theo workflow story: phân tích epic một lần → nhiều sub-feature song song qua isolated worktrees → merge về nhánh story → PR duyệt bởi con người.*
-
-</div>
+| 📦 **Context packs** | [`docs/superpowers/contexts/`](docs/superpowers/contexts/) — spec slice per SF |
+| 🗂 **ADR** | `docs/adr/` — quyết định kiến trúc chi tiết (SF-10 hoàn thiện) |

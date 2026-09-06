@@ -1,0 +1,33 @@
+{
+  "name": "ecommerce-frontend",
+  "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "gen": "turbo run gen"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@module-federation/vite": "catalog:",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "playwright": "catalog:",
+    "typescript": "catalog:",
+    "turbo": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  }
+}

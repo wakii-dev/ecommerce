@@ -41,10 +41,10 @@ spring:
       #   uri: http://localhost:8085
       #   predicates: [ "Path=/api/ordering/**" ]
       #   filters: [ "StripPrefix=1" ]
-      # - id: payment                                    # SF-5 · port 8086
-      #   uri: http://localhost:8086
-      #   predicates: [ "Path=/api/payment/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      - id: payment                                      # SF-5 · port 8086
+        uri: http://localhost:8086
+        predicates: [ "Path=/api/payment/**" ]
+        filters: [ "StripPrefix=1" ]
       # - id: notification                               # SF-10 · port 8087
       #   uri: http://localhost:8087
       #   predicates: [ "Path=/api/notification/**" ]

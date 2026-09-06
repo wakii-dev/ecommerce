@@ -8,7 +8,7 @@ Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán 
 
 ![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![Next.js](https://img.shields.io/badge/Next.js-SSR%2FISR-000000) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
 
-🚧 **Đang xây dựng** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · 10 sub-features · 5 tier · [📊 Tiến độ](#-tiến-độ-story)
+🚧 **Đang xây dựng** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · **15 sub-features · 7 tier · release 5 phase** · [📊 Tiến độ](#-tiến-độ-story) · [🚢 Release plan](#-release-plan--5-phases)
 
 </div>
 
@@ -33,7 +33,7 @@ flowchart LR
         PAY["payment<br/>:8086"]
         NOTI["notification<br/>:8087"]
         LOG["log<br/>:8088"]
-        INV["🐍 invoice<br/>:8090 PDF"]
+        PDF["🐍 invoice<br/>:8090 PDF"]
         PART["partner-api<br/>:8091 Open API"]
         AFF["affiliate<br/>:8092"]
     end
@@ -138,13 +138,87 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 
 ---
 
+## 🧱 Bracket — 15 SF · 7 tier
+
+```mermaid
+flowchart TD
+    subgraph T0["TIER 0"]
+        N1["SF-1 platform-foundation<br/>FI-311 · 13 tasks<br/>✅ Done"]
+    end
+    subgraph T1["TIER 1"]
+        N2["SF-2 contracts-design<br/>FI-312 · 14 tasks<br/>✅ Done"]
+    end
+    subgraph T2["TIER 2"]
+        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>🔨 In Progress"]
+        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>🔨 In Progress"]
+        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>🔨 In Progress"]
+    end
+    subgraph T3["TIER 3"]
+        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks"]
+        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks"]
+        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks"]
+        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks"]
+    end
+    subgraph T4["TIER 4"]
+        N11["SF-11 partner Open API<br/>FI-321 · 10 tasks"]
+        N12["SF-12 affiliate<br/>FI-322 · 10 tasks"]
+    end
+    subgraph T5["TIER 5"]
+        N10["SF-10 convergence + ship<br/>FI-320 · 13 tasks"]
+    end
+    subgraph T6["TIER 6"]
+        N13["SF-13 essentials<br/>FI-323 · 13 tasks"]
+        N14["SF-14 commerce ext<br/>FI-324 · 13 tasks"]
+        N15["SF-15 engagement<br/>FI-325 · 10 tasks"]
+    end
+    N1 --> N2
+    N2 --> N3
+    N2 --> N4
+    N2 --> N5
+    N3 --> N6
+    N4 --> N6
+    N5 --> N6
+    N3 --> N7
+    N4 --> N7
+    N5 --> N7
+    N3 --> N8
+    N4 --> N8
+    N5 --> N9
+    N4 --> N11
+    N9 --> N11
+    N3 --> N12
+    N6 --> N12
+    N9 --> N12
+    N7 --> N14
+    N9 --> N14
+    N10 --> N14
+    N3 --> N15
+    N4 --> N15
+    N5 --> N15
+    N10 --> N15
+    N6 --> N10
+    N7 --> N10
+    N8 --> N10
+    N9 --> N10
+    N11 --> N10
+    N12 --> N10
+    classDef done fill:#26AA99,stroke:#1d8275,color:#fff
+    classDef running fill:#FF9C08,stroke:#d68206,color:#fff
+    classDef todo fill:#555,stroke:#444,color:#eee
+    class N1,N2 done
+    class N3,N4,N5 running
+    class N6,N7,N8,N9,N10,N11,N12,N13,N14,N15 todo
+```
+
+> Bản render tương tác (hết hạn ~30 ngày): [share.onorca.dev/a/YghPe0uD5FEQ](https://share.onorca.dev/a/YghPe0uD5FEQ) · Nguồn: [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md)
+
 ## 📊 Tiến độ story
 
 | SF | Nội dung | Issue | Trạng thái |
 |---|---|---|---|
 | SF-1 | Nền móng: monorepo, compose, gateway, service template | [FI-311](https://linear.app/my-app-hoivu/issue/FI-311) | ✅ Done |
 | SF-2 | Contracts freeze (10 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ✅ Done |
-| SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ⏳ Todo |
+| SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ✅ Done |
 | SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
 | SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ⏳ Todo |
 | SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ⏳ Todo |

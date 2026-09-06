@@ -39,7 +39,13 @@
     <module>shared/common-lib</module>
     <module>gateway</module>
     <module>services/template-service</module>
+    <!-- SF-3 (FI-313) -->
+    <module>services/identity-service</module>
+    <!-- SF-4 (FI-314) -->
     <module>services/catalog-service</module>
+    <!-- SF-5 (FI-315) -->
+    <module>services/inventory-service</module>
+    <module>services/payment-service</module>
   </modules>
 
   <dependencyManagement>

@@ -9,7 +9,9 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
-    import: optional:classpath:gateway-routes.yml
+    import:
+      - optional:classpath:gateway-routes.yml
+      - optional:classpath:routes/gateway-auth.yml
 
 management:
   endpoints:

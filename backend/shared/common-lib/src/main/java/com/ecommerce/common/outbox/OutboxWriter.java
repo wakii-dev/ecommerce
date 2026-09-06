@@ -4,6 +4,7 @@ import com.ecommerce.common.event.EventEnvelope;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,16 +35,20 @@ public class OutboxWriter {
 
     private final OutboxMessageRepository repository;
     private final ObjectMapper objectMapper;
+    private final Environment environment;
 
-    public OutboxWriter(OutboxMessageRepository repository, ObjectMapper objectMapper) {
+    public OutboxWriter(OutboxMessageRepository repository, ObjectMapper objectMapper, Environment environment) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.environment = environment;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public OutboxMessage write(String eventType, JsonNode payload, String correlationId) {
         try {
-            EventEnvelope envelope = EventEnvelope.of(eventType, correlationId, payload);
+            // producer = tên service phát event (envelope.schema.json yêu cầu top-level)
+            String producer = environment.getProperty("spring.application.name", "unknown");
+            EventEnvelope envelope = EventEnvelope.of(producer, eventType, correlationId, payload);
             OutboxMessage message = OutboxMessage.pending(
                 eventType, objectMapper.writeValueAsString(envelope), correlationId);
             return repository.save(message);

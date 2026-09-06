@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GATEWAY AUTH POLICY — SF-3 (FI-313). Public paths + admin prefixes TẬP TRUNG
+# ở ĐÂY. SF sau cần path public (vd webhook) → THÊM 1 DÒNG vào public-paths.
+# JWT: verify RS256 qua JWKS identity (spec §3.4). Unauthenticated → 401;
+# authenticated thiếu role trên admin-prefixes → 403 (authorization chạy
+# TRƯỚC route dispatch — /api/admin/** chưa route vẫn 403, không 404).
+# ─────────────────────────────────────────────────────────────────────────────
+ecom:
+  gateway:
+    auth:
+      # Mặc định đi QUA chính gateway (path public) — không phụ thuộc strip nội bộ.
+      jwks-uri: ${IDENTITY_JWKS_URI:http://localhost:8080/api/identity/.well-known/jwks.json}
+      public-paths:
+        - /api/smoke
+        - /actuator/**
+        - /api/*/actuator/**
+        - /api/identity/auth/register
+        - /api/identity/auth/login
+        - /api/identity/auth/refresh
+        - /api/identity/auth/logout          # contract: cookie-only, không bearerAuth
+        - /api/identity/.well-known/**
+        - /api/catalog/**                    # guest browse — public từ SF-4
+      admin-prefixes:
+        - /api/admin/**                      # chữ ACCEPTANCE (path chưa route → 403 trước 404)
+        - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
+        # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

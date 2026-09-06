@@ -49,10 +49,16 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !(path.equals(APPLICATION_PREFIX) || path.startsWith(APPLICATION_PREFIX + "/"))
+        if (!(path.equals(APPLICATION_PREFIX) || path.startsWith(APPLICATION_PREFIX + "/"))) {
+            return true; // ngoài namespace API (actuator, lỗi, favicon...)
+        }
+        // Docs portal exempt — springdoc redirect UI assets sang
+        // /open-api/v1/swagger-ui/** (bên cạnh /docs + /api-docs)
+        return path.startsWith("/open-api/v1/docs")
             || path.startsWith("/open-api/v1/api-docs")
-            || path.equals("/open-api/v1/docs")
-            || path.startsWith("/open-api/v1/docs/");
+            || path.startsWith("/open-api/v1/swagger-ui")
+            || path.startsWith("/v3/api-docs")
+            || path.startsWith("/swagger-ui");
     }
 
     @Override

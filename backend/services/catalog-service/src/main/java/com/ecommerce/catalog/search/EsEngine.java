@@ -309,6 +309,7 @@ public class EsEngine implements SearchEngine {
     private <T> T degrade(String op, Exception e, Supplier<T> fallbackCall) {
         if (!degraded) {
             degraded = true;
+            healReindexQueued.set(false); // episode mới → heal được phép chạy lại (Q16, review nhóm 5)
             log.warn("[es] {} lỗi → degraded → PgFts fallback (không 500)", op, e);
         } else {
             log.debug("[es] {} lỗi (đã degraded) → PgFts fallback", op);

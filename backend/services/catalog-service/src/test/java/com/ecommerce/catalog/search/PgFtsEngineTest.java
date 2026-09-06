@@ -34,7 +34,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * là việc của EsEngine Task 6). Seed tối thiểu qua repository, seed runner TẮT
  * (base class) + uri ES rỗng → config chọn PgFts không ping.
  */
-@TestPropertySource(properties = {"catalog.seed.enabled=false", "elasticsearch.uri="})
+@TestPropertySource(properties = {
+    "catalog.seed.enabled=false", // override base (inlined properties của subclass THAY base)
+    "elasticsearch.uri=",
+    // base inline bị thay → khai báo lại 2 default AMQP (Task 5)
+    "outbox.relay.enabled=false",
+    "spring.rabbitmq.listener.simple.auto-startup=false"
+})
 class PgFtsEngineTest extends AbstractIntegrationTest {
 
     @Autowired

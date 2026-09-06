@@ -39,9 +39,9 @@ spring:
           predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en,/en/**,/_next/**" ]
       # SF-6 (2026-09-06) un-comment block cart — KHÔNG StripPrefix (SF-4
       # precedent): cart-service controllers map FULL /api/cart/** khớp contract.
-      - id: cart                                          # SF-6 · port 8083
-        uri: http://localhost:8083
-        predicates: [ "Path=/api/cart/**" ]
+        - id: cart                                          # SF-6 · port 8083
+          uri: http://localhost:8083
+          predicates: [ "Path=/api/cart/**" ]
         - id: inventory                                  # SF-5 · port 8084
           uri: http://localhost:8084
           predicates: [ "Path=/api/inventory/**" ]

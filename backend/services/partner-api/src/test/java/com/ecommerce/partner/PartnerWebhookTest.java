@@ -132,13 +132,10 @@ class PartnerWebhookTest extends AbstractPartnerApiTest {
 
     @Test
     void orderNotFromPartner_noDelivery() {
-        // đơn KHÔNG trong partner_order_refs (đơn customer thường) → bỏ qua
-        String envelope = """
-            {"eventId": "%s", "eventType": "order.paid", "occurredAt": "2026-09-07T03:00:00Z",
-             "correlationId": "r", "producer": "ordering-service", "schemaVersion": 1,
-             "payload": {"orderId": "%s", "paymentIntentId": "pi", "paidAt": "2026-09-07T03:00:00Z"}}
-            """.formatted(UUID.randomUUID(), UUID.randomUUID());
-        rabbitTemplate.convertAndSend("ecommerce.events", "order.paid", envelope);
+        // đơn KHÔNG trong partner_order_refs (đơn customer thường) → bỏ qua.
+        // Publish RAW bytes (helper publish) — convertAndSend(String) double-encode
+        // khiến message rơi vào poison-parse, KHÔNG tới nhánh ref-miss cần test.
+        publish("order.paid", UUID.randomUUID());
 
         Awaitility.await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(5))
             .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))));

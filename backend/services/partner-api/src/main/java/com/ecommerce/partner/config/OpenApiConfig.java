@@ -44,6 +44,12 @@ public class OpenApiConfig {
                     | `429` | Vượt rate-limit — đọc `Retry-After` (giây) rồi thử lại |
                     | `409` | Sản phẩm hết hàng **hoặc ngừng bán** |
 
+                    ### Đọc sản phẩm
+                    - `GET /products` + `/search` trả tóm tắt (slug, giá) — phân trang 1-based.
+                    - `GET /products/{id}` — **dùng `slug`** trả về từ list/search (vd
+                      `/products/sac-nhanh-20w`). Tra theo UUID chỉ hoạt động khi platform cấu hình
+                      token nội bộ; mặc định trả `502` — **hãy dùng slug**.
+
                     ### Tạo đơn (idempotent)
                     - `partnerRef` là id đơn bên HỆ THỐNG CỦA BẠN — **unique theo partner**. Gửi lại cùng
                       `partnerRef` → trả lại đơn đã có (không bao giờ double đơn), bất kể payload.

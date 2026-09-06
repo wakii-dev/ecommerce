@@ -10,7 +10,6 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpStatus.BAD_GATEWAY;
@@ -99,8 +98,6 @@ public class OrderingClient {
             log.info("[ordering] 401 — refresh service-account token, retry 1 lần");
             identity.getAccessToken();
             return call.run();
-        } catch (RestClientException e) {
-            throw e;
         }
     }
 

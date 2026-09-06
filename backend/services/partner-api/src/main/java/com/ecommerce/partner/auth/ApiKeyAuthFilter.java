@@ -118,6 +118,9 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     private void writeProblem(HttpServletResponse response, HttpStatus status, String title, String detail)
         throws IOException {
         response.setStatus(status.value());
+        // charset TRƯỚC getWriter() — không thì servlet mặc định ISO-8859-1,
+        // detail tiếng Việt thành mojibake (code-review 07/09)
+        response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         ApiError error = ApiError.of(status.value(), title, detail, null, MDC.get("requestId"), List.of());
         objectMapper.writeValue(response.getWriter(), error);

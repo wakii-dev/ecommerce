@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
@@ -42,6 +41,14 @@ import java.util.UUID;
  * IdempotencyConflict ở ordering nhưng đơn đã tồn tại) → không thấy ref mới
  * 409 "hết hàng"; 422 (ItemUnavailable — ngừng bán) → 409; 400 pass-through;
  * còn lại → 502.</p>
+ *
+ * <p><strong>Cố ý KHÔNG {@code @Transactional}:</strong> create() chỉ có 1
+ * INSERT; với tx bọc method, persist chỉ flush lúc commit (SAU khi method
+ * return) → DataIntegrityViolationException ném ngoài catch race-UNIQUE →
+ * 2 request đồng thời cùng partnerRef nhận 409 thay vì 201-replay, và giữ
+ * DB connection trong suốt HTTP call ordering (code-review 07/09). Không
+ * tx: save() commit ngay → DIVE ném đúng tại save() → catch re-fetch chạy
+ * như thiết kế.</p>
  */
 @Service
 public class PartnerOrderService {
@@ -59,7 +66,6 @@ public class PartnerOrderService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional
     public PartnerOrderCreated create(ApiKeyPrincipal principal, CreatePartnerOrderRequest request) {
         UUID partnerId = principal.partnerId();
         String ref = request.partnerRef().trim();

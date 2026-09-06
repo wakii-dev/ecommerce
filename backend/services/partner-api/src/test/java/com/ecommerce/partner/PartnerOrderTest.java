@@ -7,6 +7,7 @@ import com.ecommerce.partner.domain.PartnerOrderRefEntity;
 import com.ecommerce.partner.repo.ApiKeyRepository;
 import com.ecommerce.partner.repo.PartnerOrderRefRepository;
 import com.ecommerce.partner.repo.PartnerRepository;
+import com.ecommerce.partner.proxy.IdentityClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class PartnerOrderTest extends AbstractPartnerApiTest {
 
     @Autowired
     private PartnerOrderRefRepository refs;
+
+    @Autowired
+    private IdentityClient identityClient;
 
     private String rawKey;
     private PartnerEntity partner;
@@ -172,8 +176,10 @@ private String directOrderJson(UUID orderId, String status) {
     }
 
     @Test
-    void raceConflictWithRefExisting_returnsExistingOrder201() {
-        // 409 từ ordering nhưng ref đã tồn tại (race payload khác) → 201 đơn cũ
+    void orderingConflict_refAlreadyExists_returnsExistingOrder201() {
+        // 409 từ ordering nhưng ref đã tồn tại (race payload khác) → 201 đơn cũ.
+        // Lưu ý: nhánh catch 409-race thật (2 request qua layer-1 cùng lúc) được
+        // phủ bởi concurrentSamePartnerRef test — đây là path ref đã có TRƯỚC.
         UUID orderId = UUID.randomUUID();
         PartnerOrderRefEntity ref = new PartnerOrderRefEntity();
         ref.setPartnerId(partner.getId());
@@ -186,6 +192,104 @@ private String directOrderJson(UUID orderId, String status) {
         ResponseEntity<Map<String, Object>> response = postOrder(createBody("ref-race"));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().get("orderId")).isEqualTo(orderId.toString());
+    }
+
+    @Test
+    void concurrentSamePartnerRef_both201_sameOrder() throws Exception {
+        // code-review P1: 2 request ĐỒNG THỜI cùng partnerRef — không được 409
+        // (UNIQUE race), cả hai 201 cùng 1 đơn (một tạo, một replay-DIVE-catch).
+        UUID orderId = UUID.randomUUID();
+        WIRE.stubFor(post(urlEqualTo("/orders")).willReturn(okJson(orderJson(orderId, "PENDING"))));
+        WIRE.stubFor(get(urlEqualTo("/me/orders/" + orderId)).willReturn(okJson(directOrderJson(orderId, "PENDING"))));
+
+        String body = createBody("ref-thread-race");
+        int threads = 2;
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        try {
+            var futures = new java.util.ArrayList<java.util.concurrent.Future<ResponseEntity<Map<String, Object>>>>();
+            for (int i = 0; i < threads; i++) {
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    return postOrder(body);
+                }));
+            }
+            start.countDown();
+            var orderIds = new java.util.HashSet<String>();
+            for (var f : futures) {
+                ResponseEntity<Map<String, Object>> r = f.get(20, java.util.concurrent.TimeUnit.SECONDS);
+                // KHÔNG 409 — race UNIQUE phải kết thúc bằng 201 đơn cũ
+                assertThat(r.getStatusCode()).as("body=%s", r.getBody()).isEqualTo(HttpStatus.CREATED);
+                orderIds.add((String) r.getBody().get("orderId"));
+            }
+            assertThat(orderIds).hasSize(1); // đúng 1 đơn, không double
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void serviceAccountToken401_selfHealsRegisterAndRetry() throws Exception {
+        // code-review P1: identity login 401 lần đầu → register → login lại →
+        // đơn tạo thành công (self-healing path — spec §7). Self-heal diễn ra
+        // NỘI BỘ trong getAccessToken() → ordering POST đầu tiên đã mang token mới.
+        WIRE.resetAll();
+        WIRE.stubFor(post(urlEqualTo("/auth/login"))
+            .inScenario("relogin")
+            .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+            .willReturn(aResponse().withStatus(401))
+            .willSetStateTo("after-register"));
+        WIRE.stubFor(post(urlEqualTo("/auth/login"))
+            .inScenario("relogin")
+            .whenScenarioStateIs("after-register")
+            .willReturn(okJson(
+                "{\"accessToken\":\"tok-new\",\"tokenType\":\"Bearer\",\"expiresIn\":900,"
+                    + "\"user\":{\"id\":\"" + UUID.randomUUID() + "\",\"email\":\"svc@x\",\"fullName\":\"svc\"}}")));
+        WIRE.stubFor(post(urlEqualTo("/auth/register")).willReturn(okJson("{\"id\":\"u1\"}")));
+        UUID orderId = UUID.randomUUID();
+        WIRE.stubFor(post(urlEqualTo("/orders"))
+            .withHeader("Authorization", equalTo("Bearer tok-new"))
+            .willReturn(okJson(orderJson(orderId, "PENDING"))));
+
+        expireServiceAccountToken();
+
+        ResponseEntity<Map<String, Object>> response = postOrder(createBody("ref-relogin"));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().get("orderId")).isEqualTo(orderId.toString());
+        WIRE.verify(1, postRequestedFor(urlEqualTo("/auth/register"))); // đúng 1 register
+        WIRE.verify(1, postRequestedFor(urlEqualTo("/orders"))
+            .withHeader("Authorization", equalTo("Bearer tok-new"))); // token mới ngay từ call đầu
+    }
+
+    @Test
+    void ordering401_retriesOnceWithCachedToken() throws Exception {
+        // code-review P1: path OrderingClient.callWithTokenRetry — ordering chối
+        // token 401 LẦN ĐẦU → refresh (cache còn valid → cùng token) → retry đúng
+        // 1 lần → thành công. Scenario theo LẦN GỌI POST /orders.
+        UUID orderId = UUID.randomUUID();
+        WIRE.stubFor(post(urlEqualTo("/orders"))
+            .inScenario("ordering-retry")
+            .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+            .willReturn(aResponse().withStatus(401))
+            .willSetStateTo("retried"));
+        WIRE.stubFor(post(urlEqualTo("/orders"))
+            .inScenario("ordering-retry")
+            .whenScenarioStateIs("retried")
+            .willReturn(okJson(orderJson(orderId, "PENDING"))));
+
+        ResponseEntity<Map<String, Object>> response = postOrder(createBody("ref-retry-401"));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().get("orderId")).isEqualTo(orderId.toString());
+        WIRE.verify(2, postRequestedFor(urlEqualTo("/orders"))); // 401 → đúng 1 retry
+    }
+
+    /** Ép token service-account hết hạn — bật path login-401 cho test self-healing. */
+    @SuppressWarnings("unchecked")
+    private void expireServiceAccountToken() throws Exception {
+        var field = Class.forName("com.ecommerce.partner.proxy.IdentityClient")
+            .getDeclaredField("cache");
+        field.setAccessible(true);
+        ((java.util.concurrent.atomic.AtomicReference<Object>) field.get(identityClient)).set(null);
     }
 
     @Test

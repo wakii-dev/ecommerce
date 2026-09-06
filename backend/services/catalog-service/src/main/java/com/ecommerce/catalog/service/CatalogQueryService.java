@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.ecommerce.catalog.cache.CatalogCacheService;
 import com.ecommerce.catalog.domain.CategoryEntity;
 import com.ecommerce.catalog.domain.ProductEntity;
 import com.ecommerce.catalog.domain.ProductImageEntity;
@@ -61,13 +62,16 @@ public class CatalogQueryService {
     private final CategoryRepository categoryRepository;
     private final ProductImageRepository imageRepository;
     private final ProductVariantRepository variantRepository;
+    private final CatalogCacheService cache;
 
     public CatalogQueryService(ProductRepository productRepository, CategoryRepository categoryRepository,
-                               ProductImageRepository imageRepository, ProductVariantRepository variantRepository) {
+                               ProductImageRepository imageRepository, ProductVariantRepository variantRepository,
+                               CatalogCacheService cache) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.imageRepository = imageRepository;
         this.variantRepository = variantRepository;
+        this.cache = cache;
     }
 
     /**
@@ -128,29 +132,46 @@ public class CatalogQueryService {
         return new ProductCardPageDto(items, page, size, result.getTotalElements());
     }
 
-    /** PDP — khớp slug_vi HOẶC slug_en; draft/soft-deleted/không thấy → 404. */
+    /**
+     * PDP — khớp slug_vi HOẶC slug_en; draft/soft-deleted/không thấy → 404.
+     *
+     * <p>Cache-aside Redis (Task 7, spec Q13): resolve entity TRƯỚC rồi mới
+     * cache theo canonical key {@code cat:prod:{entity.slugVi}:{locale}} —
+     * 2 đường URL (slug vi/en) dùng chung 1 key mỗi locale. 404 không cache
+     * (draft→publish heal ngay). {@code cat:home} không cache backend —
+     * Next.js ISR (revalidate 60s) đã cache home listing; double-cache =
+     * YAGNI (deviation plan Task 7, coordinator duyệt trong dispatch).</p>
+     */
     @Transactional(readOnly = true)
     public ProductDetailDto getProduct(String slug, String locale) {
         ProductEntity product = productRepository.findBySlugViOrSlugEn(slug, slug)
             .filter(p -> p.getStatus() == ProductStatus.PUBLISHED && p.getDeletedAt() == null)
             .orElseThrow(() -> new NoSuchElementException("product: " + slug));
-        List<ProductImageEntity> images = imageRepository.findByProductIdOrderByPositionAsc(product.getId());
-        List<ProductVariantEntity> variants = variantRepository.findByProductIdOrderByCreatedAtAsc(product.getId());
-        return toDetail(product, images, variants, locale);
+        return cache.getOrLoadDetail(product.getSlugVi(), locale, () -> {
+            List<ProductImageEntity> images = imageRepository.findByProductIdOrderByPositionAsc(product.getId());
+            List<ProductVariantEntity> variants = variantRepository.findByProductIdOrderByCreatedAtAsc(product.getId());
+            return toDetail(product, images, variants, locale);
+        });
     }
 
-    /** Cây danh mục — load 1 lần, assemble đệ quy trong memory, children sort theo tên đã resolve. */
+    /**
+     * Cây danh mục — load 1 lần, assemble đệ quy trong memory, children sort
+     * theo tên đã resolve. Cache-aside 1 key/{@code locale} TTL 1800s (Task 7)
+     * — category write không emit event nên invalidate chỉ xảy ra theo TTL.
+     */
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoryTree(String locale) {
-        List<CategoryEntity> all = categoryRepository.findAll();
-        Map<UUID, List<CategoryEntity>> byParent = all.stream()
-            .filter(c -> c.getParentId() != null)
-            .collect(Collectors.groupingBy(CategoryEntity::getParentId));
-        return all.stream()
-            .filter(c -> c.getParentId() == null)
-            .sorted(Comparator.comparing(c -> c.getName().resolve(locale)))
-            .map(root -> toCategory(root, byParent, locale))
-            .toList();
+        return cache.getOrLoadCategoryTree(locale, () -> {
+            List<CategoryEntity> all = categoryRepository.findAll();
+            Map<UUID, List<CategoryEntity>> byParent = all.stream()
+                .filter(c -> c.getParentId() != null)
+                .collect(Collectors.groupingBy(CategoryEntity::getParentId));
+            return all.stream()
+                .filter(c -> c.getParentId() == null)
+                .sorted(Comparator.comparing(c -> c.getName().resolve(locale)))
+                .map(root -> toCategory(root, byParent, locale))
+                .toList();
+        });
     }
 
     // ── mappers ──────────────────────────────────────────────────────────────

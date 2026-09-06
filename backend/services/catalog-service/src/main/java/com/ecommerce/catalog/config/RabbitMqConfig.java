@@ -21,6 +21,7 @@ public class RabbitMqConfig {
     public static final String EVENTS_EXCHANGE = "ecommerce.events";
     public static final String ROUTING_PRODUCT_CHANGED = "product.changed";
     public static final String INDEXER_QUEUE = "q.catalog.product-changed.indexer";
+    public static final String CACHE_QUEUE = "q.catalog.product-changed.cache";
 
     @Bean
     public TopicExchange eventsExchange() {
@@ -35,5 +36,16 @@ public class RabbitMqConfig {
     @Bean
     public Binding indexerBinding() {
         return BindingBuilder.bind(indexerQueue()).to(eventsExchange()).with(ROUTING_PRODUCT_CHANGED);
+    }
+
+    /** Task 7 append — cache invalidate consumer, CÙNG routing key indexer. */
+    @Bean
+    public Queue cacheQueue() {
+        return QueueBuilder.durable(CACHE_QUEUE).build();
+    }
+
+    @Bean
+    public Binding cacheBinding() {
+        return BindingBuilder.bind(cacheQueue()).to(eventsExchange()).with(ROUTING_PRODUCT_CHANGED);
     }
 }

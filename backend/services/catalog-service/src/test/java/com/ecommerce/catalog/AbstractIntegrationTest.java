@@ -50,7 +50,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @TestPropertySource(properties = {
     "catalog.seed.enabled=false",
     "outbox.relay.enabled=false",
-    "spring.rabbitmq.listener.simple.auto-startup=false"
+    "spring.rabbitmq.listener.simple.auto-startup=false",
+    // Task 7: redis mặc định DEAD PORT — host 6379 là Redis THẬT của máy dev
+    // (ecommerce-redis); cache-aside ghi tree/prod keys TTL 1800s vào đó sẽ
+    // nhiễm chéo giữa các run (CategoryApiTest đọc tree cached của run trước —
+    // PG singleton khác → UUID lệch). Redis-chết = §5 bypass serve PG — IT nào
+    // cần cache thật override bằng container qua @DynamicPropertySource
+    // (CacheInvalidateTest).
+    "spring.data.redis.host=localhost",
+    "spring.data.redis.port=59999"
 })
 public abstract class AbstractIntegrationTest {
 

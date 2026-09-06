@@ -36,9 +36,9 @@ Full IT suite xanh → Rule 0 browser walkthrough (đăng ký → admin duyệt 
 **Exit:** story-verify gate sạch → FI-322 Done.
 
 ## Verify (Phase 5) — acceptance pack
-- [ ] User DK → PENDING; admin duyệt → ACTIVE code + rate 5%
-- [ ] `?ref=CODE` → URL sạch + cookie 30 ngày + click tracked
-- [ ] Mua qua cookie → CONFIRMED → dashboard conversion +1, earnings total×rate
-- [ ] Suspend → không track nữa (không lỗi khách); đổi rate → đơn sau rate mới
-- [ ] Order hủy/fail → entry EARNED(PENDING) bị gỡ
-- [ ] §5.14: link sai → không tracking không lỗi
+- [x] User DK → PENDING; admin duyệt → ACTIVE code + rate 5%
+- [x] `?ref=CODE` → URL sạch + cookie 30 ngày + click tracked
+- [x] Mua qua cookie → CONFIRMED → dashboard conversion +1, earnings total×rate
+- [x] Suspend → không track nữa (không lỗi khách); đổi rate → đơn sau rate mới
+- [x] Order hủy/fail → entry EARNED(PENDING) bị gỡ
+- [x] §5.14: link sai → không tracking không lỗi

@@ -45,12 +45,13 @@ spring:
           uri: http://localhost:8084
           predicates: [ "Path=/api/inventory/**" ]
           filters: [ "StripPrefix=1" ]
-        # SF-9 (2026-09-06) un-comment block ordering — StripPrefix=1 giữ nguyên
-        # (ordering controllers map paths SAU prefix, như identity/inventory/payment).
+        # SF-9 (2026-09-06): URL contract là /api/ordering/** (ordering.yaml) nhưng
+        # controllers ở :8085 map path GỌC (/orders, /me/orders, /admin/…) — KHÔNG có
+        # class-level /ordering prefix → strip CẢ "api/ordering" (StripPrefix=2).
         - id: ordering                                    # SF-9 · port 8085
           uri: http://localhost:8085
           predicates: [ "Path=/api/ordering/**" ]
-          filters: [ "StripPrefix=1" ]
+          filters: [ "StripPrefix=2" ]
         - id: payment                                    # SF-5 · port 8086
           uri: http://localhost:8086
           predicates: [ "Path=/api/payment/**" ]

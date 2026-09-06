@@ -136,6 +136,16 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 
 **Make targets khác:** `make dev-fe app=<name>` · `make keys` (RSA keypair JWT, SF-3) · `make down` · `make full` (stub — SF-10)
 
+**🔑 Tài khoản demo (seed SF-3 — idempotent từ env `ADMIN_EMAIL`/`ADMIN_PASSWORD` trong `.env.example`):**
+
+| Vai trò | Email | Mật khẩu | Ghi chú |
+|---|---|---|---|
+| **Admin** | `admin@ecommerce.local` | `admin123` | vào `/admin` (shell `:5173`) — products/categories CRUD live, dashboard |
+| Customer | tự đăng ký tại `/register` | — | vào `/admin` sẽ thấy trang 403 (RBAC guard UI) |
+
+> Shell (mọi MFE): `http://localhost:5173` — login → menu user → hoặc gõ thẳng `/admin`.
+> Admin standalone dev: `http://localhost:5177` (proxy `/api` qua `GATEWAY_URL`, mặc định `:8080`).
+
 ---
 
 ## 🧱 Bracket — 15 SF · 7 tier

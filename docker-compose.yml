@@ -137,12 +137,14 @@ services:
 
   # Chỉ bật khi cần test webhook Stripe thật: docker compose --profile stripe up -d stripe-cli
   # Forward → payment-service chạy host :8086 (SF-5 sở hữu endpoint).
+  # NOTE (SF-5 fix): service mount /payment/webhook (gateway StripPrefix bóc /api
+  # khi đi qua :8080) — forward thẳng service path, không có /api.
   stripe-cli:
     image: stripe/stripe-cli
     container_name: ecommerce-stripe-cli
     profiles:
       - stripe
-    command: listen --forward-to host.docker.internal:8086/api/payment/webhook
+    command: listen --forward-to host.docker.internal:8086/payment/webhook
     environment:
       STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}  # thiếu key → stripe-cli lỗi rõ khi bật profile, không vỡ compose
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -155,6 +157,58 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # SF-4 (2026-09-06): catalog-service (port 8082, db_catalog) — KHÔNG chạy dev:
+  # compose là infra-only, service chạy host JVM `make dev svc=catalog`.
+  # Bật image chỉ ở profile full (SF-10): docker compose --profile full up catalog-service
+  catalog-service:
+    build:
+      # repo root — Dockerfile COPY backend/... từ context gốc (như template-service)
+      context: .
+      dockerfile: backend/services/catalog-service/Dockerfile
+    container_name: ecommerce-catalog-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_catalog
+      RABBITMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+      ELASTICSEARCH_URI: http://elasticsearch:9200
+    expose:
+      - "8082"   # internal — gateway (full profile) gọi qua service name
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # SF-6 (2026-09-06): cart-service (port 8083, KHÔNG DB — Redis thuần D8).
+  # Dev: host JVM `make dev svc=cart`. Profile full (SF-10) build image.
+  cart-service:
+    build:
+      context: .
+      dockerfile: backend/services/cart-service/Dockerfile
+    container_name: ecommerce-cart-service
+    profiles:
+      - full
+    environment:
+      REDIS_HOST: redis
+      # enrichment gọi service khác qua service name (full profile)
+      CATALOG_BASE_URL: http://catalog-service:8082
+      INVENTORY_BASE_URL: http://inventory-service:8084
+    expose:
+      - "8083"   # internal — gateway (full profile) gọi qua service name
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
 
 volumes:
   pgdata:

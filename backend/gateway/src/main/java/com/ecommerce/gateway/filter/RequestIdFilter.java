@@ -6,7 +6,9 @@ import org.slf4j.MDC;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -32,9 +34,19 @@ public class RequestIdFilter implements GlobalFilter, Ordered {
             ? firstHeader(exchange)
             : UUID.randomUUID().toString();
 
-        ServerHttpRequest mutated = exchange.getRequest().mutate()
-            .header(HEADER, requestId)
-            .build();
+        // Decorator + copy mutable — `request.mutate().header(...)` ném UOE khi
+        // security chain (WebFilter, chạy TRƯỚC gateway handler) đã bọc request:
+        // DefaultServerHttpRequestBuilder wrap headers read-only (Spring 6.1.x),
+        // cả .header() lẫn .headers(consumer) đều put/set thẳng vào bản readOnly.
+        HttpHeaders propagated = new HttpHeaders();
+        propagated.putAll(exchange.getRequest().getHeaders());
+        propagated.set(HEADER, requestId);
+        ServerHttpRequest mutated = new ServerHttpRequestDecorator(exchange.getRequest()) {
+            @Override
+            public HttpHeaders getHeaders() {
+                return propagated;
+            }
+        };
 
         // Response header set TRƯỚC khi commit — mọi kiểu response đều mang được
         exchange.getResponse().beforeCommit(() -> {

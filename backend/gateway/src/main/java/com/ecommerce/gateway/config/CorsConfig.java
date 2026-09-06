@@ -3,6 +3,8 @@ package com.ecommerce.gateway.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -10,30 +12,30 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * CORS dev — 7 Vite server MFE (5173 shell + 5174-5179 remotes).
- * DANH SÁCH TƯỜNG MINH, KHÔNG dùng regex kiểu `517[3-9]`: Spring
- * {@code OriginPattern} chỉ hiểu wildcard `*` (phần còn lại được \Q..\E
- * quote thành literal) — `[3-9]` sẽ từ chối TẤT CẢ origin.
- * Profile `dev` only; prod gateway serve static same-origin (SF-10).
+ * CORS dev — MFE Vite (5173 shell + remotes) + Next storefront (:3000, D16).
+ * Profile `dev` only; prod gateway serve static same-origin (SF-10). Chi tiết
+ * lựa chọn pattern xem ở {@link #corsWebFilter()}.
  */
 @Configuration
 @Profile("dev")
 public class CorsConfig {
 
-    static final List<String> ALLOWED_ORIGINS = List.of(
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:5177",
-        "http://localhost:5178",
-        "http://localhost:5179"
-    );
+    /**
+     * SF-6 (2026-09-06): thay DANH SÁCH TƯỜNG MINH bằng pattern port-wildcard —
+     * danh sách cứ thối theo thời gian: SF-4 thêm Next :3000 vào route table
+     * nhưng quên CORS → mọi POST từ PDP 403 (được che bằng toast fail-soft
+     * "giỏ sẽ sớm khả dụng"); dev server auto-increment port khi đụng độ
+     * (shell 5179, Next 3010 khi :3000 bị chiếm). {@code http://localhost:*}
+     * là pattern HỢP LỆ của {@code OriginPattern} (wildcard `*` — khác regex
+     * kiểu `517[3-9]` mà warning cũ cấm). Profile `dev` only; prod gateway
+     * serve static same-origin (SF-10).
+     */
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(ALLOWED_ORIGINS);
+        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

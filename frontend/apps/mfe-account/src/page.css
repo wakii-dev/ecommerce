@@ -1,0 +1,119 @@
+/* page.css — layout trang auth/account (SF-3, direction A).
+   Mọi màu/spacing QUA CSS vars ui-kit; duy nhất cặp màu error banner
+   #FDEBEC/#C0151F được plan pin CHÍNH XÁC cho login/register tint. */
+
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-7, 48px) var(--space-4, 16px);
+}
+
+/* Card login/register — center, max 400px (uk-card đã có surface/border/shadow). */
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--c-text, #212121);
+}
+
+.auth-subtitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c-text, #212121);
+}
+
+/* Banner lỗi API — nền tint đỏ nhạt, chữ đỏ đậm (direction A). */
+.auth-error {
+  background: #FDEBEC;
+  color: #C0151F;
+  border-radius: var(--radius-md, 4px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: var(--text-md, 14px);
+}
+
+/* Inline "Đã lưu" sau updateProfile thành công. */
+.auth-saved {
+  color: var(--c-success, #26AA99);
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+}
+
+.auth-switch {
+  margin: 0;
+  font-size: var(--text-md, 14px);
+  color: var(--c-text-muted, #757575);
+}
+
+.auth-switch a {
+  color: var(--c-primary, #F53D2D);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Account — layout 2 cột: info card + form card (spec §4.5). */
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(280px, 460px);
+  gap: var(--space-5, 24px);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.account-info,
+.account-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.account-form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.account-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  margin: 0;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  font-size: var(--text-md, 14px);
+}
+
+.account-row dt {
+  color: var(--c-text-muted, #757575);
+  min-width: 64px;
+}
+
+.account-row dd {
+  margin: 0;
+  color: var(--c-text, #212121);
+  font-weight: 600;
+  word-break: break-all;
+}

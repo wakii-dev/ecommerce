@@ -1,6 +1,7 @@
-import { lazy, Suspense, useReducer } from 'react';
+import { lazy, Suspense, useEffect, useReducer } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { useT } from '@ecommerce/i18n';
+import { AuthProvider } from '@ecommerce/auth';
 import { Button, Card, EmptyState } from '@ecommerce/ui-kit';
 import Header from './header/Header';
 import ErrorBoundary from './ErrorBoundary';
@@ -11,6 +12,17 @@ import { usePath } from './router';
 // Remote page nạp LAZY — shell vẫn boot được khi remote down (import động chỉ
 // chạy khi vào /skeleton); RemotePage mới là nơi import module federation.
 const RemotePage = lazy(() => import('./pages/RemotePage'));
+
+// Trang auth/profile của mfe-account (SF-3) — cũng LAZY, cùng lý do: shell
+// vẫn boot khi remote down; ErrorBoundary thay trang bằng hướng dẫn chạy remote.
+const AccountLoginPage = lazy(() => import('account/LoginPage'));
+const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
+const AccountPage = lazy(() => import('account/AccountPage'));
+
+// Trang cart/checkout của mfe-checkout (SF-6) — LAZY + fallback pattern account.
+const CheckoutCartPage = lazy(() => import('checkout/CartPage'));
+const CheckoutPage = lazy(() => import('checkout/CheckoutPage'));
+const CheckoutConfirmationPage = lazy(() => import('checkout/ConfirmationPage'));
 
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
@@ -38,6 +50,46 @@ function RemoteErrorFallback({ error }: { error: Error }): ReactElement {
   );
 }
 
+/** Fallback cho các trang mfe-account (SF-3) — cùng pattern RemoteErrorFallback. */
+function AccountErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-account không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-account dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
+/** Fallback cho các trang mfe-checkout (SF-6) — cùng pattern. */
+function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-checkout không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-checkout dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
 export default function App(): ReactElement {
   const { t } = useT();
   const path = usePath();
@@ -45,6 +97,14 @@ export default function App(): ReactElement {
   // re-render đọc lại HeaderSlots.list (registry không có subscription —
   // tối giản cho harness).
   const [, bumpRegistry] = useReducer((count: number) => count + 1, 0);
+
+  // mfe-account bootstrap (main.tsx) truyền onRegistryChange dispatch event này
+  // khi widget auth của remote vào header → bump để Header đọc lại registry.
+  useEffect(() => {
+    const bump = (): void => bumpRegistry();
+    window.addEventListener('ecommerce:header-slots-changed', bump);
+    return () => window.removeEventListener('ecommerce:header-slots-changed', bump);
+  }, [bumpRegistry]);
 
   let page: ReactNode;
   if (path === '/skeleton') {
@@ -57,14 +117,64 @@ export default function App(): ReactElement {
     );
   } else if (path === '/ui-kit') {
     page = <UiKitDemoPage />;
+  } else if (path === '/login') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountLoginPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/register') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountRegisterPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/cart') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutCartPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/checkout') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/order/confirmation') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutConfirmationPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
   } else {
     page = <Home />;
   }
 
+  // AuthProvider bao TOÀN app — useAuth() trong widget/page của remote đọc cùng
+  // context này (singleton federation: remote dùng chung bản @ecommerce/auth).
   return (
-    <>
+    <AuthProvider>
       <Header />
       <main style={mainStyle}>{page}</main>
-    </>
+    </AuthProvider>
   );
 }

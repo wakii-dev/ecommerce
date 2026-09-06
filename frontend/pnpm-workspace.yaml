@@ -36,3 +36,12 @@ catalog:
   "@eslint/js": ^9.17.0
   typescript-eslint: ^8.18.0
   globals: ^15.14.0
+  # storefront-web (SF-4 Task 10) — Next 14 App Router + Node types
+  # (@types/react đã có ở trên — KHÔNG bump)
+  next: ^14.2.32
+  "@types/node": ^20.17.6
+  "@types/react-dom": ^18.3.1
+  # mfe-checkout (SF-6) — Stripe.js confirm thật (FE chỉ cần publishable key
+  # + clientSecret từ payment-service; KHÔNG thêm @stripe/react-stripe-js —
+  # mount Payment Element thủ công, giảm dep)
+  "@stripe/stripe-js": ^7.3.0

@@ -56,5 +56,7 @@ public abstract class AbstractPartnerApiTest {
         // Retry/scheduler nhanh cho IT (override ở test riêng khi cần chậm hơn)
         registry.add("partner.webhook.retry-base-ms", () -> "100");
         registry.add("partner.webhook.scheduler-interval-ms", () -> "200");
+        // IT tự tạo partner/key của riêng mình (deterministic) — tắt seed demo
+        registry.add("partner.seed.enabled", () -> "false");
     }
 }

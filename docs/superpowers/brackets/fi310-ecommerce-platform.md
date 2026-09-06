@@ -10,7 +10,7 @@ Tier: 0
 linear: FI-311
 What: Nền móng chạy được — `docker compose up -d`healthy (PG 5 DB, Redis, RabbitMQ, Mailpit, stripe-cli) + `make dev svc=<tên>` boot được service từ template + gateway route smoke 200 với request-id + frontend pnpm/turbo workspace build xanh. demo: hệ khung sống, chưa có business.
 Depends on: —
-Tasks: monorepo-scaffold-makefile-readme-env / pnpm-turbo-frontend-workspace / maven-multimodule-parent-springboot3-java21 / compose-infra-stack-5db-redis-rabbitmq-mailpit-stripecli / service-template-module-health-actuator-dockerfile / template-springdoc-flyway-conventions / template-testcontainers-it-harness / gateway-skeleton-route-table-cors / gateway-requestid-filter / common-lib-event-envelope-outbox-base-error-model / contracts-dir-skeleton-openapi-lint / makefile-dev-targets-per-service / compose-healthchecks-wiring
+Tasks: monorepo-scaffold-makefile-readme-env / pnpm-turbo-frontend-workspace / maven-multimodule-parent-springboot3-java21 / compose-infra-stack-pg5db-redis-rabbitmq-mailpit-mongo-stripecli / service-template-module-health-actuator-dockerfile / template-springdoc-flyway-conventions / template-testcontainers-it-harness / gateway-skeleton-route-table-cors / gateway-requestid-filter / common-lib-event-envelope-outbox-base-error-model / contracts-dir-skeleton-openapi-lint / makefile-dev-targets-per-service / compose-healthchecks-wiring
 
 ## SF-2 contracts-design-foundation
 Tier: 1
@@ -82,4 +82,4 @@ linear: FI-320
 Design: none
 What: Toàn hệ thống sống như một — mfe-checkout wire ordering THẬT (bỏ mocks), notification-service gửi email Mailpit, gateway full route table + đủ 5 remotes mounted, profile `full` compose chạy toàn bộ containerized, deterministic seed (coupon WELCOME10, sản phẩm search được, Stripe test cards), Playwright E2E: golden path + admin CRUD → storefront + review flow + saga fail. demo: 1 lệnh chạy cả hệ, mua hàng end-to-end thấy email, admin thấy đơn.
 Depends on: SF-6, SF-7, SF-8, SF-9
-Tasks: checkout-live-wiring-real-ordering / notification-service-mailpit-emails / gateway-full-routetable-final-mounts / make-dev-fullstack-compose-profile-full / deterministic-seed-coupons-products-stripecards / e2e-golden-path / e2e-admin-crud-storefront-assert / e2e-review-flow / e2e-saga-fail-declined / services-standalone-check / gateway-rbac-403-check / demo-readme-script / adr-finalize / perf-security-sanity
+Tasks: checkout-live-wiring-real-ordering / notification-service-mailpit-emails / log-service-mongo-scaffold / events-fanin-consumer-mongo-eventlog / gateway-full-routetable-final-mounts / make-dev-fullstack-compose-profile-full / deterministic-seed-coupons-products-stripecards / e2e-golden-path / e2e-admin-crud-storefront-assert / e2e-review-flow / e2e-saga-fail-declined / sanity-checks-standalone-rbac-perf-security / docs-demo-readme-adr

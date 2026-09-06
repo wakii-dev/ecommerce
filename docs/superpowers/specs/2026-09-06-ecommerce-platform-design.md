@@ -29,12 +29,13 @@
 | D5 | API style: REST contract-first, OpenAPI 3.1 specs là source of truth trong `contracts/`; TS clients sinh bằng openapi-typescript; Java side springdoc + contract-conformance test | AGENT (phase0), nhất quán với D1-D2 |
 | D6 | Event broker: **RabbitMQ** (topic exchange, DLQ, transactional outbox polling relay) | AGENT (phase0) |
 | D7 | Auth: email/password, **JWT RS256** (identity ký, services verify qua JWKS; gateway + service guard đều check `role` claim server-side) | AGENT (phase0, điều chỉnh RS256 vì Spring resource-server hỗ trợ native) |
-| D8 | Datastore: 1 container Postgres, **DB-per-service** (`db_identity`, `db_catalog`, `db_ordering`, `db_payment`, `db_inventory`); Redis cho cart + cache; cấm cross-DB join | AGENT (phase0) |
+| D8 | Datastore: 1 container Postgres, **DB-per-service** (`db_identity`, `db_catalog`, `db_ordering`, `db_payment`, `db_inventory`); Redis cho cart + cache; **MongoDB cho event/audit log (D14)**; cấm cross-DB join | AGENT (phase0) + USER (Mongo) |
 | D9 | Đặt reviews + wishlist vào **catalog-service** (cùng bounded context product); coupons vào **ordering-service** (gần logic tính tổng đơn). ADR ghi rõ đường extract thành service riêng khi cần → extensibility | AGENT quyết (BALANCED mode — flag: nếu user muốn tách service riêng, nói trước APPROVE) |
 | D10 | i18n: **vi mặc định + en** (i18next, vi/en catalogs trong `packages/i18n`); tiền tệ **VND** (Stripe zero-decimal) | AGENT (phase0 assumption, giữ nguyên) |
 | D11 | UI: Tailwind CSS + ui-kit tự build primitives (token hóa 2 theme storefront/admin), TanStack Query, react-router | AGENT (BALANCED mode) |
 | D12 | Deploy: docker-compose (dev: infra-only + apps trên host; profile `full`: toàn bộ containerized). Dockerfile per app. K8s chỉ ADR migration path | AGENT (phase0) |
 | D13 | **Design/product reference: https://tiki.vn** — storefront benchmark theo pattern UX Tiki (xem §4.1). Reference pattern, KHÔNG copy logo/brand/assets/data | **USER** (thêm sau spec draft) |
+| D14 | **MongoDB = central event/audit log store** (polyglot persistence): `log-service` (port 8088) fan-in TẤT CẢ domain events từ RabbitMQ → Mongo collection `event_log`. Consume-only — KHÔNG contract REST mới. Xem qua mongo-express (:8089). Admin activity page = backlog | **USER** (thêm sau APPROVE, trước SF-2 freeze) + AGENT chốt thiết kế fan-in |
 
 ## 3. Kiến trúc
 
@@ -57,7 +58,8 @@ ecommerce/
 │   │   ├── inventory-service/          # stock, reservation TTL → db_inventory
 │   │   ├── ordering-service/           # orders + saga orchestrator + outbox + coupons → db_ordering
 │   │   ├── payment-service/            # Stripe intents + webhook + adapter SPI → db_payment
-│   │   └── notification-service/       # consumes events → email (Mailpit dev)
+│   │   ├── notification-service/       # consumes events → email (Mailpit dev)
+│   │   └── log-service/                # fan-in TẤT CẢ domain events → Mongo event_log (D14)
 │   └── shared/common-lib/              # event envelope + outbox base + error model + security config
 ├── frontend/                           # pnpm workspace + Turborepo
 │   ├── apps/
@@ -89,6 +91,7 @@ ecommerce/
 | ordering | orders, order_items, coupons, checkout saga, outbox | db_ordering | order.created, order.paid, order.confirmed, order.cancelled, order.failed (created/paid: published for future consumers — additive) | payment.succeeded, payment.failed |
 | payment | payment_intents (Stripe), webhook events, adapter SPI | db_payment | payment.succeeded, payment.failed | (Stripe webhook in) |
 | notification | email templates, send log | (log/db nhẹ) | — | order.confirmed, order.cancelled, review.moderated |
+| log | activity/audit log tập trung (event_log) | **MongoDB** (D14) | — | TẤT CẢ domain events (queue bind topic `#`) |
 
 Command edges (sync REST, không MQ — pin): ordering → inventory `POST /reservations` (all-or-nothing, TTL 30'), ordering → payment `POST /intents`. Compensation/commit đi qua events (bảng trên) để có retry semantics.
 
@@ -172,12 +175,13 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 5. Gateway từ chối `/api/admin/**` không có JWT `role=admin` (401/403 — server-side enforcement).
 6. Review flow: mua xong → viết review → admin duyệt → review hiện trên PDP với badge verified.
 7. Saga compensation: fail-injection (payment declined) → stock được release, order FAILED, không rò rỉ reservation.
+8. Mongo `event_log` (mongo-express :8089) có documents cho TẤT CẢ domain events xảy ra trong demo — action ở UI → dòng log xuất hiện.
 
 ## 6. SF split (10 SF — mỗi SF 8-15 tasks, contract-first)
 
 | SF | Tên | Tier | Depends | Theme (~tasks) |
 |---|---|---|---|---|
-| SF-1 | platform-foundation | 0 | — | Repo scaffold (Makefile, compose infra PG/Redis/RabbitMQ/Mailpit/stripe-cli, db init), Maven parent + **service template module** (health/springdoc/Flyway/Testcontainers/Dockerfile), frontend pnpm+turbo scaffold, gateway skeleton (routes/request-id/CORS), shared common-lib (envelope/outbox base/error), contracts dir skeleton (~14) |
+| SF-1 | platform-foundation | 0 | — | Repo scaffold (Makefile, compose infra PG/Redis/RabbitMQ/Mailpit/Mongo+mongo-express/stripe-cli, db init), Maven parent + **service template module** (health/springdoc/Flyway/Testcontainers/Dockerfile), frontend pnpm+turbo scaffold, gateway skeleton (routes/request-id/CORS), shared common-lib (envelope/outbox base/error), contracts dir skeleton (~14) |
 | SF-2 | contracts-design-foundation | 1 | SF-1 | **Freeze toàn bộ OpenAPI specs (7 service) + JSON Schema events (fat payloads — §6.1) + order state machine (§3.6) + admin stats endpoints**, TS codegen → packages/contracts, packages/auth (RS256 decode/refresh singleton), ui-kit v1 (tokens + primitives + 2 theme), i18n vi/en, designer mock-prototype 3 hướng Tiki-inspired (§4.1) → USER CHỌN, **federation harness (shell + 1 skeleton remote qua MF 2.0 runtime — shared singletons 1 instance, pattern `REMOTE_*_URL` proven; gate: harness xanh trước khi T2 fork)**. Freeze contracts KHÔNG chờ designer choice (contract trước; ui-kit tokens theo hướng được chọn sau) — 1 lựa chọn hướng GLOBAL, các SF sau implement screens theo hướng đó (~14) |
 | SF-3 | identity + account | 2 | SF-2 | identity-service (register/login/refresh/JWT RS256/RBAC, seed admin), mfe-account (login/register/profile — orders page là placeholder cho tới SF-9), gateway auth wiring, shell header auth state (~11) |
 | SF-4 | catalog + browse | 2 | SF-2 | catalog-service (products/categories/images/search FTS/Redis cache+invalidate/seed, compare_price + flash_sale_ends_at + rating_avg/rating_count denormalized), mfe-storefront (home/PLP filter-sort-paginate/PDP gallery + add-to-cart stub), product.changed events (~14) |
@@ -186,7 +190,7 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 | SF-7 | admin MFE | 3 | SF-3, SF-4, SF-5 | mfe-admin shell + RBAC guards, products/categories CRUD (**live** — catalog có từ T2), coupons CRUD + reviews moderation queue + orders list/detail + revenue stats (**mock-gate** theo contract — ordering chưa có ở T3; low-stock live qua SF-5), live-data verify SF-10 (~13) |
 | SF-8 | reviews + wishlist | 3 | SF-3, SF-4 | reviews aggregate trong catalog-service (moderation states, verified-purchase từ order.confirmed — **event harness Testcontainers với synthetic order.confirmed**, không đòi ordering chạy thật), PDP reviews + write flow (mọi user đăng nhập viết được, badge verified qua event), wishlist APIs + heart + wishlist page, my-reviews (~11) |
 | SF-9 | ordering saga + coupons | 3 | SF-5 | ordering-service + saga orchestrator (reserve sync all-or-nothing, compensation edges + late-payment refund — §3.3, fail-injection tests) + outbox relay, coupons validate/usage-reserve, order state machine §3.6 + my-orders APIs **+ my-orders UI trong mfe-account (`pages/orders/*` — file-slice)** (~13) |
-| SF-10 | convergence + ship | 4 | SF-6, SF-7, SF-8, SF-9 | Checkout **live wiring** (mfe-checkout → ordering thật), **notification-service (email Mailpit)**, golden-path Playwright E2E + admin CRUD spec + **review-flow E2E (§5.6)** + saga fail spec (§5.7) + asserts §5.3 (admin tạo product → thấy trên storefront) / §5.4 (mỗi service standalone) / §5.5 (gateway 403 admin), deterministic seed (coupon code cố định, product names cho search, Stripe test cards 4242-success + 4000...0002-declined), profile `full` compose + static MFE hosting qua gateway + **final mounts: đủ 4 remote apps + shell host, full route table, `make dev` full-stack**, demo README + script, ADR hoàn thiện, perf/security sanity (~14) |
+| SF-10 | convergence + ship | 4 | SF-6, SF-7, SF-8, SF-9 | Checkout **live wiring** (mfe-checkout → ordering thật), **notification-service (email Mailpit) + log-service (Mongo `event_log` fan-in — D14)**, golden-path Playwright E2E + admin CRUD spec + **review-flow E2E (§5.6)** + saga fail spec (§5.7) + asserts §5.3 (admin tạo product → thấy trên storefront) / §5.4 (mỗi service standalone) / §5.5 (gateway 403 admin), deterministic seed (coupon code cố định, product names cho search, Stripe test cards 4242-success + 4000...0002-declined), profile `full` compose + static MFE hosting qua gateway + **final mounts: đủ 4 remote apps + shell host, full route table, `make dev` full-stack**, demo README + script, ADR hoàn thiện, perf/security sanity (~14) |
 
 **Anti-duplicate check (đã liệt kê tasks mọi SF):** scaffold service → SF-1 template (SF khác chỉ invoke = Zweck); auth FE → SF-2 packages/auth (SF khác consume); UI primitives → SF-2 ui-kit; i18n infra → SF-2 (keys per-SF là Zweck); admin shell → SF-7; contracts → SF-2 freeze. Không pattern nào lặp ≥2 SF ngoài Zweck-merges. Không SF < 8 tasks.
 

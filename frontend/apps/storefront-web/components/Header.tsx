@@ -1,5 +1,6 @@
 import type { Locale } from '../lib/format';
 import { localePath } from '../lib/format';
+import { shellUrl } from '../lib/site';
 
 import LocaleSwitcher from './LocaleSwitcher';
 import SearchBar from './SearchBar';
@@ -48,7 +49,7 @@ export default function Header({ locale }: { locale: Locale }) {
         <SearchBar locale={locale} />
         <div className="header-actions">
           <LocaleSwitcher locale={locale} />
-          <a className="header-action" href="/cart">
+          <a className="header-action" href={`${shellUrl()}/cart`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.8L20 8H6" strokeLinecap="round" strokeLinejoin="round" />
               <circle cx="9.5" cy="19.5" r="1.5" />
@@ -56,7 +57,7 @@ export default function Header({ locale }: { locale: Locale }) {
             </svg>
             {t.cart}
           </a>
-          <a className="header-action" href="/account">
+          <a className="header-action" href={`${shellUrl()}/account`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <circle cx="12" cy="8" r="4" />
               <path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" strokeLinecap="round" />

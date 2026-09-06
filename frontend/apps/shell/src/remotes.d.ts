@@ -50,6 +50,42 @@ declare module 'account/AccountPage' {
   export default AccountPage;
 }
 
+// ── mfe-checkout (SF-6, apps/mfe-checkout) — cart/checkout/confirmation remote.
+// bootstrap nhận ShellContext (cùng shape account/bootstrap) lúc initCheckoutShell.
+declare module 'checkout/bootstrap' {
+  export type SlotKey = 'left' | 'center' | 'right';
+  export interface ShellContext {
+    HeaderSlots: {
+      register(slot: SlotKey, id: string, component: import('react').ComponentType): void;
+      unregister(slot: SlotKey, id: string): void;
+    };
+    navigate: (to: string) => void;
+    onRegistryChange?: () => void;
+  }
+  export function initCheckoutShell(ctx: ShellContext): void;
+  export function appNavigate(to: string): void;
+}
+
+declare module 'checkout/CartBadge' {
+  const CartBadge: import('react').ComponentType;
+  export default CartBadge;
+}
+
+declare module 'checkout/CartPage' {
+  const CartPage: import('react').ComponentType;
+  export default CartPage;
+}
+
+declare module 'checkout/CheckoutPage' {
+  const CheckoutPage: import('react').ComponentType;
+  export default CheckoutPage;
+}
+
+declare module 'checkout/ConfirmationPage' {
+  const ConfirmationPage: import('react').ComponentType;
+  export default ConfirmationPage;
+}
+
 // ── mfe-admin (SF-7, apps/mfe-admin) — khu quản trị. bootstrap nhận
 // ShellContext do shell truyền lúc initAdminShell (main.tsx); remote KHÔNG
 // import code host — shape này là hợp đồng 1 chiều.

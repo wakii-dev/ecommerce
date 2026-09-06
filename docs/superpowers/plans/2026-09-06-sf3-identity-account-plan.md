@@ -15,6 +15,7 @@
 - KHÔNG đụng: `contracts/**`, `frontend/packages/{contracts,ui-kit,i18n}`, route block của service khác, file SF-4/5 (song song).
 - Backend paths service-ngắn (gateway `StripPrefix=2`): controller map `/auth/**`, `/me`, `/admin/**`, `/.well-known/**`.
 - pnpm-lock: chỉ regen bằng `pnpm -C frontend install` (không sửa tay).
+- **Build serialized (coordinator chịu):** task song song chỉ OVERLAP giai đoạn EDIT; lệnh `mvn ... test` / `pnpm install|build` chạy DUY NHẤT 1 process tại 1 thời điểm (reactor backend/ + node_modules dùng chung — race khi 2 mvn cùng rebuild common-lib). Worker chỉ chạy build trong cửa sổ coordinator cấp.
 
 ---
 
@@ -24,7 +25,7 @@
 - Modify: `backend/pom.xml` (append 1 module line)
 - Create: `backend/services/identity-service/pom.xml`, `src/main/java/com/ecommerce/identity/IdentityServiceApplication.java`, `config/{JwtProperties,SecurityConfig}.java`, `security/PemKeys.java`, `user/{UserEntity,Role,UserRepository}.java`, `token/{RefreshTokenEntity,RefreshTokenRepository}.java`
 - Create: `src/main/resources/application.yml`, `src/main/resources/db/migration/V1__users_roles_refresh.sql`
-- Create: `src/test/java/com/ecommerce/identity/AbstractIntegrationTest.java`, `src/test/java/com/ecommerce/identity/IdentityScaffoldIT.java`, `src/test/resources/docker-java.properties`
+- Create: `src/test/java/com/ecommerce/identity/AbstractIntegrationTest.java`, `src/test/java/com/ecommerce/identity/IdentityScaffoldIntegrationTest.java`, `src/test/resources/docker-java.properties`
 
 - [ ] **Step 1: Append module vào parent pom** — `backend/pom.xml`, trong `<modules>` thêm dòng (append-only, không đổi dòng khác):
 
@@ -117,6 +118,17 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>rabbitmq</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- WebTestClient cho IT (identity là servlet stack — webflux CHỈ test scope) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -251,7 +263,8 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     @Query("""
            select u from UserEntity u
-           where (:q is null or lower(u.email) like lower(concat('%', :q, '%'))
+           where (cast(:q as string) is null
+                       or lower(u.email) like lower(concat('%', :q, '%'))
                        or lower(u.fullName) like lower(concat('%', :q, '%')))
            """)
     Page<UserEntity> search(@Param("q") String q, Pageable pageable);
@@ -600,7 +613,6 @@ LƯU Ý (đổi so với đoạn trên — seed mặc định RỖNG để trán
 package com.ecommerce.identity;
 
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -641,20 +653,23 @@ public abstract class AbstractIntegrationTest {
     static Path privateKeyPath;
     static Path publicKeyPath;
 
-    @TempDir
-    static void writeKeys(Path tempDir) throws Exception {
-        KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
-        gen.initialize(2048);
-        KeyPair pair = gen.generateKeyPair();
-        RSAPrivateCrtKey priv = (RSAPrivateCrtKey) pair.getPrivate();
-        RSAPublicKey pub = (RSAPublicKey) pair.getPublic();
-        RSAPublicKey pubFromCrt = (RSAPublicKey) KeyFactory.getInstance("RSA")
-            .generatePublic(new RSAPublicKeySpec(priv.getModulus(), priv.getPublicExponent()));
+    private static void writeKeys() {
+        try {
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+            gen.initialize(2048);
+            KeyPair pair = gen.generateKeyPair();
+            RSAPrivateCrtKey priv = (RSAPrivateCrtKey) pair.getPrivate();
+            RSAPublicKey pubFromCrt = (RSAPublicKey) KeyFactory.getInstance("RSA")
+                .generatePublic(new RSAPublicKeySpec(priv.getModulus(), priv.getPublicExponent()));
 
-        privateKeyPath = tempDir.resolve("jwt-private.pem");
-        publicKeyPath = tempDir.resolve("jwt-public.pem");
-        Files.writeString(privateKeyPath, pem("PRIVATE KEY", priv.getEncoded()));
-        Files.writeString(publicKeyPath, pem("PUBLIC KEY", pubFromCrt.getEncoded()));
+            Path tempDir = Files.createTempDirectory("identity-it-keys");
+            privateKeyPath = tempDir.resolve("jwt-private.pem");
+            publicKeyPath = tempDir.resolve("jwt-public.pem");
+            Files.writeString(privateKeyPath, pem("PRIVATE KEY", priv.getEncoded()));
+            Files.writeString(publicKeyPath, pem("PUBLIC KEY", pubFromCrt.getEncoded()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Sinh key IT thất bại", e);
+        }
     }
 
     private static String pem(String label, byte[] der) {
@@ -664,6 +679,7 @@ public abstract class AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
+        writeKeys(); // suppliers resolve LAZY — sinh key ở đây an toàn về ordering (không @TempDir method: JUnit 5.10 chỉ cho FIELD/PARAMETER)
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
@@ -675,7 +691,7 @@ public abstract class AbstractIntegrationTest {
 }
 ```
 
-`IdentityScaffoldIT.java`:
+`IdentityScaffoldIntegrationTest.java`:
 
 ```java
 package com.ecommerce.identity;
@@ -687,7 +703,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Scaffold: context boot + Flyway tạo đúng 2 bảng + JWKS sẵn sàng. */
-class IdentityScaffoldIT extends AbstractIntegrationTest {
+class IdentityScaffoldIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbc;
@@ -720,7 +736,7 @@ class IdentityScaffoldIT extends AbstractIntegrationTest {
 }
 ```
 
-- [ ] **Step 9: Build + chạy IT** — `cd backend && mvn -pl services/identity-service -am test -DskipITs=false` (surefire chạy *IT theo tag? kiểm: template chạy `mvn test` đủ — pattern SF-1). Expected: BUILD SUCCESS, IT PASS (Docker phải chạy — đã healthy).
+- [ ] **Step 9: Build + chạy IT** — `cd backend && mvn -pl services/identity-service -am test — LƯU Ý: test class PHẢI đuôi `*Test`/`*IntegrationTest` (surefire default includes, KHÔNG chạy `*IT`). Expected: BUILD SUCCESS, IT PASS (Docker phải chạy — đã healthy).
 
 - [ ] **Step 10: Commit** — stage từ `git status`:
 
@@ -943,6 +959,8 @@ public class AuthController {
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email đã tồn tại");
         }
+        // RACE duplicate: unique constraint nổ → common-lib GlobalExceptionHandler
+        // đã map DataIntegrityViolationException → 409 problem+json (không cần catch tại đây).
         UserEntity user = new UserEntity();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
@@ -1174,7 +1192,7 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Đầy đủ luồng auth: register → login → refresh (rotate) → logout (revoke) → reuse 401. */
-class AuthApiIT extends AbstractIntegrationTest {
+class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
     static final AtomicInteger SEQ = new AtomicInteger();
     static final Pattern RAW_COOKIE = Pattern.compile("refresh_token=([^;]+)");
@@ -1333,17 +1351,17 @@ class AuthApiIT extends AbstractIntegrationTest {
 - [ ] **Step 7: AdminApiIT + SeedAdminIT + OutboxIT**:
 
 ```java
-// AdminApiIT: tạo customer (register) + admin (save trực tiếp qua UserRepository + passwordEncoder)
+// AdminApiIntegrationTest: tạo customer (register) + admin (save trực tiếp qua UserRepository + passwordEncoder)
 // → customer token GET /admin/users → 403; admin token → 200 {items,page,size,total};
 // ?q= tìm theo email/fullName; ?page=&size= phân trang (tạo 25 user → size=10 total=26...).
 // Admin tạo: UserEntity admin=new UserEntity(); setEmail(unique); setPasswordHash(encoder.encode("admin123"));
 //            setFullName("Admin"); setRole(Role.ADMIN); userRepository.save(admin);
 
-// SeedAdminIT: @SpringBootTest riêng với properties identity.seed.admin-email=admin@test.local
+// SeedAdminIntegrationTest: @SpringBootTest riêng với properties identity.seed.admin-email=admin@test.local
 // admin-password=admin123 → context boot 2 lần (2 ApplicationRunner chạy) → đúng 1 admin trong DB
 // (đếm bằng UserRepository.countByEmail("admin@test.local") == 1) → login /auth/login admin@test.local OK.
 
-// OutboxIT: extends AbstractIntegrationTest + RabbitMQContainer (copy pattern template
+// OutboxIntegrationTest (đổi tên khỏi *IT — surefire default chỉ chạy *Test): extends AbstractIntegrationTest + RabbitMQContainer (copy pattern template
 // OutboxIntegrationTest) → gọi AuthController.register qua WebTestClient → hàng outbox
 // status=PENDING có envelope eventType=user.created, payload.userId = id từ response 201;
 // outboxRelay.poll() → nhận message trên queue bind "user.created" → envelope nguyên vẹn.
@@ -1561,7 +1579,7 @@ import com.nimbusds.jwt.SignedJWT;
  * no token protected → 401; public paths → qua.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class GatewayAuthIT {
+class GatewayAuthIntegrationTest {
 
     @LocalServerPort int port;
 
@@ -1696,7 +1714,7 @@ class GatewayAuthIT {
 
 **CHỈNH (executor thực hiện):** `DynamicPropertySource` chạy TRƯỚC `@BeforeAll` — chuyển logic start-stub vào **static initializer** của class (sinh key + start server + set stubPort), để registry đọc đúng `stubPort`. Nhớ khai báo `GatewayApplication` thêm `@ConfigurationPropertiesScan` (hoặc `@EnableConfigurationProperties(GatewayAuthProperties.class)` đã có ở config — đủ).
 
-- [ ] **Step 7: Chạy** — `cd backend && mvn -pl gateway -am test`. Expected: GatewaySmokeTest CŨ vẫn xanh (public /api/smoke) + GatewayAuthIT 8 test xanh.
+- [ ] **Step 7: Chạy** — `cd backend && mvn -pl gateway -am test`. Expected: GatewaySmokeTest CŨ vẫn xanh (public /api/smoke) + GatewayAuthIntegrationTest 8 test xanh.
 
 - [ ] **Step 8: Commit** — `git add backend/gateway && git commit -m "feat(gateway): JWT auth qua JWKS identity — public-paths tập trung, admin guard 403, route identity"`
 
@@ -1776,10 +1794,10 @@ function clientOptions(): ApiClientOptions {
   };
 }
 
-let identityClient: IdentityClient | null = null;
+// KHÔNG cache client: config (fetchImpl stub trong test) đổi qua configureAuth —
+// dựng per-call (object rẻ). Cache sẽ bám stale fetchImpl của test đầu tiên.
 function identity(): IdentityClient {
-  identityClient ??= createIdentityClient(clientOptions());
-  return identityClient;
+  return createIdentityClient(clientOptions());
 }
 
 function toAuthUser(): AuthUser {
@@ -1816,8 +1834,13 @@ export async function logout(): Promise<void> {
 
 /** PATCH /api/identity/me — GAP endpoint (REQUIREMENT-GAP FI-310, chưa có trong generated client). */
 export async function updateProfile(input: ProfileInput): Promise<MeProfile> {
-  const config = authStore.getConfig();
+  // PATCH chưa có trong generated client (GAP FI-310) → executeRequest với RouteDef local.
   return executeRequest(clientOptions(), ['PATCH', '/api/identity/me'], input) as Promise<MeProfile>;
+}
+
+/** GET /api/identity/me — prefill trang /account (dùng getMe của generated client). */
+export async function fetchProfile(): Promise<MeProfile> {
+  return identity().getMe({}) as Promise<MeProfile>;
 }
 ```
 
@@ -1905,16 +1928,16 @@ describe('auth api', () => {
 });
 ```
 
-- [ ] **Step 5: Chạy** — `pnpm -C frontend --filter @ecommerce/auth test && pnpm -C frontend --filter @ecommerce/auth build`. Expected: PASS + tsc sạch.
+- [ ] **Step 5: Chạy** — `pnpm -C frontend install` (regen lockfile cho dep contracts mới của package) rồi `pnpm -C frontend --filter @ecommerce/auth test && pnpm -C frontend --filter @ecommerce/auth build`. Expected: PASS + tsc sạch.
 
-- [ ] **Step 6: Commit** — `git add frontend/packages/auth && git commit -m "feat(auth): login/register/logout/updateProfile API + identityBaseUrl config + 401-refresh-retry"`
+- [ ] **Step 6: Commit** — `git add frontend/packages/auth && git commit -m "feat(auth): login/register/logout/updateProfile/fetchProfile API + identityBaseUrl config + 401-refresh-retry"`
 
 ---
 
 ### Task 5: mfe-account remote — scaffold + bootstrap + AuthWidget + 3 pages (dep Task 4)
 
 **Files:**
-- Create: `frontend/apps/mfe-account/{package.json,vite.config.ts,tsconfig.json,index.html}`, `src/{main.tsx,bootstrap.tsx,AuthWidget.tsx,styles.css}`, `src/pages/{LoginPage,RegisterPage,AccountPage}.tsx`
+- Create: `frontend/apps/mfe-account/{package.json,vite.config.ts,tsconfig.json,index.html}`, `src/{api.ts,main.tsx,bootstrap.tsx,AuthWidget.tsx,styles.css}`, `src/pages/{LoginPage,RegisterPage,AccountPage}.tsx`
 
 - [ ] **Step 1: Scaffold** — copy structure `_skeleton-remote` (package.json đổi name `@ecommerce/mfe-account`, THÊM dep `"@ecommerce/contracts": "workspace:*"`). vite.config.ts:
 
@@ -1992,6 +2015,21 @@ export function initAccountShell(ctx: ShellContext): void {
   ctx.onRegistryChange?.();
   void authStore.refresh().then((ok) => readyResolve?.(ok));
 }
+```
+
+- [ ] **Step 2b: src/api.ts** — re-export (pages/AuthWidget import `./api` / `../api`):
+
+```ts
+// mfe-account/src/api.ts — mỏng, chuyển tiếp từ packages/auth (singleton federation).
+// Giữ 1 điểm import để sau này SF-8/9/12 thêm slice riêng (orders/wishlist/affiliate).
+export {
+  login,
+  register,
+  logout,
+  updateProfile,
+  fetchProfile
+} from '@ecommerce/auth';
+export type { RegisterInput, CredentialsInput, ProfileInput, MeProfile } from '@ecommerce/auth';
 ```
 
 - [ ] **Step 3: AuthWidget.tsx** — guest links / user dropdown (ui-kit + tokens; `useAuth` reactive nhờ AuthProvider ở shell):
@@ -2107,14 +2145,6 @@ import { appNavigate, authReady } from '../bootstrap';
 ```
 (Guard: `useEffect(() => { let alive = true; authReady.then(ok => { if (alive && !ok) appNavigate('/login'); }); return () => { alive = false; }; }, [])`. Prefill: sau authReady OK → GET profile bằng `updateProfile({})`? KHÔNG — PATCH rỗng đụng data; thêm `fetchProfile()` vào packages/auth api.ts: `executeRequest(clientOptions(), ['GET', '/api/identity/me'], {})` (route GET /me — export `fetchProfile()` từ api.ts, thêm 5 dòng + 1 test). Form: fullName + phone (prefill), email + role badge (chỉ đọc — badge primary tint), Button Lưu loading, thành công → inline "Đã lưu" + authStore.setToken giữ nguyên (profile claim mới áp ở refresh sau — header tên vẫn đọc từ user hiện tại, gọi `authStore.setToken` KHÔNG đổi được claims → UI cập nhật tên qua state cục bộ dùng cho dropdown; đơn giản: hiện toast "Đã lưu" và update state fullName cục bộ).)
 
-**Bổ sung Task 5 Step 4b — `fetchProfile` vào packages/auth/api.ts:**
-
-```ts
-export async function fetchProfile(): Promise<MeProfile> {
-  return executeRequest(clientOptions(), ['GET', '/api/identity/me'], {}) as Promise<MeProfile>;
-}
-```
-
 - [ ] **Step 5: main.tsx standalone** (debug khi chạy riêng :5176 — pattern skeleton, render LoginPage trong div center) + `page.css` (class `.auth-page` center, `.auth-card` max-width 400 — dùng tokens var, KHÔNG hex ngoài tokens).
 
 - [ ] **Step 6: pnpm install + build + test**:
@@ -2198,7 +2228,7 @@ declare module 'account/bootstrap' {
   export function initAccountShell(ctx: ShellContext): void;
   export function appNavigate(to: string): void;
 }
-declare module 'account/AuthWidget' { const c: ComponentType; export default c; }
+declare module 'account/AuthWidget' { const c: import('react').ComponentType; export default c; }
 declare module 'account/LoginPage' { const c: ComponentType; export default c; }
 declare module 'account/RegisterPage' { const c: ComponentType; export default c; }
 declare module 'account/AccountPage' { const c: ComponentType; export default c; }
@@ -2244,12 +2274,32 @@ import('account/bootstrap')
 
 ---
 
-### Task 7: Full build + integration xanh (dep T2, T3, T5, T6)
+### Task 7: Full build + integration xanh + stack chạy thật (dep T2, T3, T5, T6)
 
-- [ ] **Step 1:** `cd backend && mvn -am -pl services/identity-service,gateway test` — BUILD SUCCESS (ITs + smoke).
+- [ ] **Step 1:** `cd backend && mvn -am -pl services/identity-service,gateway test` — BUILD SUCCESS (IntegrationTests + smoke).
 - [ ] **Step 2:** `pnpm -C frontend exec turbo build test` — sạch (tất cả workspace).
 - [ ] **Step 3:** fix mọi fail phát hiện (3-WHY mỗi lỗi; attempt-log qua `~/.claude/bin/story-attempt log`).
-- [ ] **Step 4:** commit nếu có fix — `fix(sf-3): ...`.
+- [ ] **Step 4: Bật stack thật cho Task 8** (tất cả process chạy nền, log ra /tmp):
+
+```bash
+make keys                                   # infra/keys (đã có thì skip)
+export ADMIN_EMAIL=admin@ecommerce.local ADMIN_PASSWORD=admin123
+# ⚠ KHÔNG `source .env` nguyên khối: .env ghi JWT_PRIVATE_KEY_PATH=infra/keys/...
+# (repo root) — make dev chạy từ backend/ nên default yml `../infra/keys/...` MỚI đúng.
+# Chỉ export ADMIN_* (seed admin cho flow 5).
+make dev svc=identity > /tmp/identity.log 2>&1 &
+make dev svc=gateway  > /tmp/gateway.log 2>&1 &
+pnpm -C frontend --filter @ecommerce/mfe-account dev > /tmp/mfe-account.log 2>&1 &
+pnpm -C frontend --filter @ecommerce/shell dev       > /tmp/shell.log 2>&1 &
+sleep 20
+curl -s localhost:8081/actuator/health | grep -o '"status":"UP"'
+curl -s localhost:8080/actuator/health | grep -o '"status":"UP"'
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5173/login     # 200 (vite serve)
+curl -s -X POST localhost:8080/api/identity/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"smoke2@test.local","password":"password123","fullName":"Smoke"}' -o /dev/null -w '%{http_code}\n'  # 201 QUA GATEWAY
+```
+
+- [ ] **Step 5:** commit nếu có fix — `fix(sf-3): ...`. Giữ stack chạy cho Task 8.
 
 ### Task 8: BROWSER VERIFY Rule 0 (3 tầng) + verify ACCEPTANCE pack (dep Task 7)
 

@@ -257,6 +257,12 @@ paths:
             type: string
             enum: [vi, en]
             default: vi
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Ngon ngu resolve content. Fallback vi.
+          schema:
+            type: string
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
       responses:
@@ -289,6 +295,12 @@ paths:
             type: string
             enum: [vi, en]
             default: vi
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Ngon ngu resolve content. Fallback vi.
+          schema:
+            type: string
       responses:
         '200':
           description: Goi y.
@@ -309,6 +321,14 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
         - name: Accept-Language
           in: header
           required: false

@@ -169,11 +169,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 components:
-  securitySchemes:
-    internalService:
-      type: http
-      scheme: bearer
-      description: Service-to-service — JWT internal hoặc network trust (SF-3 gateway wiring); contract không pin cơ chế.
   schemas:
     ApiError:
       type: object

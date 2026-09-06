@@ -28,6 +28,7 @@ paths:
     post:
       tags: [inventory]
       operationId: createReservation
+      x-internal-only: true
       summary: Tao reservation ton kho (variant level)
       description: |
         Goi boi ordering-service trong saga tao don (buoc reserve).
@@ -95,6 +96,8 @@ paths:
       description: |
         Cho dashboard admin (bang low-stock). `threshold` mac dinh 10 —
         tra cac variant co `available` ≤ threshold.
+      security:
+        - bearerAuth: []
       parameters:
         - name: threshold
           in: query
@@ -113,10 +116,32 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LowStockItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT RS256 tu identity — role=admin cho admin endpoints (SF-3 gateway wiring).
   responses:
     BadRequest:
       description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Thieu/JWT khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: JWT hop le nhung khong du quyen (yeu cau role=admin).
       content:
         application/problem+json:
           schema:

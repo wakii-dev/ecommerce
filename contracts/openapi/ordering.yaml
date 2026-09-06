@@ -40,7 +40,7 @@ paths:
           ngay sau reserve inventory; PAID khi admin giao hang.
         - Stripe: tra `clientSecret` de FE confirm payment (zero-decimal VND).
         - Diem thuong: `usePoints` (so diem dung) → `pointsDiscount` tren Order.
-        Loi: 409 het ton kho (detail kem `insufficient[]`), 422 coupon khong hop le.
+        Loi: 409 het ton kho (`insufficient[]` structured — CreateOrderConflictError), 422 coupon khong hop le.
       security:
         - bearerAuth: []
       parameters:
@@ -64,12 +64,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '409':
           description: |
-            Het ton kho (ApiError.detail kem `insufficient[]` — variantId/requested/available),
-            hoac trung Idempotency-Key khac payload.
+            Het ton kho (all-or-nothing — `insufficient[]` structured, mirror
+            ReservationConflictError inventory.yaml), hoac trung Idempotency-Key
+            khac payload (truong hop nay khong co `insufficient`).
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/ApiError'
+                $ref: '#/components/schemas/CreateOrderConflictError'
         '422':
           description: Coupon khong hop le (het han / khong dat minOrderValue / sai code).
           content:
@@ -97,8 +98,6 @@ paths:
                 $ref: '#/components/schemas/ValidateCouponResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
   /api/ordering/coupons/public:
     get:
       tags: [coupons]
@@ -821,6 +820,35 @@ components:
                 type: string
               message:
                 type: string
+    InsufficientStock:
+      type: object
+      required: [variantId, requested, available]
+      properties:
+        variantId:
+          type: string
+        requested:
+          type: integer
+          minimum: 1
+        available:
+          type: integer
+          minimum: 0
+          description: Ton kho co the mua (da tru reserved).
+    CreateOrderConflictError:
+      type: object
+      description: |
+        Body 409 cua POST /orders — mirror ReservationConflictError cua inventory.yaml
+        (all-or-nothing). Replay Idempotency-Key khac payload cung tra 409 nhung
+        KHONG co `insufficient` (vi vay field nay khong required).
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+        - type: object
+          properties:
+            insufficient:
+              type: array
+              minItems: 1
+              description: Cac variant thieu hang (chi co khi 409 do het stock).
+              items:
+                $ref: '#/components/schemas/InsufficientStock'
     OrderStatus:
       type: string
       description: |
@@ -832,7 +860,7 @@ components:
         | PAID      | CONFIRMED | system                             |
         | CONFIRMED | SHIPPED   | admin (POST .../ship)              |
         | SHIPPED   | DELIVERED | admin (POST .../deliver); COD→PAID |
-        | PENDING   | CANCELLED | admin, hoac SYSTEM TTL 30'         |
+        | PENDING   | CANCELLED | admin, USER (POST .../cancel), hoac SYSTEM TTL 30' |
         | PAID / CONFIRMED | CANCELLED | admin (+ refund tu dong) |
         | PENDING   | FAILED    | system                             |
 

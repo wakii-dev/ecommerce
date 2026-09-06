@@ -44,7 +44,7 @@ liên file — chấp nhận lặp có chủ ý. Đổi envelope → đổi đ�
 ## Validate
 
 ```bash
-# Parse-all (không cần thêm dependency) — script này cũng được CI chạy:
+# Parse-all (không cần thêm dependency) — chạy tay/CI khi wire (chưa có CI events hiện tại):
 for f in contracts/events/*.schema.json; do
   node -e "JSON.parse(require('fs').readFileSync('$f','utf8')); console.log('OK $f')"
 done

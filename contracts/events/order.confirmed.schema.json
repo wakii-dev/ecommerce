@@ -83,6 +83,10 @@
               "price": {
                 "type": "integer",
                 "description": "Đơn giá VND tại thời điểm đặt"
+              },
+              "name": {
+                "type": "string",
+                "description": "Tên sản phẩm đã resolve (R2 FI-312: notification cần cho email xác nhận — contract cấm consumer call-back HTTP)"
               }
             }
           }

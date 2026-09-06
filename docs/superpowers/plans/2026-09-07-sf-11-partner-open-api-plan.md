@@ -51,12 +51,12 @@ Contracts frozen (partner-api.yaml SF-2) — KHÔNG sửa được; services kh�
 | # | Task | Files chính | Xong khi |
 |---|------|-------------|----------|
 | 1 | Scaffold + Flyway + IT harness | pom (bucket4j), Application, application.yml, V1+V10, 4 entity + repo, Dockerfile, AbstractPartnerApiTest (PG+Rabbit Testcontainers), docker-java.properties | `mvn -pl services/partner-api test` xanh (context boot + flyway migrate trong IT) |
-| 2 | API-key auth + rate-limit + seed | auth/ApiKeyAuthFilter, ApiKeyService, PartnerRateLimiter, config/SecurityConfig, seed/PartnerSeedRunner | IT: 401 matrix (thiếu/sai/revoke/expire), 403 scope, 429+Retry-After |
+| 2 | API-key auth + rate-limit + seed | auth/ApiKeyAuthFilter, ApiKeyService, PartnerRateLimiter, config/SecurityConfig, seed/PartnerSeedRunner (partner + API key — **service-account ensure thuộc T4**, nơi IdentityClient tồn tại) | IT: 401 matrix (thiếu/sai/revoke/expire), 403 scope, 429+Retry-After |
 | 3 | Catalog proxy | web/PartnerCatalogController, proxy/CatalogClient, mapper flatten | IT: list/detail(slug+UUID ma trận token)/categories flatten/search; 502 catalog chết |
-| 4 | Orders + service-account | web/PartnerOrderController, proxy/OrderingClient, proxy/IdentityClient, partner_order_refs flow | IT: 201+replay 1-call; 409 recheck; 422→409; 400 pass-through; GET chặn partner khác |
-| 5 | Webhook HMAC delivery | webhook/PartnerEventConsumer, WebhookDeliveryService, WebhookRetryScheduler, HmacSigner, RabbitMqConfig | IT: HMAC verify; retry→DEAD 3 attempts; SUSPENDED/non-partner skip |
-| 6 | Docs portal | config/OpenApiConfig + springdoc yml | IT: /open-api/v1/docs 2xx + api-docs JSON có 6 paths + mô tả auth/webhook |
-| 7 | Infra wiring + full build | gateway-routes.yml, gateway-auth.yml, docker-compose.yml, Makefile, .env.example, 01-create-dbs.sh | `mvn -q package` toàn repo + compose config hợp lệ |
+| 4 | Orders + service-account | web/PartnerOrderController, proxy/OrderingClient, **proxy/IdentityClient + ensure service-account (gọi lúc boot/seed)**, partner_order_refs flow | IT: 201+replay 1-call; 409 recheck; 422→409; 400 pass-through; **5xx→502; identity 401 → re-login 1 lần**; GET chặn partner khác |
+| 5 | Webhook HMAC delivery | webhook/PartnerEventConsumer, WebhookDeliveryService, WebhookRetryScheduler, HmacSigner, RabbitMqConfig | IT: HMAC verify; retry→DEAD 3 attempts; SUSPENDED/non-partner skip; **order.* lạ → WARN+skip không crash không marker** (dep thực chỉ cần T1 — edge T2 vô hại khi inline) |
+| 6 | Docs portal | config/OpenApiConfig + springdoc yml | IT: /open-api/v1/docs 2xx + api-docs JSON có 6 paths + mô tả auth/webhook; **browser-check Swagger UI render thật tại :8091/open-api/v1/docs** |
+| 7 | Infra wiring + full build | gateway-routes.yml, gateway-auth.yml, docker-compose.yml, Makefile, .env.example, 01-create-dbs.sh | `mvn -q package` toàn repo + compose config hợp lệ + **db_partner TỒN TẠI trên volume dev (CREATE DATABASE thực thi + psql check)** |
 
 - **File structure:** package `com.ecommerce.partner` — tách lớp như spec §3 (config/auth/web/proxy/webhook/domain/repo/seed); migrations theo convention V1 nền + V10 domain.
 - **Testing strategy:** unit (`*Test` thường: HmacSigner vector, scope map, flatten) + IT (1 class `PartnerApiIntegrationTest` kế thừa harness — PG+Rabbit thật, WireMock identity/ordering/catalog + receiver stub; naming `*Test` theoSurefire); IT matrix map từng dòng ACCEPTANCE.

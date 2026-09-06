@@ -49,3 +49,14 @@ declare module 'account/AccountPage' {
   const AccountPage: import('react').ComponentType;
   export default AccountPage;
 }
+
+// ── mfe-account SF-8 append — wishlist + my-reviews pages.
+declare module 'account/WishlistPage' {
+  const WishlistPage: import('react').ComponentType;
+  export default WishlistPage;
+}
+
+declare module 'account/MyReviewsPage' {
+  const MyReviewsPage: import('react').ComponentType;
+  export default MyReviewsPage;
+}

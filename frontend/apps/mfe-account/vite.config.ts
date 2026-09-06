@@ -11,7 +11,10 @@ const mfeConfig = defineMfeConfig({
     './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
     './RegisterPage': './src/pages/RegisterPage.tsx',
-    './AccountPage': './src/pages/AccountPage.tsx'
+    './AccountPage': './src/pages/AccountPage.tsx',
+    // SF-8 append — wishlist + my-reviews slice
+    './WishlistPage': './src/pages/wishlist/WishlistPage.tsx',
+    './MyReviewsPage': './src/pages/my-reviews/MyReviewsPage.tsx'
   }
 });
 

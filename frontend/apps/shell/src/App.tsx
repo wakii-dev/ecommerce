@@ -18,6 +18,9 @@ const RemotePage = lazy(() => import('./pages/RemotePage'));
 const AccountLoginPage = lazy(() => import('account/LoginPage'));
 const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
 const AccountPage = lazy(() => import('account/AccountPage'));
+// SF-8: wishlist + my-reviews của mfe-account — cùng pattern lazy + fallback.
+const WishlistPage = lazy(() => import('account/WishlistPage'));
+const MyReviewsPage = lazy(() => import('account/MyReviewsPage'));
 
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
@@ -113,6 +116,24 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <AccountPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account/wishlist') {
+    // SF-8: wishlist page (mfe-account slice)
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <WishlistPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account/reviews') {
+    // SF-8: my-reviews page (mfe-account slice)
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <MyReviewsPage />
         </Suspense>
       </ErrorBoundary>
     );

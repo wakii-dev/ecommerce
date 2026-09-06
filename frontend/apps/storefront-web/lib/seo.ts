@@ -89,11 +89,6 @@ export function homeMetadata(locale: Locale): HomeMetadataResult {
 }
 
 
-/**
- * Metadata PDP: seoTitle/seoDescription priority, fallback name/description.
- * robots.index = false khi locale `en` VÀ có fallback (thiếu bản dịch SEO —
- * trang en nội dung vi không nên index).
- */
 // ── Sitemap entry builders (Task 14 — pure, unit-test được) ─────────────────
 
 /** Card tối thiểu cần cho sitemap (subset ProductCard — slug/slugEn luôn có). */
@@ -143,16 +138,33 @@ export function buildStaticSitemapEntries(base: string): SitemapEntry[] {
   });
 }
 
+/** Chỉ 2 field nội dung cần cho so sánh fallback (subset SeoProduct/ProductDetail). */
+export type FallbackContent = Pick<SeoProduct, 'name' | 'description'>;
+
 /**
- * Metadata PDP: seoTitle/seoDescription priority, fallback name/description.
- * robots.index = false khi locale `en` VÀ có fallback (thiếu bản dịch SEO —
- * trang en nội dung vi không nên index).
+ * en page có PHẢI là bản fallback vi không — so sánh NỘI DUNG thật (name +
+ * description) với product vi-resolved, KHÔNG nhìn seoTitle/seoDescription.
+ * Lý do: seo fields là ADMIN OVERRIDE (seed thường không có) — dùng chúng làm
+ * tín hiệu fallback khiến MỌI en PDP bị noindex dù có bản dịch en thật.
+ * API trả chuỗi đã resolve theo locale nên không tự biết fallback bằng cách
+ * nhìn 1 product — bắt buộc so với bản vi (trang en fetch thêm).
+ * viProduct null/undefined (vi fetch fail/404) → UNKNOWN → ưu tiên indexable:
+ * fetch hỏng không phạt SEO; page vẫn render en content như đã có.
  */
-export function pdpMetadata(product: SeoProduct, locale: Locale): PdpMetadataResult {
-  const hasSeoTitle = hasText(product.seoTitle);
-  const hasSeoDescription = hasText(product.seoDescription);
+export function enUsesFallback(product: FallbackContent, viProduct: FallbackContent | null | undefined): boolean {
+  if (!viProduct) return false;
+  const description = (value: string | undefined) => value ?? '';
+  return product.name === viProduct.name && description(product.description) === description(viProduct.description);
+}
+
+/**
+ * Metadata PDP: seoTitle/seoDescription priority, fallback name/description
+ * (priority title/desc GIỮ NGUYÊN). robots.index = false CHỈ khi locale `en`
+ * VÀ en page lặp nguyên nội dung vi (name+description trùng bản vi-resolved —
+ * duplicate content); thiếu seo override KHÔNG còn là noindex.
+ */
+export function pdpMetadata(product: SeoProduct, locale: Locale, viProduct?: FallbackContent | null): PdpMetadataResult {
   const descriptionFallback = hasText(product.description) ? product.description.trim() : product.name;
-  const usedFallback = !hasSeoTitle || !hasSeoDescription;
   return {
     title: resolveTitle(product.seoTitle, product.name),
     description: resolveDescription(product.seoDescription, descriptionFallback),
@@ -160,7 +172,7 @@ export function pdpMetadata(product: SeoProduct, locale: Locale): PdpMetadataRes
     // prefix khi enPath được truyền tường minh — trước đây ra /p/{slugEn} mất /en).
     alternates: buildAlternates(`/p/${product.slug}`, `/en/p/${product.slugEn ?? product.slug}`),
     robots: {
-      index: !(locale === 'en' && usedFallback),
+      index: !(locale === 'en' && enUsesFallback(product, viProduct)),
       follow: true,
     },
   };

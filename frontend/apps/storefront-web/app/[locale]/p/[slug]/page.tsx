@@ -72,8 +72,27 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
   if (!locale) notFound();
 
   let product: ProductDetail | null = null;
+  let viProduct: ProductDetail | null = null;
   try {
-    product = await catalogApi(locale).getProduct(params.slug);
+    if (locale === 'en') {
+      // en page: fetch THÊM product vi-resolved để so sánh nội dung thật
+      // (name+description) phát hiện fallback vi — API trả chuỗi đã resolve
+      // theo locale nên không tự biết mình là fallback. CÙNG slug được: public
+      // GET match vi lẫn en slug → query vi bằng slugEn trả product vi-content.
+      // Cả hai qua cùng client (Next cache revalidate 60) — không tăng tải.
+      // vi fetch fail (404/down) → null → ưu tiên indexable: fetch hỏng không
+      // phạt SEO (quyết định ghi chú trong lib/seo.ts).
+      const [en, vi] = await Promise.all([
+        catalogApi(locale).getProduct(params.slug),
+        catalogApi('vi')
+          .getProduct(params.slug)
+          .catch(() => null),
+      ]);
+      product = en;
+      viProduct = vi;
+    } else {
+      product = await catalogApi(locale).getProduct(params.slug);
+    }
   } catch (error) {
     if (!(error instanceof CatalogUnavailableError)) throw error;
     // Catalog down → metadata fallback theo slug (page body tự render degraded).
@@ -83,7 +102,7 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
     return { title: params.slug };
   }
 
-  const meta = pdpMetadata(product, locale);
+  const meta = pdpMetadata(product, locale, viProduct);
   const ogImages = product.image.url ? [product.image.url] : undefined;
 
   return {

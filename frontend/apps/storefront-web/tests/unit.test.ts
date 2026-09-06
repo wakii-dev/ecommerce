@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { formatVnd, localePath, resolveLocale } from '../lib/format';
 import { rewriteTarget } from '../lib/locale-rewrite';
-import { buildAlternates, pdpMetadata, resolveDescription, resolveTitle } from '../lib/seo';
+import { buildAlternates, enUsesFallback, pdpMetadata, resolveDescription, resolveTitle } from '../lib/seo';
 
 /** Override process.env.SITE_URL trong 1 khối test, restore sau. */
 function withSiteUrl(url: string | undefined, run: () => void): void {
@@ -113,23 +113,39 @@ describe('seo priority helpers', () => {
 
 describe('pdpMetadata', () => {
   const base = { name: 'Áo thun', slug: 'ao-thun', slugEn: 't-shirt', description: 'Áo cotton mát' };
+  const viContent = { name: 'Áo thun', description: 'Áo cotton mát' };
+  const enContent = { name: 'T-shirt', description: 'Breathable cotton tee' };
 
-  it('uses seoTitle/seoDescription when present → indexable (en)', () => {
-    const meta = pdpMetadata({ ...base, seoTitle: 'Seo title', seoDescription: 'Seo desc' }, 'en');
+  it('uses seoTitle/seoDescription when present — override title/desc GIỮ NGUYÊN', () => {
+    const meta = pdpMetadata({ ...base, seoTitle: 'Seo title', seoDescription: 'Seo desc' }, 'en', viContent);
     expect(meta.title).toBe('Seo title');
     expect(meta.description).toBe('Seo desc');
+  });
+
+  it('en + THIẾU seo override + nội dung en thật (khác vi) → indexable (fix cũ noindex oan)', () => {
+    // Seed products không có seoTitle/seoDescription (admin override) — đây
+    // KHÔNG phải fallback; robots chỉ nhìn nội dung so với bản vi.
+    const meta = pdpMetadata(base, 'en', enContent);
+    expect(meta.title).toBe('Áo thun');
+    expect(meta.description).toBe('Áo cotton mát');
     expect(meta.robots).toEqual({ index: true, follow: true });
   });
 
-  it('falls back to name/description; en + fallback → robots.index false', () => {
-    const meta = pdpMetadata(base, 'en');
-    expect(meta.title).toBe('Áo thun');
-    expect(meta.description).toBe('Áo cotton mát');
-    expect(meta.robots.index).toBe(false);
+  it('en + nội dung trùng nguyên vi (name+description) → noindex (duplicate content)', () => {
+    expect(pdpMetadata(base, 'en', viContent).robots.index).toBe(false);
   });
 
-  it('vi + fallback stays indexable', () => {
-    expect(pdpMetadata(base, 'vi').robots.index).toBe(true);
+  it('en + CHỈ name khác (description trùng) → indexable', () => {
+    expect(pdpMetadata(base, 'en', { name: 'T-shirt', description: 'Áo cotton mát' }).robots.index).toBe(true);
+  });
+
+  it('en + viProduct null/undefined (vi fetch fail) → ưu tiên indexable (fetch hỏng không phạt SEO)', () => {
+    expect(pdpMetadata(base, 'en', null).robots.index).toBe(true);
+    expect(pdpMetadata(base, 'en', undefined).robots.index).toBe(true);
+  });
+
+  it('vi + nội dung trùng vi → luôn indexable', () => {
+    expect(pdpMetadata(base, 'vi', viContent).robots.index).toBe(true);
   });
 
   it('alternates pair slug vi / slugEn — en URL LUÔN mang prefix /en (Task 13 fix)', () => {
@@ -150,9 +166,32 @@ describe('pdpMetadata', () => {
     });
   });
 
-  it('missing description falls back to name; partial seo still noindex on en', () => {
-    const meta = pdpMetadata({ name: 'X', slug: 'x', seoTitle: 'Seo' }, 'en');
+  it('missing description falls back to name', () => {
+    const meta = pdpMetadata({ name: 'X', slug: 'x', seoTitle: 'Seo' }, 'en', enContent);
     expect(meta.description).toBe('X');
-    expect(meta.robots.index).toBe(false);
+    expect(meta.robots.index).toBe(true);
+  });
+});
+
+describe('enUsesFallback', () => {
+  it('true khi name VÀ description identical với bản vi', () => {
+    expect(enUsesFallback({ name: 'A', description: 'd' }, { name: 'A', description: 'd' })).toBe(true);
+  });
+
+  it('false khi name khác dù description trùng', () => {
+    expect(enUsesFallback({ name: 'En', description: 'd' }, { name: 'Vi', description: 'd' })).toBe(false);
+  });
+
+  it('false khi description khác dù name trùng', () => {
+    expect(enUsesFallback({ name: 'A', description: 'en text' }, { name: 'A', description: 'vi text' })).toBe(false);
+  });
+
+  it('undefined description coi như chuỗi rỗng (backend resolve chuỗi rỗng ≠ mất dịch)', () => {
+    expect(enUsesFallback({ name: 'A', description: undefined }, { name: 'A', description: '' })).toBe(true);
+  });
+
+  it('viProduct null/undefined → false (unknown → ưu tiên indexable)', () => {
+    expect(enUsesFallback({ name: 'A', description: 'd' }, null)).toBe(false);
+    expect(enUsesFallback({ name: 'A', description: 'd' }, undefined)).toBe(false);
   });
 });

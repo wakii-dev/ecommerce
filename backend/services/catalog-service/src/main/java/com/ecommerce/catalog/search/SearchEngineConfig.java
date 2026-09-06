@@ -1,8 +1,5 @@
 package com.ecommerce.catalog.search;
 
-import org.apache.http.HttpHost;
-import org.elasticsearch.client.Request;
-import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +15,11 @@ import com.ecommerce.catalog.repo.ProductRepository;
 
 /**
  * Chọn SearchEngine lúc startup (D15): {@code elasticsearch.uri} rỗng →
- * PgFtsEngine (INFO); uri set → ping ES (timeout 2s) — ES là "chính" nhưng
- * EsEngine (search + indexer) hoàn thành ở Task 5/6, nên Task 4 này giữ
- * PgFtsEngine cho mọi nhánh và chỉ WARN khi ES reachable (seam interface +
- * config đã sẵn — Task 6 chỉ cần thay bean). ES unreachable → WARN degraded.
- * Không bao giờ 500 vì search.
+ * PgFtsEngine (INFO); uri set → ping ES (timeout 2s): reachable → EsEngine
+ * (Task 5/6 — INFO; startup reindex chạy qua {@link StartupReindexRunner}),
+ * unreachable → PgFtsEngine (WARN degraded). Tạo index if-missing lúc chọn
+ * engine — fail → PgFts (WARN, ES quá flaky lúc boot). Không bao giờ 500
+ * vì search — ES chết runtime → EsEngine tự degrade PgFts (Q16).
  */
 @Configuration
 public class SearchEngineConfig {
@@ -43,26 +40,40 @@ public class SearchEngineConfig {
             log.info("elasticsearch.uri rỗng → chọn PgFtsEngine");
             return pgFts;
         }
-        if (esReachable(esUri)) {
-            log.warn("ES reachable ({}) nhưng EsEngine thuộc Task 5/6 — dùng PgFtsEngine (seam sẵn, Task 6 swap bean)",
-                esUri);
+        if (!esReachable(esUri)) {
+            log.warn("ES không reachable (uri={}) → degraded → PgFtsEngine", esUri);
             return pgFts;
         }
-        log.warn("ES không reachable (uri={}) → degraded → PgFtsEngine", esUri);
-        return pgFts;
+        RestClient client = EsIndexConfig.restClient(esUri, 2_000, 5_000);
+        try {
+            EsIndexConfig.ensureIndex(client);
+        } catch (Exception e) {
+            log.warn("ES reachable ({}) nhưng tạo index products lỗi → PgFtsEngine (WARN degraded)", esUri, e);
+            closeQuietly(client);
+            return pgFts;
+        }
+        log.info("EsEngine active (uri={}) — startup reindex chạy qua StartupReindexRunner", esUri);
+        return new EsEngine(client, objectMapper, pgFts, productRepository, imageRepository,
+            categoryRepository, jdbcTemplate);
     }
 
     /** Ping ES 2s — server TRẢ RESPONSE (kể cả 4xx/5xx) = reachable. */
     private static boolean esReachable(String uri) {
-        try (RestClient client = RestClient.builder(HttpHost.create(uri))
-                .setRequestConfigCallback(rc -> rc.setConnectTimeout(2_000).setSocketTimeout(2_000))
-                .build()) {
-            client.performRequest(new Request("GET", "/"));
+        try (RestClient client = EsIndexConfig.restClient(uri, 2_000, 2_000)) {
+            client.performRequest(new org.elasticsearch.client.Request("GET", "/"));
             return true;
-        } catch (ResponseException answered) {
+        } catch (org.elasticsearch.client.ResponseException answered) {
             return true; // server sống, chỉ là status lỗi
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    private static void closeQuietly(RestClient client) {
+        try {
+            client.close();
+        } catch (Exception ignored) {
+            // shutdown path — không còn gì làm
         }
     }
 }

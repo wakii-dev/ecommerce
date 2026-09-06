@@ -143,19 +143,36 @@ public class PgFtsEngine implements SearchEngine {
             Map.of("q", term), UUID.class);
         List<ProductCardDto> productCards = hydrateCards(ids, locale);
 
-        // Categories: ilike '%q%' trên key locale — slug + name resolve theo locale
+        return new SuggestResponseDto(productCards, suggestCategories(jdbc, objectMapper, term, locale));
+    }
+
+    /**
+     * Categories ilike '%q%' trên key locale — slug + name resolve theo locale.
+     * Static + dùng chung cho CẢ HAI engines (EsEngine suggest gọi — nguồn
+     * category là PG, Task 6 không nhân bản query).
+     */
+    static List<SuggestCategoryDto> suggestCategories(NamedParameterJdbcTemplate jdbc,
+                                                      com.fasterxml.jackson.databind.ObjectMapper objectMapper,
+                                                      String term, String locale) {
         String key = LocaleResolver.EN.equals(locale) ? "en" : "vi";
         String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        List<SuggestCategoryDto> categories = jdbc.query(
+        return jdbc.query(
             "SELECT name, slug_vi, slug_en FROM categories "
                 + "WHERE name->>:loc ILIKE :pattern ESCAPE '\\' ORDER BY created_at LIMIT 5",
             Map.of("loc", key, "pattern", pattern),
             (rs, i) -> {
-                I18nText name = parseI18n(rs.getString("name"));
+                I18nText name = parseI18nStatic(rs.getString("name"), objectMapper);
                 return new SuggestCategoryDto(resolvedSlug(rs.getString("slug_vi"), rs.getString("slug_en"), key),
                     name.resolve(locale));
             });
-        return new SuggestResponseDto(productCards, categories);
+    }
+
+    private static I18nText parseI18nStatic(String json, com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+        try {
+            return objectMapper.readValue(json, I18nText.class);
+        } catch (Exception e) {
+            return new I18nText(json, null);
+        }
     }
 
     // ── no-op (PG: search_vec GENERATED sống theo row) ──────────────────────
@@ -240,15 +257,5 @@ public class PgFtsEngine implements SearchEngine {
             return preferred;
         }
         return slugVi != null ? slugVi : slugEn;
-    }
-
-    /** name jsonb string → I18nText; lỗi parse → degrade {raw, null} (không 500 suggest). */
-    private I18nText parseI18n(String json) {
-        try {
-            return objectMapper.readValue(json, I18nText.class);
-        } catch (Exception e) {
-            log.warn("[pg-fts] parse category name jsonb fail: {}", e.getMessage());
-            return new I18nText(json, null);
-        }
     }
 }

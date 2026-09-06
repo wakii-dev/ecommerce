@@ -97,6 +97,35 @@
       <version>3.9.1</version>
       <scope>test</scope>
     </dependency>
+    <!-- IT: extract text PDF hóa đơn (assert đủ trường + VAT breakdown) -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- IT: validate order.confirmed envelope ĐÚNG schema frozen contracts/events/ -->
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>1.5.6</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Saga IT (pack: inventory + payment THẬT) — boot 2 app cùng test JVM.
+         LƯU Ý: Flyway TẮT trong IT (3 jar cùng classpath:db/migration sẽ conflict
+         version V10) — migration áp tay qua JDBC trong AbstractSagaIT. -->
+    <dependency>
+      <groupId>com.ecommerce</groupId>
+      <artifactId>inventory-service</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.ecommerce</groupId>
+      <artifactId>payment-service</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

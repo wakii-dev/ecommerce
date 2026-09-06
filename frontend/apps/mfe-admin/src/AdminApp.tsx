@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, MouseEvent as ReactMouseEvent } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18next from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import { authStore, configureAuth, logout, useAuth } from '@ecommerce/auth';
 import { useT } from '@ecommerce/i18n';
 import { Button, EmptyState, ToastProvider } from '@ecommerce/ui-kit';
@@ -24,6 +27,14 @@ import ReviewsPage from './pages/ReviewsPage';
 
 const STOREFRONT_URL: string =
   (import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? 'http://localhost:3000';
+
+// Query client riêng của admin (shell không wrap provider) — module-level vì
+// remote module load đúng 1 lần; react/react-query là shared singleton.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 15_000, refetchOnWindowFocus: false }
+  }
+});
 
 function renderPage(route: AdminRoute, t: (key: string) => string): ReactElement {
   switch (route.page) {
@@ -185,5 +196,14 @@ export default function AdminApp(): ReactElement {
     body = <AdminShell path={path} />;
   }
 
-  return <ToastProvider>{body}</ToastProvider>;
+  // I18nextProvider TƯƠNG MINH: workspace có thể resolve nhiều instance i18next
+  // (pnpm store theo version) — bind useTranslation (react-i18next) CHẶC vào
+  // global instance mà initI18n() đã init (shell/standalone gọi trước render).
+  return (
+    <I18nextProvider i18n={i18next}>
+      <ToastProvider>
+        <QueryClientProvider client={queryClient}>{body}</QueryClientProvider>
+      </ToastProvider>
+    </I18nextProvider>
+  );
 }

@@ -285,8 +285,7 @@
   margin-bottom: var(--space-4, 16px);
 }
 
-.admin-chart-row h3,
-.admin-page-head ~ .admin-page-head h3 {
+.admin-chart-row h3 {
   margin: 0 0 var(--space-3, 12px);
   font-size: 15px;
 }

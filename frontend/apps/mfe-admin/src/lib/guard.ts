@@ -24,6 +24,7 @@ export type AdminPageKey =
   | 'product-edit'
   | 'categories'
   | 'coupons'
+  | 'affiliates' // SF-12 (FI-322) append
   | 'reviews'
   | 'orders'
   | 'order-detail'
@@ -45,6 +46,7 @@ export function resolveAdminRoute(pathname: string): AdminRoute {
   if (productEdit) return { page: 'product-edit', id: productEdit[1] };
   if (rest === '/categories') return { page: 'categories' };
   if (rest === '/coupons') return { page: 'coupons' };
+  if (rest === '/affiliates') return { page: 'affiliates' }; // SF-12 append
   if (rest === '/reviews') return { page: 'reviews' };
   if (rest === '/orders') return { page: 'orders' };
   const orderDetail = rest.match(/^\/orders\/([^/]+)$/);
@@ -59,7 +61,9 @@ export const ADMIN_NAV: ReadonlyArray<{ to: string; key: string }> = [
   { to: '/admin/categories', key: 'admin.nav.categories' },
   { to: '/admin/coupons', key: 'admin.nav.coupons' },
   { to: '/admin/reviews', key: 'admin.nav.reviews' },
-  { to: '/admin/orders', key: 'admin.nav.orders' }
+  { to: '/admin/orders', key: 'admin.nav.orders' },
+  // SF-12 (FI-322) append — affiliates manage (D20)
+  { to: '/admin/affiliates', key: 'admin.nav.affiliates' }
 ] as const;
 
 /** Nav item nào active cho pathname (prefix match; /admin/products/x vẫn active Products). */
@@ -74,7 +78,8 @@ export function activeNavIndex(pathname: string): number {
     coupons: 3,
     reviews: 4,
     orders: 5,
-    'order-detail': 5
+    'order-detail': 5,
+    affiliates: 6 // SF-12 append
   };
   return idxByPage[route.page] ?? 0;
 }

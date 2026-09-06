@@ -41,7 +41,8 @@ export const en = {
       categories: 'Categories',
       coupons: 'Coupons',
       reviews: 'Reviews',
-      orders: 'Orders'
+      orders: 'Orders',
+      affiliates: 'Affiliates'
     },
     topbar: {
       viewStorefront: 'View storefront',
@@ -88,6 +89,7 @@ export const en = {
       PENDING: 'Pending',
       APPROVED: 'Approved',
       REJECTED: 'Rejected',
+      SUSPENDED: 'Suspended',
       PAID: 'Paid',
       CONFIRMED: 'Confirmed',
       SHIPPED: 'Shipped',
@@ -187,6 +189,29 @@ export const en = {
       updated: 'Coupon updated',
       toggled: 'Coupon status toggled',
       empty: 'No coupons yet'
+    },
+    affiliates: {
+      title: 'Affiliates',
+      colCode: 'Ref code',
+      colRate: 'Commission (%)',
+      colClicks: 'Clicks',
+      colConversions: 'Conversions',
+      colEarnings: 'Commission',
+      statTotal: 'Total profiles',
+      statClicks: 'Clicks',
+      statConversions: 'Conversions',
+      statCommission: 'Total commission',
+      approve: 'Approve',
+      approveDone: 'Approved — ref code generated',
+      reject: 'Reject',
+      rejectDone: 'Rejected',
+      suspend: 'Suspend',
+      suspendDone: 'Suspended — link stops tracking',
+      reactivate: 'Reactivate',
+      reactivateDone: 'Reactivated',
+      rateEditHint: 'Click to change rate (applies to future orders)',
+      rateInvalid: 'Rate must be within (0, 50]',
+      empty: 'No affiliate profiles yet'
     },
     reviews: {
       title: 'Review moderation',

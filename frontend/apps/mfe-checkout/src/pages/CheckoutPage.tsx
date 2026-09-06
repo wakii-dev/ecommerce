@@ -16,6 +16,7 @@ import {
   type Order
 } from '../lib/orderingStub';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
+import { readAffiliateRef } from '../lib/affiliateRef';
 import '../page.css';
 
 /**
@@ -146,6 +147,8 @@ export default function CheckoutPage(): ReactElement {
         ...(couponDiscount !== null && couponCode.trim()
           ? { couponCode: couponCode.trim() }
           : {}),
+        // SF-12: attribution affiliate từ cookie aff_ref (nullable — order.confirmed)
+        ...(readAffiliateRef() ? { affiliateCode: readAffiliateRef() as string } : {}),
         userId: authStore.getUser()?.id ?? 'guest'
       });
       setCreated(result);

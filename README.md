@@ -165,9 +165,9 @@ flowchart TD
     end
     subgraph T3["TIER 3"]
         N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks<br/>✅ Done"]
-        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks<br/>🔨 In Progress"]
+        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks<br/>✅ Done"]
         N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks<br/>🔨 In Progress"]
-        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks<br/>🔨 In Progress"]
+        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks<br/>✅ Done"]
     end
     subgraph T4["TIER 4"]
         N11["SF-11 partner Open API<br/>FI-321 · 10 tasks"]
@@ -232,9 +232,9 @@ flowchart TD
 | SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ✅ Done |
 | SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ✅ Done |
 | SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ✅ Done |
-| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | 🔨 In Progress |
+| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | ✅ Done |
 | SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | 🔨 In Progress |
-| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | 🔨 In Progress |
+| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ✅ Done |
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
 | SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
 | SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |
@@ -252,7 +252,7 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 |---|---|---|
 | **P1** Foundation | Nền móng + contracts freeze + design direction + federation harness | SF-1 ✅ + SF-2 xong | ✅ **[phase-1 released + merged main](https://github.com/wakii-dev/ecommerce/releases/tag/phase-1)** |
 | **P2** Catalog & Identity | Đăng ký/đăng nhập · storefront Next.js SEO · search ES · tồn kho + Stripe nền | SF-3 ✅ + SF-4 ✅ + SF-5 ✅ | ✅ **[phase-2 released + merged main](https://github.com/wakii-dev/ecommerce/pull/2)** |
-| **P3** Transaction MVP | Giỏ → checkout (coupon, Stripe/COD) → saga → đơn + hóa đơn PDF · admin vận hành | SF-6 + SF-7 + SF-9 |
+| **P3** Transaction MVP | Giỏ → checkout (coupon, Stripe/COD) → saga → đơn + hóa đơn PDF · admin vận hành | SF-6 ✅ + SF-7 ✅ + SF-9 ✅ | ✅ **[phase-3 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-3)** |
 | **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 + SF-11 + SF-12 |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |
 

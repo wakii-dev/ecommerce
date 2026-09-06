@@ -68,6 +68,11 @@ spring:
         - id: partner-api                                # SF-11 · port 8091
           uri: http://localhost:8091
           predicates: [ "Path=/open-api/**" ]
+        # SF-12 (2026-09-07): affiliate-service :8092 (D20) — controllers map
+        # FULL /api/affiliate/** (precedent catalog/cart) → KHÔNG StripPrefix.
+        - id: affiliate                                   # SF-12 · port 8092
+          uri: http://localhost:8092
+          predicates: [ "Path=/api/affiliate/**" ]
       # - id: notification                               # SF-10 · port 8087
       #   uri: http://localhost:8087
       #   predicates: [ "Path=/api/notification/**" ]

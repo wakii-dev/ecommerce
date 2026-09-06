@@ -59,6 +59,8 @@ export interface Order {
   total: number;
   currency: 'VND';
   couponCode?: string;
+  /** SF-12 — attribution affiliate (ordering.yaml nullable; ledger hoa hồng). */
+  affiliateCode?: string | null;
   paymentMethod: PaymentMethod;
   shippingMethod: string;
   address: Address;
@@ -105,6 +107,8 @@ export interface CreateOrderInput {
   shippingMethod: string;
   shippingFee: number;
   couponCode?: string;
+  /** SF-12 — cookie aff_ref nếu đơn qua link affiliate. */
+  affiliateCode?: string;
   userId: string;
 }
 
@@ -165,6 +169,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
     total,
     currency: 'VND',
     ...(input.couponCode ? { couponCode: input.couponCode.trim().toUpperCase() } : {}),
+    affiliateCode: input.affiliateCode ?? null,
     paymentMethod: 'stripe',
     shippingMethod: input.shippingMethod,
     address: input.address,

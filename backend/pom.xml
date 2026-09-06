@@ -52,6 +52,8 @@
     <module>services/ordering-service</module>
     <!-- SF-11 (FI-321) -->
     <module>services/partner-api</module>
+    <!-- SF-12 (FI-322) -->
+    <module>services/affiliate-service</module>
   </modules>
 
   <dependencyManagement>

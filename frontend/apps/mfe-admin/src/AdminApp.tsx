@@ -15,6 +15,7 @@ import {
   type AdminGuardState,
   type AdminRoute
 } from './lib/guard';
+import AffiliatesPage from './pages/AffiliatesPage';
 import CategoriesPage from './pages/CategoriesPage';
 import CouponsPage from './pages/CouponsPage';
 import DashboardPage from './pages/DashboardPage';
@@ -50,6 +51,8 @@ function renderPage(route: AdminRoute, t: (key: string) => string): ReactElement
       return <CategoriesPage />;
     case 'coupons':
       return <CouponsPage />;
+    case 'affiliates': // SF-12 (FI-322) append
+      return <AffiliatesPage />;
     case 'reviews':
       return <ReviewsPage />;
     case 'orders':

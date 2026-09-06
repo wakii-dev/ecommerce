@@ -34,8 +34,12 @@ ecom:
         # auth là X-API-Key (không JWT customer), enforcement trong partner-api
         # (ApiKeyAuthFilter: 401/403/429). Docs portal cũng public (tự phục vụ).
         - /open-api/**
+        # SF-12 (2026-09-07): track click public theo contract affiliate.yaml —
+        # storefront capture ?ref không auth (204 im lặng, cookie do service set)
+        - /api/affiliate/track/click
       admin-prefixes:
         - /api/admin/**                      # chữ ACCEPTANCE (path chưa route → 403 trước 404)
         - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
         - /api/ordering/admin/**             # SF-9 — 2 lớp (gateway + @PreAuthorize ordering)
+        - /api/affiliate/admin/**            # SF-12 — 2 lớp (gateway + @PreAuthorize affiliate)
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

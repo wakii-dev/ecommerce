@@ -16,8 +16,9 @@
 - [x] 9. gateway-skeleton-route-table-cors — `backend/gateway/`: SCG WebFlux :8080, route table file riêng (7 block placeholder + smoke), global CORS dev `localhost:5173-5179`
 - [x] 10. gateway-requestid-filter — global filter gen/propagate `X-Request-Id` (request + response + MDC log), gateway smoke test (WebTestClient)
 - [ ] 11. contracts-dir-skeleton-openapi-lint — `contracts/openapi/`, `contracts/events/` (gitkeep), `.spectral.yaml`, `contracts/README.md` (quy tắc freeze + additive-only events)
-- [ ] 12. pnpm-turbo-frontend-workspace — `frontend/`: `pnpm-workspace.yaml` (workspace + catalog pre-pin R3), `turbo.json` (dev/build/test/lint/gen), root `package.json`, `packages/config/` (tsconfig.base + eslint preset + vite preset MF import), `.npmrc`, apps/ + packages/{contracts,auth,ui-kit,i18n} gitkeep → `pnpm install && pnpm build` xanh
-- [ ] 13. makefile-dev-targets-per-service — Makefile `dev svc=<name>` + `dev-fe app=<name>`, e2e: `make dev svc=template-service` boot :8099 health UP + `make dev svc=gateway` smoke 200 X-Request-Id
+- [x] 12. pnpm-turbo-frontend-workspace — `frontend/`: `pnpm-workspace.yaml` (workspace + catalog pre-pin R3), `turbo.json` (dev/build/test/lint/gen), root `package.json`, `packages/config/` (tsconfig.base + eslint preset + vite preset MF import), `.npmrc`, apps/ + packages/{contracts,auth,ui-kit,i18n} gitkeep → `pnpm install && pnpm build` xanh
+- [x] 13. makefile-dev-targets-per-service — Makefile `dev svc=<name>` + `dev-fe app=<name>`, e2e: `make dev svc=template-service` boot :8099 health UP + `make dev svc=gateway` smoke 200 X-Request-Id
+- [x] 14. (scope-addendum D14+D15, 2026-09-06 sau khi fork) — compose thêm mongo:7 + mongo-express :8089 + elasticsearch:8.17.4 :9200 (single-node, heap 512m, không kibana); `.env.example` thêm MONGO_URI + ELASTICSEARCH_URI; acceptance mở rộng: mongo-express + ES cluster info healthy
 
 ## ACCEPTANCE (Phase 5 — kiểm từng dòng)
 

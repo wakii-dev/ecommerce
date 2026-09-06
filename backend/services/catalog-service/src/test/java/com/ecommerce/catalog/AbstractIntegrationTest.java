@@ -1,5 +1,16 @@
 package com.ecommerce.catalog;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.Signature;
+import java.time.Instant;
+import java.util.Base64;
+
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -21,6 +32,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * class ĐẦU TIÊN; khi class đó stop container (@Container per-class), các class
  * sau chọc vào DB chết → Hikari timeout 30s/test. Start 1 lần trong static init
  * → mọi class chia sẻ container + context sống sót hết JVM (Ryuk dọn lúc exit).</p>
+ *
+ * <p><strong>JWT (Task 8b):</strong> sinh 1 RSA keypair/JVM, ghi PEM vào
+ * {@code target/it-keys/} và trỏ {@code JWT_PUBLIC_KEY_PATH} — decoder security
+ * boot được ở MỌI IT (surefire chạy CWD = module dir nên path đó deterministic);
+ * subclass mint token bằng {@link #mintToken(String)} ký bằng đúng keypair.</p>
  */
 @Tag("integration")
 @Testcontainers(disabledWithoutDocker = true)
@@ -35,8 +51,22 @@ public abstract class AbstractIntegrationTest {
         .withUsername("postgres")
         .withPassword("postgres");
 
+    /** Keypair dùng chung cho JWT trong IT — AdminCatalogIT mint token bằng private key này. */
+    static final KeyPair JWT_KEY_PAIR;
+
     static {
         POSTGRES.start();
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            JWT_KEY_PAIR = generator.generateKeyPair();
+            Path keyDir = Path.of("target", "it-keys");
+            Files.createDirectories(keyDir);
+            writePem(keyDir.resolve("jwt-public.pem"), "PUBLIC KEY", JWT_KEY_PAIR.getPublic().getEncoded());
+            writePem(keyDir.resolve("jwt-private.pem"), "PRIVATE KEY", JWT_KEY_PAIR.getPrivate().getEncoded());
+        } catch (GeneralSecurityException | IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
 
     @LocalServerPort
@@ -55,5 +85,32 @@ public abstract class AbstractIntegrationTest {
         // Tắt outbox relay poller trong IT — không có RabbitMQ, poll 2s/lần chỉ
         // gây ồn log + rỉ connection trên container PG dùng chung nhiều context.
         registry.add("outbox.relay.enabled", () -> "false");
+        // Security (Task 8b): decoder đọc PEM IT-generated — CWD surefire = module dir.
+        registry.add("JWT_PUBLIC_KEY_PATH", () -> "target/it-keys/jwt-public.pem");
+    }
+
+    /** Mint JWT RS256 ({@code roles: [role]}) ký bằng keypair IT — guard tests 401/403/200. */
+    protected static String mintToken(String role) {
+        try {
+            String header = b64url("{\"alg\":\"RS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+            long now = Instant.now().getEpochSecond();
+            String payload = b64url(("{\"sub\":\"it-admin\",\"roles\":[\"" + role + "\"],\"iat\":" + now
+                + ",\"exp\":" + (now + 3600) + "}").getBytes(StandardCharsets.UTF_8));
+            Signature signer = Signature.getInstance("SHA256withRSA");
+            signer.initSign(JWT_KEY_PAIR.getPrivate());
+            signer.update((header + "." + payload).getBytes(StandardCharsets.US_ASCII));
+            return header + "." + payload + "." + b64url(signer.sign());
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("mint token fail", e);
+        }
+    }
+
+    private static void writePem(Path path, String label, byte[] der) throws IOException {
+        String base64 = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII)).encodeToString(der);
+        Files.writeString(path, "-----BEGIN " + label + "-----\n" + base64 + "\n-----END " + label + "-----\n");
+    }
+
+    private static String b64url(byte[] bytes) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

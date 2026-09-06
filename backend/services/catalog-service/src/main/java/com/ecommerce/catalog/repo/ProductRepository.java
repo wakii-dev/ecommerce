@@ -21,4 +21,17 @@ public interface ProductRepository extends JpaRepository<ProductEntity, UUID>, J
 
     /** Seed flash-refresh (Q12): mọi product có flash_sale_ends_at. */
     List<ProductEntity> findByFlashSaleEndsAtIsNotNull();
+
+    /** Guard DELETE category (Task 8b): còn product CHƯA soft-delete trong danh mục → 409. */
+    boolean existsByCategoryIdAndDeletedAtIsNull(UUID categoryId);
+
+    /**
+     * Guard DELETE category (Task 8b) — hard-delete danh mục cần gỡ FK từ các
+     * row product ĐÃ soft-delete (row giữ nguyên cho order/review tham chiếu,
+     * nhưng category_id không còn nghĩa → set NULL trong cùng tx để FK bật qua).
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query(
+        "update ProductEntity p set p.categoryId = null where p.categoryId = :categoryId and p.deletedAt is not null")
+    int detachSoftDeletedFromCategory(@org.springframework.data.repository.query.Param("categoryId") UUID categoryId);
 }

@@ -73,8 +73,16 @@
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
     </dependency>
 
-    <!-- KHÔNG thêm security/oauth2 ở đây — Task 8b thêm cùng SecurityConfig
-         (thêm sớm = Boot default security khóa mọi endpoint, health 401) -->
+    <!-- Admin guard (Task 8b) — cùng commit với SecurityConfig/JwtDecoderConfig
+         để không có khoảng thời gian Boot default security khóa mọi endpoint -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>

@@ -180,7 +180,12 @@ public class CatalogQueryService {
             p.getCategoryId());
     }
 
-    private ProductDetailDto toDetail(ProductEntity p, List<ProductImageEntity> images,
+    /**
+     * Mapper ProductDetail — public static để AdminCatalogService (Task 8b)
+     * dựng {@code ProductAdminView = ProductDetail + i18n gốc} KHÔNG nhân bản
+     * (cùng logic variant priceDelta/flash/image như PDP public).
+     */
+    public static ProductDetailDto toDetail(ProductEntity p, List<ProductImageEntity> images,
                                       List<ProductVariantEntity> variants, String locale) {
         ProductCardDto card = toCard(p, images, locale);
         List<ProductImageDto> imageDtos = images.stream()

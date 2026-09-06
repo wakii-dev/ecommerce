@@ -19,4 +19,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariantEn
     /** Thứ tự ổn định theo thời điểm tạo; tiebreak id — insert cùng timestamp không nhảy thứ tự. */
     @Query("select v from ProductVariantEntity v where v.productId = :productId order by v.createdAt asc, v.id asc")
     List<ProductVariantEntity> findByProductIdOrderByCreatedAtAsc(UUID productId);
+
+    /** Write replace-all (Task 8b): xóa hết variant rồi insert lại theo payload. */
+    void deleteByProductId(UUID productId);
 }

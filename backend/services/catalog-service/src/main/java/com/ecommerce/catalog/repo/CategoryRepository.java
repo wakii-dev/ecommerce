@@ -14,4 +14,7 @@ import com.ecommerce.catalog.domain.CategoryEntity;
 public interface CategoryRepository extends JpaRepository<CategoryEntity, UUID> {
 
     Optional<CategoryEntity> findBySlugViOrSlugEn(String slugVi, String slugEn);
+
+    /** Guard DELETE category (Task 8b): còn node con → 409. */
+    boolean existsByParentId(UUID parentId);
 }

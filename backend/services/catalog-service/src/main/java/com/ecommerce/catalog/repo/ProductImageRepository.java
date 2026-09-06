@@ -19,4 +19,7 @@ public interface ProductImageRepository extends JpaRepository<ProductImageEntity
 
     /** Gallery PDP — sort theo position. */
     List<ProductImageEntity> findByProductIdOrderByPositionAsc(UUID productId);
+
+    /** Write replace-all (Task 8b): xóa hết ảnh rồi insert lại theo payload. */
+    void deleteByProductId(UUID productId);
 }

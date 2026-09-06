@@ -76,10 +76,26 @@ What: Checkout saga chạy thật (backend) — POST /orders: re-price catalog �
 Depends on: SF-5
 Tasks: ordering-service-scaffold-outbox-wiring / flyway-orders-items-coupons-sagastate-invoiceseq / coupon-crud-validate-apis / coupon-usage-reserve-finalize-release / checkout-saga-orchestrator-reprice-reserve-intent / payment-inventory-event-consumers-late-refund / compensation-edges-fail-injection-tests / order-state-machine-guards / ttl-scheduler-cancel / my-orders-apis / invoice-service-python-fastapi-reportlab / http-invoice-provider-numbering-endpoints / my-orders-ui-invoice-download / ordering-it-tests
 
-## SF-10 convergence + ship
+## SF-11 partner Open API
 Tier: 4
+linear: FI-321
+Design: none
+What: Đối tác bên ngoài kết nối được qua `/open-api/v1` — API key auth + rate-limit per key, đọc catalog (products/categories/search), tạo đơn + tra cứu trạng thái, webhook HMAC báo thay đổi trạng thái về URL đối tác, docs portal swagger. demo: curl với X-API-Key → products trả về; key sai → 401; đơn đổi trạng thái → webhook nhận POST HMAC-signed.
+Depends on: SF-4, SF-9
+Tasks: partner-api-scaffold / flyway-partners-apikeys-scopes / apikey-auth-ratelimit / catalog-proxy-endpoints / order-create-status-endpoints / webhook-registry-hmac-signer / webhook-consumer-retry-dlq / docs-portal-springdoc / compose-makefile-gateway-route-dbinit / partner-it-tests
+
+## SF-12 affiliate
+Tier: 4
+linear: FI-322
+Design: none
+What: Affiliate marketing hoạt động end-to-end — user đăng ký affiliate (admin duyệt), nhận ref code + link; khách click `?ref=<code>` → cookie attribution 30 ngày; mua hàng qua link → đơn CONFIRMED → ledger hoa hồng đúng rate per-affiliate; affiliate xem dashboard (code, link generator, clicks/conversions/earnings); admin duyệt + đổi rate + xem stats. demo: đăng ký → duyệt → share link → mua qua link → dashboard thấy hoa hồng.
+Depends on: SF-3, SF-6, SF-9
+Tasks: affiliate-service-scaffold / flyway-affiliates-clicks-ledger / refcode-registry-approve-rate / storefront-ref-capture-cookie / checkout-pass-affiliate-code / orderconfirmed-ledger-consumer / account-dashboard-affiliate-slice / admin-affiliates-manage-live / compose-makefile-gateway-route-dbinit / affiliate-it-tests
+
+## SF-10 convergence + ship
+Tier: 5
 linear: FI-320
 Design: none
 What: Toàn hệ thống sống như một — mfe-checkout wire ordering THẬT (bỏ mocks), notification-service gửi email Mailpit, gateway full route table + đủ 5 remotes mounted, profile `full` compose chạy toàn bộ containerized, deterministic seed (coupon WELCOME10, sản phẩm search được, Stripe test cards), Playwright E2E: golden path + admin CRUD → storefront + review flow + saga fail. demo: 1 lệnh chạy cả hệ, mua hàng end-to-end thấy email, admin thấy đơn.
-Depends on: SF-6, SF-7, SF-8, SF-9
+Depends on: SF-6, SF-7, SF-8, SF-9, SF-11, SF-12
 Tasks: checkout-live-wiring-real-ordering / notification-service-thankyou-email-invoice-attach / log-service-mongo-scaffold / events-fanin-consumer-mongo-eventlog / gateway-full-routetable-final-mounts / make-dev-fullstack-compose-profile-full / deterministic-seed-coupons-products-stripecards / e2e-golden-path / e2e-admin-crud-storefront-assert / e2e-review-flow / e2e-saga-fail-declined / sanity-checks-standalone-rbac-perf-security / docs-demo-readme-adr

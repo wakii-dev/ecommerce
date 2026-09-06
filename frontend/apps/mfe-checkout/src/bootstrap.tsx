@@ -24,18 +24,20 @@ export function appNavigate(to: string): void {
 }
 
 /** Merge-on-login — authStore (shared singleton) flip guest→user:
- *  còn guest token trong localStorage → POST /api/cart/merge (Bearer tự gắn qua
- *  authStore.fetch). 404 (giỏ guest hết hạn) → clear token im lặng. Login page
- *  KHÔNG cần biết cart tồn tại — zero touch mfe-account. */
+ *  POST /api/cart/merge luôn được gọi khi có chuyển đổi — guest token từ
+ *  localStorage (nếu cùng origin) hoặc Cookie httpOnly fallback phía server
+ *  (localStorage bị PORT-SCOPED — PDP :3000 ghi, shell :5179 không đọc được;
+ *  cookie thì port-agnostic nên merge vẫn đúng giỏ). 400/404 = không có gì
+ *  để merge → im lặng. Login page KHÔNG cần biết cart tồn tại — zero touch
+ *  mfe-account. */
 function watchMergeOnLogin(): void {
   let wasAuthenticated = authStore.isAuthenticated();
   authStore.subscribe(() => {
     const isAuth = authStore.isAuthenticated();
     if (isAuth && !wasAuthenticated) {
-      const token = readGuestToken();
-      if (token) {
-        void mergeGuestCart((input, init) => authStore.fetch(input, init), token);
-      }
+      void mergeGuestCart(readGuestToken()).catch(() => {
+        // merge fail (mạng/cart chết) — user vẫn đăng nhập bình thường
+      });
     }
     wasAuthenticated = isAuth;
   });

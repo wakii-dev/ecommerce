@@ -86,9 +86,21 @@ describe('cartApi', () => {
     window.localStorage.setItem('ecommerce.guest_cart_token', 'expired-token');
     fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => null } as unknown as Response);
 
-    const result = await mergeGuestCart(fetchMock, 'expired-token');
+    const result = await mergeGuestCart('expired-token');
 
     expect(result).toBeNull();
+    expect(window.localStorage.getItem('ecommerce.guest_cart_token')).toBeNull();
+  });
+
+  it('mergeGuestCart token null (khác port) → body rỗng, server dùng cookie fallback; 400 = nothing-to-merge', async () => {
+    window.localStorage.setItem('ecommerce.guest_cart_token', 'stale-other-port');
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 400, json: async () => null } as unknown as Response);
+
+    const result = await mergeGuestCart(null);
+
+    expect(result).toBeNull();
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({}); // rỗng → server cookie fallback
     expect(window.localStorage.getItem('ecommerce.guest_cart_token')).toBeNull();
   });
 
@@ -96,7 +108,7 @@ describe('cartApi', () => {
     window.localStorage.setItem('ecommerce.guest_cart_token', 'good-token');
     fetchMock.mockResolvedValueOnce(cartResponse({ items: [], subtotal: 0 }));
 
-    const result = await mergeGuestCart(fetchMock, 'good-token');
+    const result = await mergeGuestCart('good-token');
 
     expect(result).not.toBeNull();
     expect(window.localStorage.getItem('ecommerce.guest_cart_token')).toBeNull();

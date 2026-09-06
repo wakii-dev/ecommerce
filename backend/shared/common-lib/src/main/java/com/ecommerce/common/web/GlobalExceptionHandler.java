@@ -50,7 +50,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({jakarta.persistence.EntityNotFoundException.class, java.util.NoSuchElementException.class})
     public ResponseEntity<ApiError> handleNotFound(Exception e) {
-        return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage(), null);
+        // KHÔNG echo e.getMessage() — có thể leak entity/internal qua response
+        log.debug("Not found [requestId={}]", MDC.get("requestId"), e);
+        return problem(HttpStatus.NOT_FOUND, "Not found", "Resource không tồn tại", null);
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)

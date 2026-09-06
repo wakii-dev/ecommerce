@@ -12,7 +12,7 @@ common-lib kéo theo `starter-web` (servlet) + `starter-data-jpa` +
 | Consumer | Có dùng được common-lib? |
 |---|---|
 | Service có DB PG (identity, catalog, ordering, payment, inventory) | ✓ target chính |
-| notification (db nhẹ) | ✓ — dùng PG bình thường |
+| notification (db nhẹ = `db_notification`) | ✓ — dùng PG bình thường |
 | **gateway (WebFlux)** | ✗ KHÔNG — servlet web conflict; gateway tự viết filter riêng |
 | cart-service (Redis-only) | ⚠ dùng được web/error model; `IdempotentConsumer` CẦN bảng `processed_messages` (PG) — nếu không muốn PG, cart tự dedupe bằng operation tự nhiên idempotent |
 

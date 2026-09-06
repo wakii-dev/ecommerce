@@ -2,6 +2,7 @@ package com.ecommerce.common.outbox;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.AmqpConnectException;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
@@ -20,9 +21,16 @@ import java.util.List;
  *
  * <p>Semantics: <strong>at-least-once</strong> (publish thành công nhưng crash
  * trước khi mark SENT → publish lại lần poll sau — consumer idempotent qua
- * {@link IdempotentConsumer}). Retry: mỗi lần poll thử lại PENDING; quá
- * {@code outbox.relay.max-attempts} → FAILED (giữ row + lastError để ops
- * debug/requeue — relay không tự xóa, không tự dead-letter queue).</p>
+ * {@link IdempotentConsumer}). Retry có phân biệt LOẠI LỖI:</p>
+ * <ul>
+ *   <li>{@link AmqpConnectException} (broker chết/hạ tầng) — KHÔNG đốt attempts:
+ *       message không có lỗi, chỉ broker chưa sẵn sàng. Relay tự pause
+ *       {@code outbox.relay.connect-backoff-ms} rồi thử lại VĨNH VIỄN — tránh
+ *       scenario RabbitMQ chết 10s → toàn bộ PENDING thành FAILED (poison).</li>
+ *   <li>Exception khác (lỗi theo-message: serialize, quyền, quota...) —
+ *       attempts++ mỗi poll; quá {@code outbox.relay.max-attempts} → FAILED
+ *       (giữ row + lastError để ops debug/requeue — không tự dead-letter).</li>
+ * </ul>
  *
  * <p>Service dùng phải: {@code @EnableScheduling} + bảng outbox (copy
  * {@code sql/outbox-schema.sql} vào migration V1) + đặt
@@ -38,7 +46,11 @@ public class OutboxRelay {
     private final String exchange;
     private final int maxAttempts;
     private final int batchSize;
+    private final long connectBackoffMs;
     private final boolean enabled;
+
+    /** Pause poll sau lỗi connect — volatile vì @Scheduled thread đọc, relay thread ghi. */
+    private volatile Instant pausedUntil = Instant.EPOCH;
 
     public OutboxRelay(
         OutboxMessageRepository repository,
@@ -46,6 +58,7 @@ public class OutboxRelay {
         @Value("${outbox.relay.exchange:ecommerce.events}") String exchange,
         @Value("${outbox.relay.max-attempts:5}") int maxAttempts,
         @Value("${outbox.relay.batch-size:100}") int batchSize,
+        @Value("${outbox.relay.connect-backoff-ms:15000}") long connectBackoffMs,
         @Value("${outbox.relay.enabled:true}") boolean enabled
     ) {
         this.repository = repository;
@@ -53,12 +66,13 @@ public class OutboxRelay {
         this.exchange = exchange;
         this.maxAttempts = maxAttempts;
         this.batchSize = batchSize;
+        this.connectBackoffMs = connectBackoffMs;
         this.enabled = enabled;
     }
 
     @Scheduled(fixedDelayString = "${outbox.relay.poll-interval-ms:2000}")
     public void poll() {
-        if (!enabled) {
+        if (!enabled || Instant.now().isBefore(pausedUntil)) {
             return;
         }
         List<OutboxMessage> batch =
@@ -77,6 +91,11 @@ public class OutboxRelay {
             message.setStatus(OutboxStatus.SENT);
             message.setSentAt(Instant.now());
             repository.save(message);
+        } catch (AmqpConnectException e) {
+            // Hạ tầng chết — giữ PENDING, attempts KHÔNG đổi, pause cả batch.
+            pausedUntil = Instant.now().plusMillis(connectBackoffMs);
+            log.warn("RabbitMQ chưa kết nối được (publish {} lỗi) — relay pause {}ms, row PENDING giữ nguyên",
+                message.getEventType(), connectBackoffMs, e);
         } catch (Exception e) {
             int attempts = message.getAttempts() + 1;
             message.setAttempts(attempts);

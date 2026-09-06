@@ -1,25 +1,35 @@
 package com.ecommerce.common.outbox;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Idempotent consume cho event at-least-once: {@code tryConsume(eventId)} trả
- * true CHỈ cho consumer đầu tiên ghi được row vào {@code processed_messages}
- * (PK trùng → false). Pattern dùng trong @RabbitListener:
+ * true CHỈ cho consumer đầu tiên ghi được row vào {@code processed_messages}.
+ *
+ * <p><strong>Implementation notes (2 bug đã sửa — đừng quay lại):</strong></p>
+ * <ul>
+ *   <li>Native {@code INSERT ... ON CONFLICT DO NOTHING} — thực thi NGAY và
+ *       trả rowcount (không như {@code em.persist()} defer INSERT tới commit,
+ *       khiến catch DataIntegrityViolation trong method thành dead-code);
+ *       conflict KHÔNG abort transaction.</li>
+ *   <li>{@code MANDATORY} — marker PHẢI cùng transaction với business logic:
+ *       business rollback = marker rollback. (REQUIRES_NEW sẽ tạo "ghost
+ *       commit": marker còn sau rollback → event gửi lại bị skip → mất event.)
+ *       Nếu không có tx → exception ngay, bắt caller sửa đúng.</li>
+ * </ul>
+ *
+ * <p>Pattern dùng trong {@code @RabbitListener}:</p>
  *
  * <pre>{@code
- * if (!idempotentConsumer.tryConsume(eventId)) return;
- * // ... business logic trong cùng transaction
+ * @Transactional
+ * @RabbitListener(queues = "...")
+ * public void on(EventEnvelope envelope) {
+ *     if (!idempotentConsumer.tryConsume(envelope.eventId().toString())) return;
+ *     // ... business logic — cùng transaction với marker
+ * }
  * }</pre>
- *
- * <p>{@code REQUIRES_NEW}: INSERT trùng làm Postgres ABORT transaction hiện tại
- * — nếu chạy trong tx của caller, mọi business-write trước đó sẽ rollback câm.
- * Tách tx riêng để race chỉ hủy đúng lệnh bookkeeping này. Cần bảng
- * {@code processed_messages} (migration V1, PG) — service Redis-only tự dedupe
- * bằng operation tự nhiên idempotent thay vì class này.</p>
  */
 @Component
 public class IdempotentConsumer {
@@ -31,20 +41,12 @@ public class IdempotentConsumer {
     }
 
     /**
-     * @return true nếu message CHƯA xử lý (consumer được phép chạy business
-     *         logic); false nếu đã xử lý hoặc đang xử lý ở transaction khác.
+     * @return true nếu message CHƯA xử lý (consumer chạy business logic trong
+     *         CÙNG transaction này); false nếu đã xử lý hoặc consumer khác
+     *         đang giữ.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.MANDATORY)
     public boolean tryConsume(String messageId) {
-        if (repository.existsById(messageId)) {
-            return false;
-        }
-        try {
-            repository.save(new ProcessedMessage(messageId));
-            return true;
-        } catch (DataIntegrityViolationException e) {
-            // race giữa 2 consumer — thua → bỏ qua (tx riêng, không hại caller)
-            return false;
-        }
+        return repository.insertIgnore(messageId) == 1;
     }
 }

@@ -1,0 +1,36 @@
+# --- Env / secrets ---
+.env
+infra/keys/
+
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# --- Node / pnpm ---
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# --- Playwright ---
+playwright-report/
+test-results/
+blob-report/
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / tmp ---
+*.log
+tmp/

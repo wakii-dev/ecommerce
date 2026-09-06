@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
+import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
 import { EmptyState, StarRating } from '../../../../components/ui-kit';
 import {
   catalogApi,
@@ -221,6 +222,8 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
             <span className="pdp-meta-sold">
               {copy.sold} {product.ratingCount}
             </span>
+            {/* SF-8: wishlist heart — guest → /account (đăng nhập shell) */}
+            <WishlistHeart productId={product.id} locale={locale} variant="pdp" />
           </div>
 
           <PdpBuyBox product={product} locale={locale} />

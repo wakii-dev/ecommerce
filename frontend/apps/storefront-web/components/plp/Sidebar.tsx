@@ -2,8 +2,8 @@ import type { Category } from '../../lib/catalog-api';
 import { localePath, type Locale } from '../../lib/format';
 import {
   buildPlpUrl,
-  PRICE_PRESETS,
   withFilters,
+  PRICE_PRESETS,
   type PlpQuery,
 } from '../../lib/plp-params';
 
@@ -40,7 +40,7 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
           <div key={root.id}>
             <a
               className={`plp-tree-root${activeIds.has(root.id) ? ' is-active' : ''}`}
-              href={buildPlpUrl(localePath(`/c/${root.slug}`, locale), query)}
+              href={buildPlpUrl(localePath(`/c/${root.slug}`, locale), withFilters(query, {}))}
             >
               {root.name}
             </a>
@@ -50,7 +50,7 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
                   <a
                     key={child.id}
                     className={`plp-tree-child${activeIds.has(child.id) ? ' is-active' : ''}`}
-                    href={buildPlpUrl(localePath(`/c/${child.slug}`, locale), query)}
+                    href={buildPlpUrl(localePath(`/c/${child.slug}`, locale), withFilters(query, {}))}
                   >
                     {child.name}
                   </a>

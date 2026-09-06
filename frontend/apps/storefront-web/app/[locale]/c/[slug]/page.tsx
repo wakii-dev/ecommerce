@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: { params: { locale: string; s
     // Template `%s | Shop VN` của layout → "Điện Tử | Shop VN".
     title: name,
     alternates: {
-      canonical: localePath(`/c/${slugVi}`, locale),
+      canonical: localePath(`/c/${locale === 'en' ? slugEn : slugVi}`, locale), // khớp hreflang en (review nhóm 6)
       // en URL luôn có prefix /en (middleware: /en/* pass, /c/* rewrite sang vi).
       // Khi tree không resolve được (catalog down) slugEn fallback = slug —
       // /en/c/{slug} vẫn render được (API accept slug vi lẫn en).

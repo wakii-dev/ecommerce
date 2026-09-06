@@ -60,7 +60,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
           >
             <p className="hero-kicker">{slide.kicker}</p>
             <h2 className="hero-title">{slide.title}</h2>
-            <a className="hero-cta" href={ctaHref}>
+            <a className="hero-cta" href={ctaHref} tabIndex={slideIndex === index ? undefined : -1}>
               {CTA_LABEL[locale]}
             </a>
             <span className="hero-ribbon" aria-hidden="true">

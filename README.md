@@ -138,6 +138,80 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 
 ---
 
+## 🧱 Bracket — 15 SF · 7 tier
+
+```mermaid
+flowchart TD
+    subgraph T0["TIER 0"]
+        N1["SF-1 platform-foundation<br/>FI-311 · 13 tasks<br/>✅ Done"]
+    end
+    subgraph T1["TIER 1"]
+        N2["SF-2 contracts-design<br/>FI-312 · 14 tasks<br/>✅ Done"]
+    end
+    subgraph T2["TIER 2"]
+        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>🔨 In Progress"]
+        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>🔨 In Progress"]
+        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>🔨 In Progress"]
+    end
+    subgraph T3["TIER 3"]
+        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks"]
+        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks"]
+        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks"]
+        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks"]
+    end
+    subgraph T4["TIER 4"]
+        N11["SF-11 partner Open API<br/>FI-321 · 10 tasks"]
+        N12["SF-12 affiliate<br/>FI-322 · 10 tasks"]
+    end
+    subgraph T5["TIER 5"]
+        N10["SF-10 convergence + ship<br/>FI-320 · 13 tasks"]
+    end
+    subgraph T6["TIER 6"]
+        N13["SF-13 essentials<br/>FI-323 · 13 tasks"]
+        N14["SF-14 commerce ext<br/>FI-324 · 13 tasks"]
+        N15["SF-15 engagement<br/>FI-325 · 10 tasks"]
+    end
+    N1 --> N2
+    N2 --> N3
+    N2 --> N4
+    N2 --> N5
+    N3 --> N6
+    N4 --> N6
+    N5 --> N6
+    N3 --> N7
+    N4 --> N7
+    N5 --> N7
+    N3 --> N8
+    N4 --> N8
+    N5 --> N9
+    N4 --> N11
+    N9 --> N11
+    N3 --> N12
+    N6 --> N12
+    N9 --> N12
+    N7 --> N14
+    N9 --> N14
+    N10 --> N14
+    N3 --> N15
+    N4 --> N15
+    N5 --> N15
+    N10 --> N15
+    N6 --> N10
+    N7 --> N10
+    N8 --> N10
+    N9 --> N10
+    N11 --> N10
+    N12 --> N10
+    classDef done fill:#26AA99,stroke:#1d8275,color:#fff
+    classDef running fill:#FF9C08,stroke:#d68206,color:#fff
+    classDef todo fill:#555,stroke:#444,color:#eee
+    class N1,N2 done
+    class N3,N4,N5 running
+    class N6,N7,N8,N9,N10,N11,N12,N13,N14,N15 todo
+```
+
+> Bản render tương tác (hết hạn ~30 ngày): [share.onorca.dev/a/YghPe0uD5FEQ](https://share.onorca.dev/a/YghPe0uD5FEQ) · Nguồn: [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md)
+
 ## 📊 Tiến độ story
 
 | SF | Nội dung | Issue | Trạng thái |

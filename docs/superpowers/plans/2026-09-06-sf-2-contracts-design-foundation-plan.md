@@ -237,12 +237,12 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `frontend/packages/ui-kit/package.json`, `src/styles/tokens.css`, `src/components/{Button,Input,Select,Card,Badge,Modal,Drawer,Tabs,Table,Toast,StarRating,Price,Skeleton,EmptyState}.tsx`, `src/components/index.ts`, `src/demo/UiKitDemo.tsx`, `src/demo/index.ts`
 
-- [ ] `tokens.css`: CSS variables 2 theme qua `[data-theme="storefront"]` + `[data-theme="admin"]` — scale: `--c-*` (primary, primary-hover, bg, surface, text, text-muted, border, danger, warning, success, focus), `--space-1..8`, `--radius-sm/md/lg/full`, `--font-sans/serif?`, `--text-xs..3xl`, `--shadow-1..3`. Giá trị v1 = neutral sạch (sẽ hoàn thiện theo hướng designer ở Task 16)
-- [ ] 14 primitives (Tailwind KHÔNG bắt buộc ở đây — dùng CSS vars thuần cho tính portable; mỗi component `<button class="uk-btn">` + styles trong `ui-kit.css`): Button (variant primary/secondary/ghost/danger, size, loading), Input (label, error, hint), Select, Card, Badge (variant theo `--c-*`), Modal (portal + focus trap + ESC), Drawer (trái/phải), Tabs (keyboard ←→), Table (thead/tbody/empty), Toast (provider + useToast), StarRating (hiển thị + nhập, half-star), **Price (VND `Intl.NumberFormat('vi-VN', {style:'currency', currency:'VND'})` + giá gạch strikethrough prop + badge %)**, Skeleton, EmptyState
-- [ ] **Framework-portable (D16):** không browser-only API ở module top-level (localStorage/window chỉ trong effect/handler); components dùng được trong Next Server import (client boundary do app lo) lẫn Vite MFE
-- [ ] `UiKitDemo`: render từng component + showcase bảng giá VND (1.290.000 ₫) + **theme switcher** đổi `data-theme` trên `<html>` (storefront ↔ admin) — demo được mount ở shell route `/ui-kit` (Task 14)
-- [ ] Vitest: Price format đúng "1.290.000 ₫"; StarRating value; Badge variant class
-- [ ] Commit: `feat(ui-kit): v1 — tokens 2 theme + 14 primitives + Price VND + demo page`
+- [x] `tokens.css`: CSS variables 2 theme qua `[data-theme="storefront"]` + `[data-theme="admin"]` — scale: `--c-*` (primary, primary-hover, bg, surface, text, text-muted, border, danger, warning, success, focus), `--space-1..8`, `--radius-sm/md/lg/full`, `--font-sans/serif?`, `--text-xs..3xl`, `--shadow-1..3`. Giá trị v1 = neutral sạch (sẽ hoàn thiện theo hướng designer ở Task 16)
+- [x] 14 primitives (Tailwind KHÔNG bắt buộc ở đây — dùng CSS vars thuần cho tính portable; mỗi component `<button class="uk-btn">` + styles trong `ui-kit.css`): Button (variant primary/secondary/ghost/danger, size, loading), Input (label, error, hint), Select, Card, Badge (variant theo `--c-*`), Modal (portal + focus trap + ESC), Drawer (trái/phải), Tabs (keyboard ←→), Table (thead/tbody/empty), Toast (provider + useToast), StarRating (hiển thị + nhập, half-star), **Price (VND `Intl.NumberFormat('vi-VN', {style:'currency', currency:'VND'})` + giá gạch strikethrough prop + badge %)**, Skeleton, EmptyState
+- [x] **Framework-portable (D16):** không browser-only API ở module top-level (localStorage/window chỉ trong effect/handler); components dùng được trong Next Server import (client boundary do app lo) lẫn Vite MFE
+- [x] `UiKitDemo`: render từng component + showcase bảng giá VND (1.290.000 ₫) + **theme switcher** đổi `data-theme` trên `<html>` (storefront ↔ admin) — demo được mount ở shell route `/ui-kit` (Task 14)
+- [x] Vitest: Price format đúng "1.290.000 ₫"; StarRating value; Badge variant class
+- [x] Commit: `feat(ui-kit): v1 — tokens 2 theme + 14 primitives + Price VND + demo page`
 
 ### Task 13: i18n-vi-en
 

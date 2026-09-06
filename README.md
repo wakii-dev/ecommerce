@@ -131,7 +131,7 @@ make dev                    # toàn bộ services + frontend (đang xây)
 | SF | Nội dung | Issue | Trạng thái |
 |---|---|---|---|
 | SF-1 | Nền móng: monorepo, compose, gateway, service template | [FI-311](https://linear.app/my-app-hoivu/issue/FI-311) | ✅ Done |
-| SF-2 | Contracts freeze (7 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ⏳ Todo |
+| SF-2 | Contracts freeze (10 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ✅ Done |
 | SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ⏳ Todo |
 | SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
 | SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ⏳ Todo |

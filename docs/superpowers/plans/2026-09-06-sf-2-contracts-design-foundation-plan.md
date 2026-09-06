@@ -226,12 +226,12 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `frontend/packages/auth/package.json`, `src/{AuthStore.ts, provider.tsx, useAuth.ts, index.ts}`, `src/__tests__/authStore.test.ts`
 
-- [ ] `AuthStore` (singleton `export const authStore`): state `accessToken` in-memory ONLY (KHÔNG localStorage — XSS), `user {id, roles}` decode từ JWT payload (RS256 — decode phần payload base64, KHÔNG verify chữ ký client-side); `refresh()` gọi `POST /api/identity/auth/refresh` (cookie httpOnly, `credentials: 'include'`); **auto-refresh on 401 với request queue**: fetch wrapper chờ 1 refresh duy nhất rồi retry toàn bộ; `hasRole(...roles)`; `logout()`; `subscribe(listener)` cho UI re-render
-- [ ] Config inject được: `configureAuth({refreshUrl, loginPath?})` — KHÔNG hardcode URL (framework-portable D16, storefront-web dùng lại được)
-- [ ] `AuthProvider` + `useAuth()` (react; import react qua peerDep) + re-export singleton
-- [ ] Unit tests (vitest): set/get token; 401 → refresh 1 lần + 2 request hàng đợi đều retry; refresh fail → logout; `hasRole` admin/customer; không rò token ra storage
-- [ ] `pnpm -C frontend --filter @ecommerce/auth test` xanh
-- [ ] Commit: `feat(auth): AuthStore singleton — in-memory token, refresh queue on 401, hasRole, useAuth`
+- [x] `AuthStore` (singleton `export const authStore`): state `accessToken` in-memory ONLY (KHÔNG localStorage — XSS), `user {id, roles}` decode từ JWT payload (RS256 — decode phần payload base64, KHÔNG verify chữ ký client-side); `refresh()` gọi `POST /api/identity/auth/refresh` (cookie httpOnly, `credentials: 'include'`); **auto-refresh on 401 với request queue**: fetch wrapper chờ 1 refresh duy nhất rồi retry toàn bộ; `hasRole(...roles)`; `logout()`; `subscribe(listener)` cho UI re-render
+- [x] Config inject được: `configureAuth({refreshUrl, loginPath?})` — KHÔNG hardcode URL (framework-portable D16, storefront-web dùng lại được)
+- [x] `AuthProvider` + `useAuth()` (react; import react qua peerDep) + re-export singleton
+- [x] Unit tests (vitest): set/get token; 401 → refresh 1 lần + 2 request hàng đợi đều retry; refresh fail → logout; `hasRole` admin/customer; không rò token ra storage
+- [x] `pnpm -C frontend --filter @ecommerce/auth test` xanh
+- [x] Commit: `feat(auth): AuthStore singleton — in-memory token, refresh queue on 401, hasRole, useAuth`
 
 ### Task 12: ui-kit-v1-tokens-primitives-2themes
 
@@ -248,10 +248,10 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `frontend/packages/i18n/package.json`, `src/{init.ts, useT.ts, catalogs/vi.ts, catalogs/en.ts, index.ts}`, `src/__tests__/i18n.test.ts`
 
-- [ ] i18next init (export `initI18n({lang?})` — idempotent, framework-portable): `vi` default + `en` fallback `vi`; resources chỉ **chrome chung** (nav: home/cart/checkout/account/admin/login/register/logout; auth: email/password/login/register/forgot; actions: save/cancel/delete/edit/search/addToCart/buyNow; common: loading/empty/error/retry/currency)
-- [ ] `useT()` = wrapper react-i18next trả `{t, lang, setLang}`; KHÔNG init tại module top-level
-- [ ] Test: default vi; switch en dịch đúng key; key thiếu → fallback vi
-- [ ] Commit: `feat(i18n): i18next vi/en — chrome catalogs + useT`
+- [x] i18next init (export `initI18n({lang?})` — idempotent, framework-portable): `vi` default + `en` fallback `vi`; resources chỉ **chrome chung** (nav: home/cart/checkout/account/admin/login/register/logout; auth: email/password/login/register/forgot; actions: save/cancel/delete/edit/search/addToCart/buyNow; common: loading/empty/error/retry/currency)
+- [x] `useT()` = wrapper react-i18next trả `{t, lang, setLang}`; KHÔNG init tại module top-level
+- [x] Test: default vi; switch en dịch đúng key; key thiếu → fallback vi
+- [x] Commit: `feat(i18n): i18next vi/en — chrome catalogs + useT`
 
 ### Task 14: federation-harness-shell-skeleton-remote
 

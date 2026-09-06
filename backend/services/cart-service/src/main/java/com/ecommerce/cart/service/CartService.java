@@ -96,7 +96,9 @@ public class CartService {
     }
 
     private LineItem enrichOne(LineItem item, Map<String, Integer> availability) {
-        boolean unavailable = false;
+        // code-review P1: KHÔNG reset unavailable — catalog DOWN phải GIỮ trạng
+        // thái trước đó (item OOS/unpublished không được "sống lại" ảo).
+        boolean unavailable = item.unavailable();
         String name = item.name();
         String image = item.image();
         long unitPrice = item.unitPrice();
@@ -108,6 +110,7 @@ public class CartService {
                 name = product.name();
                 image = product.image() != null ? product.image().url() : image;
                 unitPrice = product.price() + product.priceDeltaOf(item.variantId()).orElse(0L);
+                unavailable = false; // catalog sống → re-validate; inventory OOS set lại true dưới
             } else if (result.outcome() == Outcome.PRODUCT_MISSING) {
                 unavailable = true; // draft/deleted/slug đổi — giữ snapshot, không xóa
             } else if (unitPrice == 0) {
@@ -180,14 +183,20 @@ public class CartService {
         }
 
         // 3. Dedupe line identity — cộng qty (cap 99); line cũ GIỮ id (client
-        // đang giữ id cho PATCH/DELETE) nhưng nhận enrichment mới của line add.
+        // đang giữ id cho PATCH/DELETE). code-review P1: catalog DOWN → probe
+        // thoái hóa (name null/price 0) KHÔNG được đè snapshot lành của line
+        // cũ — chỉ catalog OK (dữ liệu live) mới thay enrichment.
         List<LineItem> items = new ArrayList<>(doc.items());
         int index = indexOfSameLine(items, line);
         if (index >= 0) {
             LineItem existing = items.get(index);
             int mergedQty = Math.min(MAX_QTY_PER_LINE, existing.qty() + qty);
-            items.set(index, new LineItem(existing.id(), existing.productId(), existing.variantId(),
-                mergedQty, line.slug(), line.name(), line.image(), line.unitPrice(), line.unavailable()));
+            if (result.outcome() == Outcome.OK) {
+                items.set(index, new LineItem(existing.id(), existing.productId(), existing.variantId(),
+                    mergedQty, line.slug(), line.name(), line.image(), line.unitPrice(), line.unavailable()));
+            } else {
+                items.set(index, existing.withQty(mergedQty));
+            }
         } else {
             items.add(line);
         }
@@ -195,19 +204,21 @@ public class CartService {
         return new AddOutcome(enrichAll(updated), false);
     }
 
-    /** PATCH qty — 404 line lạ; 409 vượt stock (variant). */
+    /** PATCH qty — 404 line lạ; 409 vượt stock (variant). qty clamp 99 TRƯỚC
+     *  khi so stock (code-review P2: qty 150 không bị 409 oan khi stock 120). */
     public CartDocument patchQty(CartDocument doc, UUID lineId, int qty) {
         List<LineItem> items = new ArrayList<>(doc.items());
         int index = indexOfLineId(items, lineId);
         if (index < 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "item_not_found — " + lineId);
         }
-        LineItem line = items.get(index).withQty(Math.min(MAX_QTY_PER_LINE, qty));
+        int clamped = Math.min(MAX_QTY_PER_LINE, qty);
+        LineItem line = items.get(index).withQty(clamped);
         if (line.variantId() != null) {
             Integer available = inventory
                 .availabilityOf(List.of(line.variantId()))
                 .get(line.variantId().toString());
-            if (available != null && available < qty) {
+            if (available != null && available < clamped) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "qty_exceeds_stock — variant " + line.variantId() + " chỉ còn " + available);
             }

@@ -42,6 +42,7 @@ public final class CartDtos {
 
     /** Mirror AddItemRequest — variantId OMIT khi product không variant (A1). */
     public record AddItemRequest(
+            @jakarta.validation.constraints.NotNull(message = "productId là bắt buộc")
             UUID productId,
             UUID variantId,
             Integer qty,

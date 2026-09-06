@@ -24,6 +24,11 @@ import type { Locale } from '../../lib/format';
  * Lỗi/404/non-array → KHÔNG render UI tồn kho (cart vẫn kiểm 409 lúc add).
  */
 
+/** Shell origin (cart/checkout là trang shell, KHÔNG phải route Next —
+ *  code-review P1: '/cart' relative 404 trên mọi dev topology). Default 5173
+ *  theo .env.example; override khi dev port đụng độ. */
+const SHELL_URL = import.meta.env.VITE_SHELL_URL ?? 'http://localhost:5173';
+
 const COPY = {
   vi: {
     add: 'THÊM VÀO GIỎ',
@@ -137,7 +142,7 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
       }
       window.dispatchEvent(new CustomEvent('ecommerce:cart-changed'));
       showToast(true);
-      if (buyNow) window.location.assign('/cart');
+      if (buyNow) window.location.assign(`${SHELL_URL}/cart`);
     } catch {
       // network/cart-service chết → toast êm (giữ hành vi cũ, không crash)
       showToast(false);

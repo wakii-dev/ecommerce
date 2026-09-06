@@ -154,18 +154,17 @@ class CartApiTest extends AbstractCartIntegrationTest {
 
     @Test
     void addItemWhenCatalogDeadAcceptsUnpricedLine() throws Exception {
-        // Pin spec: catalog CHẾT lúc add (khác 404) → nhận item không enrichment
-        CATALOG_WIREMOCK.stop();
-        try {
-            UUID productId = UUID.randomUUID();
-            Reply reply = send(req("POST", "/api/cart/items?slug=dead-catalog", null, null,
-                "{\"productId\":\"" + productId + "\",\"qty\":1}"));
-            assertThat(reply.status()).isEqualTo(200);
-            assertThat(reply.body()).contains("\"unitPrice\":0");
-            assertThat(reply.body()).contains("\"unavailable\":true");
-        } finally {
-            CATALOG_WIREMOCK.start();
-        }
+        // Pin spec: catalog CHẾT lúc add (khác 404) → nhận item không enrichment.
+        // 503 stub mô phỏng chết — KHÔNG stop()/start() WireMock chung (poison
+        // dynamic port + stub registry cho các class sau trong context dùng chung).
+        CATALOG_WIREMOCK.stubFor(get(urlEqualTo("/api/catalog/products/dead-catalog"))
+            .willReturn(aResponse().withStatus(503)));
+        UUID productId = UUID.randomUUID();
+        Reply reply = send(req("POST", "/api/cart/items?slug=dead-catalog", null, null,
+            "{\"productId\":\"" + productId + "\",\"qty\":1}"));
+        assertThat(reply.status()).isEqualTo(200);
+        assertThat(reply.body()).contains("\"unitPrice\":0");
+        assertThat(reply.body()).contains("\"unavailable\":true");
     }
 
     @Test
@@ -224,5 +223,37 @@ class CartApiTest extends AbstractCartIntegrationTest {
         Reply gone = send(req("PATCH", "/api/cart/items/" + lineId, null, cookie,
             "{\"qty\":1}"));
         assertThat(gone.status()).isEqualTo(404);
+    }
+
+    @Test
+    void patchQtyClampsBeforeStockCheck() throws Exception {
+        // code-review P2 regression: clamp 99 chạy TRƯỚC check stock — patch
+        // 150 với stock 120 → qty hiệu dụng 99 ≤ 120 → 200, KHÔNG 409 oan.
+        UUID productId = UUID.randomUUID();
+        UUID variantId = UUID.randomUUID();
+        stubCatalogProduct("clamp-item", "Clamp Item", 10000, variantId, 0);
+        INVENTORY_WIREMOCK.stubFor(get(urlPathEqualTo("/inventory/availability"))
+            .withQueryParam("variantIds", equalTo(variantId.toString()))
+            .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                .withBody("[{\"variantId\":\"" + variantId + "\",\"available\":120}]")));
+
+        Reply add = send(req("POST", "/api/cart/items?slug=clamp-item", null, null,
+            "{\"productId\":\"" + productId + "\",\"variantId\":\"" + variantId + "\",\"qty\":1}"));
+        String cookie = add.setCookie().orElseThrow().split(";")[0];
+        String lineId = com.jayway.jsonpath.JsonPath.read(add.body(), "$.items[0].id");
+
+        Reply clamped = send(req("PATCH", "/api/cart/items/" + lineId, null, cookie,
+            "{\"qty\":150}"));
+        assertThat(clamped.status()).isEqualTo(200);
+        assertThat(clamped.body()).contains("\"qty\":99");
+
+        // vượt thật sự: stock 120 < 150 → 409 (clamp không giấu 409 thật)
+        INVENTORY_WIREMOCK.stubFor(get(urlPathEqualTo("/inventory/availability"))
+            .withQueryParam("variantIds", equalTo(variantId.toString()))
+            .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                .withBody("[{\"variantId\":\"" + variantId + "\",\"available\":3}]")));
+        Reply overStock = send(req("PATCH", "/api/cart/items/" + lineId, null, cookie,
+            "{\"qty\":150}"));
+        assertThat(overStock.status()).isEqualTo(409);
     }
 }

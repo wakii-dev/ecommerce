@@ -97,6 +97,40 @@ class CartEnrichmentTest extends AbstractCartIntegrationTest {
     }
 
     @Test
+    void catalogDownKeepsPreviousUnavailableState() throws Exception {
+        // code-review P1 regression: item OOS (unavailable=true) — catalog DOWN
+        // sau đó KHÔNG được "sống lại" (trạng thái cũ phải giữ nguyên).
+        // DÙNG STUB 503 mô phỏng catalog chết — KHÔNG stop()/start() WireMock
+        // chung (dynamic port + stub registry chết theo → poison các class sau).
+        UUID productId = UUID.randomUUID();
+        UUID variantId = UUID.randomUUID();
+        CATALOG_WIREMOCK.stubFor(get(urlEqualTo("/api/catalog/products/regress-item"))
+            .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                .withBody("{\"name\":\"Regress Item\",\"image\":null,\"price\":700000,"
+                    + "\"variants\":[{\"id\":\"" + variantId + "\",\"priceDelta\":0}]}")));
+        stubInventory(variantId, 0);
+        Reply add = send(req("POST", "/api/cart/items?slug=regress-item", null,
+            "{\"productId\":\"" + productId + "\",\"variantId\":\"" + variantId
+                + "\",\"qty\":1,\"allowOos\":true}"));
+        assertThat(add.body()).contains("\"unavailable\":true"); // OOS → unavailable
+
+        // catalog "chết" cho slug này — 503 → CATALOG_DOWN (snapshot giữ nguyên)
+        CATALOG_WIREMOCK.stubFor(get(urlEqualTo("/api/catalog/products/regress-item"))
+            .willReturn(aResponse().withStatus(503)));
+        Reply down = send(req("GET", "/api/cart", add.cookie().split(";")[0], null));
+        assertThat(down.body()).contains("\"unavailable\":true"); // giữ trạng thái cũ
+        assertThat(down.body()).contains("\"unitPrice\":700000"); // giữ snapshot giá
+        assertThat(down.body()).doesNotContain("\"unavailable\":false");
+    }
+
+    private void stubInventory(UUID variantId, int available) {
+        INVENTORY_WIREMOCK.stubFor(get(urlPathEqualTo("/inventory/availability"))
+            .withQueryParam("variantIds", equalTo(variantId.toString()))
+            .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                .withBody("[{\"variantId\":\"" + variantId + "\",\"available\":" + available + "}]")));
+    }
+
+    @Test
     void variantOutOfStockMarksUnavailable() throws Exception {
         UUID productId = UUID.randomUUID();
         UUID variantId = UUID.randomUUID();

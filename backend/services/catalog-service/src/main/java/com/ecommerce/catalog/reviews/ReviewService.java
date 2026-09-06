@@ -2,6 +2,7 @@ package com.ecommerce.catalog.reviews;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ import com.ecommerce.catalog.repo.ReviewEligibilityRepository;
 import com.ecommerce.catalog.repo.ReviewRepository;
 import com.ecommerce.catalog.reviews.web.dto.ReviewAdminDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewAdminPageDto;
+import com.ecommerce.catalog.reviews.web.dto.MeReviewDto;
+import com.ecommerce.catalog.reviews.web.dto.MeReviewPageDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewListDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewSubmitRequest;
@@ -202,6 +205,80 @@ public class ReviewService {
             review.getCreatedAt(),
             review.getProductId(),
             review.getStatus().name());
+    }
+
+    // ── me/reviews (T4) — ADDITIVE ngoài contract, REQUIREMENT-GAP FI-310 ───
+
+    /** Review của tôi — mọi status, mới nhất trước; filter productId optional (PDP my-pending). */
+    @Transactional(readOnly = true)
+    public MeReviewPageDto meList(UUID userId, UUID productIdFilter, int page, int size) {
+        if (page < 1) {
+            throw bad("page phải >= 1 (1-based)");
+        }
+        if (size < 1 || size > 100) {
+            throw bad("size phải trong khoảng [1, 100] (mặc định 20)");
+        }
+        Page<ReviewEntity> result = productIdFilter == null
+            ? reviewRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page - 1, size))
+            : reviewRepository.findByUserIdAndProductIdOrderByCreatedAtDesc(userId, productIdFilter, PageRequest.of(page - 1, size));
+
+        Map<UUID, String> namesByProduct = new LinkedHashMap<>();
+        List<UUID> productIds = result.getContent().stream().map(ReviewEntity::getProductId).distinct().toList();
+        if (!productIds.isEmpty()) {
+            productRepository.findAllById(productIds).forEach(p ->
+                namesByProduct.put(p.getId(), p.getName() == null ? null : p.getName().resolve("vi")));
+        }
+        return new MeReviewPageDto(
+            result.getContent().stream().map(r -> toMeDto(r, namesByProduct.get(r.getProductId()))).toList(),
+            page, size, result.getTotalElements());
+    }
+
+    /** Sửa review của mình — chỉ PENDING; review người khác → 404 (không lộ tồn tại, spec Q1). */
+    @Transactional
+    public MeReviewDto editMine(UUID userId, UUID reviewId, ReviewSubmitRequest request, String userName) {
+        ReviewEntity review = ownedPendingReview(userId, reviewId);
+        validate(request);
+        review.setRating(request.rating());
+        review.setTitle(normalizeTitle(request.title()));
+        review.setContent(request.content().trim());
+        if (userName != null && !userName.isBlank()) {
+            review.setUserName(userName.trim());
+        }
+        return toMeDto(reviewRepository.save(review), null);
+    }
+
+    /** Xóa review của mình — chỉ PENDING; guards như editMine. */
+    @Transactional
+    public void deleteMine(UUID userId, UUID reviewId) {
+        ReviewEntity review = ownedPendingReview(userId, reviewId);
+        reviewRepository.delete(review);
+        reviewRepository.flush(); // 204 phải chắc chắn row đã bay (tránh stale read ngay sau)
+    }
+
+    private ReviewEntity ownedPendingReview(UUID userId, UUID reviewId) {
+        ReviewEntity review = reviewRepository.findById(reviewId).orElseThrow(
+            () -> notFound("Không tìm thấy review"));
+        if (!review.getUserId().equals(userId)) {
+            // không phải của mình → 404 như không tồn tại (không lộ existence)
+            throw notFound("Không tìm thấy review");
+        }
+        if (review.getStatus() != ReviewStatus.PENDING) {
+            throw conflict("Review đã ở trạng thái " + review.getStatus() + " — chỉ PENDING sửa/xóa được");
+        }
+        return review;
+    }
+
+    private static MeReviewDto toMeDto(ReviewEntity review, String productName) {
+        return new MeReviewDto(
+            review.getId(),
+            review.getProductId(),
+            productName,
+            review.getRating(),
+            review.getTitle(),
+            review.getContent(),
+            review.getStatus().name(),
+            review.isVerified(),
+            review.getCreatedAt());
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────

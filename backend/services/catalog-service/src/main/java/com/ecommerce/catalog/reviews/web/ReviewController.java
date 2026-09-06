@@ -68,7 +68,8 @@ public class ReviewController {
         }
     }
 
-    private static String resolveUserName(Jwt jwt) {
+    /** fullName claim fallback email local-part — MeReviewController tái dùng (cùng slice). */
+    static String resolveUserName(Jwt jwt) {
         String fullName = jwt.getClaimAsString("fullName");
         if (fullName != null && !fullName.isBlank()) {
             String trimmed = fullName.trim();

@@ -10,7 +10,7 @@
 
 **Linear Issue:** FI-315 · **Spec:** `docs/superpowers/specs/2026-09-06-sf-5-inventory-payment-design.md` (nguồn sự thật cho mọi quyết định — plan không lặp lại rationale)
 
-**DAG:** T1→{T2→T4, T3} · T5→T6→T7 · T8←{T4,T7}. Chuỗi inventory (T1-T4) và payment (T5-T7) file-disjoint — song song được, trừ parent pom (append 2 module — làm chung Task 1 để tránh xung đột).
+**DAG:** T1→{T2→T4, T3} · T5→T6→T7 · T8←{T4,T7}. **Controller paths KHÔNG có prefix `/api`** — gateway route `Path=/api/<svc>/**` + `StripPrefix=1` (convention pinned trong gateway-routes.yml): service nhận `/inventory/reservations`, public path qua gateway = `/api/inventory/reservations` (contract paths là gateway-level). Chuỗi inventory/payment chỉ trùng 2 file shared (parent pom — append 2 module chung Task 1; gateway-routes.yml — 2 block rời nhau) → chạy inline tuần tự an toàn.
 
 ---
 
@@ -76,7 +76,7 @@ Saga không có chỗ để reserve stock an toàn và thu tiền — cần 2 se
 **Files:**
 - Modify: `backend/pom.xml` (append 2 `<module>` — CẢ inventory + payment một lượt, tránh conflict SF song song)
 - Modify: `backend/gateway/src/main/resources/gateway-routes.yml` (un-comment block `inventory` — SF-5 sở hữu)
-- Create: `backend/services/inventory-service/pom.xml`, `src/main/java/com/ecommerce/inventory/InventoryServiceApplication.java`, `src/main/resources/application.yml`, `src/main/resources/db/migration/V1__init.sql` (copy template), `V10__inventory_domain.sql`, `src/test/java/com/ecommerce/inventory/AbstractIntegrationTest.java`, `InventoryScaffoldIT.java`, `Dockerfile`
+- Create: `backend/services/inventory-service/pom.xml`, `src/main/java/com/ecommerce/inventory/InventoryServiceApplication.java`, `src/main/resources/application.yml`, `src/main/resources/db/migration/V1__init.sql` (copy template), `V10__inventory_domain.sql`, `src/test/java/com/ecommerce/inventory/AbstractIntegrationTest.java`, `InventoryScaffoldIT.java` (Dockerfile → Task 8, một owner duy nhất)`
 
 **Steps:**
 - [ ] Append modules vào `backend/pom.xml` (sau `services/template-service`): `<module>services/inventory-service</module>` + `<module>services/payment-service</module>` (payment module T5 tạo sau — pom refer trước không sao vì -pl chọn lọc; NHƯNG `mvn verify` full reactor sẽ fail nếu module thiếu → T8 trước khi chạy full, đảm bảo T5 đã có. Ghi chú trong task.)
@@ -111,6 +111,11 @@ inventory:
     sweep-interval-ms: ${INVENTORY_SWEEP_INTERVAL_MS:30000}
     max-ttl-minutes: ${INVENTORY_MAX_TTL_MINUTES:60}
   low-stock-threshold: ${INVENTORY_LOW_STOCK_THRESHOLD:10}
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false   # poison message → reject, không requeue storm
 ```
 - [ ] Application class fork template (`@EntityScan({"com.ecommerce.inventory.domain", "com.ecommerce.common.outbox"})`).
 - [ ] `AbstractIntegrationTest` fork template (db name `db_inventory`).
@@ -140,8 +145,9 @@ int deduct(@Param("id") String id, @Param("qty") int qty);
 @Modifying @Query("UPDATE Stock s SET s.quantity = s.quantity + :qty, s.updatedAt = CURRENT_TIMESTAMP WHERE s.variantId = :id")
 int restock(@Param("id") String id, @Param("qty") int qty);
 ```
-**ReservationService.create(orderId, items[{variantId, qty}], ttlMinutes, correlationId) — 6 bước spec §4.2:** (1) gom trùng Map<variantId,qty> + validate ttl (400 qua `ResponseStatusException BAD_REQUEST`) → (2) self-heal: `reservationRepo` tìm RESERVED hết hạn của order này → `transition(id, RESERVED, RELEASED)==1` → restock từng item + `outboxWriter.write("inventory.released", payload{reservationId, orderId, items})` → (3) replay: `findFirst...StatusAndExpiresAtAfter(RESERVED)` → 201 DTO cũ; COMMITTED → replay; (4) `lockAllNative` → (5) check-all gom `insufficient[]` (variant không có row = available 0) → ném `InsufficientStockException` → (6) deduct-all + INSERT reservation (`@JdbcTypeCode(SqlTypes.JSON) List<ReservationItem>`, TTL `Instant.now().plus(ttl, MINUTES)`) + `outboxWriter.write("inventory.reserved", ...)`; catch `DataIntegrityViolationException` trên INSERT → re-lookup active → replay 201.
-**Controller:** `POST /api/inventory/reservations` `@Valid` body (orderId @NotBlank, items @NotEmpty @Valid, qty ≥ 1, ttlMinutes ≥ 1 optional) → 201 `{reservationId, expiresAt}`. **`InventoryExceptionHandler`** `@RestControllerAdvice`: `InsufficientStockException` → 409 `application/problem+json` body ApiError + extension `insufficient` (ObjectNode ghép, khớp `ReservationConflictError`).
+**ReservationService.create(orderId, items[{variantId, qty}], ttlMinutes, correlationId) — 6 bước spec §4.2:** (1) gom trùng Map<variantId,qty> + validate ttl (`ttlMinutes` vắng mặt → **default 30 — contract pin**; <1 hoặc > `inventory.reservation.max-ttl-minutes` → 400 qua `ResponseStatusException BAD_REQUEST`) → (2) self-heal: `reservationRepo` tìm RESERVED hết hạn của order này → `transition(id, RESERVED, RELEASED)==1` → restock từng item + `outboxWriter.write("inventory.released", payload{reservationId, orderId, items})` → (3) replay: `findFirst...StatusAndExpiresAtAfter(RESERVED)` → 201 DTO cũ; COMMITTED → replay; (4) `lockAllNative` → (5) check-all gom `insufficient[]` (variant không có row = available 0) → ném `InsufficientStockException` → (6) deduct-all + INSERT reservation (`@JdbcTypeCode(SqlTypes.JSON) List<ReservationItem>`, TTL `Instant.now().plus(ttl, MINUTES)`) + `outboxWriter.write("inventory.reserved", ...)`; catch `DataIntegrityViolationException` trên INSERT → re-lookup active → replay 201.
+**jsonb casing (PIN một quyết định cho cả T2/T3/T4):** DB jsonb lưu **snake_case** `{"variant_id": "...", "qty": n}` — record `ReservationItem(String variantId, int qty)` với `@JsonProperty("variant_id")` (Jackson serialization của Hibernate tôn trọng annotation) — khớp spec §4.1 + T3 SQL `item->>'variant_id'`. Event payload thì **camelCase** `variantId` (schema freeze) → T4 build payload bằng remap snake→camel. IT T2 assert jsonb thật: `SELECT items->0->>'variant_id' FROM reservations` = snake.
+**Controller (KHÔNG prefix `/api` — gateway StripPrefix=1):** `POST /inventory/reservations` `@Valid` body (orderId @NotBlank, items @NotEmpty @Valid, qty ≥ 1, ttlMinutes ≥ 1 optional) → 201 `{reservationId, expiresAt}`. **`InventoryExceptionHandler`** `@RestControllerAdvice`: `InsufficientStockException` → 409 `application/problem+json` body ApiError + extension `insufficient` (ObjectNode ghép, khớp `ReservationConflictError`).
 **IT ReservationApiIT (RANDOM_PORT + TestRestTemplate qua cổng thật — HTTP path gồm Jackson + advice):**
 - reserve 2 variant đủ stock (seed stocks qua JdbcTemplate) → 201, `quantity` giảm đúng (Jdbc assert), expiresAt ≈ now+30'
 - vượt (1 trong 2 variant thiếu) → 409 + body có `insufficient[]` ĐỦ mọi variant thiếu + available KHÔNG đổi
@@ -155,12 +161,12 @@ int restock(@Param("id") String id, @Param("qty") int qty);
 ### Task 3: Availability + low-stock endpoints
 
 **Files:**
-- Create: `api/InventoryQueryController.java`, `repo/VariantAvailabilityView.java` (interface projection)
-- Modify: `repo/StockRepository.java` (thêm 2 query)
+- Create: `api/InventoryQueryController.java`, `repo/InventoryQueryRepository.java` (repository RIÊNG — không sửa StockRepository của T2, T3 độc lập với T2), `repo/VariantAvailabilityView.java`, `repo/LowStockView.java` (interface projections)
 - Test: `InventoryQueryIT.java`
 
 **Key:**
 ```java
+// InventoryQueryRepository
 @Query(value = """
     SELECT s.variant_id AS variantId,
            s.quantity AS available,
@@ -178,12 +184,13 @@ List<VariantAvailabilityView> findAvailability(@Param("ids") Collection<String> 
 
 @Query(value = """
     SELECT variant_id AS variantId, product_id AS productId, product_name AS productName,
-           quantity AS available, threshold_low AS thresholdUsed
+           quantity AS available, threshold_low AS threshold
     FROM stocks WHERE quantity <= :threshold ORDER BY quantity ASC
     """, nativeQuery = true)
 List<LowStockView> findLowStock(@Param("threshold") int threshold);
 ```
-Controller: `GET /api/inventory/availability?variantIds=a,b,c` (`@RequestParam List<String> variantIds` — Spring tách comma với form explode=false; rỗng → 400) → 200 list. `GET /api/inventory/admin/low-stock?threshold=` (default `@Value("${inventory.low-stock-threshold:10}")`) → 200 list đủ 5 trường contract (productId/productName null khi chưa fill). IT: availability đúng available+reserved (seed reservation active jsonb), reservation hết hạn KHÔNG tính reserved; low-stock lọc đúng + threshold param override.
+(alias `threshold` — khớp contract field `threshold`, KHÔNG `thresholdUsed`.)
+Controller: `GET /inventory/availability?variantIds=a,b,c` (`@RequestParam List<String> variantIds` — Spring tách comma với form explode=false; rỗng → 400) → 200 list. `GET /inventory/admin/low-stock?threshold=` (default `@Value("${inventory.low-stock-threshold:10}")`) → 200 list đủ 5 trường contract (productId/productName null khi chưa fill). IT: availability đúng available+reserved (seed reservation active jsonb SNAKE_CASE keys), reservation hết hạn KHÔNG tính reserved; low-stock lọc đúng + threshold param override.
 - [ ] Commit: `feat(inventory): availability + low-stock admin endpoints (jsonb reserved SUM)`
 
 ### Task 4: TTL sweeper + commit/release consumers
@@ -218,8 +225,8 @@ public void on(EventEnvelope envelope) {
     }
 }
 ```
-Payload commit/release: `{reservationId, orderId, items[]}` từ reservation items — **schema-exact** (KHÔNG thêm reason — log thôi). correlationId = `envelope.correlationId()` incoming. Poison: try/catch quanh parse — envelope hỏng → log.error + return (ack, không requeue).
-**IT InventoryEventsIT:** publish synthetic envelope (ObjectMapper serialize EventEnvelope) qua `rabbitTemplate.convertAndSend("ecommerce.events", "order.paid", envelopeJson)` — seed reservation RESERVED → await 5s (Awaitility) → status COMMITTED + outbox row `inventory.committed`; re-publish CÙNG eventId → không đổi gì (vẫn 1 outbox row); order.cancelled → RELEASED + stock hoàn; sweep: seed reservation hết hạn → gọi `sweeper.releaseExpired()` trực tiếp → RELEASED + outbox `inventory.released` + stock hoàn; sweep-vs-consumer: reservation hết hạn bị sweep TRƯỚC rồi order.paid tới → consumer warn no-op, stock không đổi, không event mới.
+Payload commit/release: `{reservationId, orderId, items[]}` — **items remap SNAKE (jsonb) → CAMEL (event schema)**: đọc `reservation.getItems()` (đã deserialize thành record `ReservationItem(variantId, qty)` camel-tên-field, có `@JsonProperty("variant_id")` cho jsonb round-trip) → build payload node với key `variantId` — schema-exact, KHÔNG thêm reason (log thôi). correlationId = `envelope.correlationId()` incoming. **Poison message (PIN mechanism):** typed param `EventEnvelope` + `spring.rabbitmq.listener.simple.default-requeue-rejected: false` trong application.yml — envelope hỏng fail conversion ở container → reject KHÔNG requeue (container log), không storm.
+**IT InventoryEventsIT:** publish synthetic envelope (ObjectMapper serialize EventEnvelope) qua `rabbitTemplate.convertAndSend("ecommerce.events", "order.paid", envelopeJson)` — seed reservation RESERVED → await 5s (Awaitility) → status COMMITTED + outbox row `inventory.committed` + **assert payload keys camelCase** (`payload.items[0].variantId` tồn tại, `variant_id` KHÔNG); re-publish CÙNG eventId → không đổi gì (vẫn 1 outbox row); order.cancelled → RELEASED + stock hoàn; sweep: seed reservation hết hạn → gọi `sweeper.releaseExpired()` trực tiếp → RELEASED + outbox `inventory.released` + stock hoàn; sweep-vs-consumer: reservation hết hạn bị sweep TRƯỚC rồi order.paid tới → consumer warn no-op, stock không đổi, không event mới; **poison**: publish garbage JSON vào queue → không requeue (queue depth 0 sau 2s), business state untouched.
 - [ ] Commit: `feat(inventory): TTL sweeper + idempotent commit/release consumers`
 
 ### Task 5: payment-service scaffold + SPI + StripeAdapter
@@ -227,7 +234,7 @@ Payload commit/release: `{reservationId, orderId, items[]}` từ reservation ite
 **Files:**
 - Modify: `gateway-routes.yml` (un-comment block `payment`)
 - Create: `backend/services/payment-service/pom.xml` (fork template + `com.stripe:stripe-java` + test `org.wiremock:wiremock-standalone:3.9.1`), `PaymentServiceApplication.java`, `application.yml` (port 8086, db_payment, thêm block stripe), `V1__init.sql` (copy template), `V10__payment_domain.sql` (spec §5.1 + cột `stripe_status VARCHAR(32)` mirror response + index `idx_payment_order` trên order_id), `spi/PaymentProviderAdapter.java`, `spi/IntentCommand.java`, `spi/AdapterIntent.java`, `spi/AdapterRefund.java`, `spi/ProviderWebhookEvent.java`, `spi/WebhookVerificationException.java`, `spi/PaymentUnconfiguredException.java`, `spi/StripeAdapter.java`, `spi/UnconfiguredAdapter.java`, `config/PaymentAdapterConfig.java`, `Dockerfile`
-- Test: `AbstractPaymentIntegrationTest.java` (fork, db_payment), `StripeAdapterTest.java` (WireMock, KHÔNG cần Spring context — new StripeAdapter trực tiếp)
+- Test: `AbstractPaymentIntegrationTest.java` (fork, db_payment), `StripeAdapterTest.java` (WireMock, KHÔNG cần Spring context — new StripeAdapter trực tiếp), `PaymentScaffoldIT.java` (mirror T1: context loads + Flyway 2 bảng — bắt lỗi V10/yml ngay ở T5 không chờ T6)
 
 **Key:**
 ```java
@@ -237,8 +244,14 @@ stripe:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   base-url: ${STRIPE_BASE_URL:https://api.stripe.com}   # IT override → WireMock
 
-// PaymentAdapterConfig
-@Bean @ConditionalOnProperty(name = "stripe.secret-key")   // không blank? — dùng matches="^sk_" hoặc check trong @Bean method
+// PaymentAdapterConfig — @ConditionalOnProperty KHÔNG đủ (empty string vẫn match) → custom Condition:
+static class StripeSecretKeyPresentCondition implements Condition {
+    public boolean matches(ConditionContext ctx, AnnotatedTypeMetadata md) {
+        String key = ctx.getEnvironment().getProperty("stripe.secret-key", "");
+        return key != null && !key.isBlank();
+    }
+}
+@Bean @Conditional(StripeSecretKeyPresentCondition.class)
 StripeAdapter stripeAdapter(@Value("${stripe.secret-key}") String key, @Value("${stripe.base-url}") String baseUrl) { ... }
 @Bean @ConditionalOnMissingBean(PaymentProviderAdapter.class)
 PaymentProviderAdapter unconfiguredAdapter() { return new UnconfiguredAdapter(); }
@@ -250,7 +263,7 @@ public AdapterIntent createIntent(IntentCommand cmd) {
         .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build())
         .putMetadata("order_id", cmd.orderId()).build();
     var opts = RequestOptions.builder().setApiKey(secretKey).setBaseUrl(baseUrl)
-        .putExtraHeader("Idempotency-Key", cmd.idempotencyKey()).build();
+        .setIdempotencyKey(cmd.idempotencyKey()).build();   // setIdempotencyKey — VERIFIED javap 24.16
     PaymentIntent pi = PaymentIntent.create(params, opts);
     return new AdapterIntent(pi.getId(), pi.getClientSecret(), pi.getStatus());
 }
@@ -260,7 +273,7 @@ public ProviderWebhookEvent verifyWebhook(String rawBody, String sigHeader) {
     // parse data.object → PaymentIntent/Refund tùy type; trả ProviderWebhookEvent(eventId, type, intentId, amount, currency, failureMessage)
 }
 ```
-(`RequestOptions.putExtraHeader` — verify javap khi code; nếu không có → builder không hỗ trợ thì dùng `Stripe` global idempotency không khả thi per-request → fallback: set metadata + chấp nhận, hoặc check alternative `IdempotencyKeyListener`... ĐẦU TIÊN thử putExtraHeader — javap confirm khi implement; nếu thiếu, plan-B: bỏ Stripe-side idempotency (P1d mitigate chính bằng local rollback semantics) + ghi chú.)
+(Stripe-side idempotency đã verify: `RequestOptions.RequestOptionsBuilder.setIdempotencyKey(String)` tồn tại trong 24.16 (javap) — plan-B bỏ.)
 `UnconfiguredAdapter`: mọi method ném `PaymentUnconfiguredException`. VND zero-decimal: amount truyền nguyên; currency lowcase 'vnd' cho Stripe, uppercase cho DB/event.
 **StripeAdapterTest (WireMock, deterministic — không Docker):** stub `POST /v1/payment_intents` trả JSON pi + client_secret + status `requires_confirmation` → assert AdapterIntent; stub `POST /v1/payment_intents/pi_x/cancel` → void; stub `POST /v1/refunds` → re_; verify request header `Idempotency-Key` = cmd key + amount = số VND nguyên (WireMock verify). Signature: compute helper `sign(whsec, payload, epochNow)` (HMAC-SHA256 hex, header `t=<ts>,v1=<hex>`) → `verifyWebhook` OK; sai header → `WebhookVerificationException`.
 - [ ] Commit: `feat(payment): scaffold payment-service + PaymentProviderAdapter SPI + StripeAdapter`
@@ -273,9 +286,9 @@ public ProviderWebhookEvent verifyWebhook(String rawBody, String sigHeader) {
 
 **Key:** service.createIntent(request, headerKey): key = header không rỗng ? header : request.idempotencyKey() (cả hai rỗng → 400 `ResponseStatusException`); validate amount > 0 (400), currency == "VND" (400). payloadHash = SHA-256 hex của `orderId|amount|currency` (HexFormat). Lookup `findByIdempotencyKey`: có + hash khớp → 201 response cũ (dựng từ cột `stripe_status` mirror đã lưu lúc tạo — replay không gọi adapter); có + hash khác → 409. Không có → gọi adapter (rollback nếu ném — spec §5.3 bước 4) → INSERT (đủ stripe_intent_id/client_secret/stripe_status) → 201. **Lưu ý T5: cột `stripe_status VARCHAR(32)` viết SẴN trong V10__payment_domain.sql** (không migration sau).
 **V10 bổ sung cột:** `stripe_status VARCHAR(32)` (mirror response) — V10 chưa commit nên viết thẳng vào file.
-Controller: `POST /api/payment/intents` header `Idempotency-Key` optional → 201/400/409/502/503. `PaymentExceptionHandlers`: `PaymentUnconfiguredException` → 503 problem+json title `payment_unconfigured` + detail chỉ env; `StripeException` InvalidRequest → 409 `payment_conflict` (T7 chung), Stripe khác → 502 `payment_provider_error`.
+Controller (KHÔNG prefix `/api` — gateway StripPrefix=1): `POST /payment/intents` header `Idempotency-Key` optional → 201/400/409/502/503. **DTO `CreateIntentRequest.idempotencyKey` KHÔNG đặt `@NotBlank`** (contract required ở schema nhưng header là kênh chính — request chỉ có header phải qua `@Valid`). `PaymentExceptionHandlers`: `PaymentUnconfiguredException` → 503 problem+json title `payment_unconfigured` + detail chỉ env; `StripeException` InvalidRequest → 409 `payment_conflict` (T7 chung), Stripe khác → 502 `payment_provider_error`.
 **IT PaymentIntentsIT:** WireMock stub create → 201 {paymentIntentId=pi_..., clientSecret=secret_..., status=requires_confirmation}; replay same key same payload → CÙNG response (WireMock được gọi ĐÚNG 1 lần — verify count); same key khác amount → 409; amount 0/âm → 400; currency USD → 400; thiếu key header + body → 400; WireMock trả 500 → 502 + DB KHÔNG có row (rollback — assert count=0); retry sau lỗi với cùng key → thành công (rollback semantics đúng).
-**IT PaymentDegradedIT:** boot không key → /intents 503 title payment_unconfigured; health UP; outbox relay vẫn poll (log/bean tồn tại).
+**IT PaymentDegradedIT:** boot không key → `/payment/intents` 503 title `payment_unconfigured` **+ `/payment/refunds` + `/payment/void` + `/payment/webhook` đều 503 cùng title**; health UP; outbox relay vẫn poll (log/bean tồn tại). **Case key-có-secret-thiếu**: `@SpringBootTest` riêng với secret-key set + webhook-secret blank → webhook 503 (không crash boot).
 - [ ] Commit: `feat(payment): idempotent intents API + degraded mode 503`
 
 ### Task 7: Webhook + refund/void + error classification
@@ -284,9 +297,9 @@ Controller: `POST /api/payment/intents` header `Idempotency-Key` optional → 20
 - Modify: `api/PaymentController.java` (+3 endpoint), `service/PaymentIntentService.java` (+3 method)
 - Test: `PaymentWebhookIT.java`
 
-**Key:** webhook endpoint: `@PostMapping(value="/api/payment/webhook")` `@RequestBody String rawBody` + `@RequestHeader("Stripe-Signature")` → `adapter.verifyWebhook` (sai → `WebhookVerificationException` → 400) → `@Transactional` handler: `tryConsume("stripe:" + evt.eventId())` false → 200 `{received:true}`; switch type: `payment_intent.succeeded` → tìm theo stripeIntentId → local status SUCCEEDED + stripe_status SUCCEEDED + outbox `payment.succeeded {orderId, paymentIntentId, amount, currency:"VND", failureReason:null}`; `payment_intent.payment_failed` → FAILED + outbox `payment.failed {.., failureReason}`; `charge.refunded` → local REFUNDED (silent); khác → no-op. Không thấy intent → warn + 200. correlationId outbox = evt.eventId().
+**Key:** webhook endpoint: `@PostMapping(value="/payment/webhook")` `@RequestBody String rawBody` + `@RequestHeader("Stripe-Signature")` → `adapter.verifyWebhook` (sai → `WebhookVerificationException` → 400) → `@Transactional` handler: `tryConsume("stripe:" + evt.eventId())` false → 200 `{received:true}`; switch type: `payment_intent.succeeded` → tìm theo stripeIntentId → local status SUCCEEDED + stripe_status SUCCEEDED + outbox `payment.succeeded {orderId, paymentIntentId, amount, currency:"VND", failureReason:null}`; `payment_intent.payment_failed` → FAILED + outbox `payment.failed {.., failureReason}`; `charge.refunded` → local REFUNDED (silent); khác → no-op. Không thấy intent → warn + 200. correlationId outbox = evt.eventId().
 Refund: local precheck (404 nếu không có stripeIntentId; 409 nếu status != SUCCEEDED) → adapter.refund → 201 `{refundId, status mirror, amount}` + local REFUNDED nếu full (amount == null hoặc == amount_vnd). Void: precheck (409 trừ khi CREATED/REQUIRES_CONFIRMATION) → adapter.voidIntent → local VOIDED + 200 `{status: mirror CANCELED}`.
-**IT PaymentWebhookIT:** sig sai → 400 (WireMock không bị gọi); sig đúng succeeded → 200 + outbox row `payment.succeeded`: parse envelope — assert payload-section khớp schema fields + envelope đủ 5 field (eventId UUID, eventType, occurredAt, correlationId, payload) — **KHÔNG assert producer/schemaVersion (GAP #2)**; re-post CÙNG event → 200, outbox vẫn 1 row; `payment_intent.payment_failed` → outbox failed + failureReason; refund full → 201 + status REFUNDED; refund vượt amount (WireMock trả invalid_request_error) → 409; void sau SUCCEEDED → 409; void sau CREATED → 200 VOIDED; unknown pi → 404.
+**IT PaymentWebhookIT:** sig sai → 400 (WireMock không bị gọi); sig đúng succeeded → 200 + outbox row `payment.succeeded`: parse envelope — assert payload-section khớp schema fields + envelope đủ 5 field (eventId UUID, eventType, occurredAt, correlationId, payload) — **KHÔNG assert producer/schemaVersion (GAP #2)**; re-post CÙNG event → 200, outbox vẫn 1 row; `payment_intent.payment_failed` → outbox failed + failureReason; **webhook intent không tồn tại local → 200 + warn, không outbox row**; refund full → 201 + status REFUNDED; refund vượt amount (WireMock trả invalid_request_error) → 409; void sau SUCCEEDED → 409; void sau CREATED → 200 VOIDED; refund unknown pi → 404.
 - [ ] Commit: `feat(payment): webhook signature verify + outbox events + refund/void`
 
 ### Task 8: Full-suite + Dockerfiles + demo seed + docs

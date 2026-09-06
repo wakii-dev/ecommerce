@@ -277,8 +277,8 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   ```
 - [x] Ports: shell 5173 / skeleton 5178 (5174-5177 dành storefront/checkout/account/admin theo .env.example SF-1)
 - [x] Chạy: `pnpm -C frontend install` → 2 terminal: `pnpm -C frontend --filter @ecommerce/skeleton-remote dev` + `pnpm -C frontend --filter shell dev` (Makefile dev-fe KHÔNG có skeleton — READ-ONLY, flag coordinator trong báo cáo)
-- [ ] Verify thủ công (bắt buộc trước commit): mở `http://localhost:5173/skeleton` — page remote render TRONG layout shell (header shell vẫn hiện) + chip `REACT ✓ 1 INSTANCE`; console sạch duplicate-react warning; widget từ remote hiện trong header *(server-side đã verify: vite build 2 app xanh, dev boot 5173+5178, curl remoteEntry.js 200 + shell `/`, `/skeleton` 200; trình duyệt chip/widget/console chờ coordinator mở browser)*
-- [ ] Commit: `feat(harness): MF shell + skeleton remote — slot registry, shared singletons 1 React`
+- [x] Verify thủ công (bắt buộc trước commit): mở `http://localhost:5173/skeleton` — page remote render TRONG layout shell (header shell vẫn hiện) + chip `REACT ✓ 1 INSTANCE`; console sạch duplicate-react warning; widget từ remote hiện trong header *(server-side đã verify: vite build 2 app xanh, dev boot 5173+5178, curl remoteEntry.js 200 + shell `/`, `/skeleton` 200; trình duyệt chip/widget/console chờ coordinator mở browser)*
+- [x] Commit: `feat(harness): MF shell + skeleton remote — slot registry, shared singletons 1 React` (32db9b9; browser verify do coordinator chạy ở Phase 5 — chip REACT ✓ 1 INSTANCE + widget header slot + theme switch, eval/click qua Orca browser)
 
 ### Task 15: designer-mockup-3huong-user-gate (song song từ đầu — KHÔNG chặn Task 1-14)
 

@@ -2,7 +2,7 @@
 const nextConfig = {
   // Các workspace package ship raw TS entry (main: ./src/index.ts) — Next
   // KHÔNG transpile TS của linked packages theo mặc định (Conventions #10).
-  transpilePackages: ['@ecommerce/ui-kit', '@ecommerce/contracts', '@ecommerce/i18n'],
+  transpilePackages: ['@ecommerce/ui-kit', '@ecommerce/contracts', '@ecommerce/i18n', '@ecommerce/auth'],
   async rewrites() {
     // Client components gọi relative `/api/...` — proxy qua gateway, tránh
     // cross-origin :3000→:8080 (Conventions #10). Server components vẫn fetch

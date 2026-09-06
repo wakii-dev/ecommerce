@@ -15,7 +15,10 @@ const mfeConfig = defineMfeConfig({
     // SF-9 (FI-319) — my-orders slice (pages/orders/*)
     './OrdersPage': './src/pages/orders/OrdersPage.tsx',
     './OrderDetailPage': './src/pages/orders/OrderDetailPage.tsx',
-    './OrdersNavLink': './src/pages/orders/OrdersNavLink.tsx'
+    './OrdersNavLink': './src/pages/orders/OrdersNavLink.tsx',
+    // SF-8 append — wishlist + my-reviews slice
+    './WishlistPage': './src/pages/wishlist/WishlistPage.tsx',
+    './MyReviewsPage': './src/pages/my-reviews/MyReviewsPage.tsx'
   }
 });
 

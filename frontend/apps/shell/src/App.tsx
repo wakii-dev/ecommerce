@@ -21,6 +21,17 @@ const AccountPage = lazy(() => import('account/AccountPage'));
 // SF-9 (FI-319) — my-orders slice mfe-account (pages/orders/*) — LAZY như các page trên.
 const AccountOrdersPage = lazy(() => import('account/OrdersPage'));
 const AccountOrderDetailPage = lazy(() => import('account/OrderDetailPage'));
+// SF-8: wishlist + my-reviews của mfe-account — cùng pattern lazy + fallback.
+const WishlistPage = lazy(() => import('account/WishlistPage'));
+const MyReviewsPage = lazy(() => import('account/MyReviewsPage'));
+
+// Trang cart/checkout của mfe-checkout (SF-6) — LAZY + fallback pattern account.
+const CheckoutCartPage = lazy(() => import('checkout/CartPage'));
+const CheckoutPage = lazy(() => import('checkout/CheckoutPage'));
+const CheckoutConfirmationPage = lazy(() => import('checkout/ConfirmationPage'));
+
+// Khu quản trị mfe-admin (SF-7) — LAZY như các remote khác.
+const AdminApp = lazy(() => import('admin/AdminApp'));
 
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
@@ -68,6 +79,48 @@ function AccountErrorFallback({ error }: { error: Error }): ReactElement {
   );
 }
 
+/** Fallback cho khu quản trị mfe-admin (SF-7) — cùng pattern account. */
+function AdminErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-admin không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-admin dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
+
+
+/** Fallback cho các trang mfe-checkout (SF-6) — cùng pattern. */
+function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-checkout không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-checkout dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
 export default function App(): ReactElement {
   const { t } = useT();
   const path = usePath();
@@ -85,7 +138,18 @@ export default function App(): ReactElement {
   }, [bumpRegistry]);
 
   let page: ReactNode;
-  if (path === '/skeleton') {
+  // mfe-admin (SF-7) — full-bleed NGOÀI <main maxWidth:960> (admin layout có
+  // sidebar riêng, cần trọn bề ngang); shell Header vẫn giữ cho auth widget.
+  const isAdmin = path === '/admin' || path.startsWith('/admin/');
+  if (isAdmin) {
+    page = (
+      <ErrorBoundary fallback={(error) => <AdminErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AdminApp />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/skeleton') {
     page = (
       <ErrorBoundary fallback={(error) => <RemoteErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
@@ -129,12 +193,62 @@ export default function App(): ReactElement {
         </Suspense>
       </ErrorBoundary>
     );
+  } else if (path === '/account/wishlist') {
+    // SF-8: wishlist page (mfe-account slice)
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <WishlistPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account/reviews') {
+    // SF-8: my-reviews page (mfe-account slice)
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <MyReviewsPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/cart') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutCartPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/checkout') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/order/confirmation') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutConfirmationPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
   } else {
     page = <Home />;
   }
 
   // AuthProvider bao TOÀN app — useAuth() trong widget/page của remote đọc cùng
   // context này (singleton federation: remote dùng chung bản @ecommerce/auth).
+  if (isAdmin) {
+    return (
+      <AuthProvider>
+        <Header />
+        {page}
+      </AuthProvider>
+    );
+  }
   return (
     <AuthProvider>
       <Header />

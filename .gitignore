@@ -40,3 +40,7 @@ tmp/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Module Federation dev artifacts (@module-federation/vite)
+.mf/
+infra/keys/

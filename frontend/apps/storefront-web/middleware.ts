@@ -10,10 +10,31 @@ import { rewriteTarget } from './lib/locale-rewrite';
  */
 export function middleware(request: NextRequest) {
   const target = rewriteTarget(request.nextUrl.pathname);
-  if (target === null) return NextResponse.next();
+  // SF-8: locale resolve cho <html lang> ở root app/layout.tsx (không thấy
+  // params segment) — segment /en hoặc path rewrite vi.
+  const locale = resolveHeaderLocale(request.nextUrl.pathname);
+  const requestHeaders = new Headers(request.headers);
+  if (locale) requestHeaders.set('x-app-locale', locale);
+
+  if (target === null) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    if (locale) response.headers.set('x-app-locale', locale);
+    return response;
+  }
   const url = request.nextUrl.clone();
   url.pathname = target;
-  return NextResponse.rewrite(url);
+  return NextResponse.rewrite(url, {
+    request: { headers: requestHeaders },
+  });
+}
+
+/** Locale cho header: /en/** → en; còn lại (path thường rewrite vi hoặc /vi/**) → vi. */
+function resolveHeaderLocale(pathname: string): string | null {
+  if (pathname === '/en' || pathname.startsWith('/en/')) return 'en';
+  if (pathname === '/vi' || pathname.startsWith('/vi/')) return 'vi';
+  if (pathname === '/' || pathname.startsWith('/c') || pathname.startsWith('/p')
+    || pathname.startsWith('/search') || pathname.startsWith('/coupons')) return 'vi';
+  return null;
 }
 
 export const config = {

@@ -21,10 +21,14 @@ spring:
           uri: forward:///internal/smoke
           predicates: [ "Path=/api/smoke" ]
       # ── Placeholder blocks (SF sau un-comment + append) ──────────────────
-      # - id: identity                                   # SF-3 · port 8081
-      #   uri: http://localhost:8081
-      #   predicates: [ "Path=/api/identity/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      # SF-7 (2026-09-06) un-comment block identity (FI-310 GAP: SF-3 ra đời
+      # nhưng block còn comment trên story branch — login qua gateway 404).
+      # StripPrefix=2 (không phải 1 như placeholder): AuthController map
+      # @RequestMapping("/auth") — /api/identity/auth/login → /auth/login.
+        - id: identity                                    # SF-3 · port 8081
+          uri: http://localhost:8081
+          predicates: [ "Path=/api/identity/**" ]
+          filters: [ "StripPrefix=2" ]
       # SF-4 (2026-09-06) un-comment block catalog — DECISION: KHÔNG StripPrefix.
       # Placeholder cũ ghi StripPrefix=1 nhưng mâu thuẫn chính comment conventions
       # ("service nhận path còn lại sau /api/<service>") và template PingController
@@ -37,10 +41,11 @@ spring:
         - id: storefront-web                               # SF-4 · port 3000
           uri: http://localhost:3000
           predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en,/en/**,/_next/**" ]
-      # - id: cart                                       # SF-6 · port 8083
-      #   uri: http://localhost:8083
-      #   predicates: [ "Path=/api/cart/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      # SF-6 (2026-09-06) un-comment block cart — KHÔNG StripPrefix (SF-4
+      # precedent): cart-service controllers map FULL /api/cart/** khớp contract.
+        - id: cart                                          # SF-6 · port 8083
+          uri: http://localhost:8083
+          predicates: [ "Path=/api/cart/**" ]
         - id: inventory                                  # SF-5 · port 8084
           uri: http://localhost:8084
           predicates: [ "Path=/api/inventory/**" ]

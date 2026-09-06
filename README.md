@@ -136,6 +136,16 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 
 **Make targets khác:** `make dev-fe app=<name>` · `make keys` (RSA keypair JWT, SF-3) · `make down` · `make full` (stub — SF-10)
 
+**🔑 Tài khoản demo (seed SF-3 — idempotent từ env `ADMIN_EMAIL`/`ADMIN_PASSWORD` trong `.env.example`):**
+
+| Vai trò | Email | Mật khẩu | Ghi chú |
+|---|---|---|---|
+| **Admin** | `admin@ecommerce.local` | `admin123` | vào `/admin` (shell `:5173`) — products/categories CRUD live, dashboard |
+| Customer | tự đăng ký tại `/register` | — | vào `/admin` sẽ thấy trang 403 (RBAC guard UI) |
+
+> Shell (mọi MFE): `http://localhost:5173` — login → menu user → hoặc gõ thẳng `/admin`.
+> Admin standalone dev: `http://localhost:5177` (proxy `/api` qua `GATEWAY_URL`, mặc định `:8080`).
+
 ---
 
 ## 🧱 Bracket — 15 SF · 7 tier
@@ -149,15 +159,15 @@ flowchart TD
         N2["SF-2 contracts-design<br/>FI-312 · 14 tasks<br/>✅ Done"]
     end
     subgraph T2["TIER 2"]
-        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>🔨 In Progress"]
-        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>🔨 In Progress"]
-        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>🔨 In Progress"]
+        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>✅ Done"]
+        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>✅ Done"]
+        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>✅ Done"]
     end
     subgraph T3["TIER 3"]
-        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks"]
-        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks"]
-        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks"]
-        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks"]
+        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks<br/>✅ Done"]
+        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks<br/>🔨 In Progress"]
+        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks<br/>🔨 In Progress"]
+        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks<br/>🔨 In Progress"]
     end
     subgraph T4["TIER 4"]
         N11["SF-11 partner Open API<br/>FI-321 · 10 tasks"]
@@ -205,9 +215,9 @@ flowchart TD
     classDef done fill:#26AA99,stroke:#1d8275,color:#fff
     classDef running fill:#FF9C08,stroke:#d68206,color:#fff
     classDef todo fill:#555,stroke:#444,color:#eee
-    class N1,N2 done
-    class N3,N4,N5 running
-    class N6,N7,N8,N9,N10,N11,N12,N13,N14,N15 todo
+    class N1,N2,N3,N4,N5,N6 done
+    class N7,N8,N9 running
+    class N10,N11,N12,N13,N14,N15 todo
 ```
 
 > Bản render tương tác (hết hạn ~30 ngày): [share.onorca.dev/a/YghPe0uD5FEQ](https://share.onorca.dev/a/YghPe0uD5FEQ) · Nguồn: [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md)
@@ -219,12 +229,12 @@ flowchart TD
 | SF-1 | Nền móng: monorepo, compose, gateway, service template | [FI-311](https://linear.app/my-app-hoivu/issue/FI-311) | ✅ Done |
 | SF-2 | Contracts freeze (10 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ✅ Done |
 | SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ✅ Done |
-| SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
-| SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ⏳ Todo |
-| SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ⏳ Todo |
-| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | ⏳ Todo |
-| SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | ⏳ Todo |
-| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ⏳ Todo |
+| SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ✅ Done |
+| SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ✅ Done |
+| SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ✅ Done |
+| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | 🔨 In Progress |
+| SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | 🔨 In Progress |
+| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | 🔨 In Progress |
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
 | SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
 | SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |
@@ -240,8 +250,8 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 
 | Phase | Nội dung | Release khi |
 |---|---|---|
-| **P1** Foundation | Nền móng + contracts freeze + design direction + federation harness | SF-1 ✅ + SF-2 xong |
-| **P2** Catalog & Identity | Đăng ký/đăng nhập · storefront Next.js SEO · search ES · tồn kho + Stripe nền | SF-3 + SF-4 + SF-5 |
+| **P1** Foundation | Nền móng + contracts freeze + design direction + federation harness | SF-1 ✅ + SF-2 xong | ✅ **[phase-1 released + merged main](https://github.com/wakii-dev/ecommerce/releases/tag/phase-1)** |
+| **P2** Catalog & Identity | Đăng ký/đăng nhập · storefront Next.js SEO · search ES · tồn kho + Stripe nền | SF-3 ✅ + SF-4 ✅ + SF-5 ✅ | ✅ **[phase-2 released + merged main](https://github.com/wakii-dev/ecommerce/pull/2)** |
 | **P3** Transaction MVP | Giỏ → checkout (coupon, Stripe/COD) → saga → đơn + hóa đơn PDF · admin vận hành | SF-6 + SF-7 + SF-9 |
 | **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 + SF-11 + SF-12 |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |

@@ -1,5 +1,6 @@
 package com.ecommerce.catalog.repo;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,9 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItemEntity
 
     /** Trang wishlist — mới thêm trước (service enrich ProductCard theo thứ tự này). */
     Page<WishlistItemEntity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    /** /ids — toàn bộ productId (contract không phân trang), mới thêm trước. */
+    List<WishlistItemEntity> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     boolean existsByUserIdAndProductId(UUID userId, UUID productId);
 

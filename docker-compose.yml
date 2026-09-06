@@ -1,0 +1,79 @@
+# Ecommerce platform — INFRA ONLY (dev mode).
+# Backend services KHÔNG containerize ở dev — chạy host qua `make dev svc=<name>`.
+# Containerize toàn bộ = profile `full` (SF-10, `make full`).
+# Append-only per SF (shared-file ownership §6): SF mới thêm service block, không sửa block người khác.
+
+name: ecommerce
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - ecommerce-net
+
+  redis:
+    image: redis:7
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - ecommerce-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    networks:
+      - ecommerce-net
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: ecommerce-mailpit
+    ports:
+      - "1025:1025"   # SMTP sink (services gửi mail dev vào đây)
+      - "8025:8025"   # UI xem email
+    volumes:
+      - mailpitdata:/data
+    networks:
+      - ecommerce-net
+
+  # Chỉ bật khi cần test webhook Stripe thật: docker compose --profile stripe up -d stripe-cli
+  # Forward → payment-service chạy host :8086 (SF-5 sở hữu endpoint).
+  stripe-cli:
+    image: stripe/stripe-cli
+    container_name: ecommerce-stripe-cli
+    profiles:
+      - stripe
+    command: listen --forward-to host.docker.internal:8086/api/payment/webhook
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}  # thiếu key → stripe-cli lỗi rõ khi bật profile, không vỡ compose
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ecommerce-net
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitmqdata:
+  mailpitdata:
+
+networks:
+  ecommerce-net:
+    name: ecommerce-net

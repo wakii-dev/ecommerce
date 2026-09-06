@@ -146,7 +146,7 @@
   height: 140px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--color-surface-muted, #f3f4f6);
+  background: var(--c-bg, #F5F5F5);
   position: relative;
 }
 
@@ -181,12 +181,12 @@
 
 .wl-card-price {
   font-weight: 700;
-  color: var(--color-primary, #ee4d2d);
+  color: var(--c-primary, #F53D2D);
 }
 
 .wl-card-rating {
   font-size: 12px;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--c-text-muted, #757575);
 }
 
 .mr-list {
@@ -203,20 +203,20 @@
 }
 
 .mr-card-stars {
-  color: var(--color-warning, #f59e0b);
+  color: var(--c-warning, #FE9C08);
   letter-spacing: 2px;
 }
 
 .mr-card-verified {
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-success, #0f9d58);
+  color: var(--tint-success-text, #197A6D);
 }
 
 .mr-card-date {
   margin-left: auto;
   font-size: 12px;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--c-text-muted, #757575);
 }
 
 .mr-card-product-name {

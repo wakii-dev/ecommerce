@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, MouseEvent } from 'react';
 
 import { ensureSession } from '../../lib/account-session';
 import type { Locale } from '../../lib/format';
-import { bustWishlistIdsCache, fetchWishlistIds, toggleWishlist } from './wishlist-api';
+import { applyToggle, bustWishlistIdsCache, fetchWishlistIds, toggleWishlist } from './wishlist-api';
 
 /**
  * Wishlist heart (SF-8, spec Q15 — pack: heart client component trên PDP +
@@ -33,6 +33,7 @@ export default function WishlistHeart({
   const copy = COPY[locale];
   const [authed, setAuthed] = useState<boolean | null>(null); // null = đang boot
   const [active, setActive] = useState(false);
+  const idsRef = useRef<string[]>([]); // state thật — update qua applyToggle (reducer đã test)
 
   useEffect(() => {
     let alive = true;
@@ -41,7 +42,9 @@ export default function WishlistHeart({
       setAuthed(ok);
       if (!ok) return;
       fetchWishlistIds().then((ids) => {
-        if (alive) setActive(ids.has(productId));
+        if (!alive) return;
+        idsRef.current = [...ids];
+        setActive(ids.has(productId));
       });
     });
     return () => {
@@ -58,16 +61,24 @@ export default function WishlistHeart({
       return;
     }
     const next = !active;
-    setActive(next); // optimistic
+    const nextIds = applyToggle(idsRef.current, productId, next); // optimistic
+    idsRef.current = nextIds;
+    setActive(nextIds.includes(productId));
     toggleWishlist(productId, next)
       .then((ok) => {
         if (ok) {
           bustWishlistIdsCache();
         } else {
-          setActive(!next); // revert
+          revert(next);
         }
       })
-      .catch(() => setActive(!next));
+      .catch(() => revert(next));
+  };
+
+  /** Revert state về trước toggle (API lỗi/không 204). */
+  const revert = (next: boolean): void => {
+    idsRef.current = applyToggle(idsRef.current, productId, !next);
+    setActive(idsRef.current.includes(productId));
   };
 
   const className = [

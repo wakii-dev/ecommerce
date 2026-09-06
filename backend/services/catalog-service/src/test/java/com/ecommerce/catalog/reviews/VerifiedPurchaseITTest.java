@@ -95,10 +95,9 @@ class VerifiedPurchaseITTest extends ReviewsItHarness {
 
         // A submit review → PENDING không hiện public; admin approve → hiện + badge verified
         submitReview(product.getSlugVi(), userA, "Mua rồi, tốt", 5);
-        String pending = getAdminJson("/api/catalog/admin/reviews?status=PENDING");
-        assertThat(om.readTree(pending).get("total").asInt()).isEqualTo(1);
-        String reviewId = om.readTree(pending).get("items").get(0).get("id").asText();
-        approveReview(reviewId);
+        UUID reviewA = reviewIdOf(userA, product);
+        assertThat(pendingIdsContains(reviewA)).isTrue();
+        approveReview(reviewA.toString());
 
         String body = http.getForEntity(
             "http://localhost:" + httpPort() + "/api/catalog/products/" + product.getSlugVi() + "/reviews", String.class)
@@ -115,19 +114,17 @@ class VerifiedPurchaseITTest extends ReviewsItHarness {
         // B không mua → submit được (mọi user đăng nhập được review — epic §6.1.6);
         // PENDING của B không hiện public; approve → KHÔNG badge verified
         submitReview(product.getSlugVi(), userB, "Chưa mua vẫn đánh giá được", 3);
-        String pending2 = getAdminJson("/api/catalog/admin/reviews?status=PENDING");
-        assertThat(om.readTree(pending2).get("total").asInt()).isEqualTo(1);
-        String reviewBId = om.readTree(pending2).get("items").get(0).get("id").asText();
-        approveReview(reviewBId);
+        UUID reviewB = reviewIdOf(userB, product);
+        approveReview(reviewB.toString());
 
         String body2 = http.getForEntity(
             "http://localhost:" + httpPort() + "/api/catalog/products/" + product.getSlugVi() + "/reviews?page=1&size=20",
             String.class).getBody();
         var list2 = om.readTree(body2);
         assertThat(list2.get("items")).hasSize(2);
-        var reviewB = list2.get("items").get(0); // mới nhất trước
-        assertThat(reviewB.get("userId").asText()).isEqualTo(userB.toString());
-        assertThat(reviewB.get("verifiedPurchase").asBoolean()).isFalse();
+        var reviewBNode = list2.get("items").get(0); // mới nhất trước
+        assertThat(reviewBNode.get("userId").asText()).isEqualTo(userB.toString());
+        assertThat(reviewBNode.get("verifiedPurchase").asBoolean()).isFalse();
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
@@ -180,6 +177,19 @@ class VerifiedPurchaseITTest extends ReviewsItHarness {
             "http://localhost:" + httpPort() + "/api/catalog/products/" + slug + "/reviews",
             HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
         assertThat(res.getStatusCode().value()).isEqualTo(202);
+    }
+
+    /** Review id qua jdbc (admin list global vì PG singleton — không assert total tuyệt đối). */
+    private UUID reviewIdOf(UUID userId, ProductEntity product) {
+        return UUID.fromString(jdbc.queryForObject(
+            "SELECT id FROM reviews WHERE user_id = ? AND product_id = ?", String.class, userId, product.getId()));
+    }
+
+    private boolean pendingIdsContains(UUID reviewId) throws Exception {
+        String pending = getAdminJson("/api/catalog/admin/reviews?status=PENDING&size=100");
+        var ids = new java.util.HashSet<String>();
+        om.readTree(pending).get("items").forEach(i -> ids.add(i.get("id").asText()));
+        return ids.contains(reviewId.toString());
     }
 
     private String getAdminJson(String path) {

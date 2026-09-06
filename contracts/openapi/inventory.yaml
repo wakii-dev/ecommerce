@@ -1,0 +1,244 @@
+openapi: 3.1.0
+info:
+  title: Inventory API
+  description: |
+    Ton kho + reservation theo VARIANT level (pin §6.1.4) cua inventory-service.
+    REST chi danh cho tao reservation (checkout) + tra availability/low-stock.
+
+    Commit/Release KHONG qua REST — chi qua events tren broker:
+    - `order.paid`    → commit reservation (tru ton kho that).
+    - `order.cancelled` / `order.failed` → release reservation (hoan ton kho).
+    Service publish ra broker: `inventory.reserved`, `inventory.released`,
+    `inventory.committed` (schemas o contracts/events/).
+
+    Reservation all-or-nothing: MOT item thieu hang = huy ca reservation (409).
+    Tien/so luong: integer. Moi error response: RFC 7807 problem+json
+    (khop common-lib `ApiError`).
+  version: 1.0.0
+servers:
+  - url: /
+    description: Qua API gateway (prefix /api/inventory → inventory-service)
+tags:
+  - name: inventory
+    description: Reservation + availability (goi boi ordering/FE)
+  - name: admin
+    description: Canh bao ton kho thap
+paths:
+  /api/inventory/reservations:
+    post:
+      tags: [inventory]
+      operationId: createReservation
+      summary: Tao reservation ton kho (variant level)
+      description: |
+        Goi boi ordering-service trong saga tao don (buoc reserve).
+        ALL-OR-NOTHING: neu BAT KY variant nao thieu hang → KHONG reserve gi het,
+        tra 409 voi `insufficient[]` (variantId/requested/available).
+        Reservation tu het han sau `ttlMinutes` (mac dinh 30 — khop TTL 30' cua don PENDING §3.6).
+        Thanh cong → publish event `inventory.reserved`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequest'
+      responses:
+        '201':
+          description: Da reserve — dung truoc expiresAt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Thieu hang (all-or-nothing) — body ApiError + insufficient[].
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ReservationConflictError'
+  /api/inventory/availability:
+    get:
+      tags: [inventory]
+      operationId: getAvailability
+      summary: Ton kho kha dung theo danh sach variant
+      description: |
+        `variantIds` truyen cach nhau dau phay (form, explode=false):
+        `?variantIds=a,b,c`. Tra `available` (khach co the mua) va `reserved`
+        (dang bi giu boi cac reservation con hieu luc).
+      parameters:
+        - name: variantIds
+          in: query
+          required: true
+          description: Danh sach variantId, phan cach phay.
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Availability tung variant (chi tra nhung variant ton tai).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VariantAvailability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/inventory/admin/low-stock:
+    get:
+      tags: [admin]
+      operationId: listLowStock
+      summary: Danh sach variant sap het hang
+      description: |
+        Cho dashboard admin (bang low-stock). `threshold` mac dinh 10 —
+        tra cac variant co `available` ≤ threshold.
+      parameters:
+        - name: threshold
+          in: query
+          required: false
+          description: Nguong canh bao (mac dinh 10).
+          schema:
+            type: integer
+            default: 10
+            minimum: 0
+      responses:
+        '200':
+          description: Danh sach variant ton kho thap.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LowStockItem'
+components:
+  responses:
+    BadRequest:
+      description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    ReservationItem:
+      type: object
+      required: [variantId, qty]
+      properties:
+        variantId:
+          type: string
+          description: Level variant (pin §6.1.4).
+        qty:
+          type: integer
+          minimum: 1
+    CreateReservationRequest:
+      type: object
+      required: [orderId, items]
+      properties:
+        orderId:
+          type: string
+          description: Don hang gan voi reservation (idempotency theo order).
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ReservationItem'
+        ttlMinutes:
+          type: integer
+          minimum: 1
+          default: 30
+          description: Het han tu dong — mac dinh 30 (khop TTL don PENDING §3.6).
+    ReservationCreated:
+      type: object
+      required: [reservationId, expiresAt]
+      properties:
+        reservationId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+          description: Sau thoi diem nay reservation tu dong release.
+    InsufficientStock:
+      type: object
+      description: 1 variant thieu hang trong 409.
+      required: [variantId, requested, available]
+      properties:
+        variantId:
+          type: string
+        requested:
+          type: integer
+          description: So luong khach yeu cau.
+        available:
+          type: integer
+          description: So luong thuc te kha dung.
+    ReservationConflictError:
+      type: object
+      description: Body 409 — ApiError chuan + danh sach variant thieu hang (all-or-nothing).
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+        - type: object
+          required: [insufficient]
+          properties:
+            insufficient:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/InsufficientStock'
+    VariantAvailability:
+      type: object
+      required: [variantId, available, reserved]
+      properties:
+        variantId:
+          type: string
+        available:
+          type: integer
+          description: Khach co the mua (da tru reserved).
+        reserved:
+          type: integer
+          description: Dang bi giu boi reservation con hieu luc.
+    LowStockItem:
+      type: object
+      required: [variantId, productId, productName, available, threshold]
+      properties:
+        variantId:
+          type: string
+        productId:
+          type: string
+        productName:
+          type: string
+          description: Ten san pham (resolve vi) de hien bang dashboard.
+        available:
+          type: integer
+        threshold:
+          type: integer
+          description: Nguong da ap dung cho dong nay.

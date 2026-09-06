@@ -105,6 +105,7 @@ flowchart LR
 | **PDP chuẩn SEO**: SSR + JSON-LD Product + OG + sitemap | SEO override per-product (seoTitle/description/slug) | **Hybrid rendering**: Next.js SSR (SEO) + Vite MF (app) |
 | **Đa ngôn ngữ vi/en** — kể cả dữ liệu sản phẩm (`/en/*` + hreflang) | Form sản phẩm tabs vi/en, fallback tự động | **i18n data**: JSONB {vi,en} trong Postgres, ES index per-locale |
 | **Open API đối tác**: `/open-api/v1` API key + webhook HMAC + docs portal | Quản lý affiliate: duyệt, rate, stats | **Affiliate**: ref link, attribution 30 ngày, ledger hoa hồng event-driven |
+| **COD** + **RMA đổi trả refund Stripe** + **GHN shipping** có tracking | **Loyalty điểm** earn 1% / burn checkout | **Login Google/Facebook + 2FA TOTP**, stock alert email, PWA + dark mode, live chat |
 | My orders / wishlist / reviews · **tải hóa đơn PDF** | Orders: ship/deliver/cancel + low-stock + **tải hóa đơn** | **Polyglot**: Python (FastAPI/ReportLab) PDF service — stateless renderer tách khỏi business |
 | — | **Email cảm ơn** kèm hóa đơn PDF khi mua hàng | RBAC server-side 2 lớp (gateway + service) |
 
@@ -153,6 +154,9 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
 | SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
 | SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |
+| SF-13 | Essentials: password reset, COD, MinIO upload, abandoned cart, audit viewer, related, GA4, CSV, newsletter | [FI-323](https://linear.app/my-app-hoivu/issue/FI-323) | ⏳ Todo |
+| SF-14 | Commerce extensions: RMA đổi trả, GHN shipping, loyalty điểm | [FI-324](https://linear.app/my-app-hoivu/issue/FI-324) | ⏳ Todo |
+| SF-15 | Engagement: social login + 2FA, stock alert, PWA + dark mode, live chat | [FI-325](https://linear.app/my-app-hoivu/issue/FI-325) | ⏳ Todo |
 
 ---
 

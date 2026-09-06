@@ -292,10 +292,11 @@ class OrderAdminTest extends AbstractSagaTest {
         assertThat(summaryBody.path("confirmed").asLong()).isGreaterThanOrEqualTo(1);
         assertThat(summaryBody.path("todayOrders").asLong()).isGreaterThanOrEqualTo(1);
 
-        // Ngày bucket theo DB (created_at UTC) — LocalDate.now() máy client lệch
-        // TZ (UTC+7 nửa đêm) sẽ trôi sang ngày khác → doanh thu 0 (flaky)
+        // Ngày bucket theo UTC — endpoint mở window from/to qua ZoneOffset.UTC
+        // (AdminOrderController). created_at::date THÔNG thường cast theo session
+        // TimeZone (JVM UTC+7) → lệch 1 ngày lúc nửa đêm → mảng rỗng (flaky).
         String today = jdbc.queryForObject(
-            "SELECT created_at::date::text FROM orders WHERE id = ?", String.class,
+            "SELECT (created_at AT TIME ZONE 'UTC')::date::text FROM orders WHERE id = ?", String.class,
             java.util.UUID.fromString(o1[0]));
         ResponseEntity<String> revenue = exchange(
             "/admin/stats/revenue-by-day?from=" + today + "&to=" + today, admin, HttpMethod.GET, String.class);

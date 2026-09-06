@@ -65,7 +65,7 @@ export function nextAffiliateCookieAction(
   if (capture.kind === 'set') {
     const plan = parseAffiliateSetCookie(capture.setCookie);
     if (plan) return { action: 'set', plan };
-    return hasExistingCookie ? { action: 'keep' } : { action: 'keep' };
+    return { action: 'keep' };   // header hỏng — an toàn nhất là giữ nguyên
   }
   if (capture.kind === 'absent') {
     return hasExistingCookie ? { action: 'clear' } : { action: 'keep' };

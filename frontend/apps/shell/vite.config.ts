@@ -16,6 +16,13 @@ const mfeConfig = defineMfeConfig({
       type: 'module',
       name: 'mfe_skeleton',
       entry: `${process.env.REMOTE_SKELETON_URL ?? 'http://localhost:5178'}/remoteEntry.js`
+    },
+    // mfe-account (SF-3) — login/register/profile; import specifier 'account/*'
+    // (remotes.d.ts). `name` khớp federation name của remote (apps/mfe-account).
+    account: {
+      type: 'module',
+      name: 'mfe_account',
+      entry: `${process.env.REMOTE_ACCOUNT_URL ?? 'http://localhost:5176'}/remoteEntry.js`
     }
   }
 });
@@ -23,5 +30,12 @@ const mfeConfig = defineMfeConfig({
 export default defineConfig({
   ...mfeConfig,
   plugins: [react(), ...(mfeConfig.plugins ?? [])],
-  server: { port: 5173 }
+  server: {
+    port: 5173,
+    // Same-origin cho /api → cookie refresh_token hoạt động (SameSite=Lax).
+    // Cross-origin fetch thẳng :8080 sẽ KHÔNG mang cookie → bắt buộc đi proxy.
+    proxy: {
+      '/api': { target: process.env.GATEWAY_URL ?? 'http://localhost:8080', changeOrigin: true }
+    }
+  }
 });

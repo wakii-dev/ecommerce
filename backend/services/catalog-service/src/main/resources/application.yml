@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# catalog-service (SF-4) — PORT TABLE (đổi khi fork):
+#   gateway 8080 · identity 8081 · catalog 8082 · cart 8083 · inventory 8084
+#   ordering 8085 · payment 8086 · notification 8087 · template 8099
+# DB-PER-SERVICE (D8): db_catalog — cấm share DB.
+# Profile `dev`: đọc env do compose infra expose trên localhost (make infra).
+# ─────────────────────────────────────────────────────────────────────────────
+server:
+  port: 8082
+
+spring:
+  application:
+    name: catalog-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    # Host port 5433 — máy dev có postgres compose khác giữ 5432 (compose map 5433:5432)
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_catalog}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# Search engine chọn lúc startup (D15): ES reachable → EsEngine (chính);
+# uri rỗng (ELASTICSEARCH_URI="") hoặc ping fail → PgFtsEngine fallback (WARN degraded).
+elasticsearch:
+  uri: ${ELASTICSEARCH_URI:http://localhost:9200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true        # /actuator/health/{liveness,readiness}
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+# Outbox relay (common-lib) — admin CRUD publish product.changed qua outbox
+outbox:
+  relay:
+    exchange: ecommerce.events
+    poll-interval-ms: 2000
+    max-attempts: 5
+    batch-size: 100
+    enabled: true
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

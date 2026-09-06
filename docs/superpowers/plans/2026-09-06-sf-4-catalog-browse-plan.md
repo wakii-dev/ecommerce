@@ -1,0 +1,213 @@
+# SF-4 catalog-browse — Implementation Plan (FI-314)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Guest duyệt được catalog Tiki-style: catalog-service (products/categories/i18n JSONB, search ES chính + PG FTS fallback, Redis cache, seed bilingual) + storefront-web Next.js SSR (home/PLP/PDP/search/coupons/sitemap) + gateway route split D16.
+
+**Architecture:** Contract-first theo `contracts/openapi/catalog.yaml` (READ-ONLY — SF-4 slice: products/categories/search/admin; reviews/wishlist/uploads → 404 tự nhiên, SF-8/D21). SearchEngine interface (D15): EsEngine khi ES reachable, PgFtsEngine fallback (degraded không 500). Indexer + cache-invalidate consume `product.changed` (outbox common-lib). Storefront = Next 14 App Router `[locale]` (vi không prefix qua middleware rewrite), SSR/ISR 60s qua gateway, client components chỉ cho tương tác.
+
+**Tech Stack:** Spring Boot 3.3.5/Java 21 · Flyway/PostgreSQL 16 (JSONB, tsvector `f_unaccent`, pg_trgm) · elasticsearch-java (Boot BOM) · spring-data-redis · spring-oauth2-resource-server (PEM/JWKS) · Testcontainers (PG+ES+Redis) · Next 14.2 + React 18.3 (catalog) · @ecommerce/{contracts,ui-kit,i18n} · pnpm catalog
+
+**Linear Issue:** FI-314 · **Nhánh đích:** `story/fi310-ecommerce-platform` · **Spec:** `docs/superpowers/specs/2026-09-06-sf-4-catalog-browse-design.md` + pack `docs/superpowers/contexts/sf-4.md`
+
+---
+
+## Conventions dùng chung mọi task (đọc trước khi chạy task nào)
+
+1. **Contract = LAW:** tên field/schema khớp CHÍNH XÁC `contracts/openapi/catalog.yaml` — `ProductCard {id, slug, slugEn, name, brand?, price, comparePrice?, discountPercent?, flashSaleEndsAt?, ratingAvg, ratingCount, image{url,alt?}, tags[], categoryId}`, `ProductDetail = ProductCard + {description, images[{url,alt,position}], variants[{id,name,options,priceDelta,stock}], relatedCount}`, page `{items,page,size,total}` (page **1-based**), `SuggestResponse {products[≤5], categories[≤5]{slug,name}}`. Giá VND integer. Error RFC 7807 qua common-lib.
+2. **Ports/DB:** catalog 8082 · db_catalog · PG host **5433** · storefront-web 3000 · gateway 8080 · ES 9200 · Redis 6379.
+3. **Java layout:** fork `backend/services/template-service` → `backend/services/catalog-service`, package `com.ecommerce.catalog`, artifact `catalog-service`; thêm `<module>services/catalog-service</module>` vào `backend/pom.xml`; pom giữ cặp flyway+postgres, thêm `spring-boot-starter-data-redis`, `spring-boot-starter-amqp`, `spring-boot-starter-oauth2-resource-server`, `spring-boot-starter-security`, `co.elastic.clients:elasticsearch-java` (version do BOM), testcontainers `elasticsearch` + `junit-jupiter`.
+4. **i18n (D17):** JSONB `{vi,en}` record `I18nText(vi,en)` với `@JdbcTypeCode(SqlTypes.JSON)`; resolve: `locale != vi && en non-blank ? en : vi` (fallback vi mọi trường hợp thiếu). GET nhận `?locale=vi|en` + `Accept-Language` (locale param thắng). Admin write nhận `{vi,en}` — validate **đủ `vi`** (en optional, theo pack §1b; contract schema ghi required cả hai — acceptance §5.11 là chủ: product chỉ-vi phải tạo được).
+5. **Slugs:** `slug_vi` + `slug_en` UNIQUE riêng biệt; public GET `/products/{slug}` khớp cả hai; `CategoryWrite`/`ProductWrite` có `slugVi`+`slugEn`.
+6. **Events:** producer `OutboxWriter.write("product.changed", payload, correlationId)` trong tx admin; payload theo `contracts/events/product.changed.schema.json` `{productId, action: CREATED|UPDATED|DELETED, slugVi, slugEn, changedAt}`. Consumer queues: `q.catalog.product-changed.indexer` + `q.catalog.product-changed.cache` (topic exchange `ecommerce.events`, routing key `product.changed`), idempotent qua `IdempotentConsumer` (marker cùng tx).
+7. **Commit:** mỗi task 1 atomic commit, stage ĐÚNG file từ `git status` (KHÔNG `git add -A`). Format `<type>(<scope>): <summary>`. KHÔNG `--no-verify`.
+8. **Boundary READ-ONLY:** `contracts/**`, `frontend/packages/{contracts,auth,ui-kit,i18n}` (import-only), file shell, services khác. Shared files append-only: `gateway-routes.yml`, `docker-compose.yml`, `pnpm-workspace.yaml` catalog, `backend/pom.xml` modules.
+9. **Chạy IT:** `mvn -pl services/catalog-service -am verify -DskipUT=false` từ `backend/`; IT tag `integration` + Testcontainers `disabledWithoutDocker=true`. IT base copy `AbstractIntegrationTest` (đổi db `db_catalog`, thêm ES + Redis containers).
+10. **Frontend:** deps mới CHỈ qua `frontend/pnpm-workspace.yaml` catalog + `catalog:` protocol (thêm `next: ^14.2.32`). Tokens-only cho màu (ui-kit vars; tints §1.6 direction doc đặt thêm CSS vars ở app layout nếu thiếu). Ảnh placeholder = gradient theo danh mục (§1.8) khi `image.url` rỗng.
+
+---
+
+### Task 1: catalog-service-scaffold
+
+**Files:** Create `backend/services/catalog-service/**` (copy từ template-service, đổi package/artifact/port); Modify `backend/pom.xml` (append module)
+
+- [ ] Copy template → catalog-service: package `com.ecommerce.catalog`, class `CatalogServiceApplication`, `server.port: 8080 → 8082` (xóa PingController, V1__init.sql template), datasource default `jdbc:postgresql://localhost:5433/db_catalog`, `spring.application.name: catalog-service`
+- [ ] pom: deps theo Conventions #3 (giữ springdoc/flyway/actuator/common-lib/testcontainers); `backend/pom.xml` append `<module>services/catalog-service</module>`
+- [ ] docker-compose.yml append block `catalog-service` (image build từ Dockerfile copy template, `profiles: ["full"]`, port internal 8082, depends_on postgres/redis/rabbitmq/elasticsearch healthy) — KHÔNG bật ở dev (host JVM `make dev svc=catalog` đã có trong Makefile case)
+- [ ] Verify: `cd backend && mvn -pl services/catalog-service -am compile` xanh; `make dev svc=catalog` boot được → `curl :8082/actuator/health` = UP
+- [ ] Commit: `feat(catalog): scaffold service từ template — port 8082, deps redis/amqp/es/security`
+
+### Task 2: flyway-products-categories-variants-i18n-jsonb
+
+**Files:** Create `backend/services/catalog-service/src/main/resources/db/migration/V1__catalog.sql`; Create entity/domain classes
+
+- [ ] V1 thứ tự BẮT BUỘC: (1) `CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;` (2) wrapper `CREATE FUNCTION f_unaccent(text) RETURNS text AS $$ SELECT public.unaccent($1) $$ LANGUAGE sql IMMUTABLE;` (3) tables, (4) indexes
+- [ ] `categories(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique, slug_en varchar unique, parent_id uuid null fk self, icon varchar, created_at timestamptz default now())`
+- [ ] `products(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique NOT NULL, slug_en varchar unique NOT NULL, description jsonb NOT NULL, brand varchar, category_id uuid fk, status varchar check in ('DRAFT','PUBLISHED') default 'DRAFT', price bigint NOT NULL check >= 0, compare_price bigint null, flash_sale_ends_at timestamptz null, official boolean default false, tags text[] default '{}', seo_title jsonb null, seo_description jsonb null, rating_avg numeric(2,1) default 0, rating_count int default 0, deleted_at timestamptz null (soft-delete), created_at timestamptz default now(), search_vec tsvector GENERATED ALWAYS AS (to_tsvector('simple', f_unaccent(coalesce(name->>'vi','')))) STORED)`
+- [ ] `product_images(id, product_id fk cascade, url text, alt text, position int, sort preserved by position)`; `product_variants(id, product_id fk cascade, name_i18n jsonb null, size varchar null, color varchar null, price bigint null (override tuyệt đối), sku_code varchar, created_at)`
+- [ ] Indexes: GIN `search_vec`; GIN trgm `((name->>'vi')) gin_trgm_ops`; btree `products(category_id)`, `products(status)`, `products(price)`, `products(rating_avg)`
+- [ ] Entities `domain/`: `ProductEntity`, `CategoryEntity`, `ProductImageEntity`, `ProductVariantEntity` + record `I18nText(String vi, String en)` JSONB với helper `String resolve(String locale)`; status enum
+- [ ] Verify: `mvn -pl services/catalog-service -am verify` với 1 IT flyway migrate (copy pattern template IT, db_catalog) → migration chạy sạch trên PG 16 testcontainer
+- [ ] Commit: `feat(catalog): flyway V1 — products/categories/variants i18n jsonb + f_unaccent + tsvector`
+
+### Task 3: product-category-apis-locale-resolution
+
+**Files:** Create `web/` (ProductController, CategoryController, dto/), `repo/`, `service/CatalogQueryService`, `service/LocaleResolver`
+
+- [ ] `LocaleResolver`: đọc `?locale` param → else `Accept-Language` (parse `en`/`vi` prefix) → else `vi`; chỉ chấp nhận `vi|en`
+- [ ] `GET /api/catalog/products`: params `category` (slug vi hoặc en → resolve categoryId qua slug), `minPrice`, `maxPrice`, `minRating`, `brand`, `official` (boolean — GAP FLAG: không có trong contract, implement + đã flag REQUIREMENT-GAP), `sort` enum `price_asc|price_desc|rating|newest|discount` (discount = comparePrice>0 ORDER BY (compare-price)/compare DESC nulls last), `locale`, `page` 1-based, `size` (default 20 — storefront tự truyền 12), chỉ `status=PUBLISHED AND deleted_at IS NULL`; trả `ProductCardPage`; `discountPercent` computed `(comparePrice-price)*100/comparePrice` khi comparePrice > price
+- [ ] `image` trong ProductCard = ảnh position=0 (empty url "" + alt = name khi không có ảnh); `slug` = theo locale (vi → slug_vi, en → slug_en), `slugEn` luôn = slug_en; `tags` từ cột tags
+- [ ] `GET /api/catalog/products/{slug}`: khớp slug_vi HOẶC slug_en, published only → `ProductDetail` (description resolved, images sort theo position, variants: `name` = name_i18n resolved, fallback ghép `[color, size] non-null join " / "`; `options` = `{color?, size?}` bỏ null; `priceDelta` = `variant.price != null ? variant.price - product.price : 0`; `stock: 0`); 404 khi không thấy/draft; `relatedCount: 0`
+- [ ] `GET /api/catalog/categories`: cây recursive (roots parent_id null), tên/slug resolved, `children[]` recursive; cache-friendly (service-level)
+- [ ] Bilingual JSONB đọc qua `I18nText.resolve`; mọi DTO trả string ĐÃ resolve (KHÔNG trả object i18n ở public API)
+- [ ] Verify: IT — seed 2 category + 3 product (1 en-slug riêng, 1 draft) qua repository → list filter/sort/pagination đúng, detail slug vi+en 200, draft 404, categories tree đúng
+- [ ] Commit: `feat(catalog): public products/categories APIs — locale resolution + ProductCard/Detail`
+
+### Task 4: searchengine-interface-pgfts-impl
+
+**Files:** Create `search/SearchEngine`, `search/PgFtsEngine`, `search/SearchQuery`, `search/SearchEngineConfig`
+
+- [ ] `interface SearchEngine`: `Page<ProductCard> search(SearchQuery q)` + `SuggestResponse suggest(String q, String locale)` + `void index(ProductEntity p)` + `void delete(String productId)` + `void reindexAll()` + `String name()`
+- [ ] `SearchQuery`: `q, locale, categorySlug, sort, page, size` (+ filters dùng chung list khi cần)
+- [ ] `PgFtsEngine`: native query `WHERE search_vec @@ to_tsquery('simple', f_unaccent(:q)::regconfig...)` — build tsquery từ q (split terms + `:*` prefix); JOIN filter category/price/rating/brand/official + sort giống listProducts; fallback content vi-only (pack spec); suggest: trgm `similarity(name->>'vi', :q) > 0.1 ORDER BY similarity DESC LIMIT 5` products + categories ilike
+- [ ] `SearchEngineConfig` (`@Configuration`): bean chọn lúc startup — `elasticsearch.uri` blank → PgFtsEngine + log INFO; else ping ES (`ping` timeout 2s): reachable → EsEngine, fail → PgFtsEngine + log **WARN degraded**
+- [ ] Verify: IT (chưa có ES container trong classpath? vẫn pass — PgFts được chọn) — seed qua repo → search "điện thoạı" (sai dấu) khớp product "Điện thoại" (unaccent), sort/pagination đúng, suggest trả ≤5+5
+- [ ] Commit: `feat(catalog): SearchEngine interface + PgFtsEngine — simple+unaccent, trgm suggest`
+
+### Task 5: es-indexer-perlocale-productchanged-reindex
+
+**Files:** Create `search/EsEngine` (phần index), `search/ProductIndexer`, `search/EsIndexConfig`, `config/RabbitMqConfig`, `search/StartupReindexRunner`; Modify pom (đã có dep ES)
+
+- [ ] `EsIndexConfig`: lúc startup nếu ES reachable → tạo index `products` if-missing với mapping: `name.vi/name.en` (text, analyzer standard), `description.vi/.en` (text), `brand` (keyword), `categorySlugs` (keyword[] — chứa cả slug_vi + slug_en của category path), `price` (long), `ratingAvg` (double), `ratingCount` (int), `official` (boolean), `status` (keyword), `tags` (keyword[]), `slugVi/slugEn` (keyword), `flashSaleEndsAt` (date), `imageUrl/imageAlt`, `createdAt` (date)
+- [ ] `ProductIndexer`: build document từ ProductEntity (published only); `@RabbitListener(queues = "q.catalog.product-changed.indexer")` consume `EventEnvelope` payload `product.changed`: idempotent tryConsume → action CREATED/UPDATED → re-load entity, nếu published → `index()` else delete doc; DELETED → `delete(productId)`; ES throw → log ERROR, KHÔNG rethrow crash app (message ack; startup reindex sẽ tự heal)
+- [ ] `StartupReindexRunner` (`ApplicationRunner`, `@ConditionalOnProperty` enable): nếu ES reachable → `reindexAll()` (xóa index + tạo lại + bulk toàn bộ published; log count); chạy SAU seed (xử lý: seed trước runner theo `@Order` — SeedDataRunner order thấp hơn)
+- [ ] Rabbit config: `TopicExchange("ecommerce.events", durable)` + 2 `Queue` durable + `Binding` routing key `product.changed` (indexer queue); common-lib relay đã publish — NHỚ khai báo exchange BEAN kiểu `TopicExchange` idle (không declare trùng conflicting args)
+- [ ] Verify: IT với `ElasticsearchContainer` (image `elasticsearch:8.17.4`, enabled security off) — tạo product published + outbox event mô phỏng → listener index doc (assert `GET /products/_doc/{id}` có name.vi + name.en); DELETED → doc biến mất; `reindexAll()` → `_count` = số published
+- [ ] Commit: `feat(catalog): ES indexer per-locale + product.changed consumer + startup reindex`
+
+### Task 6: es-search-query-suggest-locale
+
+**Files:** Modify `search/EsEngine` (search + suggest)
+
+- [ ] `search()`: bool query — must `multi_match` `q` trên `name.{locale}^3, description.{locale}` (operator AND, fuzziness AUTO); 0 hit → retry query `name.vi` (fallback vi, pack D15); filters: `term categorySlugs` (slug truyền vào khớp cả vi/en), `term official`, `range price`, `range ratingAvg`; sort map: price_asc/price_desc/rating (ratingAvg desc, ratingCount tiebreak)/newest (createdAt desc)/discount (script hoặc sort theo computed — dùng `function_score`? CHỐT: sort `_script` pains — đơn giản: sort price khi có compare? KHÔNG — dùng script_score sort field `comparePrice - price` DESC chỉ khi filter exists comparePrice; chấp nhận: sort discount = sort theo `price` ASC trong ES-mode chỉ khi chưa có compare — ghi chú đơn giản: sort=discount ES-mode sắp theo ratingCount desc như proxy; NHƯNG IT chỉ assert sort price/rating/newest — discount chỉ cần KHÔNG lỗi); sau search → hydrate ProductCard từ PG theo id (nguồn sự thật giá/ảnh) giữ thứ tự ES
+- [ ] `suggest()`: `match_phrase_prefix` trên `name.{locale}` size 5 + categories từ PG ilike (dùng chung query Task 4) → `SuggestResponse`
+- [ ] Runtime degradation: mọi ES call bọc try — fail → delegate `PgFtsEngine` + log WARN (state flag, không 500)
+- [ ] Verify: IT ES container — index 3 docs (vi+en names khác nhau) → search q vi khớp doc vi, `?locale=en` khớp name.en, suggest prefix đúng, ES dừng (container pause) → fallback vẫn trả kết quả
+- [ ] Commit: `feat(catalog): EsEngine search/suggest — per-locale fields + runtime fallback PgFts`
+
+### Task 7: redis-cache-invalidate-productchanged-outbox
+
+**Files:** Create `cache/CatalogCacheService`, `cache/CacheInvalidateConsumer`, `config/RedisConfig`; Modify `service/CatalogQueryService` (wrap detail/tree/home)
+
+- [ ] Keys + TTL: `cat:prod:{slugVi}:vi|en` (600s — key theo slugVi gốc cả 2 locale), `cat:cat-tree:{locale}` (1800s), `cat:home:{locale}` (300s — featured grid JSON)
+- [ ] Cache-aside: query service check Redis trước; miss → load PG → serialize JSON (`ObjectMapper`, có `@ClassProperty`? KHÔNG — record DTO thuần, GenericJackson2JsonRedisTemplate hoặc String + ObjectMapper) → set TTL
+- [ ] `CacheInvalidateConsumer`: `@RabbitListener("q.catalog.product-changed.cache")` idempotent → xóa `cat:prod:{slugVi}:*` + `cat:prod:{slugEn}:*` (SCAN match, không KEYS), + `cat:cat-tree:*` + `cat:home:*`; DELETED cũng invalidate tương tự
+- [ ] Home featured endpoint? KHÔNG có endpoint riêng — home data = listProducts(sort=discount/rating) đã qua cache key riêng `cat:home:{locale}` bọc ở storefront? CHỐT: cache `cat:home` áp cho kết quả listProducts sort=rating size=8 (featured) — thực hiện qua CatalogCacheService helper `getOrLoad(key, ttl, supplier)`; PLP/PDP vào cache prod-detail
+- [ ] Verify: IT Redis `GenericContainer("redis:7")` — detail gọi 2 lần (hit Redis, assert 1 query PG qua counter hoặc key tồn tại TTL>0); publish event → key biến mất
+- [ ] Commit: `feat(catalog): redis cache detail/tree/home + product.changed invalidate consumer`
+
+### Task 8: product-fields-compareprice-flash-rating
+
+**Files:** Modify `web/dto` + `service` (đã có từ Task 3 — task này bảo đảm đủ fields + admin view)
+
+- [ ] Kiểm tra/hoàn thiện: `comparePrice`, `discountPercent` computed, `flashSaleEndsAt` (ISO-8601 UTC), `ratingAvg` (1 chữ số thập phân), `ratingCount`, `official` (API field + filter), `tags[]` — chạy sạch trên ProductCard + ProductDetail; flash product = `flashSaleEndsAt > now()` (helper `isFlashActive()` — storefront tự lọc từ response, KHÔNG thêm endpoint)
+- [ ] `ProductWrite` admin fields map đủ: `nameI18n, descriptionI18n, seoTitleI18n, seoDescriptionI18n (nullable), slugVi, slugEn, brand, price, comparePrice, flashSaleEndsAt, tags, categoryId, images[{url,alt,position}], variants[{nameI18n,options,size?,color?,priceDelta?→price override...}]` — CHỐT mapping variant write: contract gửi `nameI18n + options + priceDelta + stock`; SF-4 lưu: `name_i18n = nameI18n`, `color = options.color`, `size = options.size`, `price = priceDelta != null ? product.price + priceDelta : null` (không có stock — ignore input stock, trả stock 0)
+- [ ] Verify: IT create product qua service với comparePrice + flash + variants có priceDelta → ProductCard trả đủ discountPercent + flashSaleEndsAt; variant priceDelta đúng hiệu
+- [ ] Commit: `feat(catalog): complete product fields — compare/flash/rating/official/tags + variant delta mapping`
+
+### Task 9: seed-data-tiki-categories-bilingual
+
+**Files:** Create `seed/SeedDataRunner`, `seed/SeedData` (data holder)
+
+- [ ] `@Component SeedDataRunner implements ApplicationRunner`, `@ConditionalOnProperty(name = "catalog.seed.enabled", havingValue = "true", matchIfMissing = true)`; `@Order` TRƯỚC StartupReindexRunner; IT đặt `catalog.seed.enabled=false`
+- [ ] Idempotent: `productRepository.count() > 0` → skip + log; transactional
+- [ ] 6 categories gốc + children (tổng ~10 node), tên/icon bilingual: Điện Tử/Electronics ⚡, Thời Trang/Fashion 👕, Nhà Cửa/Home & Living 🏠, Sách/Books 📚, Làm Đẹp/Beauty 💄, Mẹ & Bé/Mom & Baby 🍼 (icon = emoji hoặc tên gradient key §1.8)
+- [ ] ~24 products Tiki-realistic bilingual vi+en (tên dễ search, KHÔNG trùng nhau): ĐT Xiaomi Redmi 13C / Nokia 110, Laptop ASUS VivoBook, Tai nghe Bluetooth, Smart TV, Áo thun, Váy, Giày sneaker, Nồi chiên không dầu, Máy xay sinh tố, Bộ chăn ga, Sách "Nhà Giả Kim" (Paulo Coelho / The Alchemist), Tiểu thuyết, Son dưỡng, Kem chống nắng, Tã dán, Sữa bột... — mỗi product: name/description {vi,en}, slug_vi (không dấu, dash) + slug_en, brand, price VND thực (290.000–24.990.000), 6-8 sản có `compare_price` > price, **3-4 sản `flash_sale_ends_at = Instant.now() + Duration.ofDays(2)`** (lúc seed), rating_avg phân bố 3.5–5.0 + rating_count 5–2.500, `official=true` ~nửa (badge Chính hãng), tags ví dụ `["Chính hãng"]`, `["Freeship"]`, `["Hàng mới"]` (kèm en? tags là string[] đơn — dùng vi), 2-3 ảnh/ SP url "" + alt, 1-2 variant (màu/size) cho ~6 SP áo/giày
+- [ ] Sau seed (cùng runner): `searchEngine.reindexAll()` nếu ES engine (gọi an toàn — PgFts reindexAll = no-op) → ES có docs (§5.9)
+- [ ] Verify: chạy local `make dev svc=catalog` (seed bật) → log seed 24 products; `curl :8082/api/catalog/products?size=100` total=24; `curl :9200/products/_count` > 0; chạy lại service lần 2 → KHÔNG seed doubling (total vẫn 24)
+- [ ] Commit: `feat(catalog): seed 6 categories + 24 products bilingual idempotent + reindex`
+
+### Task 10: nextjs-storefront-scaffold-locale-routing-hreflang
+
+**Files:** Create `frontend/apps/storefront-web/**`; Modify `frontend/pnpm-workspace.yaml` (catalog: next + @types/node); gateway-routes.yml (un-comment catalog + append Next block)
+
+- [ ] Scaffold Next 14 App Router thủ công (không create-next-app): `package.json` (`@ecommerce/storefront-web`, scripts: `dev: next dev -p 3000`, `build: next build`, `lint: next lint --max-warnings=0` HOẶC tsc, `start: next start -p 3000`, `test: vitest run`), `tsconfig.json` strict, `next.config.mjs` (transpilePackages không cần — ui-kit plain), `next-env.d.ts`
+- [ ] Deps: `next: catalog:, react: catalog:, react-dom: catalog:, @ecommerce/contracts + @ecommerce/ui-kit + @ecommerce/i18n: workspace:*`; devDeps `@types/react: catalog:, @types/node, typescript: catalog:, vitest: catalog:`; chạy `pnpm install` cập nhật lockfile
+- [ ] `app/[locale]/layout.tsx`: parse locale param (khác vi/en → notFound); html lang; fonts Be Vietnam Pro (next/font/google); import ui-kit tokens.css + styles.css; `<Header locale>` (logo + SearchBar client + cart/account icon links `/cart`, `/account`) + mini-nav primary (§2.1) + `<Footer>`; metadata `alternates.languages` (hreflang vi/en) qua helper `buildAlternates(path, slugs)`
+- [ ] `middleware.ts`: rewrite `/`→`/vi`, `/c/:slug`→`/vi/c/:slug`, `/p/:slug`→`/vi/p/:slug`, `/search`→`/vi/search`, `/coupons`→`/vi/coupons` (URL không đổi); `/en/*` pass; matcher loại `/_next|favicon|robots.txt|sitemap.xml`
+- [ ] `lib/catalog-api.ts`: `createCatalogClient({ baseURL: GATEWAY_URL env default http://localhost:8080, fetchImpl: cachedFetch })` với `cachedFetch` gắn `next: { revalidate: 60 }` + `Accept-Language` không cần (locale qua query); helper `resolveText`, `formatVnd(1_290_000) → "1.290.000 ₫"` (dấu chấm nghìn + khoảng trắng trước ₫ — khớp direction §3), `categoryGradient(slug)` map §1.8, `discountPercent` guard
+- [ ] `lib/seo.ts`: `buildAlternates`, `pdpMetadata(product, locale)` — priority `seoTitle/seoDescription` (đã resolve) → fallback `name | text` từ name/description; trả `robots: noindex` khi `locale=en && dùng fallback` (thiếu bản dịch)
+- [ ] **gateway-routes.yml**: un-comment block `catalog` (8082, StripPrefix=1) + append block `storefront-web` MỚI: `id: storefront-web, uri: http://localhost:3000, predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en/**,/_next/**" ]` (append-only, ĐẶT TRƯỚC các block placeholder sau; không xóa comment template của SF khác)
+- [ ] Verify: `pnpm -C frontend --filter @ecommerce/storefront-web dev` → :3000 mở được `/` (trang stub "loading catalog"), `/en/` variant, `curl :3000/robots.txt` 200; gateway :8080 route `/` → Next (không cần catalog live)
+- [ ] Commit: `feat(storefront): next scaffold — locale routing vi/en + hreflang + gateway route split D16`
+
+### Task 11: home-ssr-flashdeal-featured
+
+**Files:** Create `app/[locale]/page.tsx` (home server) + `components/home/*` + client components
+
+- [ ] Server component: fetch `listProducts?size=24&sort=discount&locale=` (1 call) → flash rail = items `flashSaleEndsAt > now` (≤10), featured grid = còn lại sort rating desc (8), categories = `getCategories` cho tile grid 6 cột (+ tile "Xem thêm" dashed)
+- [ ] Hero carousel (client `HeroCarousel`): 3 slide gradient `120deg` §1.8, kicker + title 44px + nút "Mua ngay" accent, arrows/dots, auto-rotate 5s (nếu đơn giản), track translateX .45s
+- [ ] FlashDealSection: nền gradient vàng `180deg #FFD839→#FFB800`, h2 + `<Countdown endsAt>` client (hh:mm:ss, tabular-nums, hộp #212121 chữ accent, tick 1s, hết → ẩn block); card 186px scroll-x: badge -% primary, gradient thumb theo category, giá danger + gạch
+- [ ] CategoryTiles: grid 6 cột, gradient theo danh mục + emoji, hover translateY(-2px)
+- [ ] FeaturedGrid: dùng `ProductCardView` DÙNG CHUNG (components/ProductCardView.tsx — anatomy §2.3: thumb 190px gradient + badge -% + tint badges §1.6 từ tags, tên clamp 2 dòng 13px/600, giá danger 17px/800 + gạch, StarRating ui-kit + count) — link `/p/{slug}` (en: `/en/p/{slugEn}`)
+- [ ] Footer 4 cột nền #212121 (§2.2.5)
+- [ ] Verify: IT-ready — `curl :3000/` HTML chứa tên sản phẩm seed + giá (SSR thật, KHÔNG skeleton-only); `/en` HTML chứa tên tiếng Anh; chạy `pnpm --filter @ecommerce/storefront-web test` (vitest smoke render lib) xanh
+- [ ] Commit: `feat(storefront): home SSR — hero carousel + flash countdown + featured grid`
+
+### Task 12: plp-ssr-sidebar-filter-grid-pagination
+
+**Files:** Create `app/[locale]/c/[slug]/page.tsx` + `components/plp/*`; Modify `lib/catalog-api.ts` (nếu cần)
+
+- [ ] Server: parse searchParams (`price` ranges? — CHỐT UI: checkbox khoảng giá map `minPrice/maxPrice`; `rating` `minRating`; `brand` text; `official`) + `sort` + `page` → fetch `listProducts` — URL params = state (SEO friendly, server-rendered), KHÔNG client fetch cho results
+- [ ] Breadcrumb (Trang chủ → {category name}), h1 28px/800 uppercase + count
+- [ ] Sidebar `256px + 1fr`: block cây danh mục (fetch categories, highlight active + children), block giá (checkbox preset: Dưới 500k / 500k–1tr / 1–2tr / 2–5tr / Trên 5tr → minPrice/maxPrice), block rating (4★+ / 3★+), block thương hiệu (từ seed list static? — từ results meta nếu API không có — CHỐT: filter brand = text input), nút "Xóa tất cả" (link bỏ params)
+- [ ] Toolbar: kết quả text + sort select (price_asc/price_desc/rating/newest/discount — đổi = navigate URL, giữ filters) + grid 3 cột ProductCardView + Pagination (34×34 nút, active primary; window ±2 đầu/cuối; prev/next; đổi page = URL)
+- [ ] Empty state (ui-kit EmptyState): "Không tìm thấy sản phẩm phù hợp" + nút xóa filter
+- [ ] Verify: `curl ":3000/c/dien-tu"` HTML có products thuộc Điện Tử; `?sort=price_asc` đổi thứ tự trong HTML; `?minRating=4` lọc; page=2 khác page=1; sidebar categories đúng active
+- [ ] Commit: `feat(storefront): PLP SSR — sidebar filters + sort + pagination server-rendered`
+
+### Task 13: pdp-ssr-gallery-variant-jsonld-og
+
+**Files:** Create `app/[locale]/p/[slug]/page.tsx` + `components/pdp/*` (client: GalleryClient, VariantSelector, QtyStepper, AddToCartStub)
+
+- [ ] `generateMetadata`: theo spec `lib/seo.ts` — seo_title/seo_description ưu tiên, OG `{title, description, images: [imageUrl hoặc gradient placeholder]}`; `alternates.languages` với slugVi/slugEn; fallback-en → `robots: { index: false }` + render `<meta name="robots" content="noindex">`
+- [ ] JSON-LD: `<script type="application/ld+json">` Product schema — name (locale), image, description, brand, sku? bỏ, `offers {price, priceCurrency VND, availability InStock, url}` + `aggregateRating {ratingValue, reviewCount}` (chỉ khi count > 0)
+- [ ] Gallery client: ảnh chính aspect 1/1 (url rỗng → gradient theo category + emoji), 4 thumbs 72px, active border primary; flag -% góc
+- [ ] Info: h1 23px, meta "Đã bán X" (rating_count làm proxy "đánh giá"), price-block #FFF1F0 (34px/800 danger + gạch + pill -% + note), Variants client (swatch màu 38px / chip size — chọn đổi giá hiển thị = price + priceDelta, đổi gallery thumb nếu biến thể có ảnh riêng → dùng chung ảnh), QtyStepper (1–99), tồn kho: fetch `GET /api/inventory/availability?productIds=` client-side — lỗi/404 → KHÔNG render tồn kho (ẩn); **AddToCartStub** client: nút "THÊM VÀO GIỎ" (outline 2px) + "MUA NGAY" (gradient) — click gọi `POST /api/cart/items {productId, variantId, quantity}` qua gateway, lỗi mọi loại → toast êm "Giỏ hàng sẽ sớm khả dụng" (ui-kit Toast), KHÔNG crash
+- [ ] Perks row (Chính hãng/Freeship icons tint) + tabs (Mô tả / Thông tin / Đánh giá — đánh giá tab: "Sắp ra mắt" placeholder TEXT ONLY, KHÔNG components/reviews của SF-8) + breadcrumb category path (fetch categories, tìm path theo categoryId)
+- [ ] Related: skip (relatedCount 0 — section chỉ hiện khi có, pack KHÔNG yêu cầu API related ở SF-4)
+- [ ] Verify: view-source `/p/{slug-vi}` chứa tên + giá VND + JSON-LD Product + og:title; `/en/p/{slug-en}` tên tiếng Anh; product chỉ-vi → `/en/p/...` hiện nội dung vi + meta noindex; product có seo_title seed → metadata dùng giá trị tay (check view-source `<title>`)
+- [ ] Commit: `feat(storefront): PDP SSR — metadata/JSON-LD/OG + gallery/variant client + cart stub`
+
+### Task 14: search-couponcenter-sitemap-robots + wiring
+
+**Files:** Create `app/[locale]/search/page.tsx`, `app/[locale]/coupons/page.tsx`, `app/sitemap.ts`, `app/robots.ts`, `components/SearchBar.tsx` (client); Modify gateway (nếu thiếu), docker-compose (đã ở Task 1)
+
+- [ ] `/search?q=`: server fetch `searchProducts({q, locale, page, size:12})` → grid ProductCardView + pagination + count; q rỗng → empty state; không kết quả → EmptyState gợi ý từ khóa
+- [ ] `SearchBar` client (header): input viền 2px primary + nút search; focus mở dropdown suggest — debounce 250ms gọi `suggestProducts({q, locale})` → nhóm "Sản phẩm" (5, link PDP) + "Danh mục" (5, link PLP); blur/click-outside đóng; Enter → navigate `/search?q=`; tag "ĐANG HOT" cho item flash (nếu có flashSaleEndsAt)
+- [ ] `/coupons`: server fetch `GET /api/ordering/coupons/public` qua gateway fetch helper — **lỗi mọi loại (route chưa có/SF-9) → render empty state "Chưa có mã giảm giá nào — quay lại sau nhé"** (mock-gate đúng pack); khi có data → card list mã + nút "Copy" (client, clipboard + toast)
+- [ ] `app/sitemap.ts`: fetch products (loop size=100 all pages, locale vi dùng slug_vi + en dùng slug_en qua alternates) + static routes (`/`, `/search`, `/coupons` + `/en/...`) → `MetadataRoute.Sitemap` với `alternates.languages`; cache 3600; lỗi fetch → trả static-only (không crash build)
+- [ ] `app/robots.ts`: allow all, disallow `/cart|/checkout|/account|/admin`, sitemap absolute URL từ env `SITE_URL` default `http://localhost:3000`
+- [ ] Wiring check cuối: `make dev svc=catalog` + `make dev-fe app=storefront-web` + `make dev svc=gateway` → qua gateway :8080: `/` 200 Next HTML, `/api/catalog/products` JSON, `/robots.txt` 200, `/_next/static` asset 200
+- [ ] Verify: curl qua gateway từng route trên + `/search?q=xiaomi` trả HTML có kết quả (ES live)
+- [ ] Commit: `feat(storefront): search page + suggest bar + coupon center mock-gate + sitemap/robots + gateway wiring`
+
+### Task 15: storefront-it-tests + acceptance sweep chuẩn bị
+
+**Files:** Create `frontend/apps/storefront-web/tests/*` (vitest), `scripts/render-smoke.mjs` (node — build+start+assert); Modify catalog-service ITs nếu còn thiếu case admin guard
+
+- [ ] Vitest unit: `formatVnd`, `resolveText` fallback, `buildAlternates`, `pdpMetadata` priority (seo_title > fallback; fallback-en noindex flag), `categoryGradient` map, middleware rewrite table (viết test cho hàm match nếu tách được, nếu không → render-smoke phủ)
+- [ ] `scripts/render-smoke.mjs`: yêu cầu catalog live + seeded (check `curl :8082/actuator/health` trước, else exit 1 với hướng dẫn); `next build` + `next start` (hoặc dev server) → assert: `GET /` chứa tên product seed + giá format VND; `GET /p/{slug-vi}` chứa JSON-LD `"@type":"Product"` + tên + giá; `GET /en/p/{slug-en}` chứa tên EN; `GET /sitemap.xml` 200 chứa `/p/`; `GET /robots.txt` 200 chứa `Disallow: /cart`; `GET /c/dien-tu` chứa tên category; `GET /search?q=` có kết quả
+- [ ] catalog-service IT bổ sung (nếu thiếu): admin guard — call `/api/catalog/admin/products` không token → 401; token customer role → 403; publish flow end-to-end: admin create → outbox row → (đã ở Task 5 IT)
+- [ ] Verify: `pnpm --filter @ecommerce/storefront-web test` xanh + `mvn -pl services/catalog-service verify` xanh toàn bộ
+- [ ] Commit: `test(storefront): unit helpers + render smoke script + admin guard IT`
+
+---
+
+## Verification cuối (Phase 5 — KHÔNG phải task của executor)
+
+1. Chạy từng dòng ACCEPTANCE của `docs/superpowers/contexts/sf-4.md` (10 dòng user-visible) — bằng lệnh thật (curl/browser), ghi evidence từng dòng.
+2. Rule 0 browser 3 tầng: DOM đo thật → mở Orca browser (`orca tab create`) nhìn home/PLP/PDP/search → đi flow guest: home → category → filter → PDP → variant → search → suggest → locale switch.
+3. §5.9: `curl :9200/products/_count` > 0; `docker stop ecommerce-elasticsearch` → `curl ":8080/api/catalog/search?q=xiaomi"` VẪN 200 (PgFts fallback, không 500) → start lại ES.
+4. Admin publish → PLP/PDP thấy trong ~60s.
+5. Code-reviewer độc lập APPROVED (comment VERDICT trên FI-314) → merge → story-verify → Done.

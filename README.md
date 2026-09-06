@@ -97,6 +97,7 @@ flowchart LR
 | Giỏ hàng guest + merge-on-login | Coupons CRUD (%, fixed, window, limit) | **Swap engine không đổi contract** — ES↔PG FTS, Stripe↔PSP khác |
 | Checkout + Stripe test + email | Reviews moderation + badge "Mua đã xác nhận" | Event audit trail trên Mongo |
 | **PDP chuẩn SEO**: SSR + JSON-LD Product + OG + sitemap | SEO override per-product (seoTitle/description/slug) | **Hybrid rendering**: Next.js SSR (SEO) + Vite MF (app) |
+| **Đa ngôn ngữ vi/en** — kể cả dữ liệu sản phẩm (`/en/*` + hreflang) | Form sản phẩm tabs vi/en, fallback tự động | **i18n data**: JSONB {vi,en} trong Postgres, ES index per-locale |
 | My orders / wishlist / reviews | Orders: ship/deliver/cancel + low-stock | RBAC server-side 2 lớp (gateway + service) |
 
 ---

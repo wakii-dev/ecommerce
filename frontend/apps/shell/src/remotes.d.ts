@@ -77,6 +77,12 @@ declare module 'account/MyReviewsPage' {
   export default MyReviewsPage;
 }
 
+// ── mfe-account SF-12 append (FI-322) — affiliate dashboard page.
+declare module 'account/AffiliatePage' {
+  const AffiliatePage: import('react').ComponentType;
+  export default AffiliatePage;
+}
+
 // ── mfe-checkout (SF-6, apps/mfe-checkout) — cart/checkout/confirmation remote.
 // bootstrap nhận ShellContext (cùng shape account/bootstrap) lúc initCheckoutShell.
 declare module 'checkout/bootstrap' {

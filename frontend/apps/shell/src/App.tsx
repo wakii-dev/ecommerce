@@ -24,6 +24,8 @@ const AccountOrderDetailPage = lazy(() => import('account/OrderDetailPage'));
 // SF-8: wishlist + my-reviews của mfe-account — cùng pattern lazy + fallback.
 const WishlistPage = lazy(() => import('account/WishlistPage'));
 const MyReviewsPage = lazy(() => import('account/MyReviewsPage'));
+// SF-12 (FI-322): affiliate dashboard của mfe-account (pages/affiliate/*).
+const AffiliatePage = lazy(() => import('account/AffiliatePage'));
 
 // Trang cart/checkout của mfe-checkout (SF-6) — LAZY + fallback pattern account.
 const CheckoutCartPage = lazy(() => import('checkout/CartPage'));
@@ -208,6 +210,15 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <MyReviewsPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account/affiliate') {
+    // SF-12: affiliate dashboard page (mfe-account slice)
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AffiliatePage />
         </Suspense>
       </ErrorBoundary>
     );

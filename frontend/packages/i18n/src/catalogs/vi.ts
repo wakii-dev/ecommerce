@@ -42,7 +42,8 @@ export const vi = {
       categories: 'Danh mục',
       coupons: 'Mã giảm giá',
       reviews: 'Đánh giá',
-      orders: 'Đơn hàng'
+      orders: 'Đơn hàng',
+      affiliates: 'Affiliate'
     },
     topbar: {
       viewStorefront: 'Xem cửa hàng',
@@ -89,6 +90,7 @@ export const vi = {
       PENDING: 'Chờ duyệt',
       APPROVED: 'Đã duyệt',
       REJECTED: 'Từ chối',
+      SUSPENDED: 'Tạm ngưng',
       PAID: 'Đã thanh toán',
       CONFIRMED: 'Đã xác nhận',
       SHIPPED: 'Đang giao',
@@ -188,6 +190,29 @@ export const vi = {
       updated: 'Đã cập nhật mã giảm giá',
       toggled: 'Đã đổi trạng thái mã',
       empty: 'Chưa có mã giảm giá nào'
+    },
+    affiliates: {
+      title: 'Affiliate',
+      colCode: 'Ref code',
+      colRate: 'Hoa hồng (%)',
+      colClicks: 'Clicks',
+      colConversions: 'Chuyển đổi',
+      colEarnings: 'Hoa hồng',
+      statTotal: 'Tổng hồ sơ',
+      statClicks: 'Clicks',
+      statConversions: 'Chuyển đổi',
+      statCommission: 'Tổng hoa hồng',
+      approve: 'Duyệt',
+      approveDone: 'Đã duyệt — ref code đã sinh',
+      reject: 'Từ chối',
+      rejectDone: 'Đã từ chối',
+      suspend: 'Tạm ngưng',
+      suspendDone: 'Đã tạm ngưng — link ngừng track',
+      reactivate: 'Kích hoạt lại',
+      reactivateDone: 'Đã kích hoạt lại',
+      rateEditHint: 'Click để đổi rate (áp cho đơn sau)',
+      rateInvalid: 'Rate phải trong khoảng (0, 50]',
+      empty: 'Chưa có hồ sơ affiliate nào'
     },
     reviews: {
       title: 'Kiểm duyệt đánh giá',

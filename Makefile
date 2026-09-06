@@ -33,7 +33,7 @@ full: ## (stub — SF-10 lấp: compose profile full, toàn bộ containerized)
 
 dev: ## Chạy 1 backend service dev mode — vd: make dev svc=template-service
 ifeq ($(svc),)
-	$(error svc=? — template-service | gateway | identity | catalog | cart | inventory | ordering | payment | notification)
+	$(error svc=? — template-service | gateway | identity | catalog | cart | inventory | ordering | payment | affiliate | notification)
 endif
 	@case "$(svc)" in \
 	  template-service) MOD=services/template-service ;; \
@@ -44,6 +44,7 @@ endif
 	  inventory)        MOD=services/inventory-service ;; \
 	  ordering)         MOD=services/ordering-service ;; \
 	  payment)          MOD=services/payment-service ;; \
+	  affiliate)        MOD=services/affiliate-service ;; \
 	  notification)     MOD=services/notification-service ;; \
 	  invoice-service) \
 	    cd services/invoice-service && \

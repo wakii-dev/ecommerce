@@ -201,3 +201,18 @@
   font-size: 13px;
   color: var(--c-text-muted, #757575);
 }
+
+/* ── Categories tree ─────────────────────────────────────────────────── */
+.admin-cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  padding-block: 10px;
+  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  font-size: 14px;
+}
+
+.admin-cat-row:last-child {
+  border-bottom: none;
+}

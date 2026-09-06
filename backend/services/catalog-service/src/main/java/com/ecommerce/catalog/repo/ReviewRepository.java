@@ -41,10 +41,29 @@ public interface ReviewRepository extends JpaRepository<ReviewEntity, UUID> {
     /** Danh sách productId đã review (PDP my-pending panel dùng qua filter productId riêng — helper cho test). */
     List<ReviewEntity> findByUserIdAndProductId(UUID userId, UUID productId);
 
+    /** Admin moderation queue — filter status (default PENDING), mới nhất trước (spec Q7). */
+    Page<ReviewEntity> findByStatusOrderByCreatedAtDesc(ReviewStatus status, Pageable pageable);
+
     /** Projection GROUP BY — rating int + count long. */
     interface RatingCount {
 
         int getRating();
+
+        long getTotal();
+    }
+
+    /** Aggregate denormalized — avg + count trên CHỈ APPROVED (RatingAggregateService). */
+    @Query("""
+        select coalesce(avg(r.rating), 0.0) as avg, count(r) as total
+        from ReviewEntity r
+        where r.productId = :productId and r.status = 'APPROVED'
+        """)
+    Aggregate aggregateApproved(@Param("productId") UUID productId);
+
+    /** Projection avg/count — avg double (0 khi không có review APPROVED). */
+    interface Aggregate {
+
+        double getAvg();
 
         long getTotal();
     }

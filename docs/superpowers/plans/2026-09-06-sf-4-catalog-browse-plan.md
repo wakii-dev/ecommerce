@@ -32,24 +32,24 @@
 
 **Files:** Create `backend/services/catalog-service/**` (copy từ template-service, đổi package/artifact/port); Modify `backend/pom.xml` (append module)
 
-- [ ] Copy template → catalog-service: package `com.ecommerce.catalog`, class `CatalogServiceApplication` (GIỮ `@EntityScan` dual package — Conventions #3), `server.port: 8082` (**GIỮ NGUYÊN `V1__init.sql` — outbox + processed_messages DDL, OutboxRelay/IdempotentConsumer cần sống; KHÔNG xóa**), xóa PingController, datasource default `jdbc:postgresql://localhost:5433/db_catalog`, `spring.application.name: catalog-service`, application.yml thêm `elasticsearch.uri: ${ELASTICSEARCH_URI:http://localhost:9200}` + block redis/rabbitmq (theo template comment)
-- [ ] pom: deps theo Conventions #3 TRỪ security/oauth2 (thêm ở Task 8b — tránh Boot default security khóa mọi endpoint trước khi có SecurityConfig); `backend/pom.xml` append `<module>services/catalog-service</module>`
-- [ ] docker-compose.yml append block `catalog-service` (image build từ Dockerfile copy template, `profiles: ["full"]`, port internal 8082, depends_on postgres/redis/rabbitmq/elasticsearch healthy) — KHÔNG bật ở dev (host JVM `make dev svc=catalog` đã có trong Makefile case)
-- [ ] Verify: `mvn -pl services/catalog-service -am verify` xanh (không IT bắt buộc ở task này); `make dev svc=catalog` boot được → `curl :8082/actuator/health` = UP (không 401 — chưa có security)
-- [ ] Commit: `feat(catalog): scaffold service từ template — port 8082, giữ V1 outbox, deps redis/amqp/es`
+- [x] Copy template → catalog-service: package `com.ecommerce.catalog`, class `CatalogServiceApplication` (GIỮ `@EntityScan` dual package — Conventions #3), `server.port: 8082` (**GIỮ NGUYÊN `V1__init.sql` — outbox + processed_messages DDL, OutboxRelay/IdempotentConsumer cần sống; KHÔNG xóa**), xóa PingController, datasource default `jdbc:postgresql://localhost:5433/db_catalog`, `spring.application.name: catalog-service`, application.yml thêm `elasticsearch.uri: ${ELASTICSEARCH_URI:http://localhost:9200}` + block redis/rabbitmq (theo template comment)
+- [x] pom: deps theo Conventions #3 TRỪ security/oauth2 (thêm ở Task 8b — tránh Boot default security khóa mọi endpoint trước khi có SecurityConfig); `backend/pom.xml` append `<module>services/catalog-service</module>`
+- [x] docker-compose.yml append block `catalog-service` (image build từ Dockerfile copy template, `profiles: ["full"]`, port internal 8082, depends_on postgres/redis/rabbitmq/elasticsearch healthy) — KHÔNG bật ở dev (host JVM `make dev svc=catalog` đã có trong Makefile case)
+- [x] Verify: `mvn -pl services/catalog-service -am verify` xanh (không IT bắt buộc ở task này); `make dev svc=catalog` boot được → `curl :8082/actuator/health` = UP (không 401 — chưa có security)
+- [x] Commit: `feat(catalog): scaffold service từ template — port 8082, giữ V1 outbox, deps redis/amqp/es`
 
 ### Task 2: flyway-products-categories-variants-i18n-jsonb
 
 **Files:** Create `backend/services/catalog-service/src/main/resources/db/migration/V10__catalog.sql`; Create entity/domain classes
 
-- [ ] **Migration domain = V10** (V1 là outbox schema dùng chung — giữ; V2–V9 reserve theo header V1__init.sql). V10 thứ tự BẮT BUỘC: (1) `CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;` (2) wrapper `CREATE FUNCTION f_unaccent(text) RETURNS text AS $$ SELECT public.unaccent($1) $$ LANGUAGE sql IMMUTABLE;` (3) tables, (4) indexes
-- [ ] `categories(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique, slug_en varchar unique, parent_id uuid null fk self, icon varchar, created_at timestamptz default now())`
-- [ ] `products(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique NOT NULL, slug_en varchar unique NOT NULL, description jsonb NOT NULL, brand varchar, category_id uuid fk, status varchar check in ('DRAFT','PUBLISHED') default 'DRAFT', price bigint NOT NULL check >= 0, compare_price bigint null, flash_sale_ends_at timestamptz null, official boolean default false, tags text[] default '{}', seo_title jsonb null, seo_description jsonb null, rating_avg numeric(2,1) default 0, rating_count int default 0, deleted_at timestamptz null (soft-delete), created_at timestamptz default now(), search_vec tsvector GENERATED ALWAYS AS (to_tsvector('simple', f_unaccent(coalesce(name->>'vi','')))) STORED)`
-- [ ] `product_images(id, product_id fk cascade, url text, alt text, position int, sort preserved by position)`; `product_variants(id, product_id fk cascade, name_i18n jsonb null, size varchar null, color varchar null, price bigint null (override tuyệt đối), sku_code varchar, created_at)`
-- [ ] Indexes: GIN `search_vec`; GIN trgm `((name->>'vi')) gin_trgm_ops`; btree `products(category_id)`, `products(status)`, `products(price)`, `products(rating_avg)`
-- [ ] Entities `domain/`: `ProductEntity`, `CategoryEntity`, `ProductImageEntity`, `ProductVariantEntity` + record `I18nText(String vi, String en)` JSONB với helper `String resolve(String locale)`; status enum
-- [ ] Verify: `mvn -pl services/catalog-service -am verify` với 1 IT flyway migrate (copy pattern template IT, db_catalog) → migration chạy sạch trên PG 16 testcontainer
-- [ ] Commit: `feat(catalog): flyway V10 — products/categories/variants i18n jsonb + f_unaccent + tsvector`
+- [x] **Migration domain = V10** (V1 là outbox schema dùng chung — giữ; V2–V9 reserve theo header V1__init.sql). V10 thứ tự BẮT BUỘC: (1) `CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS pg_trgm;` (2) wrapper `CREATE FUNCTION f_unaccent(text) RETURNS text AS $$ SELECT public.unaccent($1) $$ LANGUAGE sql IMMUTABLE;` (3) tables, (4) indexes
+- [x] `categories(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique, slug_en varchar unique, parent_id uuid null fk self, icon varchar, created_at timestamptz default now())`
+- [x] `products(id uuid pk, name jsonb NOT NULL, slug_vi varchar unique NOT NULL, slug_en varchar unique NOT NULL, description jsonb NOT NULL, brand varchar, category_id uuid fk, status varchar check in ('DRAFT','PUBLISHED') default 'DRAFT', price bigint NOT NULL check >= 0, compare_price bigint null, flash_sale_ends_at timestamptz null, official boolean default false, tags text[] default '{}', seo_title jsonb null, seo_description jsonb null, rating_avg numeric(2,1) default 0, rating_count int default 0, deleted_at timestamptz null (soft-delete), created_at timestamptz default now(), search_vec tsvector GENERATED ALWAYS AS (to_tsvector('simple', f_unaccent(coalesce(name->>'vi','')))) STORED)`
+- [x] `product_images(id, product_id fk cascade, url text, alt text, position int, sort preserved by position)`; `product_variants(id, product_id fk cascade, name_i18n jsonb null, size varchar null, color varchar null, price bigint null (override tuyệt đối), sku_code varchar, created_at)`
+- [x] Indexes: GIN `search_vec`; GIN trgm `((name->>'vi')) gin_trgm_ops`; btree `products(category_id)`, `products(status)`, `products(price)`, `products(rating_avg)`
+- [x] Entities `domain/`: `ProductEntity`, `CategoryEntity`, `ProductImageEntity`, `ProductVariantEntity` + record `I18nText(String vi, String en)` JSONB với helper `String resolve(String locale)`; status enum
+- [x] Verify: `mvn -pl services/catalog-service -am verify` với 1 IT flyway migrate (copy pattern template IT, db_catalog) → migration chạy sạch trên PG 16 testcontainer
+- [x] Commit: `feat(catalog): flyway V10 — products/categories/variants i18n jsonb + f_unaccent + tsvector`
 
 ### Task 3: product-category-apis-locale-resolution
 

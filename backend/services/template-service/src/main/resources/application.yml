@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PORT TABLE (đổi `server.port` khi fork service thật):
+#   gateway 8080 · identity 8081 · catalog 8082 · cart 8083 · inventory 8084
+#   ordering 8085 · payment 8086 · notification 8087 · template 8099
+# DB- PER-SERVICE (D8): db_identity/db_catalog/db_ordering/db_payment/db_inventory
+#   (+ db_template sandbox — chỉ template dùng)
+# Profile `dev`: đọc env do compose infra expose trên localhost (make infra).
+# ─────────────────────────────────────────────────────────────────────────────
+server:
+  port: 8099
+
+spring:
+  application:
+    name: template-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/db_template}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate

@@ -37,6 +37,7 @@
        shared/common-lib · gateway · services/template-service · services/<svc>-service (SF-3+) -->
   <modules>
     <module>shared/common-lib</module>
+    <module>services/template-service</module>
   </modules>
 
   <dependencyManagement>

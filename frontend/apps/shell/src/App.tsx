@@ -27,6 +27,9 @@ const CheckoutCartPage = lazy(() => import('checkout/CartPage'));
 const CheckoutPage = lazy(() => import('checkout/CheckoutPage'));
 const CheckoutConfirmationPage = lazy(() => import('checkout/ConfirmationPage'));
 
+// Khu quản trị mfe-admin (SF-7) — LAZY như các remote khác.
+const AdminApp = lazy(() => import('admin/AdminApp'));
+
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
   maxWidth: 960,
@@ -73,6 +76,28 @@ function AccountErrorFallback({ error }: { error: Error }): ReactElement {
   );
 }
 
+/** Fallback cho khu quản trị mfe-admin (SF-7) — cùng pattern account. */
+function AdminErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-admin không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-admin dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
+
+
 /** Fallback cho các trang mfe-checkout (SF-6) — cùng pattern. */
 function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
   return (
@@ -110,7 +135,18 @@ export default function App(): ReactElement {
   }, [bumpRegistry]);
 
   let page: ReactNode;
-  if (path === '/skeleton') {
+  // mfe-admin (SF-7) — full-bleed NGOÀI <main maxWidth:960> (admin layout có
+  // sidebar riêng, cần trọn bề ngang); shell Header vẫn giữ cho auth widget.
+  const isAdmin = path === '/admin' || path.startsWith('/admin/');
+  if (isAdmin) {
+    page = (
+      <ErrorBoundary fallback={(error) => <AdminErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AdminApp />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/skeleton') {
     page = (
       <ErrorBoundary fallback={(error) => <RemoteErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
@@ -192,6 +228,14 @@ export default function App(): ReactElement {
 
   // AuthProvider bao TOÀN app — useAuth() trong widget/page của remote đọc cùng
   // context này (singleton federation: remote dùng chung bản @ecommerce/auth).
+  if (isAdmin) {
+    return (
+      <AuthProvider>
+        <Header />
+        {page}
+      </AuthProvider>
+    );
+  }
   return (
     <AuthProvider>
       <Header />

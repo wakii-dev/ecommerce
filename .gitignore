@@ -34,5 +34,7 @@ Thumbs.db
 # --- Logs / tmp ---
 *.log
 tmp/
+
+# Module Federation dev artifacts (@module-federation/vite)
 .mf/
 infra/keys/

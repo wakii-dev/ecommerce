@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "node scripts/render-smoke.mjs"
   },
   "dependencies": {
     "@ecommerce/contracts": "workspace:*",

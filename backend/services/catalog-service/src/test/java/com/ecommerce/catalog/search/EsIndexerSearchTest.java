@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.elasticsearch.client.Request;
@@ -259,6 +260,94 @@ class EsIndexerSearchTest extends AbstractIntegrationTest {
             assertThat(unreachable.name()).isEqualTo("es");
         } finally {
             close(dead);
+        }
+    }
+
+    // ── (7) heal sau degraded: reindex đúng 1 lần/episode, chạy LẠI episode
+    //        sau (Q16 + review nhóm 5 P1-3 — validate fix 3677075) ─────────────
+
+    /**
+     * Mô phỏng downtime KHÔNG stop container (container static class-scoped —
+     * stop/start giết sibling test): DROP index {@code products} → search 404 →
+     * {@link EsEngine#search} rẽ nhánh {@code degrade()} THẬT (vì vậy reset
+     * {@code healReindexQueued} — fix 3677075); restore index → search OK →
+     * {@code markHealthyAgain()} heal reindexAll async ĐÚNG 1 LẦN + docs mất
+     * trong downtime quay lại. Episode 2 lặp degrade → recover → heal chạy LẦN
+     * 2 — thiếu reset thì CAS chặn heal #2 (count dừng ở 1 → test fail).
+     */
+    @Test
+    void healReindexesOncePerEpisodeAndAgainAcrossEpisodes() throws Exception {
+        CategoryEntity cat = seedCategory();
+        ProductEntity p = seedProduct(cat, "Máy hút bụi Xiaomi", "Xiaomi Vacuum Cleaner",
+            2_490_000L, null);
+        searchEngine.index(p); // doc có trước downtime
+        awaitDoc(p.getId(), 5);
+
+        AtomicInteger healRuns = new AtomicInteger();
+        RestClient client = elastic();
+        try {
+            // Engine riêng (không đụng bean app — degraded state không leak sang
+            // test khác); đếm reindexAll = đếm lần heal (search/index không gọi).
+            EsEngine healable = new EsEngine(client, objectMapper,
+                new PgFtsEngine(jdbc, productRepository, imageRepository, categoryRepository,
+                    objectMapper),
+                productRepository, imageRepository, categoryRepository, jdbc) {
+                @Override
+                public void reindexAll() {
+                    healRuns.incrementAndGet();
+                    super.reindexAll();
+                }
+            };
+
+            // Episode 1: ES "chết" (index biến mất) → degrade thật, fallback PG không 500
+            dropIndex();
+            assertThat(healable.search(query("hút bụi", "vi")).items())
+                .extracting(c -> c.id()).contains(p.getId());
+            assertThat(healRuns.get()).isZero(); // chưa recover → chưa heal
+
+            // Recovery: ES call OK (index mới rỗng → 0 hit vẫn là success) →
+            // markHealthyAgain → heal async đúng 1 lần + index lại doc mất
+            restoreIndex();
+            healable.search(query("hút bụi", "vi"));
+            await("heal #1 chạy sau recovery", 10, () -> healRuns.get() >= 1);
+            awaitDoc(p.getId(), 10); // reindexAll hoàn tất (refresh cuối) — doc quay lại
+            assertThat(healRuns.get()).isEqualTo(1);
+            assertThat(healable.search(query("hút bụi", "vi")).items())
+                .extracting(c -> c.id()).contains(p.getId()); // giờ tìm thấy qua ES
+
+            // Episode 2: degrade lần nữa → recover lần nữa → heal PHẢI chạy lại
+            dropIndex();
+            assertThat(healable.search(query("hút bụi", "vi")).items())
+                .extracting(c -> c.id()).contains(p.getId());
+            restoreIndex();
+            healable.search(query("hút bụi", "vi"));
+            await("heal #2 chạy sau recovery lần 2", 10, () -> healRuns.get() >= 2);
+            assertThat(healRuns.get()).isEqualTo(2);
+        } finally {
+            try {
+                restoreIndex(); // fail giữa chừng không để index thiếu cho test sau
+            } catch (Exception ignored) {
+                // cleanup best-effort
+            }
+            close(client);
+        }
+    }
+
+    /** DROP index products — mô phỏng mất docs trong downtime, không stop container. */
+    private void dropIndex() throws Exception {
+        try (RestClient c = elastic()) {
+            c.performRequest(new Request("DELETE", "/" + EsIndexConfig.INDEX));
+        } catch (ResponseException e) {
+            if (e.getResponse().getStatusLine().getStatusCode() != 404) {
+                throw e;
+            }
+        }
+    }
+
+    /** Tạo lại index products (mapping chuẩn) — ES "sống lại" sau downtime mô phỏng. */
+    private void restoreIndex() throws Exception {
+        try (RestClient c = elastic()) {
+            EsIndexConfig.ensureIndex(c);
         }
     }
 

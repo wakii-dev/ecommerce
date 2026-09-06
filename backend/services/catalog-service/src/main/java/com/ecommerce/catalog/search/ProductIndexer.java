@@ -35,6 +35,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * DELETED → delete doc. Doc build per-locale 1 nguồn duy nhất
  * {@link #buildDoc} (EsEngine.index/reindexAll dùng chung — không nhân bản).
  *
+ * <p>Marker idempotency có prefix {@code indexer:} — bảng
+ * {@code processed_messages} là global theo messageId nên marker bare
+ * {@code eventId} có nguy cơ collision khi có consumer mới thêm vào
+ * {@code product.changed} (symmetric với {@code cache:} của
+ * {@link com.ecommerce.catalog.cache.CacheInvalidateConsumer} — idempotency
+ * per consumer-group).</p>
+ *
  * <p><strong>Tradeoff ES-call trong tx (D15 + review P2 group 3):</strong> ES
  * index/delete KHÔNG transactional — fail → log ERROR, KHÔNG rethrow (marker
  * vẫn consume, message ack): rethrow = requeue vô hạn nếu index mapping lệch
@@ -76,7 +83,7 @@ public class ProductIndexer {
                 log.warn("[indexer] bỏ qua eventType lạ: {}", envelope.eventType());
                 return;
             }
-            if (!idempotentConsumer.tryConsume(envelope.eventId().toString())) {
+            if (!idempotentConsumer.tryConsume("indexer:" + envelope.eventId())) {
                 return; // đã xử lý (at-least-once duplicate)
             }
             JsonNode payload = envelope.payload();

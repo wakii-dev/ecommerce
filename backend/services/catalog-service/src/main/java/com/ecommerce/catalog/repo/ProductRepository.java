@@ -1,5 +1,6 @@
 package com.ecommerce.catalog.repo;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +18,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, UUID>, J
 
     /** Public PDP: tìm theo slug bất kỳ locale — service tự lọc PUBLISHED + chưa soft-delete. */
     Optional<ProductEntity> findBySlugViOrSlugEn(String slugVi, String slugEn);
+
+    /** Seed flash-refresh (Q12): mọi product có flash_sale_ends_at. */
+    List<ProductEntity> findByFlashSaleEndsAtIsNotNull();
 }

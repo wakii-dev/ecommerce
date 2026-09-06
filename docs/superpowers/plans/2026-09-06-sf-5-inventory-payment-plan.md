@@ -79,8 +79,8 @@ Saga không có chỗ để reserve stock an toàn và thu tiền — cần 2 se
 - Create: `backend/services/inventory-service/pom.xml`, `src/main/java/com/ecommerce/inventory/InventoryServiceApplication.java`, `src/main/resources/application.yml`, `src/main/resources/db/migration/V1__init.sql` (copy template), `V10__inventory_domain.sql`, `src/test/java/com/ecommerce/inventory/AbstractIntegrationTest.java`, `InventoryScaffoldIT.java` (Dockerfile → Task 8, một owner duy nhất)`
 
 **Steps:**
-- [ ] Append modules vào `backend/pom.xml` (sau `services/template-service`): `<module>services/inventory-service</module>` + `<module>services/payment-service</module>` (payment module T5 tạo sau — pom refer trước không sao vì -pl chọn lọc; NHƯNG `mvn verify` full reactor sẽ fail nếu module thiếu → T8 trước khi chạy full, đảm bảo T5 đã có. Ghi chú trong task.)
-- [ ] `V10__inventory_domain.sql`:
+- [x] Append modules vào `backend/pom.xml` (sau `services/template-service`): `<module>services/inventory-service</module>` + `<module>services/payment-service</module>` (payment module T5 tạo sau — pom refer trước không sao vì -pl chọn lọc; NHƯNG `mvn verify` full reactor sẽ fail nếu module thiếu → T8 trước khi chạy full, đảm bảo T5 đã có. Ghi chú trong task.)
+- [x] `V10__inventory_domain.sql`:
 ```sql
 CREATE TABLE stocks (
     variant_id    VARCHAR(64) PRIMARY KEY,
@@ -103,8 +103,8 @@ CREATE INDEX idx_reservations_expiry ON reservations (status, expires_at);
 CREATE UNIQUE INDEX uq_reservations_active_order
     ON reservations (order_id) WHERE status IN ('RESERVED', 'COMMITTED');
 ```
-- [ ] `pom.xml` fork template: bỏ springdoc? KHÔNG — giữ (swagger demo browser verify). Thêm `awaitility` test-scope (Boot BOM manage version).
-- [ ] `application.yml` fork template: port `8084`, name `inventory-service`, datasource default `db_inventory`, thêm:
+- [x] `pom.xml` fork template: bỏ springdoc? KHÔNG — giữ (swagger demo browser verify). Thêm `awaitility` test-scope (Boot BOM manage version).
+- [x] `application.yml` fork template: port `8084`, name `inventory-service`, datasource default `db_inventory`, thêm:
 ```yaml
 inventory:
   reservation:
@@ -113,12 +113,12 @@ inventory:
   low-stock-threshold: ${INVENTORY_LOW_STOCK_THRESHOLD:10}
 ```
 (merge các key `inventory.*` vào yml fork từ template — KHÔNG tạo root key `spring:`/`inventory:` trùng — YAML duplicate-key chết im.)
-- [ ] Application class fork template (`@EntityScan({"com.ecommerce.inventory.domain", "com.ecommerce.common.outbox"})`).
-- [ ] `AbstractIntegrationTest` fork template (db name `db_inventory`).
-- [ ] `InventoryScaffoldIT`: context loads + Flyway migrate + JdbcTemplate assert 2 bảng + unique index tồn tại (`SELECT indexdef FROM pg_indexes WHERE indexname='uq_reservations_active_order'`).
-- [ ] Un-comment gateway route block `inventory` (bỏ `# ` đầu 4 dòng, giữ comment `# SF-5 · port 8084`).
-- [ ] Chạy: `cd backend && mvn -pl services/inventory-service -am verify` → PASS (kể cả IT nếu Docker chạy; không Docker thì IT skip — phải thấy "Tests run" unit ≥ 0 + BUILD SUCCESS).
-- [ ] Commit: `feat(inventory): scaffold inventory-service với Flyway stocks/reservations + gateway route`
+- [x] Application class fork template (`@EntityScan({"com.ecommerce.inventory.domain", "com.ecommerce.common.outbox"})`).
+- [x] `AbstractIntegrationTest` fork template (db name `db_inventory`).
+- [x] `InventoryScaffoldIT`: context loads + Flyway migrate + JdbcTemplate assert 2 bảng + unique index tồn tại (`SELECT indexdef FROM pg_indexes WHERE indexname='uq_reservations_active_order'`).
+- [x] Un-comment gateway route block `inventory` (bỏ `# ` đầu 4 dòng, giữ comment `# SF-5 · port 8084`).
+- [x] Chạy: `cd backend && mvn -pl services/inventory-service -am verify` → PASS (kể cả IT nếu Docker chạy; không Docker thì IT skip — phải thấy "Tests run" unit ≥ 0 + BUILD SUCCESS).
+- [x] Commit: `feat(inventory): scaffold inventory-service với Flyway stocks/reservations + gateway route`
 
 ### Task 2: Reservation API all-or-nothing (TDD)
 
@@ -152,7 +152,7 @@ int restock(@Param("id") String id, @Param("qty") int qty);
 - 2 thread cùng order_id đồng thời → đúng 1 reservation active (partial index), 1 trong 2 nhận 201 replay; tổng trừ = qty của 1 request
 - 2 thread khác order tranh last stock (tổng qty > stock) → đúng 1 × 201, 1 × 409, stock = 0
 - re-reserve khi reservation cũ hết hạn (seed expires_at quá khứ chưa quét) → 201 reservation MỚI + event `inventory.released` trong outbox + stock = cũ - qty_mới
-- [ ] Commit: `feat(inventory): reservation API all-or-nothing + replay + self-heal expired`
+- [x] Commit: `feat(inventory): reservation API all-or-nothing + replay + self-heal expired`
 
 ### Task 3: Availability + low-stock endpoints
 
@@ -188,7 +188,7 @@ List<LowStockView> findLowStock(@Param("threshold") int threshold);
 ```
 (alias `threshold` — khớp contract field `threshold`, KHÔNG `thresholdUsed`.)
 Controller: `GET /inventory/availability?variantIds=a,b,c` (`@RequestParam List<String> variantIds` — Spring tách comma với form explode=false; rỗng → 400) → 200 list. `GET /inventory/admin/low-stock?threshold=` (default `@Value("${inventory.low-stock-threshold:10}")`) → 200 list đủ 5 trường contract (productId/productName null khi chưa fill). IT: availability đúng available+reserved (seed reservation active jsonb SNAKE_CASE keys), reservation hết hạn KHÔNG tính reserved; low-stock lọc đúng + threshold param override.
-- [ ] Commit: `feat(inventory): availability + low-stock admin endpoints (jsonb reserved SUM)`
+- [x] Commit: `feat(inventory): availability + low-stock admin endpoints (jsonb reserved SUM)`
 
 ### Task 4: TTL sweeper + commit/release consumers
 
@@ -230,7 +230,7 @@ public void on(EventEnvelope envelope) {
 ```
 Payload commit/release: `{reservationId, orderId, items[]}` — **items remap SNAKE (jsonb) → CAMEL (event schema)**: đọc `reservation.getItems()` (đã deserialize thành record `ReservationItem(variantId, qty)` camel-tên-field, có `@JsonProperty("variant_id")` cho jsonb round-trip) → build payload node với key `variantId` — schema-exact, KHÔNG thêm reason (log thôi). correlationId = `envelope.correlationId()` incoming. **Poison message (PIN — plan-critic cycle 2):** `ConditionalRejectingErrorHandler` trên listener container factory trong `RabbitMqConfig` (`SimpleRabbitListenerContainerFactory.setErrorHandler(new ConditionalRejectingErrorHandler())`) — conversion fail (poison) → reject KHÔNG requeue; lỗi TRANSIENT (DB blip...) → vẫn requeue (giữ at-least-once). KHÔNG dùng `default-requeue-rejected: false` (biến mọi lỗi thành at-most-once — mất event commit stock).
 **IT InventoryEventsTest:** publish synthetic envelope (ObjectMapper serialize EventEnvelope) qua `rabbitTemplate.convertAndSend("ecommerce.events", "order.paid", envelopeJson)` — seed reservation RESERVED → await 5s (Awaitility) → status COMMITTED + outbox row `inventory.committed` + **assert payload keys camelCase** (`payload.items[0].variantId` tồn tại, `variant_id` KHÔNG); re-publish CÙNG eventId → không đổi gì (vẫn 1 outbox row); order.cancelled → RELEASED + stock hoàn; sweep: seed reservation hết hạn → gọi `sweeper.releaseExpired()` trực tiếp → RELEASED + outbox `inventory.released` + stock hoàn; sweep-vs-consumer: reservation hết hạn bị sweep TRƯỚC rồi order.paid tới → consumer warn no-op, stock không đổi, không event mới; **poison**: publish garbage JSON vào queue → không requeue (queue depth 0 sau 2s), business state untouched.
-- [ ] Commit: `feat(inventory): TTL sweeper + idempotent commit/release consumers`
+- [x] Commit: `feat(inventory): TTL sweeper + idempotent commit/release consumers`
 
 ### Task 5: payment-service scaffold + SPI + StripeAdapter
 
@@ -279,7 +279,7 @@ public ProviderWebhookEvent verifyWebhook(String rawBody, String sigHeader) {
 (Stripe-side idempotency đã verify: `RequestOptions.RequestOptionsBuilder.setIdempotencyKey(String)` tồn tại trong 24.16 (javap) — plan-B bỏ.)
 `UnconfiguredAdapter`: mọi method ném `PaymentUnconfiguredException`. VND zero-decimal: amount truyền nguyên; currency lowcase 'vnd' cho Stripe, uppercase cho DB/event.
 **StripeAdapterTest (WireMock, deterministic — không Docker):** stub `POST /v1/payment_intents` trả JSON pi + client_secret + status `requires_confirmation` → assert AdapterIntent; stub `POST /v1/payment_intents/pi_x/cancel` → void; stub `POST /v1/refunds` → re_; verify request header `Idempotency-Key` = cmd key + amount = số VND nguyên (WireMock verify). Signature: compute helper `sign(whsec, payload, epochNow)` (HMAC-SHA256 hex, header `t=<ts>,v1=<hex>`) → `verifyWebhook` OK; sai header → `WebhookVerificationException`.
-- [ ] Commit: `feat(payment): scaffold payment-service + PaymentProviderAdapter SPI + StripeAdapter`
+- [x] Commit: `feat(payment): scaffold payment-service + PaymentProviderAdapter SPI + StripeAdapter`
 
 ### Task 6: Intents API idempotent + degraded mode
 
@@ -292,7 +292,7 @@ public ProviderWebhookEvent verifyWebhook(String rawBody, String sigHeader) {
 Controller (KHÔNG prefix `/api` — gateway StripPrefix=1): `POST /payment/intents` header `Idempotency-Key` optional → 201/400/409/502/503. **DTO `CreateIntentRequest.idempotencyKey` KHÔNG đặt `@NotBlank`** (contract required ở schema nhưng header là kênh chính — request chỉ có header phải qua `@Valid`). `PaymentExceptionHandlers`: `PaymentUnconfiguredException` → 503 problem+json title `payment_unconfigured` + detail chỉ env; `StripeException` InvalidRequest → 409 `payment_conflict` (T7 chung), Stripe khác → 502 `payment_provider_error`.
 **IT PaymentIntentsTest:** WireMock stub create → 201 {paymentIntentId=pi_..., clientSecret=secret_..., status=requires_confirmation}; replay same key same payload → CÙNG response (WireMock được gọi ĐÚNG 1 lần — verify count); same key khác amount → 409; amount 0/âm → 400; currency USD → 400; thiếu key header + body → 400; WireMock trả 500 → 502 + DB KHÔNG có row (rollback — assert count=0); retry sau lỗi với cùng key → thành công (rollback semantics đúng).
 **IT PaymentDegradedTest:** boot không key → `/payment/intents` 503 title `payment_unconfigured` **+ `/payment/refunds` + `/payment/void` + `/payment/webhook` đều 503 cùng title**; health UP; outbox relay vẫn poll (log/bean tồn tại). **Case key-có-secret-thiếu**: `@SpringBootTest` riêng với secret-key set + webhook-secret blank → webhook 503 (không crash boot).
-- [ ] Commit: `feat(payment): idempotent intents API + degraded mode 503`
+- [x] Commit: `feat(payment): idempotent intents API + degraded mode 503`
 
 ### Task 7: Webhook + refund/void + error classification
 
@@ -303,7 +303,7 @@ Controller (KHÔNG prefix `/api` — gateway StripPrefix=1): `POST /payment/inte
 **Key:** webhook endpoint: `@PostMapping(value="/payment/webhook")` `@RequestBody String rawBody` + `@RequestHeader("Stripe-Signature")` → `adapter.verifyWebhook` (sai → `WebhookVerificationException` → 400) → `@Transactional` handler: `tryConsume("stripe:" + evt.eventId())` false → 200 `{received:true}`; switch type: `payment_intent.succeeded` → tìm theo stripeIntentId → local status SUCCEEDED + stripe_status SUCCEEDED + outbox `payment.succeeded {orderId, paymentIntentId, amount, currency:"VND", failureReason:null}`; `payment_intent.payment_failed` → FAILED + outbox `payment.failed {.., failureReason}`; `charge.refunded` → local REFUNDED (silent); khác → no-op. Không thấy intent → warn + 200. correlationId outbox = evt.eventId().
 Refund: local precheck (404 nếu không có stripeIntentId; 409 nếu status != SUCCEEDED) → adapter.refund → 201 `{refundId, status mirror, amount}` + local REFUNDED nếu full (amount == null hoặc == amount_vnd). Void: precheck (409 trừ khi CREATED/REQUIRES_CONFIRMATION) → adapter.voidIntent → local VOIDED + 200 `{status: mirror CANCELED}`.
 **IT PaymentWebhookTest:** sig sai → 400 (WireMock không bị gọi); sig đúng succeeded → 200 + outbox row `payment.succeeded`: parse envelope — assert payload-section khớp schema fields + envelope đủ 5 field (eventId UUID, eventType, occurredAt, correlationId, payload) — **KHÔNG assert producer/schemaVersion (GAP #2)**; re-post CÙNG event → 200, outbox vẫn 1 row; `payment_intent.payment_failed` → outbox failed + failureReason; **webhook intent không tồn tại local → 200 + warn, không outbox row**; refund full → 201 + status REFUNDED; refund vượt amount (WireMock trả invalid_request_error) → 409; void sau SUCCEEDED → 409; void sau CREATED → 200 VOIDED; refund unknown pi → 404.
-- [ ] Commit: `feat(payment): webhook signature verify + outbox events + refund/void`
+- [x] Commit: `feat(payment): webhook signature verify + outbox events + refund/void`
 
 ### Task 8: Full-suite + Dockerfiles + demo seed + docs
 
@@ -313,14 +313,14 @@ Refund: local precheck (404 nếu không có stripeIntentId; 409 nếu status !=
 - Verify: full reactor
 
 **Steps:**
-- [ ] Seed demo script trong README (KHÔNG migration seed):
+- [x] Seed demo script trong README (KHÔNG migration seed):
 ```bash
 docker compose exec -T postgres psql -U postgres -d db_inventory -c \
  "INSERT INTO stocks (variant_id, quantity, threshold_low, product_id, product_name) VALUES ('var-ao-thun-den-m', 50, 10, 'prod-1', N'Áo thun đen M'), ('var-ao-thun-den-l', 3, 10, 'prod-1', N'Áo thun đen L') ON CONFLICT DO NOTHING"
 ```
-- [ ] `cd backend && mvn verify` (full reactor — T5 module đã tồn tại) → BUILD SUCCESS, list số test mỗi module.
-- [ ] IT coverage checklist §7 spec: 7 case đủ? thiếu case nào → bổ sung TRƯỚC khi commit.
-- [ ] Commit: `feat(services): Dockerfiles + demo seed docs + full suite green`
+- [x] `cd backend && mvn verify` (full reactor — T5 module đã tồn tại) → BUILD SUCCESS, list số test mỗi module.
+- [x] IT coverage checklist §7 spec: 7 case đủ? thiếu case nào → bổ sung TRƯỚC khi commit.
+- [x] Commit: `feat(services): Dockerfiles + demo seed docs + full suite green`
 
 ---
 

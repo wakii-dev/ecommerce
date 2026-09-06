@@ -1,0 +1,108 @@
+package com.ecommerce.identity.token;
+
+import com.ecommerce.identity.config.RefreshProperties;
+import com.ecommerce.identity.user.UserEntity;
+import com.ecommerce.identity.user.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.HexFormat;
+
+/**
+ * Refresh token: raw 32 byte random (cookie) — DB chỉ giữ SHA-256 hex.
+ * Rotation: refresh hợp lệ → revoke row cũ + cấp row mới (reuse row revoked → 401).
+ */
+@Service
+public class RefreshTokenService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final RefreshTokenRepository repository;
+    private final UserRepository userRepository;
+    private final RefreshProperties props;
+
+    public RefreshTokenService(RefreshTokenRepository repository, UserRepository userRepository,
+                               RefreshProperties props) {
+        this.repository = repository;
+        this.userRepository = userRepository;
+        this.props = props;
+    }
+
+    public record Rotated(UserEntity user, String newRawToken) {}
+
+    @Transactional
+    public String issue(UserEntity user) {
+        String raw = newRawToken();
+        RefreshTokenEntity entity = new RefreshTokenEntity();
+        entity.setUser(user);
+        entity.setTokenHash(sha256Hex(raw));
+        entity.setExpiresAt(Instant.now().plus(Duration.ofDays(props.ttlDays())));
+        repository.save(entity);
+        return raw;
+    }
+
+    /** Verify + ROTATE: revoke row cũ, cấp token mới. Sai/hết hạn/đã revoke → 401. */
+    @Transactional
+    public Rotated rotate(String rawToken) {
+        RefreshTokenEntity entity = repository.findByTokenHash(sha256Hex(rawToken))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token không hợp lệ"));
+        if (entity.getRevokedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token đã bị thu hồi");
+        }
+        if (entity.getExpiresAt().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token đã hết hạn");
+        }
+        entity.setRevokedAt(Instant.now());
+        // entity.getUser() là proxy LAZY — load entity THẬT trong tx để caller
+        // đọc claims (role/email/...) SAU khi tx đóng không vấp LazyInitialization.
+        UserEntity user = userRepository.findById(entity.getUser().getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token không hợp lệ"));
+        String newRaw = issue(user);
+        return new Rotated(user, newRaw);
+    }
+
+    /** Logout — idempotent. Trả false nếu token không tồn tại/hết hạn. */
+    @Transactional
+    public boolean revoke(String rawToken) {
+        return repository.findByTokenHash(sha256Hex(rawToken))
+            .map(entity -> {
+                boolean wasActive = entity.getRevokedAt() == null
+                    && entity.getExpiresAt().isAfter(Instant.now());
+                if (entity.getRevokedAt() == null) entity.setRevokedAt(Instant.now());
+                return wasActive;
+            })
+            .orElse(false);
+    }
+
+    public Duration ttl() {
+        return Duration.ofDays(props.ttlDays());
+    }
+
+    public String cookiePath() {
+        return props.cookiePath();
+    }
+
+    private String newRawToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+}

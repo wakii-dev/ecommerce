@@ -6,8 +6,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,20 +21,27 @@ import java.util.Base64;
 /**
  * IT harness identity — PG thật qua Testcontainers + RSA keypair sinh mỗi lần
  * chạy (viết PEM vào temp dir, trỏ identity.jwt.*-path). Tag "integration".
+ *
+ * <p>SINGLETON container (start 1 lần/JVM, Ryuk dọn lúc JVM exit): nhiều test
+ * class chia sẻ Spring context cache — @Container per-class sẽ STOP container
+ * sau mỗi class → restart đổi port → cached context của class sau trỏ URL chết
+ * (connection refused sau 30s timeout). Singleton giữ 1 URL sống cho cả JVM.</p>
  */
 @Tag("integration")
-@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16")
         .withDatabaseName("db_identity")
         .withUsername("postgres")
         .withPassword("postgres");
 
+    static {
+        POSTGRES.start();
+    }
+
     @LocalServerPort
-    int port;
+    public int port;
 
     static Path privateKeyPath;
     static Path publicKeyPath;

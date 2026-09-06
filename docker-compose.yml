@@ -19,6 +19,12 @@ services:
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7
@@ -29,6 +35,11 @@ services:
       - redisdata:/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -40,6 +51,12 @@ services:
       - rabbitmqdata:/var/lib/rabbitmq
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   mailpit:
     image: axllent/mailpit
@@ -51,6 +68,11 @@ services:
       - mailpitdata:/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8025/readyz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   # Chỉ bật khi cần test webhook Stripe thật: docker compose --profile stripe up -d stripe-cli
   # Forward → payment-service chạy host :8086 (SF-5 sở hữu endpoint).
@@ -67,6 +89,11 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "stripe", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   pgdata:

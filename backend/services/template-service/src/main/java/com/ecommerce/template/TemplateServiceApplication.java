@@ -10,15 +10,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>Conventions bắt buộc khi fork (SF-3+):</p>
  * <ul>
  *   <li>{@code scanBasePackages = "com.ecommerce"} — pickup common-lib
- *       (GlobalExceptionHandler, outbox, idempotent consumer).</li>
- *   <li>{@code @EnableScheduling} — OutboxRelay poll (tắt per-service bằng
- *       {@code outbox.relay.enabled=false} nếu không publish event).</li>
+ *       (GlobalExceptionHandler, outbox relay/writer, idempotent consumer).</li>
+ *   <li>JPA repos/entities + scheduling của common-lib wire tự động qua
+ *       CommonLibAutoConfiguration — KHÔNG cần @EnableScheduling/@EntityScan tay.</li>
  *   <li>Port theo bảng trong {@code application.yml} — đổi ngay khi fork.</li>
  *   <li>DB riêng ({@code db_<service>}) — cấm share DB (D8).</li>
  * </ul>
  */
 @SpringBootApplication(scanBasePackages = "com.ecommerce")
-@EnableScheduling
 public class TemplateServiceApplication {
 
     public static void main(String[] args) {

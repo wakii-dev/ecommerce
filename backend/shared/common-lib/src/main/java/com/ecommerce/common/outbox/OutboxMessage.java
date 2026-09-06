@@ -28,6 +28,7 @@ public class OutboxMessage {
 
     /** JSON payload (schema freeze tại SF-2 trong contracts/events/). */
     @Column(nullable = false, columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String payload;
 
     /** Từ {@code X-Request-Id} của gateway — propagate end-to-end. */

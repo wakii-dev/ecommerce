@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
-import { Be_Vietnam_Pro } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/tokens.css';
-import '../app.css';
 
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
@@ -18,12 +16,6 @@ const DESCRIPTION: Record<string, string> = {
   en: 'Shop VN — thousands of official products at great prices, every day.',
 };
 
-const beVietnamPro = Be_Vietnam_Pro({
-  weight: ['400', '500', '600', '700', '800'],
-  subsets: ['vietnamese', 'latin'],
-  display: 'swap',
-});
-
 export function generateMetadata({ params }: { params: { locale: string } }): Metadata {
   const locale = resolveLocale(params.locale);
   return {
@@ -35,7 +27,13 @@ export function generateMetadata({ params }: { params: { locale: string } }): Me
   };
 }
 
-/** Root layout theo segment [locale] — pattern i18n chuẩn Next App Router. */
+/**
+ * Locale layout — shell Header/main/Footer. SF-8 sửa build vỡ có sẵn:
+ * <html>/<body> + font chuyển lên root app/layout.tsx (Next ≥14.2 bắt buộc
+ * root layout vì app/not-found.tsx — pattern i18n chuẩn; chi tiết trong
+ * app/layout.tsx). Guard locale lạ giữ nguyên — not-found render trong
+ * root layout.
+ */
 export default function LocaleLayout({
   children,
   params,
@@ -46,12 +44,10 @@ export default function LocaleLayout({
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
   return (
-    <html lang={locale} className={beVietnamPro.className}>
-      <body>
-        <Header locale={locale} />
-        <main>{children}</main>
-        <Footer locale={locale} />
-      </body>
-    </html>
+    <>
+      <Header locale={locale} />
+      <main>{children}</main>
+      <Footer locale={locale} />
+    </>
   );
 }

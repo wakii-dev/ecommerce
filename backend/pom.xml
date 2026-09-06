@@ -26,7 +26,7 @@
     <spring-boot.version>3.3.5</spring-boot.version>
     <spring-cloud.version>2023.0.3</spring-cloud.version>
     <springdoc.version>2.6.0</springdoc.version>
-    <testcontainers.version>1.20.4</testcontainers.version>
+    <testcontainers.version>1.21.3</testcontainers.version>
     <stripe-java.version>24.16.0</stripe-java.version>
 
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -35,6 +35,9 @@
 
   <!-- Modules (append-only per SF — thêm cùng commit tạo module):
        shared/common-lib · gateway · services/template-service · services/<svc>-service (SF-3+) -->
+  <modules>
+    <module>shared/common-lib</module>
+  </modules>
 
   <dependencyManagement>
     <dependencies>

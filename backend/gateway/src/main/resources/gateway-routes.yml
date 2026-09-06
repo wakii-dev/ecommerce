@@ -25,10 +25,14 @@ spring:
       #   uri: http://localhost:8081
       #   predicates: [ "Path=/api/identity/**" ]
       #   filters: [ "StripPrefix=1" ]
-      # - id: catalog                                    # SF-4 · port 8082
-      #   uri: http://localhost:8082
-      #   predicates: [ "Path=/api/catalog/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      # SF-4 (2026-09-06) un-comment block catalog — DECISION: KHÔNG StripPrefix.
+      # Placeholder cũ ghi StripPrefix=1 nhưng mâu thuẫn chính comment conventions
+      # ("service nhận path còn lại sau /api/<service>") và template PingController
+      # map @RequestMapping("/api/template") (giữ FULL prefix) — controllers
+      # catalog-service map /api/catalog/** nên forward nguyên path.
+      - id: catalog                                      # SF-4 · port 8082
+        uri: http://localhost:8082
+        predicates: [ "Path=/api/catalog/**" ]
       # - id: cart                                       # SF-6 · port 8083
       #   uri: http://localhost:8083
       #   predicates: [ "Path=/api/cart/**" ]

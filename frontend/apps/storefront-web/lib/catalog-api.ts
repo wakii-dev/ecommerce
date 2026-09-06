@@ -38,7 +38,8 @@ function cachedFetch(locale: Locale): typeof fetch {
 
 type ListProductsArgs = Parameters<CatalogClient['listProducts']>[0];
 type SearchArgs = Parameters<CatalogClient['searchProducts']>[0];
-type ProductCardPage = Awaited<ReturnType<CatalogClient['listProducts']>>;
+/** Trang kết quả list/search — export cho PLP/search page (Task 12/14). */
+export type ProductCardPage = Awaited<ReturnType<CatalogClient['listProducts']>>;
 type ProductDetail = Awaited<ReturnType<CatalogClient['getProduct']>>;
 type CategoryTree = Awaited<ReturnType<CatalogClient['getCategories']>>;
 type SuggestResponse = Awaited<ReturnType<CatalogClient['suggestProducts']>>;

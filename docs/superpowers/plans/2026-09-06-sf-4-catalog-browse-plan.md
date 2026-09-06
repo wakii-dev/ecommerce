@@ -173,13 +173,13 @@
 
 **Files:** Create `app/[locale]/c/[slug]/page.tsx` + `components/plp/*`; Modify `lib/catalog-api.ts` (nếu cần)
 
-- [ ] Server: parse searchParams (`price` ranges? — CHỐT UI: checkbox khoảng giá map `minPrice/maxPrice`; `rating` `minRating`; `brand` text; `official`) + `sort` + `page` → fetch `listProducts` — URL params = state (SEO friendly, server-rendered), KHÔNG client fetch cho results
-- [ ] Breadcrumb (Trang chủ → {category name}), h1 28px/800 uppercase + count
-- [ ] Sidebar `256px + 1fr`: block cây danh mục (fetch categories, highlight active + children), block giá (checkbox preset: Dưới 500k / 500k–1tr / 1–2tr / 2–5tr / Trên 5tr → minPrice/maxPrice), block rating (4★+ / 3★+), block thương hiệu (từ seed list static? — từ results meta nếu API không có — CHỐT: filter brand = text input), nút "Xóa tất cả" (link bỏ params)
-- [ ] Toolbar: kết quả text + sort select (price_asc/price_desc/rating/newest/discount — đổi = navigate URL, giữ filters) + grid 3 cột ProductCardView + Pagination (34×34 nút, active primary; window ±2 đầu/cuối; prev/next; đổi page = URL)
-- [ ] Empty state (ui-kit EmptyState): "Không tìm thấy sản phẩm phù hợp" + nút xóa filter
+- [x] Server: parse searchParams (`price` ranges? — CHỐT UI: checkbox khoảng giá map `minPrice/maxPrice`; `rating` `minRating`; `brand` text; `official`) + `sort` + `page` → fetch `listProducts` — URL params = state (SEO friendly, server-rendered), KHÔNG client fetch cho results
+- [x] Breadcrumb (Trang chủ → {category name}), h1 28px/800 uppercase + count
+- [x] Sidebar `256px + 1fr`: block cây danh mục (fetch categories, highlight active + children), block giá (checkbox preset: Dưới 500k / 500k–1tr / 1–2tr / 2–5tr / Trên 5tr → minPrice/maxPrice), block rating (4★+ / 3★+), block thương hiệu (từ seed list static? — từ results meta nếu API không có — CHỐT: filter brand = text input), nút "Xóa tất cả" (link bỏ params)
+- [x] Toolbar: kết quả text + sort select (price_asc/price_desc/rating/newest/discount — đổi = navigate URL, giữ filters) + grid 3 cột ProductCardView + Pagination (34×34 nút, active primary; window ±2 đầu/cuối; prev/next; đổi page = URL)
+- [x] Empty state (ui-kit EmptyState): "Không tìm thấy sản phẩm phù hợp" + nút xóa filter
 - [ ] Verify: `curl ":3000/c/dien-tu"` HTML có products thuộc Điện Tử; `?sort=price_asc` đổi thứ tự trong HTML; `?minRating=4` lọc; page=2 khác page=1; sidebar categories đúng active
-- [ ] Commit: `feat(storefront): PLP SSR — sidebar filters + sort + pagination server-rendered`
+- [x] Commit: `feat(storefront): PLP SSR — sidebar filters + sort + pagination server-rendered`
 
 ### Task 13: pdp-ssr-gallery-variant-jsonld-og
 

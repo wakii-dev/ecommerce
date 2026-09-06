@@ -767,3 +767,352 @@ img {
     font-size: 32px;
   }
 }
+
+/* ── PLP (direction §2.4 — breadcrumb / sidebar 256px / toolbar / grid / pagination) ── */
+
+.plp {
+  /* §2.4 nền surface (khác nền trang --c-bg) — kéo dài full container */
+  background: var(--c-surface);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-7);
+  min-height: 60vh;
+}
+
+.plp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.plp-breadcrumb a {
+  color: var(--c-text-muted);
+  text-decoration: none;
+}
+
+.plp-breadcrumb a:hover {
+  color: var(--c-primary);
+}
+
+.plp-breadcrumb-current {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.plp-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.plp-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.plp-count {
+  font-size: 14px;
+  color: var(--c-text-muted);
+}
+
+/* Layout 256px + 1fr, gap 24px; sidebar border-right (§2.4) */
+.plp-layout {
+  display: grid;
+  grid-template-columns: 256px 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.plp-aside {
+  border-right: 1px solid var(--c-border);
+  padding-right: var(--space-4);
+  padding-bottom: var(--space-3);
+}
+
+.plp-block {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.plp-block-title {
+  margin: 0 0 var(--space-2);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-muted);
+}
+
+/* Cây danh mục — root 14px/600, child thụt lề; active = primary 700 + border-left 2px */
+.plp-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.plp-tree > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.plp-tree-root,
+.plp-tree-child {
+  color: var(--c-text);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: var(--space-2);
+}
+
+.plp-tree-root {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plp-tree-child {
+  font-size: 13px;
+  color: var(--c-text-muted);
+  margin-left: var(--space-3);
+}
+
+.plp-tree-root:hover,
+.plp-tree-child:hover {
+  color: var(--c-primary);
+}
+
+.plp-tree-root.is-active,
+.plp-tree-child.is-active {
+  color: var(--c-primary);
+  font-weight: 700;
+  border-left-color: var(--c-primary);
+}
+
+/* Link-khoảng-giá/rating mô phỏng checkbox 15×15 (single-select, toggle-off = bỏ param) */
+.plp-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--c-text);
+  text-decoration: none;
+}
+
+.plp-check:hover {
+  color: var(--c-primary);
+}
+
+.plp-check-box {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  background: var(--c-surface);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--c-surface);
+  /* accent-color primary §2.4 — áp cho hộp checked (mô phỏng input) */
+  accent-color: var(--c-primary);
+}
+
+.plp-check.is-checked .plp-check-box {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+}
+
+.plp-check.is-checked {
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
+.plp-check-stars {
+  color: var(--c-warning);
+  letter-spacing: 1px;
+}
+
+/* Thương hiệu — GET form: input + nút Áp dụng */
+.plp-brand {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.plp-brand-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--c-text);
+}
+
+.plp-brand-input:focus {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 1px;
+}
+
+.plp-brand-btn {
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plp-brand-btn:hover {
+  background: var(--tint-primary-bg);
+}
+
+/* "Xóa tất cả" — outline primary full-width, hover primary-tint (§2.4) */
+.plp-clear-all {
+  display: block;
+  margin-top: var(--space-3);
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-sm);
+  padding: 9px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-primary);
+  background: var(--c-surface);
+  text-decoration: none;
+}
+
+.plp-clear-all:hover {
+  background: var(--tint-primary-bg);
+}
+
+/* Toolbar: kết quả 13px trái + sort select phải, border-bottom (§2.4) */
+.plp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: var(--space-4);
+}
+
+.plp-results {
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.plp-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.plp-sort select {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-surface);
+  cursor: pointer;
+}
+
+.plp-sort select:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+/* Grid kết quả 3 cột gap 16px, dùng chung .p-card (§2.4) */
+.plp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.plp-main .uk-empty {
+  margin: var(--space-6) 0;
+}
+
+.plp-main .plp-clear-all {
+  display: inline-block;
+  padding: 9px 24px;
+  margin-top: 0;
+}
+
+/* Pagination — nút 34×34, hover viền+chữ primary, active nền primary (§2.4) */
+.plp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+}
+
+.plp-page-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  color: var(--c-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.plp-page-btn--nav {
+  font-size: 16px;
+}
+
+.plp-page-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+.plp-page-btn.is-active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: var(--c-surface);
+  cursor: default;
+}
+
+.plp-page-dots {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-muted);
+}
+
+/* ≤900px: grid 2 cột, sidebar xuống dưới full-width (direction §4) */
+@media (max-width: 900px) {
+  .plp-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .plp-aside {
+    border-right: 0;
+    border-bottom: 1px solid var(--c-border);
+    padding-right: 0;
+  }
+
+  .plp-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

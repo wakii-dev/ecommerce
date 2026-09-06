@@ -1,0 +1,150 @@
+import { describe, expect, it } from 'vitest';
+
+import { formatVnd, localePath, resolveLocale } from '../lib/format';
+import { rewriteTarget } from '../lib/locale-rewrite';
+import { buildAlternates, pdpMetadata, resolveDescription, resolveTitle } from '../lib/seo';
+
+/** Override process.env.SITE_URL trong 1 khối test, restore sau. */
+function withSiteUrl(url: string | undefined, run: () => void): void {
+  const original = process.env.SITE_URL;
+  if (url === undefined) delete process.env.SITE_URL;
+  else process.env.SITE_URL = url;
+  try {
+    run();
+  } finally {
+    if (original === undefined) delete process.env.SITE_URL;
+    else process.env.SITE_URL = original;
+  }
+}
+
+describe('formatVnd', () => {
+  it('formats 0 → "0 ₫"', () => {
+    expect(formatVnd(0)).toBe('0 ₫');
+  });
+
+  it('formats 1_290_000 → "1.290.000 ₫" (dot thousands + space before ₫)', () => {
+    expect(formatVnd(1290000)).toBe('1.290.000 ₫');
+  });
+
+  it('formats 250500 → "250.500 ₫"', () => {
+    expect(formatVnd(250500)).toBe('250.500 ₫');
+  });
+});
+
+describe('resolveLocale', () => {
+  it('accepts vi/en', () => {
+    expect(resolveLocale('vi')).toBe('vi');
+    expect(resolveLocale('en')).toBe('en');
+  });
+
+  it('rejects other/missing segments → null (layout notFound)', () => {
+    expect(resolveLocale('fr')).toBeNull();
+    expect(resolveLocale(undefined)).toBeNull();
+  });
+});
+
+describe('localePath', () => {
+  it('vi keeps path as-is (no prefix — middleware rewrite handles /vi)', () => {
+    expect(localePath('/', 'vi')).toBe('/');
+    expect(localePath('/c/foo', 'vi')).toBe('/c/foo');
+  });
+
+  it('en prefixes /en preserving leading slash', () => {
+    expect(localePath('/c/foo', 'en')).toBe('/en/c/foo');
+    expect(localePath('/p/bar', 'en')).toBe('/en/p/bar');
+  });
+
+  it('en root → /en/ (plan: không link /en bare)', () => {
+    expect(localePath('/', 'en')).toBe('/en/');
+  });
+});
+
+describe('rewriteTarget (middleware table)', () => {
+  it('maps bare public paths → /vi counterpart', () => {
+    expect(rewriteTarget('/')).toBe('/vi');
+    expect(rewriteTarget('/search')).toBe('/vi/search');
+    expect(rewriteTarget('/coupons')).toBe('/vi/coupons');
+  });
+
+  it('maps /c/** and /p/** with segments preserved', () => {
+    expect(rewriteTarget('/c/dien-tu')).toBe('/vi/c/dien-tu');
+    expect(rewriteTarget('/p/ao-thun')).toBe('/vi/p/ao-thun');
+  });
+
+  it('passes through /en/** and unknown paths → null', () => {
+    expect(rewriteTarget('/en')).toBeNull();
+    expect(rewriteTarget('/en/c/foo')).toBeNull();
+    expect(rewriteTarget('/vi')).toBeNull();
+    expect(rewriteTarget('/random')).toBeNull();
+  });
+});
+
+describe('buildAlternates', () => {
+  it('builds absolute vi/en pair from SITE_URL', () => {
+    withSiteUrl('http://test.local', () => {
+      expect(buildAlternates('/p/x')).toEqual({
+        languages: { vi: 'http://test.local/p/x', en: 'http://test.local/en/p/x' },
+      });
+    });
+  });
+
+  it('defaults to http://localhost:3000 when SITE_URL unset', () => {
+    withSiteUrl(undefined, () => {
+      expect(buildAlternates('/')).toEqual({
+        languages: { vi: 'http://localhost:3000/', en: 'http://localhost:3000/en/' },
+      });
+    });
+  });
+
+  it('supports explicit en path (PDP slug vi ≠ slug en)', () => {
+    withSiteUrl('http://test.local', () => {
+      expect(buildAlternates('/p/ao-thun', '/p/t-shirt').languages.en).toBe('http://test.local/p/t-shirt');
+    });
+  });
+});
+
+describe('seo priority helpers', () => {
+  it('resolveTitle/resolveDescription prefer non-blank seo values', () => {
+    expect(resolveTitle('  Title tay  ', 'Fallback')).toBe('Title tay');
+    expect(resolveTitle('   ', 'Fallback')).toBe('Fallback');
+    expect(resolveDescription(undefined, 'Desc fallback')).toBe('Desc fallback');
+  });
+});
+
+describe('pdpMetadata', () => {
+  const base = { name: 'Áo thun', slug: 'ao-thun', slugEn: 't-shirt', description: 'Áo cotton mát' };
+
+  it('uses seoTitle/seoDescription when present → indexable (en)', () => {
+    const meta = pdpMetadata({ ...base, seoTitle: 'Seo title', seoDescription: 'Seo desc' }, 'en');
+    expect(meta.title).toBe('Seo title');
+    expect(meta.description).toBe('Seo desc');
+    expect(meta.robots).toEqual({ index: true, follow: true });
+  });
+
+  it('falls back to name/description; en + fallback → robots.index false', () => {
+    const meta = pdpMetadata(base, 'en');
+    expect(meta.title).toBe('Áo thun');
+    expect(meta.description).toBe('Áo cotton mát');
+    expect(meta.robots.index).toBe(false);
+  });
+
+  it('vi + fallback stays indexable', () => {
+    expect(pdpMetadata(base, 'vi').robots.index).toBe(true);
+  });
+
+  it('alternates pair slug vi / slugEn', () => {
+    withSiteUrl('http://test.local', () => {
+      const meta = pdpMetadata(base, 'vi');
+      expect(meta.alternates.languages).toEqual({
+        vi: 'http://test.local/p/ao-thun',
+        en: 'http://test.local/p/t-shirt',
+      });
+    });
+  });
+
+  it('missing description falls back to name; partial seo still noindex on en', () => {
+    const meta = pdpMetadata({ name: 'X', slug: 'x', seoTitle: 'Seo' }, 'en');
+    expect(meta.description).toBe('X');
+    expect(meta.robots.index).toBe(false);
+  });
+});

@@ -50,18 +50,20 @@ public class RefreshTokenService {
         return raw;
     }
 
-    /** Verify + ROTATE: revoke row cũ, cấp token mới. Sai/hết hạn/đã revoke → 401. */
+    /** Verify + ROTATE: revoke row cũ (ATOMIC), cấp token mới. Sai/đã revoke/hết hạn/thua race → 401. */
     @Transactional
     public Rotated rotate(String rawToken) {
         RefreshTokenEntity entity = repository.findByTokenHash(sha256Hex(rawToken))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token không hợp lệ"));
-        if (entity.getRevokedAt() != null) {
+        Instant now = Instant.now();
+        // UPDATE ... WHERE revoked_at IS NULL — atomic, không read-check-write:
+        // 2 request cùng token → DB row lock, đúng 1 thấy 1 row; thua race = 0 → 401.
+        if (repository.revokeIfActive(entity.getTokenHash(), now) != 1) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token đã bị thu hồi");
         }
-        if (entity.getExpiresAt().isBefore(Instant.now())) {
+        if (entity.getExpiresAt().isBefore(now)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token đã hết hạn");
         }
-        entity.setRevokedAt(Instant.now());
         // entity.getUser() là proxy LAZY — load entity THẬT trong tx để caller
         // đọc claims (role/email/...) SAU khi tx đóng không vấp LazyInitialization.
         UserEntity user = userRepository.findById(entity.getUser().getId())

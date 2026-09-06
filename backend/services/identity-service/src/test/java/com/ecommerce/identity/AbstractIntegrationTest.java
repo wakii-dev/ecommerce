@@ -28,7 +28,8 @@ import java.util.Base64;
  * (connection refused sau 30s timeout). Singleton giữ 1 URL sống cho cả JVM.</p>
  */
 @Tag("integration")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "outbox.relay.enabled=false") // IT không relay nền (đẩy event lên dev RabbitMQ)
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16")

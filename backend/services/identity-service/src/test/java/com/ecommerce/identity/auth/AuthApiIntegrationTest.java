@@ -2,10 +2,20 @@ package com.ecommerce.identity.auth;
 
 import com.ecommerce.identity.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,6 +27,9 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
     static final AtomicInteger SEQ = new AtomicInteger();
     static final Pattern RAW_COOKIE = Pattern.compile("refresh_token=([^;]+)");
+
+    @Autowired
+    JdbcTemplate jdbc;
 
     WebTestClient client() {
         return WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -132,6 +145,65 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
         client().post().uri("/auth/refresh").cookie("refresh_token", firstRaw)
             .exchange().expectStatus().isEqualTo(401);
+    }
+
+    /**
+     * Race rotation: N request cùng lúc với CÙNG cookie hợp lệ — revoke ATOMIC
+     * (UPDATE ... WHERE revoked_at IS NULL) bảo đảm ĐÚNG 1 thắng, còn lại 401
+     * (read-check-write thuần cho phép 2 winner — defeat revocation).
+     */
+    @Test
+    void concurrentRefreshSameCookie_exactlyOneWins() throws Exception {
+        // Register + LẤY id từ 201 (chỉ login ĐÚNG 1 lần — login thứ 2 tạo thêm
+        // row active làm hỏng assert "1 row non-revoked").
+        String email = uniqueEmail();
+        UUID userId = UUID.fromString(String.valueOf(client().post().uri("/auth/register")
+            .header("Content-Type", "application/json")
+            .bodyValue("{\"email\":\"%s\",\"password\":\"password123\",\"fullName\":\"Race User\"}".formatted(email))
+            .exchange().expectStatus().isCreated()
+            .expectBody(Map.class).returnResult().getResponseBody().get("id")));
+        String raw = rawCookie(loginAndGetSetCookie(email));
+
+        int n = 8;
+        record Attempt(int status, String setCookie) {}
+        ExecutorService pool = Executors.newFixedThreadPool(n);
+        CountDownLatch ready = new CountDownLatch(n);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Attempt>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < n; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(10, TimeUnit.SECONDS)).isTrue();
+                    var exchange = client().post().uri("/auth/refresh")
+                        .cookie("refresh_token", raw).exchange().returnResult(Void.class);
+                    return new Attempt(exchange.getStatus().value(),
+                        exchange.getResponseHeaders().getFirst(HttpHeaders.SET_COOKIE));
+                }));
+            }
+            assertThat(ready.await(10, TimeUnit.SECONDS)).as("8 thread kịp sẵn sàng").isTrue();
+            start.countDown(); // bắn đồng loạt
+
+            List<Attempt> attempts = new ArrayList<>();
+            for (Future<Attempt> future : futures) {
+                attempts.add(future.get(30, TimeUnit.SECONDS));
+            }
+            assertThat(attempts.stream().filter(a -> a.status() == 200).count())
+                .as("đúng 1 request thắng race rotation").isEqualTo(1);
+            assertThat(attempts.stream().filter(a -> a.status() == 401).count())
+                .as("%d request còn lại thua race → 401".formatted(n - 1)).isEqualTo(n - 1);
+
+            String winnerCookie = rawCookie(attempts.stream().filter(a -> a.status() == 200)
+                .findFirst().orElseThrow().setCookie());
+            assertThat(winnerCookie).as("200 cấp token MỚI, khác cookie gốc").isNotEqualTo(raw);
+
+            Long active = jdbc.queryForObject(
+                "SELECT count(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL",
+                Long.class, userId);
+            assertThat(active).as("DB chỉ còn đúng 1 row non-revoked cho user").isEqualTo(1L);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

@@ -10,7 +10,7 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -31,8 +31,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>@Testcontainers PHẢI có trên class NÀY (base đã bỏ — singleton POSTGRES
  * start thủ công): extension mới start RABBIT @Container trước khi context
  * đọc spring.rabbitmq.port.</p>
+ *
+ * <p>@SpringBootTest ở đây SHADOW base (properties khác → context cache key
+ * riêng) — PHẢI redeclare webEnvironment RANDOM_PORT. Base tắt relay nền
+ * qua @SpringBootTest#properties (không đụng dev RabbitMQ); class này SHADOW
+ * bằng "outbox.relay.enabled=true" — KHÔNG đặt key này trong
+ * {@code @DynamicPropertySource} vì dynamic source ăn TRƯỚC
+ * {@code @SpringBootTest#properties} → "false" của base sẽ thắng.</p>
  */
 @Testcontainers(disabledWithoutDocker = true)
+@SpringBootTest(properties = "outbox.relay.enabled=true", webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class OutboxIntegrationTest extends AbstractIntegrationTest {
 
     @Container
@@ -86,6 +94,11 @@ class OutboxIntegrationTest extends AbstractIntegrationTest {
             new com.fasterxml.jackson.databind.ObjectMapper().readTree(payload);
         assertThat(envelope.path("eventType").asText()).isEqualTo("user.created");
         assertThat(envelope.path("correlationId").asText()).isEqualTo(correlationId);
+        assertThat(envelope.path("producer").asText())
+            .as("producer = spring.application.name — khớp envelope.schema.json")
+            .isEqualTo("identity-service");
+        assertThat(envelope.path("schemaVersion").asInt())
+            .as("schemaVersion là số, >= 1 theo schema freeze").isEqualTo(1);
         assertThat(envelope.path("payload").path("userId").asText())
             .as("payload.userId phải khớp id trong 201 response").isEqualTo(createdId);
         assertThat(envelope.path("payload").path("email").asText()).isEqualTo(email);
@@ -108,6 +121,8 @@ class OutboxIntegrationTest extends AbstractIntegrationTest {
         com.fasterxml.jackson.databind.JsonNode amqpEnvelope = mapper.readTree(received.getBody());
         assertThat(amqpEnvelope.path("eventType").asText()).isEqualTo("user.created");
         assertThat(amqpEnvelope.path("eventId").asText()).isNotBlank();
+        assertThat(amqpEnvelope.path("producer").asText()).isEqualTo("identity-service");
+        assertThat(amqpEnvelope.path("schemaVersion").asInt()).isEqualTo(1);
         assertThat(amqpEnvelope.path("payload").path("userId").asText()).isEqualTo(createdId);
         org.junit.jupiter.api.Assertions.assertEquals(
             "user.created", received.getMessageProperties().getHeader("eventType"));

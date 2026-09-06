@@ -204,13 +204,21 @@ public class OrderLifecycleService {
     }
 
     /**
-     * Admin cancel (§3.6): PENDING → CANCELLED; PAID/CONFIRMED → REFUND trước
-     * (REST NGOÀI tx) rồi CANCELLED kèm refunded=true; SHIPPED/DELIVERED → 409.
+     * Admin cancel (§3.6): PENDING → CANCELLED; PAID/CONFIRMED → CANCELLED +
+     * REFUND; SHIPPED/DELIVERED → 409.
      *
-     * <p>Refund idempotent theo key deterministic {@code admin-cancel:<orderId>}
-     * — retry sau lỗi không double-refund (payment dedupe cùng key).</p>
+     * <p>Thứ tự chống-race (review SF-9 P1): (1) TX chiếm CANCELLED — re-check
+     * trạng thái trong tx + {@code @Version} optimistic: consumer confirm/ship
+     * thắng race → save ném lock exception → KHÔNG refund đơn vẫn tiếp tục
+     * chạy; (2) refund NGOÀI tx SAU khi đơn đã CANCELLED (idempotent theo key
+     * deterministic {@code admin-cancel:<orderId>} — retry không double-refund);
+     * (3) outbox order.cancelled sau cùng — refunded đã biết chắc. Refund lỗi
+     * → vẫn publish order.cancelled (refunded=false, release reservation) rồi
+     * rethrow 502 — admin retry refund được bằng cùng key.</p>
      */
     public Order cancelByAdmin(UUID orderId) {
+        // Pre-read CHỈ để 409 sớm + quyết định paidLike — TX bên dưới mới là
+        // authority (refund chỉ chạy nếu TX1 xác nhận trạng thái chưa đổi).
         Order o = orders.findById(orderId)
             .orElseThrow(() -> new InvalidStateTransitionException("Không tìm thấy đơn"));
         OrderStatus from = o.getStatus();
@@ -218,25 +226,43 @@ public class OrderLifecycleService {
             || from == OrderStatus.CANCELLED || from == OrderStatus.FAILED) {
             throw new InvalidStateTransitionException("Không hủy được đơn đang " + from);
         }
-        boolean refunded = false;
-        if (from.paidLike() && o.getStripeIntentId() != null) {
-            refundOrThrow(o.getStripeIntentId(), orderId, "admin_cancel_after_paid");
-            refunded = true;
-        }
-        final boolean refundedFinal = refunded;
-        return tx.execute(status -> {
+        boolean paidLike = from.paidLike() && o.getStripeIntentId() != null;
+
+        // TX 1: chiếm CANCELLED (guarded + optimistic lock) + release coupon.
+        tx.executeWithoutResult(status -> {
             Order fresh = orders.findById(orderId).orElseThrow();
             if (fresh.getStatus() != from) {
-                throw new InvalidStateTransitionException("Đơn vừa đổi trạng thái (" + fresh.getStatus() + ") — thử lại");
+                throw new InvalidStateTransitionException(
+                    "Đơn vừa đổi trạng thái (" + fresh.getStatus() + ") — thử lại");
             }
             couponService.releaseForOrder(orderId);
             fresh.transitionTo(OrderStatus.CANCELLED);
             orders.save(fresh);
-            outbox.write("order.cancelled",
-                cancelledPayload(fresh, "admin_cancelled", "admin", refundedFinal ? true : null),
-                "admin:" + orderId);
-            return fresh;
         });
+
+        // Refund NGOÀI tx — chỉ với đơn đã CANCELLED thật sự.
+        boolean refunded;
+        try {
+            if (paidLike) {
+                refundOrThrow(o.getStripeIntentId(), orderId, "admin_cancel_after_paid");
+                refunded = true;
+            } else {
+                refunded = false;
+            }
+        } catch (RuntimeException e) {
+            writeCancelledOutbox(orderId, false);
+            throw e;
+        }
+        writeCancelledOutbox(orderId, refunded);
+        return orders.findById(orderId).orElseThrow();
+    }
+
+    /** Outbox order.cancelled (admin) — tx riêng vì refund là REST ngoài tx. */
+    private void writeCancelledOutbox(UUID orderId, boolean refunded) {
+        tx.executeWithoutResult(status -> outbox.write("order.cancelled",
+            cancelledPayload(orders.findById(orderId).orElseThrow(),
+                "admin_cancelled", "admin", refunded ? Boolean.TRUE : null),
+            "admin:" + orderId));
     }
 
     private void refundOrThrow(String paymentIntentId, UUID orderId, String reason) {

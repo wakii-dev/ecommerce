@@ -251,8 +251,11 @@ public class CheckoutSaga {
             if (o == null) {
                 return false;
             }
-            couponService.releaseForOrder(orderId);
+            // Release coupon SAU guard PENDING (review SF-9 P1): decline/timeout
+            // đến trễ khi đơn đã PAID/CONFIRMED → KHÔNG được trả lại lượt dùng
+            // coupon của đơn vẫn giữ giảm giá.
             if (o.getStatus() == OrderStatus.PENDING) {
+                couponService.releaseForOrder(orderId);
                 o.transitionTo(OrderStatus.FAILED);
                 orders.save(o);
                 ObjectNode payload = objectMapper.createObjectNode()

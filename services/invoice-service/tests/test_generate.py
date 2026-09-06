@@ -122,3 +122,18 @@ def test_garbage_body_returns_400():
         headers={"content-type": "application/json"},
     )
     assert response.status_code == 400
+
+
+def test_xml_special_chars_in_names_render():
+    """Review SF-9 P1: Paragraph parse mini-HTML — '&'/'<' trong tên SP/tên
+    khách phải render được (escape), không crash → 503."""
+    body = payload()
+    body["order"]["items"][0]["name"] = "Tai nghe & sạc nhanh <USB-C>"
+    body["buyer"]["name"] = "Cty TNHH A&B <Chi nhánh Q1>"
+    body["invoice"]["note"] = "Ghi chú & nhắc <thuế>"
+    response = client.post("/api/invoice/generate", json=body)
+    assert response.status_code == 200, "tên có XML-special chars không được crash"
+    text = _text_of_pdf(response.content)
+    assert "Tai nghe & sạc nhanh <USB-C>" in text
+    assert "Cty TNHH A&B <Chi nhánh Q1>" in text
+    assert "Ghi chú & nhắc <thuế>" in text

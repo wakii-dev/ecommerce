@@ -251,6 +251,42 @@ class OrderAdminTest extends AbstractSagaTest {
             .getStatusCode().value()).isEqualTo(403);
     }
 
+    // ── Coupon center public (contract listPublicCoupons — review P1 wiring) ─
+
+    @Test
+    void couponsPublic_anonymous_runningOnly_noInternalFields() throws Exception {
+        String code = "PUB" + UUID.randomUUID().toString().substring(0, 8);
+        execOrdering("""
+            INSERT INTO coupons (code, type, value, starts_at, ends_at, usage_limit, active, description)
+            VALUES ('%s', 'PERCENT', 10, now() - interval '1 hour', now() + interval '1 day', 99, TRUE, 'Coupon công khai IT')
+            """.formatted(code));
+        String expired = "EXP" + UUID.randomUUID().toString().substring(0, 8);
+        execOrdering("""
+            INSERT INTO coupons (code, type, value, starts_at, ends_at, usage_limit, active, description)
+            VALUES ('%s', 'FIXED', 50000, now() - interval '2 day', now() - interval '1 day', 99, TRUE, 'Hết hạn')
+            """.formatted(expired));
+
+        ResponseEntity<String> response = rest.getForEntity("/coupons/public", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        JsonNode items = om.readTree(response.getBody());
+        assertThat(items.isArray()).isTrue();
+
+        JsonNode mine = null;
+        for (JsonNode coupon : items) {
+            // Không lộ nội bộ (contract PublicCoupon: KHÔNG usageLimit/usedCount)
+            assertThat(coupon.has("usageLimit")).isFalse();
+            assertThat(coupon.has("usedCount")).isFalse();
+            if (code.equals(coupon.path("code").asText())) {
+                mine = coupon;
+            }
+            assertThat(coupon.path("code").asText()).isNotEqualTo(expired);
+        }
+        assertThat(mine).as("coupon đang chạy phải nằm trong danh sách").isNotNull();
+        assertThat(mine.path("type").asText()).isEqualTo("PERCENT");
+        assertThat(mine.path("value").asLong()).isEqualTo(10);
+        assertThat(mine.path("description").asText()).isEqualTo("Coupon công khai IT");
+    }
+
     // ── Admin list + filter (pack item 5) ────────────────────────────────────
 
     @Test

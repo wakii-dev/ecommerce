@@ -8,6 +8,7 @@ fonts-dejavu-core trong container) — đủ dấu tiếng Việt; thiếu font 
 """
 
 import os
+from xml.sax.saxutils import escape as _esc
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -91,26 +92,28 @@ def render_pdf(payload) -> bytes:
     inv = payload.invoice
 
     # ── Header: tiêu đề + thông tin mẫu/série/số ─────────────────────────────
+    # Mọi chuỗi động đi vào Paragraph PHẢI escape — Paragraph parse mini-HTML,
+    # '&'/'<' trong tên SP/tên khách làm render crash → 503 (review SF-9 P1).
     story.append(Paragraph("HÓA ĐƠN GIÁ TRỊ GIA TĂNG", styles["title"]))
     story.append(Spacer(1, 2 * mm))
     story.append(Paragraph(
-        f"Mẫu số: {inv.templateSymbol} — Ký hiệu: {inv.seriesSymbol} — Số: {inv.number:06d} "
+        f"Mẫu số: {_esc(inv.templateSymbol)} — Ký hiệu: {_esc(inv.seriesSymbol)} — Số: {inv.number:06d} "
         f"(liên 1: lưu khách hàng)", styles["meta"]))
     story.append(Spacer(1, 3 * mm))
     story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#0F766E")))
     story.append(Spacer(1, 4 * mm))
 
     # ── Người bán / Người mua 2 cột ─────────────────────────────────────────
-    seller_lines = [f"<b>{payload.seller.name}</b>", payload.seller.address]
+    seller_lines = [f"<b>{_esc(payload.seller.name)}</b>", _esc(payload.seller.address)]
     if payload.seller.phone:
-        seller_lines.append(f"ĐT: {payload.seller.phone}")
+        seller_lines.append(f"ĐT: {_esc(payload.seller.phone)}")
     if payload.seller.taxId:
-        seller_lines.append(f"MST: {payload.seller.taxId}")
-    buyer_lines = [f"<b>{payload.buyer.name}</b>", payload.buyer.address]
+        seller_lines.append(f"MST: {_esc(payload.seller.taxId)}")
+    buyer_lines = [f"<b>{_esc(payload.buyer.name)}</b>", _esc(payload.buyer.address)]
     if payload.buyer.phone:
-        buyer_lines.append(f"ĐT: {payload.buyer.phone}")
+        buyer_lines.append(f"ĐT: {_esc(payload.buyer.phone)}")
     if payload.buyer.taxId:
-        buyer_lines.append(f"MST: {payload.buyer.taxId}")
+        buyer_lines.append(f"MST: {_esc(payload.buyer.taxId)}")
     party_table = Table(
         [[Paragraph("NGƯỜI BÁN", styles["section"]),
           Paragraph("NGƯỜI MUA", styles["section"])],
@@ -168,9 +171,9 @@ def render_pdf(payload) -> bytes:
 
     if inv.note:
         story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph(inv.note, styles["note"]))
+        story.append(Paragraph(_esc(inv.note), styles["note"]))
     if payload.order.number:
-        story.append(Paragraph(f"Mã đơn hàng tham chiếu: {payload.order.number}", styles["note"]))
+        story.append(Paragraph(f"Mã đơn hàng tham chiếu: {_esc(payload.order.number)}", styles["note"]))
     story.append(Spacer(1, 8 * mm))
     story.append(Paragraph(_DEMO_DISCLAIMER, styles["disclaimer"]))
 

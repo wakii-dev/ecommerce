@@ -188,6 +188,56 @@ services:
     networks:
       - ecommerce-net
 
+  # SF-9 (2026-09-06): ordering-service (port 8085, db_ordering) — KHÔNG chạy dev
+  # (infra-only; service host qua `make dev svc=ordering`). Profile full (SF-10).
+  ordering-service:
+    build:
+      context: .
+      dockerfile: backend/services/ordering-service/Dockerfile
+    container_name: ecommerce-ordering-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_ordering
+      RABBITMQ_HOST: rabbitmq
+      IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      CATALOG_BASE_URL: http://catalog-service:8082
+      INVENTORY_BASE_URL: http://inventory-service:8084
+      PAYMENT_BASE_URL: http://payment-service:8086
+      INVOICE_SERVICE_URL: http://invoice-service:8090
+    expose:
+      - "8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      invoice-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # SF-9 (2026-09-06): invoice-service (D18) — 🐍 Python FastAPI + ReportLab,
+  # stateless PDF renderer :8090 INTERNAL ONLY (KHÔNG route qua gateway).
+  # Đây là service Python ĐẦU TIÊN chạy dev được (`make dev svc=invoice-service`).
+  invoice-service:
+    build:
+      context: ./services/invoice-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-invoice-service
+    environment:
+      INVOICE_FONT_PATH: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+    ports:
+      - "8090:8090"   # host map — ordering host-JVM gọi http://localhost:8090 ở dev
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8090/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   pgdata:
   redisdata:

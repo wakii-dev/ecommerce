@@ -45,6 +45,10 @@ endif
 	  ordering)         MOD=services/ordering-service ;; \
 	  payment)          MOD=services/payment-service ;; \
 	  notification)     MOD=services/notification-service ;; \
+	  invoice-service) \
+	    cd services/invoice-service && \
+	    test -x .venv/bin/uvicorn || { python3 -m venv .venv && .venv/bin/pip install --quiet "fastapi>=0.115" "uvicorn>=0.30" "reportlab>=4.2" "pydantic>=2.8"; }; \
+	    exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090 ;; \
 	  *) echo "✗ svc '$(svc)' chưa có — xem bảng port trong README"; exit 1 ;; \
 	esac ; \
 	cd backend && mvn -pl $$MOD spring-boot:run

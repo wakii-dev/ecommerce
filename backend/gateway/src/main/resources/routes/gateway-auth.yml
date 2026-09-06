@@ -20,7 +20,12 @@ ecom:
         - /api/identity/auth/logout          # contract: cookie-only, không bearerAuth
         - /api/identity/.well-known/**
         - /api/catalog/**                    # guest browse — public từ SF-4
+        # SF-9 (FI-319): public theo contract (không security trên operation này)
+        - /api/ordering/coupons/public       # coupon center — guest xem
+        - /api/ordering/orders/validate-coupon # kiểm mã realtime — không reserve
+        - /api/ordering/shipping/methods     # phí flat-fee — guest cần khi duyệt
       admin-prefixes:
         - /api/admin/**                      # chữ ACCEPTANCE (path chưa route → 403 trước 404)
         - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
+        - /api/ordering/admin/**             # SF-9 — 2 lớp (gateway + @PreAuthorize ordering)
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

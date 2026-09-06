@@ -12,14 +12,18 @@ import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+
 /**
  * IT harness partner-api (SF-11) — 1 PG + 1 RabbitMQ thật, container STATIC
  * singleton (start 1 lần/JVM — bài học @Container per-class chết ở class 2).
  * Flyway CHẠY thật trong IT (jar riêng, không conflict V10 như saga IT).
  *
- * <p>Services ngoài (identity / ordering / catalog) = WireMock doubles do
- * từng test tự cấu hình (base url ghi qua property {@code partner.*});
- * webhook receiver cũng là WireMock — Task 4/5 thêm khi cần.</p>
+ * <p>Services ngoài (identity / ordering / catalog) = MỘT WireMock double
+ * chung (path khác nhau không đụng nhau): /auth/** identity, /orders/**
+ * ordering, /api/catalog/** catalog — test tự stub từng scenario.</p>
  */
 @Tag("integration")
 @Testcontainers(disabledWithoutDocker = true)
@@ -35,9 +39,12 @@ public abstract class AbstractPartnerApiTest {
     static final RabbitMQContainer RABBIT =
         new RabbitMQContainer(DockerImageName.parse("rabbitmq:3-management"));
 
+    static final WireMockServer WIRE = new WireMockServer(options().dynamicPort());
+
     static {
         POSTGRES.start();
         RABBIT.start();
+        WIRE.start();
     }
 
     @LocalServerPort
@@ -58,5 +65,10 @@ public abstract class AbstractPartnerApiTest {
         registry.add("partner.webhook.scheduler-interval-ms", () -> "200");
         // IT tự tạo partner/key của riêng mình (deterministic) — tắt seed demo
         registry.add("partner.seed.enabled", () -> "false");
+        // Cả 3 service nội bộ trỏ WireMock chung + token admin RỖNG —
+        // UUID detail trả 502 trong context này; ma trận có-token ở CatalogClientTest
+        registry.add("partner.catalog.base-url", WIRE::baseUrl);
+        registry.add("partner.identity.base-url", WIRE::baseUrl);
+        registry.add("partner.ordering.base-url", WIRE::baseUrl);
     }
 }

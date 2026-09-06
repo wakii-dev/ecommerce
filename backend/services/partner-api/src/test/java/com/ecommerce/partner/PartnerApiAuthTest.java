@@ -105,11 +105,11 @@ class PartnerApiAuthTest extends AbstractPartnerApiTest {
     }
 
     @Test
-    void validKeyWithScope_passesFilter_noControllerYet_404() {
+    void validKeyWithScope_reachesController() {
         TestKey key = createKey(List.of("catalog:read"), 60);
-        // filter cho qua (controller Task 3 mới có) → 404, KHÔNG 401
-        ResponseEntity<Map> response = get(key.raw());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        // Task 3 có controller rồi — filter cho qua → 200 (catalog stub không có
+        // → proxy trả page rỗng; quan trọng là KHÔNG 401)
+        assertThat(get(key.raw()).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -124,8 +124,8 @@ class PartnerApiAuthTest extends AbstractPartnerApiTest {
     @Test
     void rateLimitExceeded_is429WithRetryAfter() {
         TestKey key = createKey(List.of("catalog:read"), 2); // limit 2/phút
-        assertThat(get(key.raw()).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND); // 1
-        assertThat(get(key.raw()).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND); // 2
+        assertThat(get(key.raw()).getStatusCode()).isEqualTo(HttpStatus.OK); // 1
+        assertThat(get(key.raw()).getStatusCode()).isEqualTo(HttpStatus.OK); // 2
         ResponseEntity<Map> third = get(key.raw());
         assertThat(third.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         String retryAfter = third.getHeaders().getFirst("Retry-After");

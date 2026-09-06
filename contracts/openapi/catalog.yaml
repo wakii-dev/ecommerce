@@ -1,0 +1,1269 @@
+openapi: 3.1.0
+info:
+  title: Catalog API
+  description: |
+    San pham / danh muc / tim kiem / review / wishlist cua catalog-service.
+    i18n (D17): moi GET content cong khai nhan `?locale=vi|en` + `Accept-Language`
+    (uu tien `?locale`, fallback `vi`) — response tra string DA resolve.
+    Admin write nhan object i18n `{vi, en}` (schema hau to `I18n`).
+    UGC (reviews) KHONG i18n.
+    Tien: VND zero-decimal — moi truong gia la integer (don vi VND).
+    Moi error response: RFC 7807 `application/problem+json` (khop common-lib `ApiError`).
+  version: 1.0.0
+servers:
+  - url: /
+    description: Qua API gateway (prefix /api/catalog → catalog-service)
+tags:
+  - name: products
+    description: San pham cong khai + stock alert
+  - name: categories
+    description: Cay danh muc cong khai
+  - name: search
+    description: Tim kiem + suggest
+  - name: reviews
+    description: Review UGC (khong i18n)
+  - name: wishlist
+    description: Wishlist cua user (JWT)
+  - name: admin
+    description: Quan tri products/categories/reviews
+  - name: uploads
+    description: Upload anh len MinIO (D21)
+paths:
+  /api/catalog/products:
+    get:
+      tags: [products]
+      operationId: listProducts
+      summary: Danh sach san pham (PLP)
+      description: Content i18n resolve theo locale. Loc + sap xep + phan trang.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Loc theo slug danh muc (da resolve — dùng slug vi hoac en deu duoc).
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Gia toi thieu (VND).
+        - name: maxPrice
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Gia toi da (VND).
+        - name: minRating
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Diem trung binh toi thieu (1.0 - 5.0).
+        - name: brand
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [price_asc, price_desc, rating, newest, discount]
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Dung khi khong co ?locale. Fallback vi.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang san pham.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCardPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/catalog/products/{slug}:
+    get:
+      tags: [products]
+      operationId: getProduct
+      summary: Chi tiet san pham theo slug (PDP)
+      description: Slug theo locale hien tai (vi hoac en deu khop). Content resolve theo locale.
+      parameters:
+        - $ref: '#/components/parameters/SlugPath'
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Dung khi khong co ?locale. Fallback vi.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chi tiet san pham.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/products/{slug}/reviews:
+    get:
+      tags: [reviews]
+      operationId: listProductReviews
+      summary: Danh sach review cua san pham
+      description: UGC khong i18n. Kem rating breakdown ("5".."1" → so luong).
+      parameters:
+        - $ref: '#/components/parameters/SlugPath'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Reviews + breakdown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [reviews]
+      operationId: submitProductReview
+      summary: Gui review (chi user mua hang)
+      description: |
+        Can JWT. Review vao trang thai PENDING — hien thi sau khi admin duyet.
+        UGC khong i18n.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SlugPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewSubmitRequest'
+      responses:
+        '202':
+          description: Da nhan — cho duyet (PENDING).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/catalog/products/{slug}/stock-alert:
+    post:
+      tags: [products]
+      operationId: createStockAlert
+      summary: Dang ky nhan bao khi co hang (D22)
+      description: Public (khong can JWT). Gui email cho user khi variant nhap hang lai.
+      parameters:
+        - $ref: '#/components/parameters/SlugPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAlertRequest'
+      responses:
+        '202':
+          description: Da nhan dang ky.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/categories:
+    get:
+      tags: [categories]
+      operationId: getCategories
+      summary: Cay danh muc
+      description: Tra cay day du (children de quy). Ten/slug resolve theo locale.
+      parameters:
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Dung khi khong co ?locale. Fallback vi.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cay danh muc (goc = cac node parentId null).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+  /api/catalog/search:
+    get:
+      tags: [search]
+      operationId: searchProducts
+      summary: Tim kiem san pham
+      description: Full-text (ES). Content resolve theo locale.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Tu khoa tim kiem.
+          schema:
+            type: string
+            minLength: 1
+        - name: category
+          in: query
+          required: false
+          description: Han che trong slug danh muc.
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [price_asc, price_desc, rating, newest, discount]
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Ket qua tim kiem.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCardPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/catalog/search/suggest:
+    get:
+      tags: [search]
+      operationId: suggestProducts
+      summary: Goi y tim kiem (search-as-you-type)
+      description: Tra toi da 5 san pham + 5 danh muc.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+      responses:
+        '200':
+          description: Goi y.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/catalog/me/wishlist:
+    get:
+      tags: [wishlist]
+      operationId: getWishlist
+      summary: Danh sach wishlist (JWT)
+      description: Page ProductCard (content resolve theo locale, mac dinh vi).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Ngon ngu resolve content. Fallback vi.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trang wishlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCardPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/catalog/me/wishlist/ids:
+    get:
+      tags: [wishlist]
+      operationId: getWishlistIds
+      summary: Chi ids san pham trong wishlist (JWT)
+      description: Nhe — de client check nhanh san pham da yeu thich chua.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sach id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WishlistIds'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/catalog/me/wishlist/{productId}:
+    put:
+      tags: [wishlist]
+      operationId: addWishlistItem
+      summary: Them san pham vao wishlist (JWT)
+      description: Idempotent — them san pham da co khong loi.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Da them (idempotent — them lai van 204).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [wishlist]
+      operationId: removeWishlistItem
+      summary: Xoa san pham khoi wishlist (JWT)
+      description: Xoa thanh cong van tra 204 ke ca khi san pham khong co trong wishlist.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Da xoa (idempotent).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/catalog/admin/products:
+    get:
+      tags: [admin]
+      operationId: adminListProducts
+      summary: Danh sach san pham (admin)
+      description: Can role ADMIN. Tim kiem theo q + loc status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: q
+          in: query
+          required: false
+          description: Tim theo ten/slug.
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [DRAFT, PUBLISHED]
+      responses:
+        '200':
+          description: Trang san pham (view admin).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdminItemPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: adminCreateProduct
+      summary: Tao san pham (admin)
+      description: Nhan ProductWrite — truong i18n dang object {vi, en}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+      responses:
+        '201':
+          description: Da tao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdminView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/catalog/admin/products/{id}:
+    get:
+      tags: [admin]
+      operationId: adminGetProduct
+      summary: Chi tiet san pham (admin) — full i18n
+      description: Tra full object goc (nameI18n...) dung de edit o admin console.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Full object voi truong i18n goc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdminView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [admin]
+      operationId: adminUpdateProduct
+      summary: Cap nhat san pham (admin) — full i18n
+      description: PUT thay the tron ven (gui lai full object nhu GET).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+      responses:
+        '200':
+          description: Da cap nhat — tra view admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdminView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      operationId: adminDeleteProduct
+      summary: Xoa san pham (admin)
+      description: Soft-delete (khong con o FE). Order/review cu giu nguyen du lieu phan anh.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Da xoa.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/admin/categories:
+    get:
+      tags: [admin]
+      operationId: adminListCategories
+      summary: Cay danh muc (admin) — kem i18n goc
+      description: Giong GET cong khai nhung children mang them nameI18n/slugVi.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cay danh muc.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [admin]
+      operationId: adminCreateCategory
+      summary: Tao danh muc (admin)
+      description: Nhan CategoryWrite (i18n + parentId). Slug vi/en phai duy nhat.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
+      responses:
+        '201':
+          description: Da tao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/catalog/admin/categories/{id}:
+    get:
+      tags: [admin]
+      operationId: adminGetCategory
+      summary: Chi tiet danh muc (admin) — full i18n
+      description: Tra CategoryAdmin (i18n goc) de edit.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Chi tiet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [admin]
+      operationId: adminUpdateCategory
+      summary: Cap nhat danh muc (admin) — full i18n
+      description: PUT thay the tron ven — gui lai object nhan tu GET.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
+      responses:
+        '200':
+          description: Da cap nhat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      operationId: adminDeleteCategory
+      summary: Xoa danh muc (admin)
+      description: Chi xoa duoc khi khong co san pham va khong con children.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Da xoa.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/catalog/admin/reviews:
+    get:
+      tags: [admin]
+      operationId: adminListReviews
+      summary: Hang doi duyet review (admin)
+      description: Loc theo status (mac dinh PENDING). UGC khong i18n.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+            default: PENDING
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang review (kem status + productId).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewAdminPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/catalog/admin/reviews/{id}/approve:
+    post:
+      tags: [admin]
+      operationId: adminApproveReview
+      summary: Duyet review (admin)
+      description: Duyet xong publish + publish event review.moderated (denormalize rating_avg).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Review da APPROVED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/admin/reviews/{id}/reject:
+    post:
+      tags: [admin]
+      operationId: adminRejectReview
+      summary: Tu choi review (admin)
+      description: Publish event review.moderated (status REJECTED).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Review da REJECTED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/admin/uploads:
+    post:
+      tags: [uploads]
+      operationId: uploadAdminImage
+      summary: Upload anh san pham (admin, D21)
+      description: |
+        Multipart field `image`. Gioi han 5MB/anh, chi jpg/png/webp.
+        Luu MinIO, tra URL public `/media/**` phat qua gateway.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: File anh (jpg/png/webp, ≤5MB).
+      responses:
+        '201':
+          description: Da upload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: File sai loai hoac qua 5MB.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: So trang — 1-based.
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      description: So item moi trang (mac dinh 20, toi da 100).
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    SlugPath:
+      name: slug
+      in: path
+      required: true
+      description: Slug san pham (vi hoac en).
+      schema:
+        type: string
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Id tai nguyen.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Body/param khong hop le.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Chua xac thuc / token het han.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Khong du quyen (can role ADMIN hoac khong phai chu so huu).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Khong tim thay tai nguyen.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Xung dot trang thai.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    I18nText:
+      type: object
+      description: Cap i18n {vi, en} (D17) — dung cho admin write.
+      required: [vi, en]
+      properties:
+        vi:
+          type: string
+        en:
+          type: string
+    I18nTextNullable:
+      type: [object, 'null']
+      description: Cap i18n nullable (null = khong SEO truong nay).
+      required: [vi, en]
+      properties:
+        vi:
+          type: [string, 'null']
+        en:
+          type: [string, 'null']
+    ImageRef:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: URL public (/media/** qua gateway).
+        alt:
+          type: string
+    ProductImage:
+      type: object
+      required: [url, position]
+      properties:
+        url:
+          type: string
+        alt:
+          type: string
+        position:
+          type: integer
+          description: Thu tu xuat hien trong gallery (0-based).
+    ProductCard:
+      type: object
+      description: Card san pham — cac truong i18n DA resolve theo locale.
+      required: [id, slug, slugEn, name, price, ratingAvg, ratingCount, image, tags, categoryId]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+          description: Slug DA resolve theo locale (vi hoac en).
+        slugEn:
+          type: string
+          description: Slug tieng Anh (luon tra — de build URL cross-locale).
+        name:
+          type: string
+          description: Ten DA resolve theo locale.
+        brand:
+          type: string
+        price:
+          type: integer
+          description: Gia ban hien tai (VND).
+        comparePrice:
+          type: integer
+          description: Gia niem yet de gach ngang (VND). Bo di khi khong khuyen mai.
+        discountPercent:
+          type: integer
+          description: Computed tu price/comparePrice (0-100).
+        flashSaleEndsAt:
+          type: string
+          format: date-time
+          description: Neu san pham dang flash sale — het han countdown.
+        ratingAvg:
+          type: number
+          description: Diem trung binh (denormalized tu reviews).
+        ratingCount:
+          type: integer
+        image:
+          $ref: '#/components/schemas/ImageRef'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Badge admin set (vd "Chinh hang", "Freeship").
+        categoryId:
+          type: string
+    Variant:
+      type: object
+      required: [id, name, options, stock]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: Ten variant DA resolve (vd "Do / XL").
+        options:
+          type: object
+          description: 'Tue chon (vd {color: do, size: XL}).'
+          additionalProperties:
+            type: string
+        priceDelta:
+          type: integer
+          description: Chenh lech gia so voi gia goc (VND, co the am).
+        stock:
+          type: integer
+          description: Ton kha dung.
+    ProductDetail:
+      type: object
+      description: ProductCard + thong tin day du cho PDP.
+      allOf:
+        - $ref: '#/components/schemas/ProductCard'
+        - type: object
+          required: [description, images, variants]
+          properties:
+            description:
+              type: string
+              description: Mo ta DA resolve theo locale.
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductImage'
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/Variant'
+            relatedCount:
+              type: integer
+              description: So san pham lien quan (goi y API sau neu can — spec §6.1).
+    VariantWrite:
+      type: object
+      required: [nameI18n, options, stock]
+      properties:
+        nameI18n:
+          $ref: '#/components/schemas/I18nText'
+        options:
+          type: object
+          additionalProperties:
+            type: string
+        priceDelta:
+          type: integer
+        stock:
+          type: integer
+          minimum: 0
+    ProductWrite:
+      type: object
+      description: Admin write — truong i18n dang object {vi, en} (D17).
+      required: [nameI18n, descriptionI18n, slugVi, slugEn, price, categoryId, status]
+      properties:
+        nameI18n:
+          $ref: '#/components/schemas/I18nText'
+        descriptionI18n:
+          $ref: '#/components/schemas/I18nText'
+        seoTitleI18n:
+          $ref: '#/components/schemas/I18nTextNullable'
+        seoDescriptionI18n:
+          $ref: '#/components/schemas/I18nTextNullable'
+        slugVi:
+          type: string
+        slugEn:
+          type: string
+        brand:
+          type: string
+        price:
+          type: integer
+          description: Gia ban (VND).
+        comparePrice:
+          type: integer
+        flashSaleEndsAt:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        categoryId:
+          type: string
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantWrite'
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED]
+    ProductAdminItem:
+      type: object
+      description: Item danh sach admin — ProductCard + status + slug goc.
+      allOf:
+        - $ref: '#/components/schemas/ProductCard'
+        - type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [DRAFT, PUBLISHED]
+            slugVi:
+              type: string
+    ProductAdminItemPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductAdminItem'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    ProductAdminView:
+      type: object
+      description: View admin chi tiet — ProductDetail + status + truong i18n goc (PUT nhan/giai day du).
+      allOf:
+        - $ref: '#/components/schemas/ProductDetail'
+        - type: object
+          required: [status, nameI18n, descriptionI18n, slugVi]
+          properties:
+            status:
+              type: string
+              enum: [DRAFT, PUBLISHED]
+            nameI18n:
+              $ref: '#/components/schemas/I18nText'
+            descriptionI18n:
+              $ref: '#/components/schemas/I18nText'
+            seoTitleI18n:
+              $ref: '#/components/schemas/I18nTextNullable'
+            seoDescriptionI18n:
+              $ref: '#/components/schemas/I18nTextNullable'
+            slugVi:
+              type: string
+    ProductCardPage:
+      type: object
+      description: Page chuan {items, page, size, total}.
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductCard'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    Category:
+      type: object
+      description: Node danh muc — ten/slug resolve theo locale, children de quy.
+      required: [id, slug, slugEn, name, children]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+          description: Slug DA resolve theo locale.
+        slugEn:
+          type: string
+        name:
+          type: string
+          description: Ten DA resolve theo locale.
+        parentId:
+          type: [string, 'null']
+          description: Null = node goc.
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    CategoryWrite:
+      type: object
+      required: [nameI18n, slugVi, slugEn]
+      properties:
+        nameI18n:
+          $ref: '#/components/schemas/I18nText'
+        slugVi:
+          type: string
+        slugEn:
+          type: string
+        parentId:
+          type: string
+          description: Bo qua/null = tao danh muc goc.
+    CategoryAdmin:
+      type: object
+      description: Danh muc view admin — Category + i18n goc.
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          required: [nameI18n, slugVi]
+          properties:
+            nameI18n:
+              $ref: '#/components/schemas/I18nText'
+            slugVi:
+              type: string
+    Review:
+      type: object
+      description: Review UGC — KHONG i18n (D17).
+      required: [id, userId, userName, rating, content, verifiedPurchase, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        content:
+          type: string
+        verifiedPurchase:
+          type: boolean
+          description: Da mua hang tai he thong.
+        createdAt:
+          type: string
+          format: date-time
+    ReviewList:
+      type: object
+      required: [items, breakdown, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        breakdown:
+          type: object
+          description: So luong theo so sao — key "5".."1".
+          additionalProperties:
+            type: integer
+        total:
+          type: integer
+    ReviewSubmitRequest:
+      type: object
+      required: [rating, content]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        content:
+          type: string
+          minLength: 1
+    ReviewAdmin:
+      type: object
+      description: Review view duyet — kem productId + status.
+      allOf:
+        - $ref: '#/components/schemas/Review'
+        - type: object
+          required: [productId, status]
+          properties:
+            productId:
+              type: string
+            status:
+              type: string
+              enum: [PENDING, APPROVED, REJECTED]
+    ReviewAdminPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewAdmin'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    SuggestResponse:
+      type: object
+      required: [products, categories]
+      properties:
+        products:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/ProductCard'
+        categories:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [slug, name]
+            properties:
+              slug:
+                type: string
+              name:
+                type: string
+    WishlistIds:
+      type: object
+      required: [productIds]
+      properties:
+        productIds:
+          type: array
+          items:
+            type: string
+    StockAlertRequest:
+      type: object
+      required: [email, variantId]
+      properties:
+        email:
+          type: string
+          format: email
+        variantId:
+          type: string
+    UploadResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: URL public /media/** (phat qua gateway).

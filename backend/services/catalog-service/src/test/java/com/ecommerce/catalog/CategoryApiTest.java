@@ -27,6 +27,8 @@ class CategoryApiTest extends AbstractIntegrationTest {
     @Autowired
     CategoryRepository categories;
     @Autowired
+    com.ecommerce.catalog.repo.ProductRepository products;
+    @Autowired
     org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired
     TestRestTemplate http;
@@ -40,6 +42,9 @@ class CategoryApiTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void seed() {
+        // Products tham chiếu categories (fk) — wipe TRƯỚC (cascade images/variants).
+        // Container PG dùng chung nhiều Spring context → IT khác có thể để lại products.
+        products.deleteAll();
         // Self-FK parent_id: phải xóa CON trước khi xóa CHA
         jdbc.update("DELETE FROM categories WHERE parent_id IS NOT NULL");
         jdbc.update("DELETE FROM categories WHERE parent_id IS NULL");

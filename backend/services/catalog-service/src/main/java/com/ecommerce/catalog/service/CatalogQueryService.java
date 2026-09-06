@@ -155,7 +155,12 @@ public class CatalogQueryService {
 
     // ── mappers ──────────────────────────────────────────────────────────────
 
-    private ProductCardDto toCard(ProductEntity p, List<ProductImageEntity> images, String locale) {
+    /**
+     * Mapper ProductCard DUY NHẤT của service — public static để search engines
+     * (Task 4 PgFts / Task 6 EsEngine) hydrate cùng logic, KHÔNG nhân bản
+     * (resolve locale, discountPercent, flash, image position 0...).
+     */
+    public static ProductCardDto toCard(ProductEntity p, List<ProductImageEntity> images, String locale) {
         String name = p.getName().resolve(locale);
         String slug = LocaleResolver.EN.equals(locale) ? p.getSlugEn() : p.getSlugVi();
         return new ProductCardDto(

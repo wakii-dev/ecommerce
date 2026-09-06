@@ -69,12 +69,12 @@
 
 **Files:** Create `search/SearchEngine`, `search/PgFtsEngine`, `search/SearchQuery`, `search/SearchEngineConfig`
 
-- [ ] `interface SearchEngine`: `Page<ProductCard> search(SearchQuery q)` + `SuggestResponse suggest(String q, String locale)` + `void index(ProductEntity p)` + `void delete(String productId)` + `void reindexAll()` + `String name()`
-- [ ] `SearchQuery`: `q, locale, categorySlug, sort, page, size` (+ filters dùng chung list khi cần)
-- [ ] `PgFtsEngine`: native query `WHERE search_vec @@ to_tsquery('simple', f_unaccent(:q)::regconfig...)` — build tsquery từ q (split terms + `:*` prefix); JOIN filter category/price/rating/brand/official + sort giống listProducts; fallback content vi-only (pack spec); suggest: trgm `similarity(name->>'vi', :q) > 0.1 ORDER BY similarity DESC LIMIT 5` products + categories ilike
-- [ ] `SearchEngineConfig` (`@Configuration`): bean chọn lúc startup — `elasticsearch.uri` blank → PgFtsEngine + log INFO; else ping ES (`ping` timeout 2s): reachable → EsEngine, fail → PgFtsEngine + log **WARN degraded**
-- [ ] Verify: IT (chưa có ES container trong classpath? vẫn pass — PgFts được chọn) — seed qua repo → search "điện thoạı" (sai dấu) khớp product "Điện thoại" (unaccent), sort/pagination đúng, suggest trả ≤5+5
-- [ ] Commit: `feat(catalog): SearchEngine interface + PgFtsEngine — simple+unaccent, trgm suggest`
+- [x] `interface SearchEngine`: `Page<ProductCard> search(SearchQuery q)` + `SuggestResponse suggest(String q, String locale)` + `void index(ProductEntity p)` + `void delete(String productId)` + `void reindexAll()` + `String name()`
+- [x] `SearchQuery`: `q, locale, categorySlug, sort, page, size` (+ filters dùng chung list khi cần)
+- [x] `PgFtsEngine`: native query `WHERE search_vec @@ to_tsquery('simple', f_unaccent(:q)::regconfig...)` — build tsquery từ q (split terms + `:*` prefix); JOIN filter category/price/rating/brand/official + sort giống listProducts; fallback content vi-only (pack spec); suggest: trgm `similarity(name->>'vi', :q) > 0.1 ORDER BY similarity DESC LIMIT 5` products + categories ilike
+- [x] `SearchEngineConfig` (`@Configuration`): bean chọn lúc startup — `elasticsearch.uri` blank → PgFtsEngine + log INFO; else ping ES (`ping` timeout 2s): reachable → EsEngine, fail → PgFtsEngine + log **WARN degraded**
+- [x] Verify: IT (chưa có ES container trong classpath? vẫn pass — PgFts được chọn) — seed qua repo → search "điện thoạı" (sai dấu) khớp product "Điện thoại" (unaccent), sort/pagination đúng, suggest trả ≤5+5
+- [x] Commit: `feat(catalog): SearchEngine interface + PgFtsEngine — simple+unaccent, trgm suggest`
 
 ### Task 5: es-indexer-perlocale-productchanged-reindex
 

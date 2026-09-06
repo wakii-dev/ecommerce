@@ -49,3 +49,24 @@ declare module 'account/AccountPage' {
   const AccountPage: import('react').ComponentType;
   export default AccountPage;
 }
+
+// ── mfe-admin (SF-7, apps/mfe-admin) — khu quản trị. bootstrap nhận
+// ShellContext do shell truyền lúc initAdminShell (main.tsx); remote KHÔNG
+// import code host — shape này là hợp đồng 1 chiều.
+declare module 'admin/bootstrap' {
+  export type SlotKey = 'left' | 'center' | 'right';
+  export interface ShellContext {
+    HeaderSlots: {
+      register(slot: SlotKey, id: string, component: import('react').ComponentType): void;
+      unregister(slot: SlotKey, id: string): void;
+    };
+    navigate: (to: string) => void;
+    onRegistryChange?: () => void;
+  }
+  export function initAdminShell(ctx: ShellContext): void;
+}
+
+declare module 'admin/AdminApp' {
+  const AdminApp: import('react').ComponentType;
+  export default AdminApp;
+}

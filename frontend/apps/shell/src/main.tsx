@@ -32,6 +32,13 @@ import('account/bootstrap')
   .then((m) => m.initAccountShell({ HeaderSlots, navigate, onRegistryChange: onHeaderSlotsChanged }))
   .catch((error) => console.warn('[shell] mfe-account chưa chạy — auth widget tạm vắng:', error.message));
 
+// mfe-admin (SF-7) — eager init: chỉ lưu navigate + configureAuth (không đăng
+// ký widget header — admin có topbar riêng). Guard của AdminApp tự lo refresh
+// + redirect; remote down không chặn shell (catch chỉ warn).
+import('admin/bootstrap')
+  .then((m) => m.initAdminShell({ HeaderSlots, navigate }))
+  .catch((error) => console.warn('[shell] mfe-admin chưa chạy — khu /admin tạm 404:', error.message));
+
 void initI18n().then(() => {
   createRoot(document.getElementById('root')!).render(<App />);
 });

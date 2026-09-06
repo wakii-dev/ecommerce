@@ -23,6 +23,14 @@ const mfeConfig = defineMfeConfig({
       type: 'module',
       name: 'mfe_account',
       entry: `${process.env.REMOTE_ACCOUNT_URL ?? 'http://localhost:5176'}/remoteEntry.js`
+    },
+    // mfe-admin (SF-7) — products/categories/coupons/reviews/orders/dashboard;
+    // import specifier 'admin/*' (remotes.d.ts). `name` khớp federation name
+    // của remote (apps/mfe-admin).
+    admin: {
+      type: 'module',
+      name: 'mfe_admin',
+      entry: `${process.env.REMOTE_ADMIN_URL ?? 'http://localhost:5177'}/remoteEntry.js`
     }
   }
 });

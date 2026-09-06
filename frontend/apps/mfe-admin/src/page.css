@@ -1,0 +1,7 @@
+/* page.css — layout admin (SF-7). Mọi màu/spacing QUA CSS vars ui-kit
+   (theme `data-theme="admin"` do AdminApp gắn); không hex cứng. */
+
+.admin-root {
+  display: flex;
+  min-height: calc(100vh - 56px);
+}

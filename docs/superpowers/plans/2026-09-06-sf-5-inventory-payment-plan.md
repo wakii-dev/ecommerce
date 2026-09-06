@@ -111,12 +111,8 @@ inventory:
     sweep-interval-ms: ${INVENTORY_SWEEP_INTERVAL_MS:30000}
     max-ttl-minutes: ${INVENTORY_MAX_TTL_MINUTES:60}
   low-stock-threshold: ${INVENTORY_LOW_STOCK_THRESHOLD:10}
-spring:
-  rabbitmq:
-    listener:
-      simple:
-        default-requeue-rejected: false   # poison message → reject, không requeue storm
 ```
+(merge các key `inventory.*` vào yml fork từ template — KHÔNG tạo root key `spring:`/`inventory:` trùng — YAML duplicate-key chết im.)
 - [ ] Application class fork template (`@EntityScan({"com.ecommerce.inventory.domain", "com.ecommerce.common.outbox"})`).
 - [ ] `AbstractIntegrationTest` fork template (db name `db_inventory`).
 - [ ] `InventoryScaffoldIT`: context loads + Flyway migrate + JdbcTemplate assert 2 bảng + unique index tồn tại (`SELECT indexdef FROM pg_indexes WHERE indexname='uq_reservations_active_order'`).
@@ -166,7 +162,8 @@ int restock(@Param("id") String id, @Param("qty") int qty);
 
 **Key:**
 ```java
-// InventoryQueryRepository
+// InventoryQueryRepository (extends Repository<Stock, String> — binding domain type cho native query)
+public interface InventoryQueryRepository extends Repository<Stock, String> {
 @Query(value = """
     SELECT s.variant_id AS variantId,
            s.quantity AS available,
@@ -201,12 +198,18 @@ Controller: `GET /inventory/availability?variantIds=a,b,c` (`@RequestParam List<
 
 **Key:**
 ```java
-// RabbitMqConfig — common-lib chỉ declare exchange; service declare queue + bindings + converter
+// RabbitMqConfig — common-lib chỉ declare exchange; service declare queue + bindings + converter + poison handler
 @Bean Queue inventoryOrders() { return QueueBuilder.durable("inventory.orders").build(); }
 @Bean Binding paidBinding()  { return BindingBuilder.bind(inventoryOrders()).to(exchange).with("order.paid"); }
 @Bean Binding cancelBinding(){ ... "order.cancelled" ... }
 @Bean Binding failedBinding(){ ... "order.failed" ... }
 @Bean Jackson2JsonMessageConverter converter(ObjectMapper om) { return new Jackson2JsonMessageConverter(om); }
+@Bean SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory cf, Jackson2JsonMessageConverter conv) {
+    var f = new SimpleRabbitListenerContainerFactory();
+    f.setConnectionFactory(cf); f.setMessageConverter(conv);
+    f.setErrorHandler(new ConditionalRejectingErrorHandler()); // poison reject-no-requeue; transient → requeue
+    return f;
+}
 
 // InventorySweeper
 @Scheduled(fixedDelayString = "${inventory.reservation.sweep-interval-ms:30000}")
@@ -225,7 +228,7 @@ public void on(EventEnvelope envelope) {
     }
 }
 ```
-Payload commit/release: `{reservationId, orderId, items[]}` — **items remap SNAKE (jsonb) → CAMEL (event schema)**: đọc `reservation.getItems()` (đã deserialize thành record `ReservationItem(variantId, qty)` camel-tên-field, có `@JsonProperty("variant_id")` cho jsonb round-trip) → build payload node với key `variantId` — schema-exact, KHÔNG thêm reason (log thôi). correlationId = `envelope.correlationId()` incoming. **Poison message (PIN mechanism):** typed param `EventEnvelope` + `spring.rabbitmq.listener.simple.default-requeue-rejected: false` trong application.yml — envelope hỏng fail conversion ở container → reject KHÔNG requeue (container log), không storm.
+Payload commit/release: `{reservationId, orderId, items[]}` — **items remap SNAKE (jsonb) → CAMEL (event schema)**: đọc `reservation.getItems()` (đã deserialize thành record `ReservationItem(variantId, qty)` camel-tên-field, có `@JsonProperty("variant_id")` cho jsonb round-trip) → build payload node với key `variantId` — schema-exact, KHÔNG thêm reason (log thôi). correlationId = `envelope.correlationId()` incoming. **Poison message (PIN — plan-critic cycle 2):** `ConditionalRejectingErrorHandler` trên listener container factory trong `RabbitMqConfig` (`SimpleRabbitListenerContainerFactory.setErrorHandler(new ConditionalRejectingErrorHandler())`) — conversion fail (poison) → reject KHÔNG requeue; lỗi TRANSIENT (DB blip...) → vẫn requeue (giữ at-least-once). KHÔNG dùng `default-requeue-rejected: false` (biến mọi lỗi thành at-most-once — mất event commit stock).
 **IT InventoryEventsIT:** publish synthetic envelope (ObjectMapper serialize EventEnvelope) qua `rabbitTemplate.convertAndSend("ecommerce.events", "order.paid", envelopeJson)` — seed reservation RESERVED → await 5s (Awaitility) → status COMMITTED + outbox row `inventory.committed` + **assert payload keys camelCase** (`payload.items[0].variantId` tồn tại, `variant_id` KHÔNG); re-publish CÙNG eventId → không đổi gì (vẫn 1 outbox row); order.cancelled → RELEASED + stock hoàn; sweep: seed reservation hết hạn → gọi `sweeper.releaseExpired()` trực tiếp → RELEASED + outbox `inventory.released` + stock hoàn; sweep-vs-consumer: reservation hết hạn bị sweep TRƯỚC rồi order.paid tới → consumer warn no-op, stock không đổi, không event mới; **poison**: publish garbage JSON vào queue → không requeue (queue depth 0 sau 2s), business state untouched.
 - [ ] Commit: `feat(inventory): TTL sweeper + idempotent commit/release consumers`
 
@@ -233,7 +236,7 @@ Payload commit/release: `{reservationId, orderId, items[]}` — **items remap SN
 
 **Files:**
 - Modify: `gateway-routes.yml` (un-comment block `payment`)
-- Create: `backend/services/payment-service/pom.xml` (fork template + `com.stripe:stripe-java` + test `org.wiremock:wiremock-standalone:3.9.1`), `PaymentServiceApplication.java`, `application.yml` (port 8086, db_payment, thêm block stripe), `V1__init.sql` (copy template), `V10__payment_domain.sql` (spec §5.1 + cột `stripe_status VARCHAR(32)` mirror response + index `idx_payment_order` trên order_id), `spi/PaymentProviderAdapter.java`, `spi/IntentCommand.java`, `spi/AdapterIntent.java`, `spi/AdapterRefund.java`, `spi/ProviderWebhookEvent.java`, `spi/WebhookVerificationException.java`, `spi/PaymentUnconfiguredException.java`, `spi/StripeAdapter.java`, `spi/UnconfiguredAdapter.java`, `config/PaymentAdapterConfig.java`, `Dockerfile`
+- Create: `backend/services/payment-service/pom.xml` (fork template + `com.stripe:stripe-java` + test `org.wiremock:wiremock-standalone:3.9.1`), `PaymentServiceApplication.java`, `application.yml` (port 8086, db_payment, thêm block stripe), `V1__init.sql` (copy template), `V10__payment_domain.sql` (spec §5.1 + cột `stripe_status VARCHAR(32)` mirror response + index `idx_payment_order` trên order_id), `spi/PaymentProviderAdapter.java`, `spi/IntentCommand.java`, `spi/AdapterIntent.java`, `spi/AdapterRefund.java`, `spi/ProviderWebhookEvent.java`, `spi/WebhookVerificationException.java`, `spi/PaymentUnconfiguredException.java`, `spi/StripeAdapter.java`, `spi/UnconfiguredAdapter.java`, `config/PaymentAdapterConfig.java` (Dockerfile → Task 8)
 - Test: `AbstractPaymentIntegrationTest.java` (fork, db_payment), `StripeAdapterTest.java` (WireMock, KHÔNG cần Spring context — new StripeAdapter trực tiếp), `PaymentScaffoldIT.java` (mirror T1: context loads + Flyway 2 bảng — bắt lỗi V10/yml ngay ở T5 không chờ T6)
 
 **Key:**

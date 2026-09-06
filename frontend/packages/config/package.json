@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
   "exports": {
     "./eslint": "./eslint-preset.mjs",
     "./vite": "./vite-preset.mjs",
@@ -10,5 +13,8 @@
   },
   "peerDependencies": {
     "@module-federation/vite": "catalog:"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

@@ -21,7 +21,8 @@
     "typescript": "catalog:",
     "turbo": "catalog:",
     "typescript-eslint": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

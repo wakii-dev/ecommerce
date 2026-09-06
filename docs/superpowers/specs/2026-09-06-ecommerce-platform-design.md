@@ -264,7 +264,7 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 | **P4 Growth & Partners** | SF-8, SF-11, SF-12 | `phase-4` | Reviews (moderation + verified) + wishlist; partner Open API + webhooks; affiliate ref + hoa hồng |
 | **P5 Complete v1** | SF-10, SF-13, SF-14, SF-15 | `phase-5` | Convergence E2E + email cảm ơn/attachment + notification; essentials (COD, MinIO, reset password, abandoned cart, audit, related, GA4, CSV, newsletter); RMA + GHN + loyalty; social login + 2FA + stock alert + PWA/dark/chat. **GA v1** |
 
-Quy tắc release từng phase một: phase hoàn thành khi TẤT CẢ SF của phase Done + merge về nhánh đích → coordinator **tag `phase-N` + `gh release create phase-N`** (release notes + demo checklist) + audit comment + báo user **"Phase N sẵn sàng"**. **Merge story → main theo từng phase là HUMAN GATE** — user review + merge khi muốn (agent/watchdog không tự merge main). SF thuộc phase sau vẫn launch bình thường khi dep xong (phase chỉ gate release, không gate launch).
+Quy tắc release từng phase một: phase hoàn thành khi TẤT CẢ SF của phase Done + merge về nhánh đích → coordinator **tạo PR `story/...` → `main`** (GitHub chỉ cho 1 PR mở cặp head/base → dùng MỘT PR release duy nhất, cập nhật title/body mỗi phase; PR cũ đã merge → tạo PR mới cho phase kế) + **tag `phase-N` + `gh release create phase-N`** (release notes + demo checklist) + audit comment + báo user **"Phase N sẵn sàng — review + merge PR"**. **Merge PR vào main là HUMAN GATE** — agent/watchdog KHÔNG bao giờ merge main. SF thuộc phase sau vẫn launch bình thường khi dep xong (phase chỉ gate release, không gate launch).
 
 ## 8. Risks + mitigations
 

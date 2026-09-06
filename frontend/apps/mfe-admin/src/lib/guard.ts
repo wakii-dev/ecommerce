@@ -7,13 +7,14 @@ export type AdminGuardState = 'guest' | 'forbidden' | 'ok';
  * - chưa đăng nhập → guest (redirect /login?next= trong shell)
  * - đăng nhập nhưng thiếu role admin → forbidden (trang 403)
  * - đủ → ok
+ * Role so sánh case-insensitive — identity cấp `roles:["ADMIN"]` (uppercase).
  */
 export function resolveGuardState(
   authenticated: boolean,
   roles: readonly string[]
 ): AdminGuardState {
   if (!authenticated) return 'guest';
-  return roles.includes('admin') ? 'ok' : 'forbidden';
+  return roles.some((role) => role.toLowerCase() === 'admin') ? 'ok' : 'forbidden';
 }
 
 export type AdminPageKey =

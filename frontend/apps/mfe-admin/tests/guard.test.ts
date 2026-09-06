@@ -18,6 +18,10 @@ describe('resolveGuardState', () => {
   it('admin → ok', () => {
     expect(resolveGuardState(true, ['customer', 'admin'])).toBe('ok');
   });
+
+  it('role ADMIN uppercase từ identity JWT → ok (case-insensitive)', () => {
+    expect(resolveGuardState(true, ['ADMIN'])).toBe('ok');
+  });
 });
 
 describe('resolveAdminRoute', () => {

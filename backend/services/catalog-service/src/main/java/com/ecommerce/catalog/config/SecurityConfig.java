@@ -34,6 +34,11 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable) // API token-only, không cookie session
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // HEAD match theo GET (security-audit P2-2): crawler/CDN probe HEAD → 401
+                .requestMatchers(HttpMethod.HEAD,
+                    "/api/catalog/products/**",
+                    "/api/catalog/categories/**",
+                    "/api/catalog/search/**").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/catalog/products/**",
                     "/api/catalog/categories/**",

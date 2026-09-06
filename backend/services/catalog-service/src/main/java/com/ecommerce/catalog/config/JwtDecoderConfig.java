@@ -86,11 +86,19 @@ public class JwtDecoderConfig {
                 return true;
             }
             Object scope = claims.get(key);
-            if (scope instanceof String s && s.toUpperCase().contains("ADMIN")) {
+            // Exact-token match (security-audit P1): substring match trước đây cho
+            // "catalog-admin:read" → ROLE_ADMIN toàn quyền. Split theo whitespace/":"/","
+            // rồi so từng token — least-privilege khi SF-3 phát scope granular.
+            if (scope instanceof String s && scopeTokens(s).anyMatch("ADMIN"::equalsIgnoreCase)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static java.util.stream.Stream<String> scopeTokens(String scope) {
+        return java.util.Arrays.stream(scope.split("[\\s:,]+"))
+            .filter(token -> !token.isBlank());
     }
 
     private static boolean collectionContains(Object value) {

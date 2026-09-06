@@ -7,8 +7,15 @@ import { rewriteTarget } from './lib/locale-rewrite';
  * rewrite sang `/vi/...` (NextResponse.rewrite — URL trên browser KHÔNG đổi);
  * `/en`, `/en/**`, `/vi/**` pass-through. Query string (?q=, ?page=) được giữ
  * nguyên qua `nextUrl.clone()`.
+ *
+ * SF-12 (FI-322): capture link affiliate `?ref=CODE` — gọi POST
+ * /api/affiliate/track/click server-side (affiliate-service ghi click +
+ * trả Set-Cookie `aff_ref` 30 ngày httpOnly — cookie window do service quản
+ * theo contract affiliate.yaml), forward cookie về browser và REWRITE bỏ
+ * `?ref` (URL sạch SEO). Gateway chết → vẫn vào trang bình thường, không
+ * tracking (fire-and-forget). Click dedupe 1/IP/10' do service lo.
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const target = rewriteTarget(request.nextUrl.pathname);
   // SF-8: locale resolve cho <html lang> ở root app/layout.tsx (không thấy
   // params segment) — segment /en hoặc path rewrite vi.
@@ -16,16 +23,85 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   if (locale) requestHeaders.set('x-app-locale', locale);
 
+  // SF-12: ?ref trên BẤT KỲ path nào → track + strip param (giữ query khác)
+  const ref = request.nextUrl.searchParams.get('ref');
+  const affCookie = ref ? await captureRef(ref, request) : null;
+  const stripRef = ref !== null; // ref="" (không track được) vẫn strip ?ref cho URL sạch
+
   if (target === null) {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     if (locale) response.headers.set('x-app-locale', locale);
-    return response;
+    return withAffiliateCookie(response, affCookie, request, stripRef);
   }
   const url = request.nextUrl.clone();
   url.pathname = target;
-  return NextResponse.rewrite(url, {
-    request: { headers: requestHeaders },
-  });
+  if (stripRef) url.searchParams.delete('ref');
+  return withAffiliateCookie(
+    NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
+    affCookie,
+    request,
+    false
+  );
+}
+
+/**
+ * Gọi affiliate-service track click — trả Set-Cookie header của response
+ * (aff_ref=...) hoặc null khi gateway chết / không track được (code sai).
+ */
+async function captureRef(refCode: string, request: NextRequest): Promise<string | null> {
+  const gateway = process.env.GATEWAY_URL || 'http://localhost:8080';
+  try {
+    const res = await fetch(`${gateway}/api/affiliate/track/click`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // IP client forward để affiliate-service dedupe click 1/IP/10'
+        'X-Forwarded-For': request.headers.get('x-forwarded-for') ?? '',
+        'User-Agent': request.headers.get('user-agent') ?? '',
+      },
+      body: JSON.stringify({ refCode }),
+      signal: AbortSignal.timeout(3000), // không treo page vì affiliate
+    });
+    if (!res.ok && res.status !== 204) return null;
+    return res.headers.get('set-cookie');
+  } catch {
+    return null; // gateway chết — vào trang bình thường, không tracking
+  }
+}
+
+/** Forward Set-Cookie (aff_ref) của affiliate-service lên browser response. */
+function withAffiliateCookie(
+  response: NextResponse,
+  setCookie: string | null,
+  request: NextRequest,
+  stripRef: boolean
+): NextResponse {
+  if (setCookie) {
+    const parts = setCookie.split(';');
+    const pair = parts[0] ?? '';
+    const eq = pair.indexOf('=');
+    if (eq > 0) {
+      const name = pair.slice(0, eq).trim();
+      const value = pair.slice(eq + 1).trim();
+      const maxAge = parts
+        .slice(1)
+        .map((a) => a.trim().toLowerCase())
+        .find((a) => a.startsWith('max-age='));
+      response.cookies.set(name, value, {
+        httpOnly: true,
+        path: '/',
+        sameSite: 'lax',
+        ...(maxAge ? { maxAge: Number(maxAge.slice('max-age='.length)) } : {}),
+      });
+    }
+  } else if (stripRef) {
+    // ref cũ/không hợp lệ: xoá cookie attribution cũ nếu có (code REJECTED
+    // không được giữ attribution — suspend acceptance)
+    if (request.cookies.get('aff_ref')) {
+      response.cookies.set('aff_ref', '', { httpOnly: true, path: '/', maxAge: 0 });
+    }
+  }
+  return response;
 }
 
 /** Locale cho header: /en/** → en; còn lại (path thường rewrite vi hoặc /vi/**) → vi. */

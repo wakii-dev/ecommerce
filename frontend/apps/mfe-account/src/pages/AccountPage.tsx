@@ -5,7 +5,7 @@ import { authStore, useAuth } from '@ecommerce/auth';
 import { fetchProfile, updateProfile } from '../api';
 import type { MeProfile } from '../api';
 import { appNavigate, authReady } from '../bootstrap';
-import './page.css';
+import '../page.css';
 
 export default function AccountPage(): ReactElement {
   const { user } = useAuth();

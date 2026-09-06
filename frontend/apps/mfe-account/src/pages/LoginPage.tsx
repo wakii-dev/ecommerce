@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
 import { login } from '../api';
 import { appNavigate } from '../bootstrap';
-import './page.css';
+import '../page.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

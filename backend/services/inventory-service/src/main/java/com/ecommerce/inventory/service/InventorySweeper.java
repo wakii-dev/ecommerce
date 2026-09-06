@@ -59,7 +59,8 @@ public class InventorySweeper {
     @Scheduled(fixedDelayString = "${inventory.reservation.sweep-interval-ms:30000}")
     public void releaseExpired() {
         List<Reservation> expired = reservations
-            .findByStatusAndExpiresAtBefore(ReservationStatus.RESERVED, Instant.now(), Limit.of(BATCH_SIZE));
+            .findByStatusAndExpiresAtBeforeOrderByExpiresAtAsc(
+                ReservationStatus.RESERVED, Instant.now(), Limit.of(BATCH_SIZE));
         expired.forEach(this::releaseOne);
         if (!expired.isEmpty()) {
             log.info("TTL sweep: released {} reservation(s) — reason {}", expired.size(), TTL_EXPIRED_REASON);

@@ -219,12 +219,50 @@ class ReservationApiTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void committedReservationReplaysSameReservationWithoutNewDeduction() {
+        String variant = seedStock(50);
+        String orderId = "order-" + SEQ.incrementAndGet();
+
+        ResponseEntity<Map> first = reserve(orderId, items(variant, 7), null);
+        assertThat(first.getStatusCode().value()).isEqualTo(201);
+        // Giả lập order.paid đã commit (path event đầy đủ ở InventoryEventsTest)
+        jdbc.update("UPDATE reservations SET status = 'COMMITTED' WHERE order_id = ?", orderId);
+        int afterCommitStock = stockOf(variant);
+
+        ResponseEntity<Map> retry = reserve(orderId, items(variant, 7), null);
+        assertThat(retry.getStatusCode().value()).as("COMMITTED → replay (đơn đã trả)").isEqualTo(201);
+        assertThat(retry.getBody().get("reservationId")).isEqualTo(first.getBody().get("reservationId"));
+        assertThat(stockOf(variant)).as("COMMITTED replay không trừ thêm").isEqualTo(afterCommitStock);
+    }
+
+    @Test
+    void unknownVariantReturns409WithZeroAvailable() {
+        String orderId = "order-" + SEQ.incrementAndGet();
+
+        ResponseEntity<Map> response = reserve(orderId,
+            items("var-khong-ton-tai-" + SEQ.incrementAndGet(), 1), null);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        List<Map> insufficient = (List<Map>) response.getBody().get("insufficient");
+        assertThat(insufficient).hasSize(1);
+        assertThat(insufficient.get(0).get("available")).as("variant không có row stocks = available 0").isEqualTo(0);
+    }
+
+    @Test
     void invalidTtlAndMissingFieldsReturn400() {
         String variant = seedStock(10);
 
         assertThat(reserve("order-" + SEQ.incrementAndGet(), items(variant, 1), 0).getStatusCode().value()).isEqualTo(400);
         assertThat(reserve("order-" + SEQ.incrementAndGet(), items(variant, 1), 61).getStatusCode().value()).isEqualTo(400);
         assertThat(reserve("order-" + SEQ.incrementAndGet(), items(variant, 0), null).getStatusCode().value()).isEqualTo(400);
+        assertThat(reserve("order-" + SEQ.incrementAndGet(), items(variant, 1_000_001), null).getStatusCode().value())
+            .as("qty > cap 1M → 400 (chặn integer-overflow stock inflation — review P0)").isEqualTo(400);
+        // gom trùng 2 dòng 1M = 2M → vượt cap → 400 (long-sum, không wrap)
+        assertThat(reserve("order-" + SEQ.incrementAndGet(),
+            List.of(Map.of("variantId", variant, "qty", 1_000_000),
+                Map.of("variantId", variant, "qty", 1_000_000)), null).getStatusCode().value())
+            .isEqualTo(400);
+        assertThat(stockOf(variant)).as("400 path không đụng stock").isEqualTo(10);
     }
 
     private List<ResponseEntity<Map>> runConcurrent(int threads, Callable<ResponseEntity<Map>> call) throws Exception {

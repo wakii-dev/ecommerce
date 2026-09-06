@@ -22,8 +22,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     Optional<Reservation> findFirstByOrderIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
         String orderId, ReservationStatus status, Instant now);
 
-    /** Batch hết hạn cho sweeper (Limit chặn batch size — pattern OutboxRelay). */
-    List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, Instant now, Limit limit);
+    /** Batch hết hạn cho sweeper (Limit chặn batch; ORDER BY expires_at — FIFO, không starve). */
+    List<Reservation> findByStatusAndExpiresAtBeforeOrderByExpiresAtAsc(
+        ReservationStatus status, Instant now, Limit limit);
 
     /**
      * GUARDED conditional transition — CHỈ thắng khi còn ở {@code from}.

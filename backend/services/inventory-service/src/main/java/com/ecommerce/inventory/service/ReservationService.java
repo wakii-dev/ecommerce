@@ -55,6 +55,7 @@ public class ReservationService {
 
     private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
     private static final int DEFAULT_TTL_MINUTES = 30;
+    private static final long MAX_QTY_PER_VARIANT = 1_000_000;
 
     private final ReservationRepository reservations;
     private final StockRepository stocks;
@@ -80,10 +81,15 @@ public class ReservationService {
     }
 
     public ReservationCreatedResponse create(String orderId, List<ReservationItemDto> items, Integer ttlMinutes) {
-        // (1) Gom trùng variantId — request hợp lệ theo contract nhưng 2 dòng cùng
-        // variant phải check/trừ theo TỔNG (không thì CHECK quantity>=0 chết giữa chừng).
-        Map<String, Integer> merged = new LinkedHashMap<>();
-        items.forEach(i -> merged.merge(i.variantId(), i.qty(), Integer::sum));
+        // (1) Gom trùng variantId — cộng trong long (Integer::sum wrap ÂM →
+        // deduct(âm) TĂNG stock = stock inflation; code-review P0) rồi validate cap.
+        Map<String, Long> merged = new LinkedHashMap<>();
+        items.forEach(i -> merged.merge(i.variantId(), (long) i.qty(), Long::sum));
+        boolean overCap = merged.values().stream().anyMatch(q -> q > MAX_QTY_PER_VARIANT);
+        if (overCap) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "qty mỗi variant phải <= " + MAX_QTY_PER_VARIANT);
+        }
 
         int ttl = ttlMinutes == null ? DEFAULT_TTL_MINUTES : ttlMinutes;
         if (ttl < 1 || ttl > maxTtlMinutes) {
@@ -105,7 +111,7 @@ public class ReservationService {
         }
     }
 
-    private ReservationCreatedResponse doCreate(String orderId, Map<String, Integer> merged,
+    private ReservationCreatedResponse doCreate(String orderId, Map<String, Long> merged,
                                                 int ttlMinutes, String correlationId) {
         // (2) Self-heal expired của đúng order này — KHÔNG full-scan (global sweep
         // là việc sweeper). Rowcount-gated: 0 = ai đó đã release → skip.
@@ -135,17 +141,17 @@ public class ReservationService {
         merged.forEach((variantId, qty) -> {
             int available = locked.containsKey(variantId) ? locked.get(variantId).getQuantity() : 0;
             if (qty > available) {
-                insufficient.add(new InsufficientStockDto(variantId, qty, available));
+                insufficient.add(new InsufficientStockDto(variantId, qty.intValue(), available));
             }
         });
         if (!insufficient.isEmpty()) {
             throw new InsufficientStockException(insufficient); // rollback = không trừ gì
         }
 
-        // (6) Trừ tất cả + INSERT + outbox — cùng commit.
-        merged.forEach((variantId, qty) -> stocks.deduct(variantId, qty));
+        // (6) Trừ tất cả + INSERT + outbox — cùng commit. (qty đã qua cap 1M — int safe)
+        merged.forEach((variantId, qty) -> stocks.deduct(variantId, qty.intValue()));
         List<ReservationItem> reservationItems = merged.entrySet().stream()
-            .map(e -> new ReservationItem(e.getKey(), e.getValue()))
+            .map(e -> new ReservationItem(e.getKey(), e.getValue().intValue()))
             .toList();
         Instant expiresAt = Instant.now().plus(Duration.ofMinutes(ttlMinutes));
         Reservation reservation = new Reservation(orderId, ReservationStatus.RESERVED, expiresAt, reservationItems);

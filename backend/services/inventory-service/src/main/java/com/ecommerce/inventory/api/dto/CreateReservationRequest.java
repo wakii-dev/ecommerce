@@ -11,7 +11,7 @@ import java.util.List;
  * (orderId + items; ttlMinutes optional, default 30 khi vắng mặt — contract pin).
  */
 public record CreateReservationRequest(
-    @NotBlank String orderId,
+    @NotBlank @jakarta.validation.constraints.Size(max = 64) String orderId,
     @NotEmpty @Valid List<ReservationItemDto> items,
     @jakarta.validation.constraints.Min(1) Integer ttlMinutes
 ) {

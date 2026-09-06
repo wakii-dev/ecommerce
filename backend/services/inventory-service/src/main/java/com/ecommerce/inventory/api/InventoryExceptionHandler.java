@@ -33,4 +33,15 @@ public class InventoryExceptionHandler {
             .contentType(MediaType.APPLICATION_PROBLEM_JSON)
             .body(node);
     }
+
+    /** Contract pin 400 cho path có param bắt buộc — common-lib không map riêng (đừng đụng common-lib). */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<ObjectNode> handleMissingParam(
+        org.springframework.web.bind.MissingServletRequestParameterException e) {
+        ApiError base = ApiError.of(400, "Validation failed",
+            "Thiếu tham số bắt buộc: " + e.getParameterName(), null, MDC.get("requestId"), null);
+        return ResponseEntity.status(400)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(objectMapper.valueToTree(base));
+    }
 }

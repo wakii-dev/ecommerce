@@ -60,7 +60,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException e) {
-        HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+        HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
         return problem(status, status.getReasonPhrase(), e.getReason(), null);
     }
 

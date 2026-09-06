@@ -1,7 +1,5 @@
 package com.ecommerce.common.outbox;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
@@ -9,6 +7,7 @@ import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Limit;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +35,6 @@ public class OutboxRelay {
 
     private final OutboxMessageRepository repository;
     private final RabbitTemplate rabbitTemplate;
-    private final ObjectMapper objectMapper;
     private final String exchange;
     private final int maxAttempts;
     private final int batchSize;
@@ -45,7 +43,6 @@ public class OutboxRelay {
     public OutboxRelay(
         OutboxMessageRepository repository,
         RabbitTemplate rabbitTemplate,
-        ObjectMapper objectMapper,
         @Value("${outbox.relay.exchange:ecommerce.events}") String exchange,
         @Value("${outbox.relay.max-attempts:5}") int maxAttempts,
         @Value("${outbox.relay.batch-size:100}") int batchSize,
@@ -53,7 +50,6 @@ public class OutboxRelay {
     ) {
         this.repository = repository;
         this.rabbitTemplate = rabbitTemplate;
-        this.objectMapper = objectMapper;
         this.exchange = exchange;
         this.maxAttempts = maxAttempts;
         this.batchSize = batchSize;
@@ -65,8 +61,9 @@ public class OutboxRelay {
         if (!enabled) {
             return;
         }
-        List<OutboxMessage> batch = repository.findByStatusOrderByIdAsc(OutboxStatus.PENDING);
-        batch.stream().limit(batchSize).forEach(this::relayOne);
+        List<OutboxMessage> batch =
+            repository.findByStatusOrderByIdAsc(OutboxStatus.PENDING, Limit.of(batchSize));
+        batch.forEach(this::relayOne);
     }
 
     /**
@@ -96,18 +93,15 @@ public class OutboxRelay {
     }
 
     private Message toAmqpMessage(OutboxMessage message) {
+        // Body = EventEnvelope JSON (wrap tại OutboxWriter — consumer đọc
+        // eventId/eventType/correlationId từ envelope). Headers chỉ là bản sao
+        // tiện cho middleware (router/debug), KHÔNG phải nguồn dữ liệu.
         MessageProperties properties = new MessageProperties();
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
         properties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         properties.setMessageId(String.valueOf(message.getId()));
         properties.setHeader("eventType", message.getEventType());
         properties.setHeader("correlationId", message.getCorrelationId());
-        try {
-            JsonNode payload = objectMapper.readTree(message.getPayload());
-            properties.setHeader("eventId", payload.path("eventId").asText(message.getId().toString()));
-        } catch (Exception ignored) {
-            // payload hỏng không chặn publish — eventId fallback = outbox id
-        }
         return new Message(message.getPayload().getBytes(StandardCharsets.UTF_8), properties);
     }
 

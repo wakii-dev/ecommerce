@@ -25,6 +25,10 @@ catalog:
   openapi-typescript: ^7.5.2
   json-schema-to-typescript: ^15.0.4
   vitest: ^2.1.8
+  # jsdom + testing-library — interaction tests cho useOverlay (SF-2 R3 P1-2)
+  jsdom: ^25.0.1
+  "@testing-library/react": ^16.1.0
+  "@testing-library/dom": ^10.4.0
   playwright: ^1.49.1
   typescript: ^5.7.2
   turbo: ^2.3.3

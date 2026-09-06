@@ -118,7 +118,7 @@ Role là single column (pack pin "role enum customer/admin"); API expose `roles:
 
 **Deps:** + `spring-boot-starter-oauth2-resource-server`.
 
-**`routes/identity.yml` (file MỚI — SF-3 sở hữu):**
+**Route identity — THỰC TẾ IMPLEMENT (spec-critic round thực thi):** kế hoạch `routes/identity.yml` BẤT KHẢ THI — `spring.cloud.gateway.routes` là list property (file import thứ 2 ĐÈ route smoke của gateway-routes.yml hoặc bind fail, không merge giữa config sources; config.import cũng không nhận glob `*.yml`). Thay bằng bean `RouteDefinitionLocator` (`GatewayRouteConfig.java`) — CompositeRouteDefinitionLocator GỘP với properties routes, gateway-routes.yml (SF-1) giữ nguyên. Giữ ĐÚNG giá trị spec (id=identity, `${IDENTITY_URI:8081}`, Path=/api/identity/**, StripPrefix=2). **CONVENTION SF-4/5: thêm bean tương tự cho service mình, KHÔNG copy routes/&lt;svc&gt;.yml.** Auth policy file `routes/gateway-auth.yml` (public-paths tập trung) VẪN y nguyên — config.import tường minh 2 dòng hoạt động tốt (chỉ list `spring.cloud.gateway.routes` là không merge). Nguyên bản kế hoạch:
 ```yaml
 spring.cloud.gateway.routes:
   - id: identity

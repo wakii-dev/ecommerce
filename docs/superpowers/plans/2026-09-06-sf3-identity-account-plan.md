@@ -1415,7 +1415,7 @@ kill %1
       - optional:classpath:routes/gateway-auth.yml
 ```
 
-- [ ] **Step 2: routes/identity.yml** (file MỚI — comment là hand-off cho SF-4/5):
+- [x] **Step 2: route identity — THỰC TẾ: GatewayRouteConfig bean (đã hoàn thành commit dfebf41)** — plan gốc routes/identity.yml BẤT KHẢ THI (list property không merge giữa config sources — T3 chứng minh bằng 2 lần fail). Bean `RouteDefinitionLocator` composite với properties → smoke route SF-1 giữ nguyên (GatewaySmokeTest 4/4 trong 12/12 xanh). Convention SF-4/5: thêm bean cho service mình. (Nguyên văn kế hoạch cũ, chỉ để tham khảo):
 
 ```yaml
 # ─────────────────────────────────────────────────────────────────────────────

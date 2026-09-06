@@ -214,7 +214,8 @@ public class OrderLifecycleService {
      * deterministic {@code admin-cancel:<orderId>} — retry không double-refund);
      * (3) outbox order.cancelled sau cùng — refunded đã biết chắc. Refund lỗi
      * → vẫn publish order.cancelled (refunded=false, release reservation) rồi
-     * rethrow 502 — admin retry refund được bằng cùng key.</p>
+     * rethrow 502; lượt retry sau đi vào nhánh CANCELLED + timeline-PAID
+     * (guard bên dưới) → resume refund cùng key idempotent.</p>
      */
     public Order cancelByAdmin(UUID orderId) {
         // Pre-read CHỈ để 409 sớm + quyết định paidLike — TX bên dưới mới là
@@ -223,7 +224,21 @@ public class OrderLifecycleService {
             .orElseThrow(() -> new InvalidStateTransitionException("Không tìm thấy đơn"));
         OrderStatus from = o.getStatus();
         if (from == OrderStatus.SHIPPED || from == OrderStatus.DELIVERED
-            || from == OrderStatus.CANCELLED || from == OrderStatus.FAILED) {
+            || from == OrderStatus.FAILED) {
+            throw new InvalidStateTransitionException("Không hủy được đơn đang " + from);
+        }
+        if (from == OrderStatus.CANCELLED) {
+            // Re-review P1: refund lượt cancel trước có thể LỖI → đơn đã
+            // CANCELLED mà tiền chưa hoàn; retry phải TIẾP TỤC refund (cùng key
+            // idempotent — payment 409 = đã hoàn rồi) thay vì 409 chặn làm tiền
+            // kẹt. Chỉ với đơn TỪNG PAID (timeline) + có intent; CANCELLED từ
+            // PENDING (user tự hủy/TTL — chưa trả tiền) → 409 như cũ.
+            boolean wasPaid = o.getTimeline().stream()
+                .anyMatch(t -> t.status() == OrderStatus.PAID);
+            if (wasPaid && o.getStripeIntentId() != null) {
+                refundOrThrow(o.getStripeIntentId(), orderId, "admin_cancel_after_paid");
+                return orders.findById(orderId).orElseThrow();
+            }
             throw new InvalidStateTransitionException("Không hủy được đơn đang " + from);
         }
         boolean paidLike = from.paidLike() && o.getStripeIntentId() != null;
@@ -271,6 +286,11 @@ public class OrderLifecycleService {
         } catch (org.springframework.web.client.HttpClientErrorException.Conflict e) {
             // 409 = đã refund rồi (retry sau crash) — coi như thành công
             log.info("Refund order {} đã tồn tại trên payment — tiếp tục cancel", orderId);
+        } catch (org.springframework.web.client.RestClientException e) {
+            // Lỗi payment khác (5xx/timeout/4xx) → 502 RÕ qua handler — không
+            // 500 raw; retry admin-cancel sau đó resume refund bằng cùng key.
+            throw new PaymentUnavailableException(
+                "Refund thất bại cho đơn " + orderId + ": " + e.getMessage());
         }
     }
 

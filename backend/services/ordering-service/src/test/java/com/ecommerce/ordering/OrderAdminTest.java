@@ -24,6 +24,7 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -241,6 +242,47 @@ class OrderAdminTest extends AbstractSagaTest {
                 + "WHERE event_type='order.cancelled' AND payload->'payload'->>'orderId' = ?",
             String.class, orderId);
         assertThat(om.readTree(payload).path("refunded").asBoolean()).isTrue();
+    }
+
+    // ── Refund lỗi ở lượt cancel đầu → retry resume refund (re-review P1) ───
+
+    @Test
+    void adminCancelRefundFailure_retryResumesRefund() throws Exception {
+        String[] order = createPending("refundretry@ecommerce.local");
+        driveToConfirmed(order[0], order[1]);
+        String admin = adminJwt();
+
+        // Lượt 1: Stripe refund 5xx → payment lỗi → cancel 502; đơn VẪN
+        // CANCELLED + outbox refunded=false (release reservation chạy).
+        STRIPE.stubFor(post(urlEqualTo("/v1/refunds"))
+            .withRequestBody(containing(order[1]))
+            .willReturn(serverError()));
+        ResponseEntity<String> first = exchange(
+            "/admin/orders/" + order[0] + "/cancel", admin, HttpMethod.POST, String.class);
+        assertThat(first.getStatusCode().value())
+            .as("refund lỗi phải 502 rõ (PaymentUnavailable), body: %s", first.getBody())
+            .isEqualTo(502);
+        assertThat(q("SELECT status FROM orders WHERE id = ?", String.class, order[0]))
+            .isEqualTo("CANCELLED");
+        String payload1 = jdbc.queryForObject(
+            "SELECT payload->'payload' FROM outbox "
+                + "WHERE event_type='order.cancelled' AND payload->'payload'->>'orderId' = ?",
+            String.class, order[0]);
+        assertThat(om.readTree(payload1).path("refunded").asBoolean()).isFalse();
+
+        // Lượt 2: retry cancel — guard CANCELLED + timeline PAID + intent →
+        // resume refund cùng key idempotent (trước fix: 409 chặn, tiền kẹt).
+        STRIPE.stubFor(post(urlEqualTo("/v1/refunds"))
+            .withRequestBody(containing(order[1]))
+            .willReturn(okJson("{\"id\":\"re_retry\",\"object\":\"refund\",\"amount\":170000,"
+                + "\"status\":\"succeeded\",\"payment_intent\":\"" + order[1] + "\",\"livemode\":false}")));
+        ResponseEntity<String> second = exchange(
+            "/admin/orders/" + order[0] + "/cancel", admin, HttpMethod.POST, String.class);
+        assertThat(second.getStatusCode().value())
+            .as("retry phải resume refund → 200, body: %s", second.getBody()).isEqualTo(200);
+        Awaitility.await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+            STRIPE.verify(com.github.tomakehurst.wiremock.client.WireMock
+                .postRequestedFor(urlEqualTo("/v1/refunds")).withRequestBody(containing(order[1]))));
     }
 
     // ── RBAC 2 lớp: customer chạm admin → 403 (service-level @PreAuthorize) ─

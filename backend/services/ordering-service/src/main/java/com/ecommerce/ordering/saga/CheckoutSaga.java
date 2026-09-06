@@ -169,7 +169,7 @@ public class CheckoutSaga {
                 request.shippingMethod(), toDomainAddress(request.address()), idempotencyKey, payloadHash);
             merged.forEach((key, qty) -> {
                 PricingAuthority.PricedItem p = pricingCache(priced, key.productId(), key.variantId());
-                o.getItems().add(new OrderItem(key.productId(), key.variantId(), p.name(), p.unitPrice(), qty.intValue()));
+                o.addItem(new OrderItem(key.productId(), key.variantId(), p.name(), p.unitPrice(), qty.intValue()));
             });
             orders.save(o);
             sagaStates.save(new SagaState(o.getId(), SagaStep.RE_PRICE, correlationId));
@@ -210,6 +210,7 @@ public class CheckoutSaga {
             failOrder(order.getId(), "insufficient_stock", "RESERVE", correlationId);
             throw e;
         } catch (Exception e) {
+            log.error("Reserve inventory fail cho order {} — compensation", order.getId(), e);
             failOrder(order.getId(), "inventory_unavailable", "OTHER", correlationId);
             throw new ExternalUnavailableException("Hệ thống kho tạm bận — đơn đã hủy, thử lại sau");
         }
@@ -220,6 +221,7 @@ public class CheckoutSaga {
             intent = payment.createIntent(order.getId(), total, idempotencyKey);
         } catch (Exception e) {
             // order.failed → inventory release reservation; coupon release tại đây
+            log.error("Create payment intent fail cho order {} — compensation", order.getId(), e);
             failOrder(order.getId(), "payment_intent_failed", "PAYMENT", correlationId);
             throw new ExternalUnavailableException("Thanh toán tạm bận — đơn đã hủy, thử lại sau");
         }

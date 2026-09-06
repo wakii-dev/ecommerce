@@ -7,7 +7,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.UuidGenerator;
@@ -119,8 +118,7 @@ public class Order {
     @Version
     private long version;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "order_id")
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<OrderItem> items = new ArrayList<>();
 
     protected Order() {
@@ -292,7 +290,14 @@ public class Order {
         return items;
     }
 
+    /** Thêm dòng hàng — set back-reference (FK do con sở hữu, {@code mappedBy}). */
+    public void addItem(OrderItem item) {
+        item.setOrder(this);
+        this.items.add(item);
+    }
+
     public void setItems(List<OrderItem> items) {
-        this.items = new ArrayList<>(items);
+        this.items = new ArrayList<>();
+        items.forEach(this::addItem);
     }
 }

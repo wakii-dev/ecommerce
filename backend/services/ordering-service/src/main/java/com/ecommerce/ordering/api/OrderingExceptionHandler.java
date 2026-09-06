@@ -2,6 +2,8 @@ package com.ecommerce.ordering.api;
 
 import com.ecommerce.common.web.ApiError;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,13 @@ import java.util.Map;
  * 409 insufficient[] (CreateOrderConflictError) · 422 coupon/item · 409 state ·
  * 502 catalog/inventory/payment · 503 invoice (D18 degraded rõ ràng).
  * GlobalExceptionHandler (common-lib) lo phần còn lại (400 validation, 404...).
+ *
+ * <p>{@code @Order(HIGHEST_PRECEDENCE)}: advices unordered so theo thứ tự đăng
+ * ký bean — GlobalExceptionHandler (có catch-all Exception) đứng trước theo tên
+ * bean thì NHẬN MỌI exception của advice này (409/422/502/503 chết → 500 mù).
+ * Advice đặc thù service phải có quyền ưu tiên trước catch-all chung.</p>
  */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 public class OrderingExceptionHandler {
 
@@ -63,15 +71,16 @@ public class OrderingExceptionHandler {
     }
 
     private Map<String, Object> baseBody(int status, String title, String detail) {
-        // Map thay vì ApiError record — cần field thêm `insufficient` ở 1 path
-        return Map.of(
-            "type", "about:blank",
-            "title", title,
-            "status", status,
-            "detail", detail,
-            "timestamp", java.time.Instant.now().toString(),
-            "requestId", MDC.get("requestId") == null ? "" : MDC.get("requestId")
-        );
+        // Map + LinkedHashMap (KHÔNG Map.of — immutable → put("insufficient") ở
+        // 409 stock ném UnsupportedOperationException → handler tự chết → 500)
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("type", "about:blank");
+        body.put("title", title);
+        body.put("status", status);
+        body.put("detail", detail);
+        body.put("timestamp", java.time.Instant.now().toString());
+        body.put("requestId", MDC.get("requestId") == null ? "" : MDC.get("requestId"));
+        return body;
     }
 
     private ResponseEntity<Map<String, Object>> problem(Map<String, Object> body) {

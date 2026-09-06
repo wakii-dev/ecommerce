@@ -11,7 +11,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.net.URI;
 import java.util.UUID;
 
 /**
@@ -64,8 +63,11 @@ public class HttpCatalogPricingClient implements PricingAuthority {
     public PricedItem price(UUID productId, UUID variantId) {
         JsonNode product;
         try {
+            // STRING overload (KHÔNG URI.create): RestClient chỉ áp baseUrl cho
+            // uri-template — java.net.URI được dùng AS-IS → URI tương đối +
+            // baseUrl → "URI is not absolute" (bug IT lần đầu chạy 6/9).
             product = rest.get()
-                .uri(URI.create(byIdPath + productId))
+                .uri(byIdPath + productId)
                 .retrieve()
                 .body(JsonNode.class);
         } catch (HttpClientErrorException.NotFound e) {

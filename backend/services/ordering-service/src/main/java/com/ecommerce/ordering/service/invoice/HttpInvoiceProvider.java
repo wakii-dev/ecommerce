@@ -126,12 +126,16 @@ public class HttpInvoiceProvider implements InvoiceProvider {
         });
     }
 
-    /** Increment guarded + self-seed (race 2 đơn đầu tiên: INSERT ON CONFLICT → retry). */
+    /** Increment guarded + self-seed (race 2 đơn đầu tiên: INSERT seed → retry).
+     * Đọc số qua scalar projection — entity đọc sau bulk-UPDATE dính L1-cache
+     * stale (cấp số 0 — chi tiết ở InvoiceSequenceRepository.readLastNumber). */
     private long nextNumber(String mau, String ky, int year) {
         for (int attempt = 0; attempt < 3; attempt++) {
             if (sequences.increment(mau, ky, year) == 1) {
-                InvoiceSequence seq = sequences.findForRead(mau, ky, year);
-                return seq.getLastNumber();
+                Long last = sequences.readLastNumber(mau, ky, year);
+                if (last != null) {
+                    return last;
+                }
             }
             // row chưa có — seed (năm mới / lần chạy đầu) rồi thử lại
             sequences.save(new InvoiceSequence(mau, ky, year));

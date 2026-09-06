@@ -18,6 +18,9 @@ const RemotePage = lazy(() => import('./pages/RemotePage'));
 const AccountLoginPage = lazy(() => import('account/LoginPage'));
 const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
 const AccountPage = lazy(() => import('account/AccountPage'));
+// SF-9 (FI-319) — my-orders slice mfe-account (pages/orders/*) — LAZY như các page trên.
+const AccountOrdersPage = lazy(() => import('account/OrdersPage'));
+const AccountOrderDetailPage = lazy(() => import('account/OrderDetailPage'));
 
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
@@ -113,6 +116,16 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <AccountPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/account/orders' || path.startsWith('/account/orders/')) {
+    // SF-9 — my-orders: list + detail (id là segment cuối; segment lạ → detail tự 404)
+    const orderId = path.split('/')[3];
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          {orderId ? <AccountOrderDetailPage id={orderId} /> : <AccountOrdersPage />}
         </Suspense>
       </ErrorBoundary>
     );

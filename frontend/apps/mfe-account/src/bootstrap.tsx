@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { authStore, configureAuth } from '@ecommerce/auth';
 import AuthWidget from './AuthWidget';
+import OrdersNavLink from './pages/orders/OrdersNavLink';
 
 export type SlotKey = 'left' | 'center' | 'right';
 
@@ -36,6 +37,8 @@ export function initAccountShell(ctx: ShellContext): void {
     loginPath: '/login'
   });
   ctx.HeaderSlots.register('right', 'account-auth', AuthWidget);
+  // SF-9 (FI-319): link "Đơn hàng" — slot registry additive (widget từ pages/orders slice)
+  ctx.HeaderSlots.register('right', 'orders-nav', OrdersNavLink);
   ctx.onRegistryChange?.();
   void authStore.refresh().then((ok) => readyResolve?.(ok));
 }

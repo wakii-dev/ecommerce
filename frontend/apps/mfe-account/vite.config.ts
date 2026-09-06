@@ -11,7 +11,11 @@ const mfeConfig = defineMfeConfig({
     './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
     './RegisterPage': './src/pages/RegisterPage.tsx',
-    './AccountPage': './src/pages/AccountPage.tsx'
+    './AccountPage': './src/pages/AccountPage.tsx',
+    // SF-9 (FI-319) — my-orders slice (pages/orders/*)
+    './OrdersPage': './src/pages/orders/OrdersPage.tsx',
+    './OrderDetailPage': './src/pages/orders/OrderDetailPage.tsx',
+    './OrdersNavLink': './src/pages/orders/OrdersNavLink.tsx'
   }
 });
 

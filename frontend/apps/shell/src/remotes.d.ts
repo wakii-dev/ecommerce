@@ -49,3 +49,19 @@ declare module 'account/AccountPage' {
   const AccountPage: import('react').ComponentType;
   export default AccountPage;
 }
+
+// ── mfe-account my-orders (SF-9, FI-319) — pages/orders/* slice — additive ──
+declare module 'account/OrdersPage' {
+  const OrdersPage: import('react').ComponentType;
+  export default OrdersPage;
+}
+
+declare module 'account/OrderDetailPage' {
+  const OrderDetailPage: import('react').ComponentType<{ id: string }>;
+  export default OrderDetailPage;
+}
+
+declare module 'account/OrdersNavLink' {
+  const OrdersNavLink: import('react').ComponentType;
+  export default OrdersNavLink;
+}

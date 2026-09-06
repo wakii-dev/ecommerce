@@ -74,7 +74,7 @@ linear: FI-319
 Design: none
 What: Checkout saga chạy thật (backend) — POST /orders: re-price catalog → reserve coupon nguyên tử → reserve inventory all-or-nothing → Stripe intent → trả clientSecret; webhook → PAID → CONFIRMED → order.confirmed fat payload; 4 compensation edges + late-payment refund + TTL cancel, fail-injection tests xanh; my-orders APIs + trang my-orders trong mfe-account. demo (API level): đặt đơn → webhook succeeded → đơn CONFIRMED; card declined → FAILED + stock được release.
 Depends on: SF-5
-Tasks: ordering-service-scaffold-outbox-wiring / flyway-orders-items-coupons-sagastate-invoiceseq / coupon-crud-validate-apis / coupon-usage-reserve-finalize-release / checkout-saga-orchestrator-reprice-reserve-intent / payment-inventory-event-consumers-late-refund / compensation-edges-fail-injection-tests / order-state-machine-guards / ttl-scheduler-cancel / my-orders-apis / invoice-pdfbox-spi-vn-template-vat / invoice-apis-download-numbering / my-orders-ui-invoice-download / ordering-it-tests
+Tasks: ordering-service-scaffold-outbox-wiring / flyway-orders-items-coupons-sagastate-invoiceseq / coupon-crud-validate-apis / coupon-usage-reserve-finalize-release / checkout-saga-orchestrator-reprice-reserve-intent / payment-inventory-event-consumers-late-refund / compensation-edges-fail-injection-tests / order-state-machine-guards / ttl-scheduler-cancel / my-orders-apis / invoice-service-python-fastapi-reportlab / http-invoice-provider-numbering-endpoints / my-orders-ui-invoice-download / ordering-it-tests
 
 ## SF-10 convergence + ship
 Tier: 4

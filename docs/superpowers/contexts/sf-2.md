@@ -6,7 +6,7 @@
 
 ## Spec slice (chỉ phần SF-2 chịu trách nhiệm)
 
-1. **7 OpenAPI 3.1 specs** trong `contracts/openapi/`: `identity.yaml`, `catalog.yaml`, `cart.yaml`, `ordering.yaml`, `payment.yaml`, `inventory.yaml`, `notification.yaml`. Pins BẮT BUỘC (spec §6.1 — checklist review từng item):
+1. **8 OpenAPI 3.1 specs** trong `contracts/openapi/`: `identity.yaml`, `catalog.yaml`, `cart.yaml`, `ordering.yaml`, `payment.yaml`, `inventory.yaml`, `notification.yaml`, **`invoice.yaml` (nội bộ cho Python renderer D18 — `POST /api/invoice/generate`, pydantic-side mirror ở `services/invoice-service/`; đánh dấu internal-only, không route qua gateway)**. Pins BẮT BUỘC (spec §6.1 — checklist review từng item):
    - `variant_id` xuất hiện trong: cart item, order line, reservation request/items.
    - `ordering.yaml`: order status enum `PENDING|PAID|CONFIRMED|SHIPPED|DELIVERED|CANCELLED|FAILED` + transition table §3.6; `POST /api/ordering/orders` (header `Idempotency-Key`) → `{order, clientSecret}`; `POST /api/ordering/orders/validate-coupon`; admin stats: `GET /api/ordering/admin/stats/revenue-by-day`, `/admin/stats/orders-summary`, `/admin/stats/top-products`; admin orders list/detail + `POST .../{id}/ship|deliver|cancel`; `GET /api/ordering/me/orders`, `/{id}`, `/{id}/cancel`.
    - `payment.yaml` endpoints REST (ordering sẽ gọi): `POST /api/payment/intents`, `POST /api/payment/webhook`, `POST /api/payment/refunds`, `POST /api/payment/void`.

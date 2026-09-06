@@ -33,6 +33,7 @@ flowchart LR
         PAY["payment<br/>:8086"]
         NOTI["notification<br/>:8087"]
         LOG["log<br/>:8088"]
+        INV["🐍 invoice<br/>:8090 PDF"]
     end
     subgraph DS["Polyglot persistence"]
         PG[("PostgreSQL<br/>5 DB / service")]
@@ -73,6 +74,7 @@ flowchart LR
 | `payment` | 8086 | Stripe test (intent/webhook/refund), `PaymentProviderAdapter` SPI | `db_payment` |
 | `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | — |
 | `log` | 8088 | Fan-in **mọi domain event** → Mongo `event_log` (audit trail) | MongoDB |
+| `invoice` 🐍 | 8090 | **Python (FastAPI + ReportLab)** — stateless PDF renderer hóa đơn VN (internal-only) | — |
 
 ## 🖥️ Micro frontends
 
@@ -98,7 +100,8 @@ flowchart LR
 | Checkout + Stripe test + email | Reviews moderation + badge "Mua đã xác nhận" | Event audit trail trên Mongo |
 | **PDP chuẩn SEO**: SSR + JSON-LD Product + OG + sitemap | SEO override per-product (seoTitle/description/slug) | **Hybrid rendering**: Next.js SSR (SEO) + Vite MF (app) |
 | **Đa ngôn ngữ vi/en** — kể cả dữ liệu sản phẩm (`/en/*` + hreflang) | Form sản phẩm tabs vi/en, fallback tự động | **i18n data**: JSONB {vi,en} trong Postgres, ES index per-locale |
-| My orders / wishlist / reviews | Orders: ship/deliver/cancel + low-stock | RBAC server-side 2 lớp (gateway + service) |
+| My orders / wishlist / reviews · **tải hóa đơn PDF** | Orders: ship/deliver/cancel + low-stock + **tải hóa đơn** | **Polyglot**: Python (FastAPI/ReportLab) PDF service — stateless renderer tách khỏi business |
+| — | **Email cảm ơn** kèm hóa đơn PDF khi mua hàng | RBAC server-side 2 lớp (gateway + service) |
 
 ---
 

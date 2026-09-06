@@ -18,7 +18,11 @@
 4. **Compensation edges §3.3 (đủ 4, mỗi edge 1 IT fail-injection)**: reserve fail; payment declined; TTL hết; admin cancel sau PAID (→ `POST /api/payment/refunds` → CANCELLED).
 5. **State machine guards §3.6**: transitions hợp lệ mới cho qua, else 409; admin endpoints: `GET /api/ordering/admin/orders` (filter status/date/paginate), `GET /{id}` (detail + items), `POST /{id}/ship|deliver|cancel` (role ADMIN); **admin stats**: `GET /admin/stats/revenue-by-day?days=30`, `GET /admin/stats/orders-summary`, `GET /admin/stats/top-products?days=30` (SQL aggregate).
 6. **My orders**: `GET /api/ordering/me/orders` (paginate, sort mới nhất), `GET /{id}` (chủ đơn only), `POST /{id}/cancel` (PENDING → CANCELLED + release reservation qua event + release coupon).
-7. **Hóa đơn PDF (D18)**: `InvoiceProvider` SPI trong ordering-service (`generate(order) → bytes`): default **PdfBoxInvoiceProvider** — layout hóa đơn VN: header công ty bán (env `INVOICE_SELLER_*`), mẫu số/Ký hiệu (env), **số HĐ tuần tự** theo (mẫu, ký hiệu, năm) — bảng `invoice_sequences`; thông tin người mua (address jsonb); bảng hàng (tên, số lượng, đơn giá, thành tiền — snapshot từ order_items); dòng **VAT breakdown**: "Đã bao gồm VAT x%: = total × rate/(100+rate)" (env `INVOICE_VAT_RATE=10`); tổng thanh toán; dòng "Bản demo — không phải hóa đơn chữ ký số". Endpoints: `GET /api/ordering/me/orders/{id}/invoice` (chủ đơn, `application/pdf`), `GET /api/ordering/admin/orders/{id}/invoice` (ADMIN) — cả hai qua Idempotent generation (cùng đơn → cùng số HĐ).
+7. **Hóa đơn PDF (D18 — Python microservice)**:
+   - **`services/invoice-service/`** (🐍 **Python 3.12 + FastAPI + ReportLab**, port 8090, **stateless renderer — KHÔNG giữ business data**): `POST /api/invoice/generate` (theo `contracts/openapi/invoice.yaml` — internal-only, KHÔNG route qua gateway) nhận full payload (pydantic model: seller, buyer, items[], totals, vat_breakdown, số HĐ/mẫu/Ký hiệu/ngày) → trả PDF bytes (layout hóa đơn VN + dòng "Bản demo — không phải hóa đơn chữ ký số"). Scaffold: pyproject + uvicorn + **pytest** + Dockerfile `python:3.12-slim`. Makefile target `dev svc=invoice-service` = uvicorn; `.env.example` append: `INVOICE_SERVICE_URL=http://localhost:8090`, `INVOICE_SELLER_*`, `INVOICE_MAU_SO`, `INVOICE_KY_HIEU`, `INVOICE_VAT_RATE=10`.
+   - **Java side (ordering-service)**: `InvoiceProvider` SPI (`generate(order) → bytes`) — default **`HttpInvoiceProvider`**: gán **số HĐ tuần tự** theo (mẫu, ký hiệu, năm) — bảng `invoice_sequences` (business truth thuộc Java), build payload (buyer từ address jsonb, items snapshot từ order_items, **VAT breakdown** `total × rate/(100+rate)`), gọi invoice-service, cache kết quả theo order (cùng đơn → cùng số HĐ). Service down → **503 rõ ràng** (degraded như Stripe, KHÔNG crash).
+   - **Endpoints**: `GET /api/ordering/me/orders/{id}/invoice` (chủ đơn, `application/pdf`), `GET /api/ordering/admin/orders/{id}/invoice` (ADMIN).
+8. **my-orders UI** (mfe-account, file-slice CHỈ `pages/orders/*`): list (status badge màu theo trạng thái, ngày, total VND), detail (items, địa chỉ, timeline trạng thái, nút Hủy khi PENDING với confirm dialog, **nút "Tải hóa đơn PDF" khi CONFIRMED+**), empty state. Shell manifest append `/account/orders`.
 8. **my-orders UI** (mfe-account, file-slice CHỈ `pages/orders/*`): list (status badge màu theo trạng thái, ngày, total VND), detail (items, địa chỉ, timeline trạng thái, nút Hủy khi PENDING với confirm dialog, **nút "Tải hóa đơn PDF" khi CONFIRMED+**), empty state. Shell manifest append `/account/orders`.
 9. **IT (Testcontainers; saga IT chạy với inventory + payment services THẬT trong compose test, catalog mock WireMock)**: happy path PENDING→PAID→CONFIRMED + `order.confirmed` validate đúng JSON Schema §6.1; declined (card 4000...0002 → webhook failed) → FAILED + reservation RELEASED + coupon released; TTL → CANCELLED + released; late webhook → refund called; concurrent coupon limit (2 thread, limit 1 → đúng 1 thắng); idempotency replay; **invoice: 2 đơn liên tiếp → số HĐ tăng dần, cùng đơn tải 2 lần → cùng số HĐ, PDF có đủ trường + VAT breakdown**.
 10. Compose append block + Makefile target `ordering-service`; gateway append route block.
@@ -26,9 +30,10 @@
 ## Touch map (files SF-9 tạo/sở hữu)
 
 ```
-backend/services/ordering-service/**
+services/invoice-service/** (🐍 Python — FastAPI + ReportLab + pytest + Dockerfile)
+backend/services/ordering-service/** (gồm InvoiceProvider SPI + HttpInvoiceProvider + invoice_sequences)
 frontend/apps/mfe-account/pages/orders/** (+ manifest entry /account/orders)
-docker-compose.yml (append) · Makefile (append) · backend/gateway/routes/ordering.yml (append)
+docker-compose.yml (append) · Makefile (append) · backend/gateway/routes/ordering.yml (append — KHÔNG route invoice-service)
 ```
 READ-ONLY: `contracts/**`, payment/inventory/catalog services (gọi REST — KHÔNG sửa code), mfe-checkout (wiring là SF-10), `pages/*` khác của mfe-account.
 
@@ -46,7 +51,7 @@ READ-ONLY: `contracts/**`, payment/inventory/catalog services (gọi REST — KH
 - Late `payment.succeeded` sau terminal → refund được gọi (kiểm payment API/log).
 - Coupon limit 1, 2 concurrent orders → đúng 1 giữ coupon.
 - `GET /me/orders` + detail + cancel hoạt động; UI my-orders hiển thị đơn thật; đơn CONFIRMED có nút **Tải hóa đơn PDF** → mở được file PDF đúng đơn.
-- **D18**: số HĐ tuần tự tăng dần giữa các đơn; tải lại cùng đơn → cùng số HĐ; VAT breakdown đúng công thức; admin tải được hóa đơn qua endpoint admin.
+- **D18**: invoice-service standalone chạy được (`pytest` xanh; `curl POST /generate` → PDF); số HĐ tuần tự tăng dần giữa các đơn; tải lại cùng đơn → cùng số HĐ; VAT breakdown đúng công thức; admin tải được hóa đơn qua endpoint admin; **dừng invoice-service → endpoint trả 503 rõ ràng, không crash ordering**.
 - Admin stats endpoints trả aggregate đúng với dữ liệu test.
 
 ## Boundary (KHÔNG làm)

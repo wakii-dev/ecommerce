@@ -12,7 +12,7 @@ import java.util.List;
  */
 public record CreateReservationRequest(
     @NotBlank @jakarta.validation.constraints.Size(max = 64) String orderId,
-    @NotEmpty @Valid List<ReservationItemDto> items,
+    @NotEmpty @Valid @jakarta.validation.constraints.Size(max = 100) List<ReservationItemDto> items,
     @jakarta.validation.constraints.Min(1) Integer ttlMinutes
 ) {
 }

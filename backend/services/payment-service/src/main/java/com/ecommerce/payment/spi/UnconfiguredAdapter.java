@@ -16,12 +16,12 @@ public class UnconfiguredAdapter implements PaymentProviderAdapter {
     }
 
     @Override
-    public AdapterIntent voidIntent(String providerIntentId) {
+    public AdapterIntent voidIntent(String providerIntentId, String idempotencyKey) {
         throw new PaymentUnconfiguredException(DEFAULT_MESSAGE);
     }
 
     @Override
-    public AdapterRefund refund(String providerIntentId, Long amountVnd) {
+    public AdapterRefund refund(String providerIntentId, Long amountVnd, String idempotencyKey) {
         throw new PaymentUnconfiguredException(DEFAULT_MESSAGE);
     }
 

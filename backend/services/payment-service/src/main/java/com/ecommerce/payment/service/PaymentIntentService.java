@@ -129,7 +129,7 @@ public class PaymentIntentService {
      * Stripe (refund vượt amount → ProviderConflict → 409 payment_conflict).
      */
     public com.ecommerce.payment.api.dto.RefundCreatedResponse refund(
-        com.ecommerce.payment.api.dto.RefundRequest request) {
+        com.ecommerce.payment.api.dto.RefundRequest request, String idempotencyKey) {
         PaymentIntent intent = intents.findByStripeIntentId(request.paymentIntentId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "paymentIntentId không tồn tại"));
@@ -139,7 +139,7 @@ public class PaymentIntentService {
         }
         boolean full = request.amount() == null || request.amount() == intent.getAmountVnd();
         com.ecommerce.payment.spi.AdapterRefund refund = adapter.refund(
-            intent.getStripeIntentId(), request.amount());
+            intent.getStripeIntentId(), request.amount(), idempotencyKey);
         if (full) {
             intent.markStatus(com.ecommerce.payment.domain.PaymentIntentStatus.REFUNDED);
             intents.save(intent);
@@ -153,7 +153,7 @@ public class PaymentIntentService {
      * SUCCEEDED → refund path. Response status = mirror (CANCELED) — DB = VOIDED.
      */
     public com.ecommerce.payment.api.dto.VoidResultResponse voidIntent(
-        com.ecommerce.payment.api.dto.VoidRequest request) {
+        com.ecommerce.payment.api.dto.VoidRequest request, String idempotencyKey) {
         PaymentIntent intent = intents.findByStripeIntentId(request.paymentIntentId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "paymentIntentId không tồn tại"));
@@ -162,7 +162,8 @@ public class PaymentIntentService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Intent đã capture/void — không void được nữa (status " + intent.getStatus() + ")");
         }
-        com.ecommerce.payment.spi.AdapterIntent canceled = adapter.voidIntent(intent.getStripeIntentId());
+        com.ecommerce.payment.spi.AdapterIntent canceled = adapter.voidIntent(
+            intent.getStripeIntentId(), idempotencyKey);
         intent.markStatus(com.ecommerce.payment.domain.PaymentIntentStatus.VOIDED);
         intent.markStripeStatus(canceled.status());
         intents.save(intent);

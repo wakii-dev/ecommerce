@@ -56,10 +56,10 @@ public class StripeAdapter implements PaymentProviderAdapter {
     }
 
     @Override
-    public AdapterIntent voidIntent(String providerIntentId) {
+    public AdapterIntent voidIntent(String providerIntentId, String idempotencyKey) {
         try {
             PaymentIntent intent = PaymentIntent.retrieve(providerIntentId, requestOptions(null));
-            intent = intent.cancel(PaymentIntentCancelParams.builder().build(), requestOptions(null));
+            intent = intent.cancel(PaymentIntentCancelParams.builder().build(), requestOptions(idempotencyKey));
             return new AdapterIntent(intent.getId(), intent.getClientSecret(), mirrorStatus(intent.getStatus()));
         } catch (StripeException e) {
             throw wrap("void intent " + providerIntentId, e);
@@ -67,14 +67,14 @@ public class StripeAdapter implements PaymentProviderAdapter {
     }
 
     @Override
-    public AdapterRefund refund(String providerIntentId, Long amountVnd) {
+    public AdapterRefund refund(String providerIntentId, Long amountVnd, String idempotencyKey) {
         RefundCreateParams.Builder builder = RefundCreateParams.builder()
             .setPaymentIntent(providerIntentId);
         if (amountVnd != null) {
             builder.setAmount(amountVnd);
         }
         try {
-            Refund refund = Refund.create(builder.build(), requestOptions(null));
+            Refund refund = Refund.create(builder.build(), requestOptions(idempotencyKey));
             return new AdapterRefund(refund.getId(), mirrorStatus(refund.getStatus()), refund.getAmount());
         } catch (StripeException e) {
             throw wrap("refund intent " + providerIntentId, e);

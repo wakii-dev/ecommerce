@@ -101,7 +101,7 @@ class StripeAdapterTest {
         wiremock.stubFor(post(urlEqualTo("/v1/payment_intents/pi_test_123/cancel"))
             .willReturn(okJson(PI_CANCELED_JSON)));
 
-        AdapterIntent result = adapter.voidIntent("pi_test_123");
+        AdapterIntent result = adapter.voidIntent("pi_test_123", null);
 
         assertThat(result.providerIntentId()).isEqualTo("pi_test_123");
         assertThat(result.status()).as("mirror UPPERCASE (enum contract)").isEqualTo("CANCELED");
@@ -111,7 +111,7 @@ class StripeAdapterTest {
     void refundPostsAmountAndReturnsAdapterRefund() {
         wiremock.stubFor(post(urlEqualTo("/v1/refunds")).willReturn(created().withBody(REFUND_JSON)));
 
-        AdapterRefund result = adapter.refund("pi_test_123", 100000L);
+        AdapterRefund result = adapter.refund("pi_test_123", 100000L, null);
 
         assertThat(result.refundId()).isEqualTo("re_test_1");
         assertThat(result.status()).as("mirror UPPERCASE (contract RefundStatus enum)").isEqualTo("SUCCEEDED");
@@ -119,6 +119,30 @@ class StripeAdapterTest {
         wiremock.verify(postRequestedFor(urlEqualTo("/v1/refunds"))
             .withRequestBody(containing("payment_intent=pi_test_123"))
             .withRequestBody(containing("amount=100000")));
+    }
+
+    @Test
+    void refundPassesIdempotencyKeyWhenProvided() {
+        wiremock.stubFor(post(urlEqualTo("/v1/refunds")).willReturn(created().withBody(REFUND_JSON)));
+
+        adapter.refund("pi_test_123", 100000L, "refund-key-1");
+
+        wiremock.verify(postRequestedFor(urlEqualTo("/v1/refunds"))
+            .withHeader("Idempotency-Key", equalTo("refund-key-1")));
+    }
+
+    @Test
+    void voidIntentPassesIdempotencyKeyWhenProvided() {
+        wiremock.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
+                urlEqualTo("/v1/payment_intents/pi_test_123"))
+            .willReturn(okJson(PI_JSON)));
+        wiremock.stubFor(post(urlEqualTo("/v1/payment_intents/pi_test_123/cancel"))
+            .willReturn(okJson(PI_CANCELED_JSON)));
+
+        adapter.voidIntent("pi_test_123", "void-key-1");
+
+        wiremock.verify(postRequestedFor(urlEqualTo("/v1/payment_intents/pi_test_123/cancel"))
+            .withHeader("Idempotency-Key", equalTo("void-key-1")));
     }
 
     @Test

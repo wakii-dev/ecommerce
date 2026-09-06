@@ -267,6 +267,22 @@ class PaymentWebhookTest extends AbstractPaymentIntegrationTest {
     }
 
     @Test
+    void succeededAfterRefundedDoesNotResurrectIntent() throws Exception {
+        String pi = "pi_web_" + SEQ.incrementAndGet();
+        seedIntent(pi, "REFUNDED", 250000);
+        long before = outboxCount("payment.succeeded");
+
+        ResponseEntity<Map> response = postWebhook("payment_intent.succeeded", pi, 250000);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(jdbc.queryForObject(
+            "SELECT status FROM payment_intents WHERE stripe_intent_id = ?", String.class, pi))
+            .as("succeeded tới sau REFUNDED — không resurrect (security-audit L-1)")
+            .isEqualTo("REFUNDED");
+        assertThat(outboxCount("payment.succeeded")).isEqualTo(before);
+    }
+
+    @Test
     void unknownIntentIsAckedWithoutOutbox() throws Exception {        long before = outboxCount("payment.succeeded");
 
         ResponseEntity<Map> response = postWebhook("payment_intent.succeeded", "pi_khong_ton_tai", 250000);

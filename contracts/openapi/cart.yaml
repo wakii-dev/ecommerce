@@ -246,7 +246,7 @@ components:
     CartItem:
       type: object
       description: 1 dong hang — gia/ten la snapshot enrich tu catalog tai thoi diem GET.
-      required: [id, productId, variantId, slug, name, qty, unitPrice, lineTotal, unavailable]
+      required: [id, productId, slug, name, qty, unitPrice, lineTotal, unavailable]
       properties:
         id:
           type: string
@@ -295,12 +295,13 @@ components:
           description: Tong cac lineTotal (VND) — tinh tren item khong unavailable.
     AddItemRequest:
       type: object
-      required: [productId, variantId, qty]
+      required: [productId, qty]
       properties:
         productId:
           type: string
         variantId:
           type: string
+          description: 'Bat buoc khi product co variant; OMIT khi product khong-variant (amendment A1 — GAP#5 FI-310). Line identity = productId + variantId.'
         qty:
           type: integer
           minimum: 1

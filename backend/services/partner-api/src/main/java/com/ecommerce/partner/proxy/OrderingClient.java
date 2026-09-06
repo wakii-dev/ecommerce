@@ -31,8 +31,10 @@ public class OrderingClient {
 
     private final RestClient rest;
     private final IdentityClient identity;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    public OrderingClient(RestClient.Builder builder, PartnerProperties props, IdentityClient identity) {
+    public OrderingClient(RestClient.Builder builder, PartnerProperties props, IdentityClient identity,
+                          com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) props.ordering().timeoutMs());
         factory.setReadTimeout((int) props.ordering().timeoutMs());
@@ -40,22 +42,36 @@ public class OrderingClient {
             .baseUrl(props.ordering().baseUrl())
             .build();
         this.identity = identity;
+        this.objectMapper = objectMapper;
     }
 
     /**
      * POST /orders — trả JsonNode CreateOrderResponse {order:{...}, clientSecret}.
      * 401 (token hết hạn) được retry ngầm 1 lần; 409/422/400/5xx ném
      * HttpClientErrorException cho caller map.
+     *
+     * <p>Body gửi qua BYTE[] + header Content-Type KHÔNG charset: RestClient
+     * + Jackson tự thêm {@code ;charset=UTF-8} → ordering trả 415
+     * HttpMediaTypeNotSupportedException (bug 07/09 — ordering chỉ chấp nhận
+     * "application/json" đúng nguyên văn).</p>
      */
     public JsonNode createOrder(String idempotencyKey, JsonNode createOrderRequest) {
-        return callWithTokenRetry(() -> rest.post()
-            .uri("/orders")
-            .header(HttpHeaders.AUTHORIZATION, bearer())
-            .header("Idempotency-Key", idempotencyKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(createOrderRequest)
-            .retrieve()
-            .body(JsonNode.class));
+        return callWithTokenRetry(() -> {
+            byte[] payload;
+            try {
+                payload = objectMapper.writeValueAsBytes(createOrderRequest);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new IllegalStateException("Không serialize được order body", e);
+            }
+            return rest.post()
+                .uri("/orders")
+                .header(HttpHeaders.AUTHORIZATION, bearer())
+                .header("Idempotency-Key", idempotencyKey)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body(payload)
+                .retrieve()
+                .body(JsonNode.class);
+        });
     }
 
     /** GET /me/orders/{id} — null khi 404. */

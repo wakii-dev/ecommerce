@@ -1,0 +1,566 @@
+openapi: 3.1.0
+info:
+  title: Affiliate API
+  version: 1.0.0
+  description: |
+    Affiliate program (D20): user đăng ký làm affiliate → admin duyệt → nhận ref code.
+    Click capture công khai qua `POST /api/affiliate/track/click`; hoa hồng tính theo tỷ lệ
+    (%) trên đơn thuộc attribution của affiliate, ghi sổ ledger (PENDING → CONFIRMED khi
+    qua cửa hoàn tiền).
+
+    Kèm loyalty nội bộ (D22): tài khoản điểm + ledger điểm thuộc affiliate-service (SF-14);
+    ordering đổi điểm qua `POST /api/affiliate/internal/loyalty/redeem` (internal-only).
+servers:
+  - url: /
+    description: API gateway — prefix /api/affiliate.
+security:
+  - bearerAuth: []
+tags:
+  - name: affiliate
+    description: Đăng ký / profile / ledger của affiliate + click capture công khai.
+  - name: admin
+    description: Duyệt affiliate, đặt rate, stats.
+  - name: internal
+    description: Service-to-service (loyalty redeem) — không route qua gateway công khai.
+paths:
+  /api/affiliate/register:
+    post:
+      tags:
+        - affiliate
+      operationId: registerAffiliate
+      summary: Đăng ký làm affiliate (JWT customer)
+      description: Gửi hồ sơ → 202 chờ admin duyệt (không auto-approve).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AffiliateRegisterRequest'
+      responses:
+        '202':
+          description: Đã nhận hồ sơ — chờ duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliatePending'
+        '400':
+          description: Payload không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: User đã có hồ sơ affiliate
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/me:
+    get:
+      tags:
+        - affiliate
+      operationId: getMyAffiliateProfile
+      summary: Hồ sơ affiliate của user hiện tại
+      description: Trả hồ sơ kèm ref code (null khi chưa APPROVED), rate và stats tổng.
+      responses:
+        '200':
+          description: Hồ sơ + ref code + stats tổng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Chưa đăng ký affiliate
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/me/ledger:
+    get:
+      tags:
+        - affiliate
+      operationId: listMyLedger
+      summary: Sổ hoa hồng của affiliate hiện tại
+      description: Mỗi entry là một đơn được tính hoa hồng; PENDING → CONFIRMED khi qua cửa hoàn tiền.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: Page ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerPage'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/track/click:
+    post:
+      tags:
+        - affiliate
+      operationId: trackClick
+      summary: Capture click từ ref code (public — storefront gọi)
+      description: |
+        Public: storefront capture khi người dùng vào qua link ref. Ghi click attribution
+        (cookie window do service quản); response 204 rỗng — không lộ trạng thái code.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackClickRequest'
+      responses:
+        '204':
+          description: Đã ghi nhận (kể cả code không tồn tại — im lặng tránh lộ)
+        '400':
+          description: Body thiếu refCode
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates:
+    get:
+      tags:
+        - admin
+      operationId: listAffiliates
+      summary: Danh sách hồ sơ affiliate (admin)
+      description: Lọc theo trạng thái duyệt; phân trang 1-based.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AffiliateStatus'
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: Page hồ sơ affiliate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfilePage'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates/{id}/approve:
+    post:
+      tags:
+        - admin
+      operationId: approveAffiliate
+      summary: Duyệt affiliate (sinh ref code + rate mặc định)
+      description: Chỉ PENDING mới approve được; APPROVED sinh ref code và rate mặc định hệ thống.
+      parameters:
+        - $ref: '#/components/parameters/AffiliateId'
+      responses:
+        '200':
+          description: Hồ sơ đã duyệt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Hồ sơ không ở trạng thái PENDING
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates/{id}/reject:
+    post:
+      tags:
+        - admin
+      operationId: rejectAffiliate
+      summary: Từ chối hồ sơ affiliate
+      description: Chỉ PENDING mới reject được; user có thể đăng ký lại sau.
+      parameters:
+        - $ref: '#/components/parameters/AffiliateId'
+      responses:
+        '200':
+          description: Hồ sơ bị từ chối
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Hồ sơ không ở trạng thái PENDING
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates/{id}/rate:
+    put:
+      tags:
+        - admin
+      operationId: updateAffiliateRate
+      summary: Đặt tỷ lệ hoa hồng (%) cho affiliate
+      description: Áp dụng cho các đơn tính hoa hồng sau thời điểm đổi; ledger cũ giữ nguyên rate cũ.
+      parameters:
+        - $ref: '#/components/parameters/AffiliateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRateRequest'
+      responses:
+        '200':
+          description: Hồ sơ với rate mới
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '400':
+          description: Rate ngoài khoảng cho phép
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/stats:
+    get:
+      tags:
+        - admin
+      operationId: getAffiliateStats
+      summary: Stats affiliate tổng hợp theo khoảng thời gian
+      description: Bỏ from/to → toàn bộ; dùng cho dashboard admin.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Bắt đầu khoảng ( inclusive, ngày local)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Kết thúc khoảng (inclusive, ngày local)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Stats tổng hợp
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateAdminStats'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/internal/loyalty/redeem:
+    post:
+      tags:
+        - internal
+      operationId: redeemLoyaltyPoints
+      summary: Đổi điểm loyalty lấy giảm giá (internal D22)
+      description: |
+        x-internal-only: ordering-service gọi khi tạo đơn có `usePoints`. Trừ điểm, trả số
+        tiền giảm tương ứng (quy đổi do service lo) + số điểm còn lại. Accounts/ledger điểm
+        thuộc affiliate-service (SF-14). Fail (điểm không đủ) → 409 problem+json.
+      x-internal-only: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedeemPointsRequest'
+      responses:
+        '200':
+          description: Đã trừ điểm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeemResult'
+        '400':
+          description: Payload không hợp lệ (points ≤ 0)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Điểm không đủ hoặc order đã redeem
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT từ identity (gateway verify SF-3); admin endpoints yêu cầu role admin.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Số trang (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    AffiliateId:
+      name: id
+      in: path
+      required: true
+      description: Id hồ sơ affiliate
+      schema:
+        type: string
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type: { type: string, default: "about:blank" }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        timestamp: { type: string, format: date-time }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    AffiliateRegisterRequest:
+      type: object
+      properties:
+        portfolioUrl:
+          type: string
+          format: uri
+          description: Link kênh giới thiệu (blog/social) — để admin review
+        note:
+          type: string
+          maxLength: 1000
+    AffiliateStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - REJECTED
+    AffiliatePending:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/AffiliateStatus'
+    AffiliateStats:
+      type: object
+      required:
+        - clicks
+        - conversions
+        - earnings
+      properties:
+        clicks:
+          type: integer
+        conversions:
+          type: integer
+        earnings:
+          type: integer
+          description: Tổng hoa hồng VND
+    AffiliateProfile:
+      type: object
+      required:
+        - id
+        - code
+        - status
+        - rate
+        - stats
+      properties:
+        id:
+          type: string
+        code:
+          type:
+            - string
+            - 'null'
+          description: Ref code — null cho đến khi APPROVED
+        status:
+          $ref: '#/components/schemas/AffiliateStatus'
+        rate:
+          type: number
+          description: Tỷ lệ hoa hồng (%)
+        stats:
+          $ref: '#/components/schemas/AffiliateStats'
+    AffiliateProfilePage:
+      type: object
+      description: Page chuẩn {items, page, size, total}
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AffiliateProfile'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+    LedgerStatus:
+      type: string
+      description: PENDING khi đơn mới; CONFIRMED khi qua cửa hoàn tiền (7 ngày)
+      enum:
+        - PENDING
+        - CONFIRMED
+    LedgerEntry:
+      type: object
+      required:
+        - id
+        - orderId
+        - orderTotal
+        - rate
+        - commission
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        orderTotal:
+          type: integer
+          description: Giá trị đơn VND được tính hoa hồng
+        rate:
+          type: number
+          description: Tỷ lệ % áp dụng tại thời điểm đơn
+        commission:
+          type: integer
+          description: Hoa hồng VND = round(orderTotal x rate / 100)
+        status:
+          $ref: '#/components/schemas/LedgerStatus'
+        createdAt:
+          type: string
+          format: date-time
+    LedgerPage:
+      type: object
+      description: Page chuẩn {items, page, size, total}
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+    TrackClickRequest:
+      type: object
+      required:
+        - refCode
+      properties:
+        refCode:
+          type: string
+          description: Ref code affiliate trên link (vd ?ref=ABC123)
+    UpdateRateRequest:
+      type: object
+      required:
+        - rate
+      properties:
+        rate:
+          type: number
+          description: Tỷ lệ hoa hồng mới (%), 0 < rate ≤ 50
+    AffiliateAdminStats:
+      type: object
+      required:
+        - totalAffiliates
+        - activeClicks
+        - conversions
+        - totalCommission
+      properties:
+        totalAffiliates:
+          type: integer
+          description: Tổng hồ sơ (mọi trạng thái) trong khoảng
+        activeClicks:
+          type: integer
+        conversions:
+          type: integer
+        totalCommission:
+          type: integer
+          description: Tổng hoa hồng VND trong khoảng
+    RedeemPointsRequest:
+      type: object
+      required:
+        - userId
+        - points
+        - orderId
+      properties:
+        userId:
+          type: string
+        points:
+          type: integer
+          minimum: 1
+          description: Số điểm muốn dùng cho đơn này
+        orderId:
+          type: string
+          description: Đơn gắn lần redeem này (dedupe)
+    RedeemResult:
+      type: object
+      required:
+        - discount
+        - remaining
+      properties:
+        discount:
+          type: integer
+          description: Số tiền giảm VND tương ứng điểm đã dùng
+        remaining:
+          type: integer
+          description: Điểm còn lại của user

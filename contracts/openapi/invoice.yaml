@@ -1,0 +1,181 @@
+openapi: 3.1.0
+info:
+  title: Invoice API (internal)
+  version: 1.0.0
+  description: |
+    Invoice renderer nội bộ (D18) — Python renderer, pydantic-side mirror ở
+    `services/invoice-service/`. KHÔNG route qua gateway: ordering-service gọi trực tiếp
+    service này (:8090) khi sinh hóa đơn cho order CONFIRMED.
+
+    Renderer thuần STATELESS: breakdown VAT-inclusive (thành tiền + VAT từng dòng) do
+    CALLER (ordering) tính và gửi đủ trong payload; service chỉ render ra PDF.
+    Số hóa đơn tuần tự do caller quản lý (InvoiceProvider SPI bên ordering), renderer
+    không sinh số. VAT rate mặc định đọc từ env `INVOICE_VAT_RATE=10` (%).
+servers:
+  - url: http://localhost:8090
+    description: invoice-service gọi trực tiếp — không qua gateway (internal).
+tags:
+  - name: invoice
+    description: Sinh PDF hóa đơn từ payload đã tính toán.
+paths:
+  /api/invoice/generate:
+    post:
+      tags:
+        - invoice
+      operationId: generateInvoice
+      summary: Render hóa đơn PDF từ payload hoàn chỉnh
+      description: |
+        Body chứa toàn bộ dữ liệu hóa đơn ĐÃ tính (breakdown VAT-inclusive do caller lo).
+        Trả PDF binary. Renderer lỗi (template/render crash) → 503 problem+json — caller
+        xử lý degraded rõ ràng (không tự sinh PDF thay thế).
+      x-internal-only: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoicePayload'
+      responses:
+        '200':
+          description: PDF hóa đơn
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Payload thiếu trường bắt buộc (validate bằng pydantic)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Renderer lỗi — service degraded (D18)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type: { type: string, default: "about:blank" }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        timestamp: { type: string, format: date-time }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    InvoiceItem:
+      type: object
+      description: Dòng hóa đơn — giá trị đã tính VAT-inclusive từ caller
+      required:
+        - name
+        - qty
+        - unitPrice
+        - lineTotal
+      properties:
+        name:
+          type: string
+          description: Tên dòng hàng đã resolve theo locale đặt đơn
+        qty:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: integer
+          description: Đơn giá VND (đã tính phần VAT thuộc dòng)
+        lineTotal:
+          type: integer
+          description: Thành tiền dòng VND = qty x unitPrice
+    InvoicePayload:
+      type: object
+      required:
+        - order
+        - seller
+        - buyer
+        - invoice
+      properties:
+        order:
+          type: object
+          required:
+            - id
+            - createdAt
+            - items
+          properties:
+            id:
+              type: string
+              description: Order id tham chiếu
+            number:
+              type: string
+              description: Mã đơn hiển thị (nếu khác id)
+            createdAt:
+              type: string
+              format: date-time
+            items:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/InvoiceItem'
+        seller:
+          type: object
+          required:
+            - name
+            - address
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+            phone:
+              type: string
+        buyer:
+          type: object
+          required:
+            - name
+            - address
+          properties:
+            name:
+              type: string
+            taxId:
+              type: string
+              description: Mã số thuế (khách doanh nghiệp) — optional
+            address:
+              type: string
+            phone:
+              type: string
+        invoice:
+          type: object
+          description: Thông tin hóa đơn — số + template do caller cung cấp
+          required:
+            - templateSymbol
+            - seriesSymbol
+            - number
+            - vatRate
+            - totalAmount
+          properties:
+            templateSymbol:
+              type: string
+              description: Ký hiệu mẫu hóa đơn
+            seriesSymbol:
+              type: string
+              description: Ký hiệu série hóa đơn
+            number:
+              type: integer
+              description: Số hóa đơn tuần tự do caller cấp
+            vatRate:
+              type: number
+              description: Thuế suất % (env INVOICE_VAT_RATE=10) — caller truyền để in lên hóa đơn
+            totalAmount:
+              type: integer
+              description: Tổng tiền hóa đơn VND (đã gồm VAT)
+            note:
+              type: string

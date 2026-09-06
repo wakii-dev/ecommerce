@@ -226,3 +226,32 @@
   padding-block: var(--space-2, 8px);
   border-bottom: 1px dashed var(--c-border, #e5e7eb);
 }
+
+/* ── Order detail ────────────────────────────────────────────────────── */
+.admin-order-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-4, 16px);
+  align-items: start;
+}
+
+.admin-order-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-3, 12px);
+  padding-top: var(--space-3, 12px);
+  border-top: 1px solid var(--c-border, #e5e7eb);
+}
+
+.admin-order-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  font-size: 14px;
+}
+
+.admin-order-grid h3 {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: 15px;
+}

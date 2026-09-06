@@ -92,6 +92,30 @@ What: Affiliate marketing hoạt động end-to-end — user đăng ký affiliat
 Depends on: SF-3, SF-6, SF-9
 Tasks: affiliate-service-scaffold / flyway-affiliates-clicks-ledger / refcode-registry-approve-rate / storefront-ref-capture-cookie / checkout-pass-affiliate-code / orderconfirmed-ledger-consumer / account-dashboard-affiliate-slice / admin-affiliates-manage-live / compose-makefile-gateway-route-dbinit / affiliate-it-tests
 
+## SF-13 essentials & polish
+Tier: 6
+linear: FI-323
+Design: none
+What: Batch cuối lấp lỗ hổng (D21) — quên mật khẩu qua email; COD (checkout chọn COD → không qua Stripe); upload ảnh thật MinIO trong admin form; email bỏ quên giỏ hàng; audit log viewer admin (đọc Mongo event_log); recently viewed + related products (ES); GA4/GTM; export CSV đơn/sản phẩm; newsletter; E2E regression essentials. demo: reset mật khẩu được; mua COD được; upload ảnh thấy ngay sản phẩm; bỏ giỏ nhận email.
+Depends on: SF-3, SF-4, SF-6, SF-7, SF-9, SF-10
+Tasks: compose-minio-catalog-upload-endpoint / identity-password-reset-flow-email / cod-payment-adapter-saga-skip / checkout-cod-option-ui / abandoned-cart-scheduler-email / audit-log-viewer-admin-mongo / recently-viewed-localstorage / related-products-es-morelikethis / ga4-gtm-env-integration / admin-export-csv / newsletter-subscribe-welcome / e2e-regression-essentials / docs-adr-scope-freeze
+
+## SF-14 commerce extensions
+Tier: 6
+linear: FI-324
+Design: none
+What: Mở rộng nghiệp vụ đơn hàng (D22) — RMA đổi trả: khách tạo yêu cầu trên đơn DELIVERED → admin duyệt → hoàn tiền qua Stripe adapter → emails mỗi bước; GHN vận chuyển: phí tính theo địa chỉ thật qua GHN API, đơn có mã vận đơn + tracking; loyalty điểm: mua CONFIRMED được 1% điểm, checkout dùng điểm giảm tiền, ledger trong affiliate-service. demo: trả hàng → được refund; đổi địa chỉ → phí ship đổi; mua hàng → có điểm → dùng điểm đơn sau.
+Depends on: SF-7, SF-9, SF-10
+Tasks: rma-schema-flyway-ordering / rma-apis-customer-create-list / rma-admin-approve-reject-refund / rma-stripe-refund-integration / ghn-client-shipping-methods / ghn-fee-calc-order-integration / ghn-tracking-order-detail / loyalty-schema-accounts-affiliate-svc / loyalty-earn-consumer-orderconfirmed / loyalty-burn-checkout-discount / admin-rma-loyalty-pages / rma-refund-emails-notification / commerce-ext-it-tests
+
+## SF-15 engagement & platform
+Tier: 6
+linear: FI-325
+Design: none
+What: Engagement + platform polish (D22) — đăng nhập bằng Google/Facebook; bật 2FA TOTP (QR + mã dự phòng); "Nhắn tôi khi có hàng" — đăng ký email, restock nhận mail; PWA (manifest + service worker, cài lên desktop); dark mode qua ui-kit tokens; live chat widget (env config). demo: login Google được; bật 2FA đăng nhập lại hỏi mã; hết hàng đăng ký → có hàng nhận mail; dark mode 1 click.
+Depends on: SF-3, SF-4, SF-5, SF-10
+Tasks: oauth-google-facebook-identity / oauth-callback-login-pages-ui / twofa-totp-enroll-verify / twofa-login-flow-ui / stockalert-api-catalog-register / stockalert-restock-checker-email / pwa-manifest-service-worker / darkmode-uikit-theme-toggle / livechat-embed-env-config / engagement-it-tests
+
 ## SF-10 convergence + ship
 Tier: 5
 linear: FI-320

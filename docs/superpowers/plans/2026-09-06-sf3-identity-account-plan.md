@@ -751,7 +751,7 @@ git commit -m "feat(identity): scaffold service — flyway users/refresh_tokens,
 
 **Files:**
 - Create: `user/dto` records (`RegisterRequest, LoginRequest, LoginSuccess, RefreshResponse, UserSummary, MeResponse, UpdateMeRequest, AdminUserDto, AdminUserPage`), `user/MeController.java`, `user/AdminUserController.java`, `token/RefreshTokenService.java`, `token/RefreshCookieProperties.java`, `auth/AuthController.java`, `auth/SeedAdmin.java`, `config/RefreshProperties.java`
-- Test: `auth/AuthApiIT.java`, `auth/AdminApiIT.java`, `auth/SeedAdminIT.java`, `auth/OutboxIT.java`
+- Test: `auth/AuthApiIntegrationTest.java`, `auth/AdminApiIntegrationTest.java`, `auth/SeedAdminIntegrationTest.java`, `auth/OutboxIntegrationTest.java`
 
 - [ ] **Step 1: DTO records** (pack §4.2 — khớp contract identity.yaml):
 
@@ -1175,7 +1175,7 @@ public record SeedProperties(String adminEmail, String adminPassword) {}
 
 (yml block `identity.seed` như Task 1 Step 7 đã có.)
 
-- [ ] **Step 6: AuthApiIT** — matrix chính (helper: `register(email, name)` helper POST; đọc Set-Cookie bằng `returnResult(Void.class).getResponseHeaders().getFirst(HttpHeaders.SET_COOKIE)`; helper `cookieValue(String setCookie)` tách raw sau `refresh_token=` đến `;` đầu tiên):
+- [ ] **Step 6: AuthApiIntegrationTest** — matrix chính (helper: `register(email, name)` helper POST; đọc Set-Cookie bằng `returnResult(Void.class).getResponseHeaders().getFirst(HttpHeaders.SET_COOKIE)`; helper `cookieValue(String setCookie)` tách raw sau `refresh_token=` đến `;` đầu tiên):
 
 ```java
 package com.ecommerce.identity.auth;
@@ -1348,7 +1348,7 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
 **CHỈNH (executor):** test `meRequiresJwt` lấy `accessToken` từ body login — dùng `WebTestClient.BodyContentSpec` + `JsonPath.read` hoặc `expectBody(Map.class).returnResult().getResponseBody()` rồi `((Map<?,?>) body).get("accessToken").toString()`. Đoạn `returnResult(Void.class).toString()` ở trên là SAI — thay bằng cách đọc Map. Email normalize: thêm 1 case register `A@X.com` → login `a@x.com` OK.
 
-- [ ] **Step 7: AdminApiIT + SeedAdminIT + OutboxIT**:
+- [ ] **Step 7: AdminApiIntegrationTest + SeedAdminIntegrationTest + OutboxIntegrationTest**:
 
 ```java
 // AdminApiIntegrationTest: tạo customer (register) + admin (save trực tiếp qua UserRepository + passwordEncoder)
@@ -1394,7 +1394,7 @@ kill %1
 **Files:**
 - Modify: `backend/gateway/pom.xml` (+1 dep), `backend/gateway/src/main/resources/application.yml` (+config.import), `backend/gateway/src/main/java/com/ecommerce/gateway/config/CorsConfig.java` (+@Order)
 - Create: `backend/gateway/src/main/resources/routes/identity.yml`, `backend/gateway/src/main/resources/routes/gateway-auth.yml`, `src/main/java/com/ecommerce/gateway/config/{GatewayAuthProperties,GatewaySecurityConfig}.java`
-- Test: `backend/gateway/src/test/java/com/ecommerce/gateway/GatewayAuthIT.java`
+- Test: `backend/gateway/src/test/java/com/ecommerce/gateway/GatewayAuthIntegrationTest.java`
 
 - [ ] **Step 1: pom + config imports** — gateway pom thêm:
 
@@ -1542,7 +1542,7 @@ import org.springframework.core.annotation.Order;
     public CorsWebFilter corsWebFilter() {
 ```
 
-- [ ] **Step 6: GatewayAuthIT** — stub JWKS + identity bằng `com.sun.net.httpserver.HttpServer` (0 dep mới):
+- [ ] **Step 6: GatewayAuthIntegrationTest** — stub JWKS + identity bằng `com.sun.net.httpserver.HttpServer` (0 dep mới):
 
 ```java
 package com.ecommerce.gateway;

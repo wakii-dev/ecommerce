@@ -33,7 +33,7 @@ full: ## (stub — SF-10 lấp: compose profile full, toàn bộ containerized)
 
 dev: ## Chạy 1 backend service dev mode — vd: make dev svc=template-service
 ifeq ($(svc),)
-	$(error svc=? — template-service | gateway | identity | catalog | cart | inventory | ordering | payment | notification)
+	$(error svc=? — template-service | gateway | identity | catalog | cart | inventory | ordering | payment | notification | partner-api)
 endif
 	@case "$(svc)" in \
 	  template-service) MOD=services/template-service ;; \
@@ -49,6 +49,7 @@ endif
 	    cd services/invoice-service && \
 	    test -x .venv/bin/uvicorn || { python3 -m venv .venv && .venv/bin/pip install --quiet "fastapi>=0.115" "uvicorn>=0.30" "reportlab>=4.2" "pydantic>=2.8"; }; \
 	    exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090 ;; \
+	  partner-api)      MOD=services/partner-api ;; \
 	  *) echo "✗ svc '$(svc)' chưa có — xem bảng port trong README"; exit 1 ;; \
 	esac ; \
 	cd backend && mvn -pl $$MOD spring-boot:run

@@ -61,6 +61,13 @@ spring:
           uri: http://localhost:8086
           predicates: [ "Path=/api/payment/**" ]
           filters: [ "StripPrefix=1" ]
+      # SF-11 (2026-09-07): partner Open API — namespace RIÊNG /open-api/** KHÔNG
+      # qua auth JWT của gateway (auth là X-API-Key trong partner-api :8091, xem
+      # gateway-auth.yml public-paths). KHÔNG StripPrefix — controllers map full
+      # /open-api/v1/** (như catalog precedent).
+        - id: partner-api                                # SF-11 · port 8091
+          uri: http://localhost:8091
+          predicates: [ "Path=/open-api/**" ]
       # - id: notification                               # SF-10 · port 8087
       #   uri: http://localhost:8087
       #   predicates: [ "Path=/api/notification/**" ]

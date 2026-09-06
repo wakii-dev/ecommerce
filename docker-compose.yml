@@ -259,6 +259,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  # SF-11 (2026-09-07): partner-api (port 8091, db_partner) — Open API đối tác
+  # (X-API-Key + rate-limit + /open-api/v1 + webhook HMAC). KHÔNG chạy dev
+  # (infra-only; host JVM qua `make dev svc=partner-api`). Profile full (SF-10).
+  partner-api:
+    build:
+      context: .
+      dockerfile: backend/services/partner-api/Dockerfile
+    container_name: ecommerce-partner-api
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_partner
+      RABBITMQ_HOST: rabbitmq
+      PARTNER_IDENTITY_BASE_URL: http://identity-service:8081
+      PARTNER_ORDERING_BASE_URL: http://ordering-service:8085
+      PARTNER_CATALOG_BASE_URL: http://catalog-service:8082
+    expose:
+      - "8091"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:

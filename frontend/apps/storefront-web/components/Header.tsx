@@ -1,6 +1,7 @@
 import type { Locale } from '../lib/format';
 import { localePath } from '../lib/format';
 
+import LocaleSwitcher from './LocaleSwitcher';
 import SearchBar from './SearchBar';
 
 /** Copy header — vi là brand voice mặc định, en dịch khi có bản (static Task 10). */
@@ -46,6 +47,7 @@ export default function Header({ locale }: { locale: Locale }) {
         </a>
         <SearchBar locale={locale} />
         <div className="header-actions">
+          <LocaleSwitcher locale={locale} />
           <a className="header-action" href="/cart">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.8L20 8H6" strokeLinecap="round" strokeLinejoin="round" />

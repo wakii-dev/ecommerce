@@ -31,3 +31,19 @@ export function localePath(path: string, locale: Locale): string {
   if (locale !== 'en') return path;
   return path === '/' ? '/en/' : `/en${path}`;
 }
+
+/** Bỏ prefix locale `/vi|/en` (kèm dấu `/` nếu chỉ còn prefix) — còn path thuần. */
+function stripLocalePrefix(pathname: string): string {
+  const rest = pathname.startsWith('/vi/') || pathname.startsWith('/en/') ? pathname.slice(3) : pathname;
+  return rest === '/vi' || rest === '/en' || rest === '/en/' || rest === '/vi/' ? '/' : rest;
+}
+
+/**
+ * Path của locale ĐÍCH từ path hiện tại (Task 10 locale-switcher):
+ * target vi → path không prefix; target en → prefix `/en` qua localePath.
+ * Nhận CẢ path đã rewrite (`/vi/p/x` — usePathname trả route sau middleware).
+ */
+export function switchLocalePath(pathname: string, target: Locale): string {
+  const bare = stripLocalePrefix(pathname);
+  return target === 'en' ? localePath(bare, 'en') : bare;
+}

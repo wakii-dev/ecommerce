@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatVnd, localePath, resolveLocale } from '../lib/format';
+import { formatVnd, localePath, resolveLocale, switchLocalePath } from '../lib/format';
 import { rewriteTarget } from '../lib/locale-rewrite';
 import { buildAlternates, enUsesFallback, pdpMetadata, resolveDescription, resolveTitle } from '../lib/seo';
 
@@ -56,6 +56,24 @@ describe('localePath', () => {
 
   it('en root → /en/ (plan: không link /en bare)', () => {
     expect(localePath('/', 'en')).toBe('/en/');
+  });
+});
+
+describe('switchLocalePath (locale-switcher Task 10)', () => {
+  it('path vi → target en: prefix /en, root → /en/', () => {
+    expect(switchLocalePath('/', 'en')).toBe('/en/');
+    expect(switchLocalePath('/p/x', 'en')).toBe('/en/p/x');
+  });
+
+  it('path en → target vi: strip prefix /en', () => {
+    expect(switchLocalePath('/en/', 'vi')).toBe('/');
+    expect(switchLocalePath('/en/p/x', 'vi')).toBe('/p/x');
+  });
+
+  it('nhận path đã rewrite /vi/** (usePathname trả route sau middleware)', () => {
+    expect(switchLocalePath('/vi/p/x', 'en')).toBe('/en/p/x');
+    expect(switchLocalePath('/vi/', 'en')).toBe('/en/');
+    expect(switchLocalePath('/vi/c/y', 'vi')).toBe('/c/y');
   });
 });
 

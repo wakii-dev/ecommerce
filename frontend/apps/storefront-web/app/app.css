@@ -267,6 +267,22 @@ img {
   color: var(--c-primary);
 }
 
+/* Locale switcher (Task 10) — ghost: 13px/600, muted → primary hover,
+   tách khỏi actions bằng border-left như direction §3. */
+.locale-switch {
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.locale-switch:hover {
+  color: var(--c-primary);
+}
+
 /* Hàng 2 — mini-nav nền primary */
 .mini-nav {
   background: var(--c-primary);

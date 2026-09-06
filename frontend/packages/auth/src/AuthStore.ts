@@ -15,6 +15,8 @@ export interface AuthConfig {
   refreshUrl: string;
   /** Route đăng nhập cho app-layer redirect sau logout/401 cuối (thông tin, store không tự điều hướng). */
   loginPath?: string;
+  /** Origin của API gateway — rỗng/không set = same-origin (Vite proxy). */
+  identityBaseUrl?: string;
   /** Inject fetch cho test / SSR client riêng. Mặc định global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -100,6 +102,11 @@ class AuthStore {
 
   getLoginPath(): string | undefined {
     return this.config.loginPath;
+  }
+
+  /** Đọc config (api.ts dựng client từ đây) — readonly để caller không mutate. */
+  getConfig(): Readonly<AuthConfig> {
+    return this.config;
   }
 
   /** true nếu user có ÍT NHẤT 1 trong các role truyền vào. */

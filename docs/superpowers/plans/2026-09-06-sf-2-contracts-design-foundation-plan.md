@@ -55,7 +55,7 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `contracts/openapi/identity.yaml`
 
-- [ ] Viết spec OpenAPI 3.1, `info.title: Identity API`, `tags: [auth, me, admin, password, oauth, 2fa]`:
+- [x] Viết spec OpenAPI 3.1, `info.title: Identity API`, `tags: [auth, me, admin, password, oauth, 2fa]`:
   - `POST /api/identity/auth/register` `{email, password, fullName}` → 201 `{id, email, fullName, roles[]}`; 409 email tồn tại
   - `POST /api/identity/auth/login` `{email, password}` → 200 `{accessToken, tokenType: "Bearer", expiresIn, user{...}}` **hoặc** (2FA bật) 200 `{twoFactorRequired: true, challengeToken}` (D22)
   - `POST /api/identity/auth/refresh` — request KHÔNG body, refresh cookie httpOnly; response `{accessToken, expiresIn}`; 401 cookie hết
@@ -67,18 +67,18 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   - `POST /api/identity/password/reset` `{token, newPassword}` → 204
   - `GET /api/identity/oauth/{provider}/authorize` (provider `google|facebook`) → 302 redirect provider; `GET /api/identity/oauth/{provider}/callback` → 302 về FE kèm code một-lần (D22; chi tiết flow SF-15)
   - `POST /api/identity/2fa/setup` (JWT) → `{secret, otpauthUrl}`; `POST /api/identity/2fa/enable` `{code}` → `{recoveryCodes[]}`; `POST /api/identity/2fa/disable` `{password}` → 204; `POST /api/identity/2fa/verify` `{challengeToken, code}` → `{accessToken, expiresIn, user}`
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): identity spec — auth/jwks/me/2fa/oauth/password-reset`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): identity spec — auth/jwks/me/2fa/oauth/password-reset`
 
 ### Task 2: openapi-catalog-spec
 
 **Files:** Create `contracts/openapi/catalog.yaml`
 
-- [ ] Spec 3.1, `tags: [products, categories, search, reviews, wishlist, admin, uploads]`. Schemas chính:
+- [x] Spec 3.1, `tags: [products, categories, search, reviews, wishlist, admin, uploads]`. Schemas chính:
   - `ProductCard`: `{id, slug (resolved theo locale), slugEn, name (resolved), brand?, price int VND, comparePrice? int, discountPercent? int (computed), flashSaleEndsAt? date-time, ratingAvg number, ratingCount int, image {url, alt?}, tags: string[] (badge "Chính hãng"/"Freeship" — admin set), categoryId}`
   - `ProductDetail` = ProductCard + `description (resolved, string)`, `images[] {url, alt?, position}`, `variants[] {id, name (resolved), options object, priceDelta? int, stock int}`, `relatedCount?`
   - `ProductWrite` (admin): trường i18n dạng object `{vi, en}`: `nameI18n`, `descriptionI18n`, `seoTitleI18n?`, `seoDescriptionI18n?` (2 seo nullable), `slugVi`, `slugEn`, + fields phẳng còn lại; `status: DRAFT|PUBLISHED`
-- [ ] Endpoints công khai (mọi content GET nhận `?locale=` + `Accept-Language`, fallback vi — D17):
+- [x] Endpoints công khai (mọi content GET nhận `?locale=` + `Accept-Language`, fallback vi — D17):
   - `GET /api/catalog/products` filters `category (slug), minPrice, maxPrice, minRating, brand, sort (price_asc|price_desc|rating|newest|discount), page, size, locale` → page\<ProductCard\>
   - `GET /api/catalog/products/{slug}` → ProductDetail; 404
   - `GET /api/catalog/categories` → cây `[{id, slug (resolved), slugEn, name, parentId, children: [...recursion]}]`
@@ -86,35 +86,35 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   - Reviews (UGC không i18n): `GET /api/catalog/products/{slug}/reviews?page&size` → `{items: [{id, userId, userName, rating int 1-5, title?, content, verifiedPurchase bool, createdAt}], breakdown: {"5": int...}, total}`; `POST` (JWT) `{rating, title?, content}` → 202 PENDING
   - Wishlist: `GET /api/catalog/me/wishlist?page&size` → page\<ProductCard\>; `PUT /api/catalog/me/wishlist/{productId}` → 204; `DELETE ...` → 204; `GET /api/catalog/me/wishlist/ids` → `{productIds: string[]}`
   - `POST /api/catalog/products/{slug}/stock-alert` `{email, variantId}` → 202 (D22, public)
-- [ ] Admin:
+- [x] Admin:
   - Products: `GET /api/catalog/admin/products?page&size&q&status`, `POST` (ProductWrite) → 201, `GET/PUT/DELETE /api/catalog/admin/products/{id}` (GET/PUT trả + nhận full object I18n)
   - Categories CRUD tương tự (`CategoryWrite` i18n + parentId)
   - Reviews moderation: `GET /api/catalog/admin/reviews?status=PENDING|APPROVED|REJECTED&page`, `POST /api/catalog/admin/reviews/{id}/approve|reject` → 200 Review
   - `POST /api/catalog/admin/uploads` multipart (`image`, ≤5MB, jpg/png/webp) → 201 `{url}` (public `/media/**` qua gateway — D21)
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): catalog spec — products/i18n-locale/search/reviews/wishlist/uploads`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): catalog spec — products/i18n-locale/search/reviews/wishlist/uploads`
 
 ### Task 3: openapi-cart-spec
 
 **Files:** Create `contracts/openapi/cart.yaml`
 
-- [ ] Spec 3.1, `tags: [cart]`. `CartItem`: `{id, productId, variantId, slug, name (resolved), image?, qty int ≥1, unitPrice int, lineTotal int, unavailable bool}`; `Cart`: `{cartToken?, items[], subtotal int}`. `unavailable` do enrich khi GET (sản phẩm xóa/hết — §6.1.2)
-- [ ] Endpoints (identity: guest qua cookie `cart_token`, user qua JWT; cả hai cùng shape response):
+- [x] Spec 3.1, `tags: [cart]`. `CartItem`: `{id, productId, variantId, slug, name (resolved), image?, qty int ≥1, unitPrice int, lineTotal int, unavailable bool}`; `Cart`: `{cartToken?, items[], subtotal int}`. `unavailable` do enrich khi GET (sản phẩm xóa/hết — §6.1.2)
+- [x] Endpoints (identity: guest qua cookie `cart_token`, user qua JWT; cả hai cùng shape response):
   - `POST /api/cart` (guest, không body) → 201 Cart + `Set-Cookie: cart_token`
   - `GET /api/cart` → 200 Cart
   - `POST /api/cart/items` `{productId, variantId, qty}` → 200 Cart (enrich); 404 sản phẩm/variant không tồn tại; 409 variant hết hàng (vẫn thêm được nếu `allowOos` — CHỐT: 409 khi hết, body ApiError.detail rõ)
   - `PATCH /api/cart/items/{itemId}` `{qty}` → 200 Cart; `DELETE /api/cart/items/{itemId}` → 200 Cart
   - `POST /api/cart/merge` (JWT + body `{cartToken}` của guest) → 200 Cart đã merge (dedupe theo variantId, cộng qty)
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): cart spec — guest cart_token/merge/enrich unavailable`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): cart spec — guest cart_token/merge/enrich unavailable`
 
 ### Task 4: openapi-ordering-spec
 
 **Files:** Create `contracts/openapi/ordering.yaml`
 
-- [ ] Spec 3.1, `tags: [orders, coupons, rma, shipping, admin]`. Enum status **pin §3.6**: `PENDING|PAID|CONFIRMED|SHIPPED|DELIVERED|CANCELLED|FAILED`; mô tả transitions table §3.6 vào `description` của schema `OrderStatus` (PENDING→PAID system; PAID→CONFIRMED system; CONFIRMED→SHIPPED admin; SHIPPED→DELIVERED admin; PENDING→CANCELLED admin; PAID/CONFIRMED→CANCELLED admin+refund; PENDING→FAILED system; →CANCELLED TTL 30'). **Admin KHÔNG có endpoint confirm.**
-- [ ] Schemas: `OrderLine {productId, variantId, name (resolved), image?, qty, unitPrice, lineTotal}`, `Address {fullName, phone, line1, ward, district, city, postalCode?}`, `Order {id, userId, status, items[], subtotal, discount, shippingFee, pointsDiscount?, total, currency: "VND", couponCode?, affiliateCode?, paymentMethod: stripe|cod, shippingMethod, trackingCode?, address, timeline: [{status, at}], createdAt, updatedAt}`, `OrderSummary` (list — không items, có `itemsCount`, `paymentMethod`)
-- [ ] Customer:
+- [x] Spec 3.1, `tags: [orders, coupons, rma, shipping, admin]`. Enum status **pin §3.6**: `PENDING|PAID|CONFIRMED|SHIPPED|DELIVERED|CANCELLED|FAILED`; mô tả transitions table §3.6 vào `description` của schema `OrderStatus` (PENDING→PAID system; PAID→CONFIRMED system; CONFIRMED→SHIPPED admin; SHIPPED→DELIVERED admin; PENDING→CANCELLED admin; PAID/CONFIRMED→CANCELLED admin+refund; PENDING→FAILED system; →CANCELLED TTL 30'). **Admin KHÔNG có endpoint confirm.**
+- [x] Schemas: `OrderLine {productId, variantId, name (resolved), image?, qty, unitPrice, lineTotal}`, `Address {fullName, phone, line1, ward, district, city, postalCode?}`, `Order {id, userId, status, items[], subtotal, discount, shippingFee, pointsDiscount?, total, currency: "VND", couponCode?, affiliateCode?, paymentMethod: stripe|cod, shippingMethod, trackingCode?, address, timeline: [{status, at}], createdAt, updatedAt}`, `OrderSummary` (list — không items, có `itemsCount`, `paymentMethod`)
+- [x] Customer:
   - `POST /api/ordering/orders` — header `Idempotency-Key` (BẮT BUỘC, 409 khi trùng key payload khác); body `{items: [{productId, variantId, qty}], couponCode?, usePoints? int, paymentMethod (enum stripe|cod, default stripe — D21), shippingMethod, affiliateCode?, address}` → 201 `{order, clientSecret?}` — `clientSecret` null khi COD (saga bỏ bước intent, CONFIRMED sau reserve); lỗi → 409 (hết stock — detail kèm `insufficient[]`) / 422 (coupon invalid) problem+json
   - `POST /api/ordering/orders/validate-coupon` `{code, subtotal}` → 200 `{valid, discount, message?}` (không reserve)
   - `GET /api/ordering/coupons/public` → `[{code, type: PERCENT|FIXED, value, minOrderValue?, startsAt?, endsAt?, description}]` — KHÔNG lộ usage-limit/used-count nội bộ
@@ -122,58 +122,58 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   - `GET /api/ordering/me/orders/{id}/invoice` → `application/pdf` (binary) — D18, 409 khi đơn chưa CONFIRMED
   - `GET /api/ordering/me/orders/{id}/tracking` → `{trackingCode, carrier, status, events?: [{at, description}]}`
   - RMA (D22): `POST /api/ordering/me/rma` `{orderId, lines: [{lineId, qty}], reason}` → 202 `{id, status: REQUESTED}`; `GET /api/ordering/me/rma?page` → page\<Rma `{id, orderId, status, lines, reason, createdAt}\>` — lifecycle `REQUESTED→APPROVED→RECEIVED→REFUNDED | REJECTED`, window 7 ngày từ DELIVERED (ghi description)
-- [ ] Shipping: `GET /api/ordering/shipping/methods` → `[{id, name, fee int, etaDays int}]` (flat-fee MVP; GHN SF-14 cùng shape)
-- [ ] Admin:
+- [x] Shipping: `GET /api/ordering/shipping/methods` → `[{id, name, fee int, etaDays int}]` (flat-fee MVP; GHN SF-14 cùng shape)
+- [x] Admin:
   - `GET /api/ordering/admin/orders?status&page&size&q` → page\<Order\>; `GET /api/ordering/admin/orders/{id}` → Order
   - `POST /api/ordering/admin/orders/{id}/ship | deliver | cancel` → 200 Order (cancel sau PAID kèm refund — server lo)
   - `GET /api/ordering/admin/orders/{id}/invoice` → pdf
   - RMA admin: `GET /api/ordering/admin/rma?status`, `POST /api/ordering/admin/rma/{id}/approve | reject | mark-received | refund` → 200 Rma
   - Stats (§6.1.8): `GET /api/ordering/admin/stats/revenue-by-day?from&to` → `[{date, revenue, orders}]`; `GET /api/ordering/admin/stats/orders-summary` → `{counts per status, totalRevenue, todayRevenue, todayOrders}`; `GET /api/ordering/admin/stats/top-products?limit&from&to` → `[{productId, name, qty, revenue}]`
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): ordering spec — state machine §3.6/idempotency/COD/coupons-public/invoice/rma/shipping/stats`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): ordering spec — state machine §3.6/idempotency/COD/coupons-public/invoice/rma/shipping/stats`
 
 ### Task 5: openapi-inventory-spec
 
 **Files:** Create `contracts/openapi/inventory.yaml`
 
-- [ ] Spec 3.1, `tags: [inventory, admin]`. Reservation = **variant-level** (§6.1.4):
+- [x] Spec 3.1, `tags: [inventory, admin]`. Reservation = **variant-level** (§6.1.4):
   - `POST /api/inventory/reservations` `{orderId, items: [{variantId, qty}], ttlMinutes? (default 30)}` → 201 `{reservationId, expiresAt}` | **409** `{...ApiError, insufficient: [{variantId, requested, available}]}` (all-or-nothing — một thiếu = hủy cả reservation)
   - `GET /api/inventory/availability?variantIds=a,b,c` → `[{variantId, available, reserved}]`
   - `GET /api/inventory/admin/low-stock?threshold` → `[{variantId, productId, productName, available, threshold}]`
   - description pin: commit/release KHÔNG qua REST — qua events `order.paid` (commit) + `order.cancelled/order.failed` (release); `inventory.reserved|released|committed` publish ra broker
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): inventory spec — reservations all-or-nothing variant-level`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): inventory spec — reservations all-or-nothing variant-level`
 
 ### Task 6: openapi-payment-spec
 
 **Files:** Create `contracts/openapi/payment.yaml`
 
-- [ ] Spec 3.1, `tags: [payments, admin]` (REST ordering gọi — sync command edge §3.3):
+- [x] Spec 3.1, `tags: [payments, admin]` (REST ordering gọi — sync command edge §3.3):
   - `POST /api/payment/intents` `{orderId, amount int, currency: "VND", idempotencyKey}` → 201 `{paymentIntentId, clientSecret, status}` (Stripe zero-decimal VND); 409 idempotent replay khác payload
   - `POST /api/payment/webhook` — body raw Stripe event, header `Stripe-Signature`; response 200 `{received: true}`; 400 signature sai
   - `POST /api/payment/refunds` `{paymentIntentId, amount?, reason}` → 201 `{refundId, status, amount}`
   - `POST /api/payment/void` `{paymentIntentId}` → 200 `{status}`
   - description pin: adapter SPI (`createIntent/void/refund/verifyWebhook`) — Stripe đầu tiên, VNPay/MoMo sau; COD không qua service này
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): payment spec — intents/webhook/refunds/void`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): payment spec — intents/webhook/refunds/void`
 
 ### Task 7: openapi-notification-spec
 
 **Files:** Create `contracts/openapi/notification.yaml`
 
-- [ ] Spec 3.1, `tags: [notification]`, `info.description`: chủ yếu event-driven (consume `order.confirmed`, `order.cancelled`, `review.moderated`); REST chỉ internal send + log:
+- [x] Spec 3.1, `tags: [notification]`, `info.description`: chủ yếu event-driven (consume `order.confirmed`, `order.cancelled`, `review.moderated`); REST chỉ internal send + log:
   - `POST /api/notification/emails` (`x-internal-only: true`) `{to, template, params object, idempotencyKey?}` → 202 `{emailId}`
   - `GET /api/notification/admin/emails?page&size&to` → page\<{id, to, template, subject, status: SENT|FAILED, sentAt, error?}\> (debug dev — Mailpit là UI thật)
-- [ ] Lint 0 error
-- [ ] Commit: `feat(contracts): notification spec — internal send + admin log`
+- [x] Lint 0 error
+- [x] Commit: `feat(contracts): notification spec — internal send + admin log`
 
 ### Task 8: openapi-aux-specs (invoice D18 + partner-api D19 + affiliate D20)
 
 **Files:** Create `contracts/openapi/invoice.yaml`, `contracts/openapi/partner-api.yaml`, `contracts/openapi/affiliate.yaml`
 
-- [ ] `invoice.yaml` — internal-only (`x-internal-only: true`, không qua gateway; ordering gọi trực tiếp :8090):
+- [x] `invoice.yaml` — internal-only (`x-internal-only: true`, không qua gateway; ordering gọi trực tiếp :8090):
   - `POST /api/invoice/generate` — body `InvoicePayload`: `{order: {id, number?, createdAt, items: [{name, qty, unitPrice, lineTotal}]}, seller: {name, address, phone?}, buyer: {name, taxId?, address, phone?}, invoice: {templateSymbol, seriesSymbol, number int (tuần tự), vatRate number (env INVOICE_VAT_RATE=10), totalAmount, note?}}` → 200 `application/pdf` (binary); 503 renderer lỗi (degraded rõ ràng — D18); VAT-inclusive breakdown do CALLER (ordering) tính, renderer thuần stateless
-- [ ] `partner-api.yaml` — `servers` namespace `/open-api/v1`; `securitySchemes: ApiKeyAuth (apiKey in header, name X-API-Key)`; mọi endpoint security ApiKeyAuth; 401 key sai/hết; 429 rate-limit (problem+json):
+- [x] `partner-api.yaml` — `servers` namespace `/open-api/v1`; `securitySchemes: ApiKeyAuth (apiKey in header, name X-API-Key)`; mọi endpoint security ApiKeyAuth; 401 key sai/hết; 429 rate-limit (problem+json):
   - `GET /open-api/v1/products?page&size&category` → page\<PartnerProduct {id, sku?, slug, name, price, stock?, updatedAt}\>
   - `GET /open-api/v1/products/{id}` → PartnerProduct chi tiết (gồm description + variants)
   - `GET /open-api/v1/categories` → cây phẳng `[{id, slug, name, parentId}]`
@@ -181,21 +181,21 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   - `POST /open-api/v1/orders` `{partnerRef (idempotent theo partner), customer {name, phone, email?, address}, items: [{productId, variantId?, qty}]}` → 201 `{orderId, partnerRef, status}`
   - `GET /open-api/v1/orders/{id}` → `{orderId, partnerRef, status, items, updatedAt}`
   - Webhook schema (outbound — mô tả + schema, không endpoint): `partner.order.changed` `{eventId, orderId, partnerRef, status, occurredAt}`; header `X-Signature: HMAC-SHA256(secret, body)`; retry + DLQ
-- [ ] `affiliate.yaml` — `tags: [affiliate, admin, internal]`:
+- [x] `affiliate.yaml` — `tags: [affiliate, admin, internal]`:
   - `POST /api/affiliate/register` (JWT) `{portfolioUrl?, note?}` → 202 `{id, status: PENDING}`; `GET /api/affiliate/me` (JWT) → `{id, code, status: PENDING|APPROVED|REJECTED, rate number (%), stats {clicks, conversions, earnings}}`
   - `GET /api/affiliate/me/ledger?page` → page\<{id, orderId, orderTotal, rate, commission, status: PENDING|CONFIRMED, createdAt}\>
   - `POST /api/affiliate/track/click` (public — storefront capture) `{refCode}` → 204
   - Admin: `GET /api/affiliate/admin/affiliates?status&page`, `POST /api/affiliate/admin/affiliates/{id}/approve | reject`, `PUT /api/affiliate/admin/affiliates/{id}/rate {rate}`; `GET /api/affiliate/admin/stats?from&to` → `{totalAffiliates, activeClicks, conversions, totalCommission}`
   - Internal (D22 loyalty): `POST /api/affiliate/internal/loyalty/redeem` (`x-internal-only`) `{userId, points int, orderId}` → 200 `{discount int, remaining}`; loyalty accounts/ledger tables thuộc affiliate-service (SF-14)
-- [ ] Lint cả 3 file 0 error
-- [ ] Commit: `feat(contracts): aux specs — invoice internal/partner open-api/affiliate+loyalty (D18-D20)`
+- [x] Lint cả 3 file 0 error
+- [x] Commit: `feat(contracts): aux specs — invoice internal/partner open-api/affiliate+loyalty (D18-D20)`
 
 ### Task 9: events-jsonschema-fat-payloads
 
 **Files:** Create `contracts/events/envelope.schema.json`, `contracts/events/*.schema.json` (12 events), Update `contracts/events/README.md` (tạo mới — hiện chưa có)
 
-- [ ] `envelope.schema.json`: `{eventId (uuid), eventType (pattern ^[a-z]+\.[a-z-]+$), occurredAt (date-time), correlationId (X-Request-Id gateway), producer (service name), schemaVersion int, payload (object)}` — mọi event schema dùng `$ref` vào envelope bằng cách TỰ CHỨA: mỗi file định nghĩa full `{envelope fields..., payload: {...event-specific}}` (json-schema-to-typescript không theo ref liên file — chấp nhận lặp, ghi chú README)
-- [ ] 12 schemas (`user.created`, `product.changed`, `inventory.reserved`, `inventory.released`, `inventory.committed`, `payment.succeeded`, `payment.failed`, `order.created`, `order.paid`, `order.confirmed`, `order.cancelled`, `order.failed`, `review.moderated`) — payload pin:
+- [x] `envelope.schema.json`: `{eventId (uuid), eventType (pattern ^[a-z]+\.[a-z-]+$), occurredAt (date-time), correlationId (X-Request-Id gateway), producer (service name), schemaVersion int, payload (object)}` — mọi event schema dùng `$ref` vào envelope bằng cách TỰ CHỨA: mỗi file định nghĩa full `{envelope fields..., payload: {...event-specific}}` (json-schema-to-typescript không theo ref liên file — chấp nhận lặp, ghi chú README)
+- [x] 12 schemas (`user.created`, `product.changed`, `inventory.reserved`, `inventory.released`, `inventory.committed`, `payment.succeeded`, `payment.failed`, `order.created`, `order.paid`, `order.confirmed`, `order.cancelled`, `order.failed`, `review.moderated`) — payload pin:
   - `user.created`: `{userId, email, fullName, roles[], createdAt}`
   - `product.changed`: `{productId, action: CREATED|UPDATED|DELETED, slugVi, slugEn, changedAt}` (indexer ES per-locale + cache invalidate)
   - `inventory.reserved|released|committed`: `{reservationId, orderId, items: [{variantId, qty}]}`
@@ -206,9 +206,9 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
   - `order.cancelled`: `{orderId, reason, cancelledBy: USER|ADMIN|SYSTEM, refunded? bool}`
   - `order.failed`: `{orderId, reason, stage: RESERVE|PAYMENT|OTHER}`
   - `review.moderated`: `{reviewId, productId, userId, status: APPROVED|REJECTED, rating, moderatedAt}` (catalog cập nhật rating_avg denormalized)
-- [ ] `contracts/events/README.md`: quy tắc additive-only (chỉ thêm field optional; đổi/xóa = breaking cấm), naming `<domain>.<event>`, exchange topic `ecommerce.events`, correlation từ `X-Request-Id`
-- [ ] Validate: `pnpm dlx ajv-cli compile` hoặc script node parse-all → pass (chọn 1, ghi lệnh vào README)
-- [ ] Commit: `feat(contracts): events schemas — envelope + 12 events, order.confirmed fat payload`
+- [x] `contracts/events/README.md`: quy tắc additive-only (chỉ thêm field optional; đổi/xóa = breaking cấm), naming `<domain>.<event>`, exchange topic `ecommerce.events`, correlation từ `X-Request-Id`
+- [x] Validate: `pnpm dlx ajv-cli compile` hoặc script node parse-all → pass (chọn 1, ghi lệnh vào README)
+- [x] Commit: `feat(contracts): events schemas — envelope + 12 events, order.confirmed fat payload`
 
 ### Task 10: ts-codegen-packages-contracts
 
@@ -284,10 +284,10 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `docs/superpowers/designs/fi310-storefront-direction.md` (SAU khi user chọn)
 
-- [ ] Designer agent (huashu-design + mock-prototype pipeline): **3 hướng** Tiki-inspired, mỗi hướng gồm: storefront **home** (hero + flash-deal countdown + featured) + **PLP** (sidebar danh mục + filter + sort + pagination) + **PDP** (gallery + info + variant + add-to-cart) + **header** (logo + search bar trung tâm + cart badge + account menu — sticky) + **1 admin dashboard** (KPI + chart + bảng low-stock) **dùng chung tokens** với hướng đó
-- [ ] Publish artifact links (unlisted) → coordinator đăng worktree comment + Linear comment FI-312 + hỏi user → **USER CHỌN = HARD GATE** (chỉ block SF-2, không block Task 1-14)
-- [ ] Sau lựa chọn: hand-off `docs/superpowers/designs/fi310-storefront-direction.md` — hex tokens (color scale đầy đủ), spacing scale, radius/typography/shadow, cấu trúc layout (header breakpoint, grid), behavior notes (hover, transition, countdown format), link artifact hướng được chọn
-- [ ] Commit: `docs(design): storefront direction hand-off — hướng được user chọn`
+- [x] Designer agent (huashu-design + mock-prototype pipeline): **3 hướng** Tiki-inspired, mỗi hướng gồm: storefront **home** (hero + flash-deal countdown + featured) + **PLP** (sidebar danh mục + filter + sort + pagination) + **PDP** (gallery + info + variant + add-to-cart) + **header** (logo + search bar trung tâm + cart badge + account menu — sticky) + **1 admin dashboard** (KPI + chart + bảng low-stock) **dùng chung tokens** với hướng đó
+- [x] Publish artifact links (unlisted) → coordinator đăng worktree comment + Linear comment FI-312 + hỏi user → **USER CHỌN = HARD GATE** (chỉ block SF-2, không block Task 1-14)
+- [x] Sau lựa chọn: hand-off `docs/superpowers/designs/fi310-storefront-direction.md` — hex tokens (color scale đầy đủ), spacing scale, radius/typography/shadow, cấu trúc layout (header breakpoint, grid), behavior notes (hover, transition, countdown format), link artifact hướng được chọn
+- [x] Commit: `docs(design): storefront direction hand-off — hướng được user chọn`
 
 ### Task 16: uikit-tokens-refine-per-direction
 

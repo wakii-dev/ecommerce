@@ -11,7 +11,8 @@ catalog:
   react-dom: ^18.3.1
   react-router-dom: ^6.28.0
   "@tanstack/react-query": ^5.62.0
-  "@module-federation/enhanced": ^0.8.4
+  # MF cho Vite — KHÔNG phải @module-federation/enhanced (webpack-only)
+  "@module-federation/vite": ^1.21.3
   vite: ^5.4.11
   "@vitejs/plugin-react": ^4.3.4
   tailwindcss: ^3.4.17

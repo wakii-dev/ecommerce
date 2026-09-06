@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@module-federation/enhanced": "catalog:",
+    "@module-federation/vite": "catalog:",
     "eslint": "catalog:",
     "globals": "catalog:",
     "playwright": "catalog:",

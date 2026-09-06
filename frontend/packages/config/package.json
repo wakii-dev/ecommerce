@@ -9,6 +9,6 @@
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "peerDependencies": {
-    "@module-federation/enhanced": "catalog:"
+    "@module-federation/vite": "catalog:"
   }
 }

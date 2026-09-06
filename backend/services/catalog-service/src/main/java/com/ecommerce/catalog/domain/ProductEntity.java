@@ -80,6 +80,16 @@ public class ProductEntity {
     @Column(name = "rating_count", nullable = false)
     private int ratingCount = 0;
 
+    /**
+     * Tỉ lệ discount đọc-only (spec Q9) — dùng cho sort=discount:
+     * {@code CASE WHEN compare_price > price THEN (compare_price-price)::float/compare_price ELSE 0 END}.
+     * {@code @Formula} để Hibernate render đúng alias trong ORDER BY (JpaSort.unsafe
+     * với CASE HQL fail runtime — đã thử).
+     */
+    @org.hibernate.annotations.Formula(
+        "CASE WHEN compare_price > price THEN (compare_price - price)::float / compare_price ELSE 0 END")
+    private Double discountRate;
+
     /** Soft-delete — set khi admin DELETE; public API lọc IS NULL. */
     private Instant deletedAt;
 

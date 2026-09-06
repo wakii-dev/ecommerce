@@ -32,9 +32,9 @@ Tasks: identity-service-scaffold / flyway-users-roles-refreshtokens / register-a
 Tier: 2
 linear: FI-314
 Design: none
-What: Khách duyệt được catalog Tiki-style — home (hero + flash deal countdown + featured), PLP (sidebar danh mục + filter giá/rating + sort + pagination), search FTS, PDP (gallery + variant + tồn kho + add-to-cart stub theo cart contract), seed ~24 sản phẩm Tiki-categories. demo: guest search "tên sản phẩm" → ra kết quả → vào PDP → đổi variant đổi giá.
+What: Khách duyệt được catalog Tiki-style qua storefront-web Next.js SSR (D16) — home (hero + flash deal countdown + featured), PLP (sidebar danh mục + filter giá/rating + sort + pagination), search, PDP (gallery + variant + tồn kho + add-to-cart stub theo cart contract + JSON-LD/OG), sitemap/robots; catalog-service với search Elasticsearch chính + PG FTS fallback (D15), seed ~24 sản phẩm Tiki-categories. demo: guest search "tên sản phẩm" → ra kết quả (ES) → vào PDP → view-source thấy HTML SSR tên + giá.
 Depends on: SF-2
-Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-category-apis / searchengine-interface-pgfts-impl / es-indexer-productchanged-reindex / es-search-query-suggest / filters-sort-pagination / redis-cache-invalidate-productchanged-outbox / product-fields-compareprice-flash-rating / seed-data-tiki-categories / home-tiki-flashdeal-featured-storefront-remote / plp-sidebar-filter-grid-card / pdp-gallery-variant-addtocart-stub / storefront-it-tests
+Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-category-apis / searchengine-interface-pgfts-impl / es-indexer-productchanged-reindex / es-search-query-suggest / filters-sort-pagination / redis-cache-invalidate-productchanged-outbox / product-fields-compareprice-flash-rating / seed-data-tiki-categories / nextjs-storefront-scaffold-home-flashdeal / plp-ssr-sidebar-filter-grid / pdp-ssr-gallery-variant-jsonld-og / search-couponcenter-sitemap-robots / storefront-it-tests
 
 ## SF-5 inventory + payment services
 Tier: 2
@@ -66,7 +66,7 @@ linear: FI-318
 Design: none
 What: Review + wishlist hoạt động — mọi user đăng nhập viết được review (vào PENDING moderation), admin approve qua API → hiện PDP với badge "Mua đã xác nhận" (verified-purchase qua order.confirmed synthetic harness — KHÔNG cần ordering thật), rating_avg trên card cập nhật; wishlist heart trên PDP/PLP + trang wishlist + my-reviews trong mfe-account. demo: viết review → approve → thấy trên PDP với badge verified.
 Depends on: SF-3, SF-4
-Tasks: flyway-reviews-wishlist-tables / reviews-apis-submit-moderation-states / verified-purchase-orderconfirmed-consumer / rating-aggregate-denormalized-update / synthetic-event-harness-testcontainers / pdp-reviews-section-verified-badge / write-review-modal-flow / wishlist-apis-peruser / wishlist-heart-pdp-plp / wishlist-page-mfe-account-slice / my-reviews-page-mfe-account-slice / reviews-wishlist-it-tests
+Tasks: flyway-reviews-wishlist-tables / reviews-apis-submit-moderation-states / verified-purchase-orderconfirmed-consumer / rating-aggregate-denormalized-update / synthetic-event-harness-testcontainers / pdp-nextjs-reviews-section-verified-badge / write-review-modal-client-component / wishlist-apis-peruser / wishlist-heart-next-pdp-plp / wishlist-page-mfe-account-slice / my-reviews-page-mfe-account-slice / reviews-wishlist-it-tests
 
 ## SF-9 ordering saga + coupons
 Tier: 3

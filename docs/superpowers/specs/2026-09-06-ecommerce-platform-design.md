@@ -23,7 +23,7 @@
 | # | Quyết định | Nguồn |
 |---|---|---|
 | D1 | Backend: **Java 21 + Spring Boot 3.x**, Maven multi-module, Spring Cloud Gateway | **USER** (chọn Spring Boot qua clarifying) |
-| D2 | Frontend: **Vite + React 18 + Module Federation** (`@module-federation/enhanced`), pnpm + Turborepo | **USER** |
+| D2 | Frontend: **Vite + React 18 + Module Federation** (`@module-federation/enhanced`) cho app pages (checkout/account/admin), pnpm + Turborepo. **Amended bởi D16**: storefront public pages chuyển sang Next.js SSR | **USER** |
 | D3 | Payment: **Stripe test mode** (stripe-java, webhook có signature verify, Stripe.js confirm phía client) — vẫn giữ `PaymentProviderAdapter` interface để sau này cắm VNPay/MoMo | **USER** |
 | D4 | Scope MVP: core + **Reviews & ratings + Coupons/vouchers + Wishlist** (tất cả) | **USER** |
 | D5 | API style: REST contract-first, OpenAPI 3.1 specs là source of truth trong `contracts/`; TS clients sinh bằng openapi-typescript; Java side springdoc + contract-conformance test | AGENT (phase0), nhất quán với D1-D2 |
@@ -37,6 +37,7 @@
 | D13 | **Design/product reference: https://tiki.vn** — storefront benchmark theo pattern UX Tiki (xem §4.1). Reference pattern, KHÔNG copy logo/brand/assets/data | **USER** (thêm sau spec draft) |
 | D14 | **MongoDB = central event/audit log store** (polyglot persistence): `log-service` (port 8088) fan-in TẤT CẢ domain events từ RabbitMQ → Mongo collection `event_log`. Consume-only — KHÔNG contract REST mới. Xem qua mongo-express (:8089). Admin activity page = backlog | **USER** (thêm sau APPROVE, trước SF-2 freeze) + AGENT chốt thiết kế fan-in |
 | D15 | **Elasticsearch = search engine chính** trong catalog-service qua `SearchEngine` interface (EsEngine khi có `ELASTICSEARCH_URI` / PgFtsEngine fallback — degraded không crash). Indexer consume `product.changed` + bulk reindex startup. ES 8 single-node, heap cap 512m, security off (dev). Contract search API KHÔNG đổi. ADR ghi extract-path thành search-service riêng | **USER** (thêm sau APPROVE, trước SF-4) + AGENT chốt abstraction |
+| D16 | **Next.js SSR cho SEO** (hybrid model): `storefront-web` (Next.js App Router, port 3000) server-render các trang PUBLIC: home, PLP, PDP, search, coupon center + sitemap.xml/robots.txt + JSON-LD Product schema + OG tags (ISR/revalidate qua catalog API). **Shell Vite MF giữ lại cho app pages cần auth** (cart/checkout/account/admin — không cần SEO). Gateway route: `/`, `/c/*`, `/p/*`, `/search`, `/coupons` → Next :3000; còn lại → shell. Contract API KHÔNG đổi. Anti-duplicate: home/PLP/PDP chỉ tồn tại ở Next, KHÔNG làm bản Vite | **USER** (sau APPROVE, trước SF-2 freeze — timing tốt) + AGENT chốt hybrid split |
 
 ## 3. Kiến trúc
 
@@ -64,8 +65,10 @@ ecommerce/
 │   └── shared/common-lib/              # event envelope + outbox base + error model + security config
 ├── frontend/                           # pnpm workspace + Turborepo
 │   ├── apps/
-│   │   ├── shell/                      # MFE host: layout, routing gốc, auth context, remote loader
-│   │   ├── mfe-storefront/             # browse: home, PLP, PDP (search/filter/gallery/reviews/wishlist)
+│   │   ├── storefront-web/             # Next.js App Router (SSR/ISR — D16): home, PLP, PDP, search,
+│   │   │                               #   coupon center + sitemap/robots/JSON-LD/OG — SEO public pages
+│   │   ├── shell/                      # MFE host (app pages): layout, routing, auth context, remotes:
+│   │   │                               #   mfe-checkout, mfe-account, mfe-admin
 │   │   ├── mfe-checkout/               # cart + checkout steps + Stripe.js confirm + confirmation
 │   │   ├── mfe-account/                # login/register/profile/orders/wishlist
 │   │   └── mfe-admin/                  # admin: products, categories, coupons, reviews moderation, orders, dashboard
@@ -126,7 +129,13 @@ Login → identity cấp access JWT (RS256, 15', claim `role`) + refresh cookie 
 
 ### 3.5 Micro frontend composition
 
-Shell (host) định nghĩa remote manifest theo env (`REMOTE_*_URL`), dùng MF 2.0 runtime; `shared` singletons: react, react-dom, packages/auth, ui-kit, i18n (react-router KHÔNG shared — routing là của shell). Dev: mỗi MFE một Vite server (5 server) — chạy chọn lọc được; prod: build static, gateway host tại `/`, remotes mount theo route. Shell sở hữu TOÀN BỘ routing/auth — remote "ngu" tối đa.
+**Hybrid rendering (D16):** hai lớp frontend, mỗi lớp đúng việc:
+
+- **`storefront-web` (Next.js App Router :3000) — SEO public**: server-render home/PLP/PDP/search/coupon center (ISR + revalidate qua catalog API), sitemap.xml + robots.txt sinh từ catalog, JSON-LD `Product`/`Offer` schema + OG tags trên PDP. Fetch thẳng catalog API qua gateway (server-side) — không qua MF.
+- **Shell Vite MF — app pages cần auth**: remote manifest theo env (`REMOTE_*_URL`), MF 2.0 runtime; remotes: **mfe-checkout, mfe-account, mfe-admin**; `shared` singletons: react, react-dom, packages/auth, ui-kit, i18n (routing của shell). Cart/checkout/account/admin không cần SEO (auth-gated) → CSR là đủ.
+- **Gateway route split**: `/`, `/c/*`, `/p/*`, `/search`, `/coupons`, `/sitemap.xml`, `/robots.txt` → Next :3000; `/cart`, `/checkout`, `/account`, `/admin` (+ `/api/**`) → shell static/gateway. Cross-link giữa 2 lớp bằng URL thuần (header shell + header Next cùng ngôn ngữ thiết kế, link `/checkout` từ PDP "Mua ngay").
+- Dev: Next dev server + 4 Vite servers chạy chọn lọc; prod profile `full`: Next standalone build (container) + remotes static qua gateway.
+- Anti-duplicate (cứng): home/PLP/PDP/search/coupon center **CHỈ tồn tại ở Next** — cấm làm bản Vite tương ứng.
 
 ### 3.6 Order state machine (pin cho contracts freeze — ordering.yaml)
 
@@ -178,6 +187,7 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 7. Saga compensation: fail-injection (payment declined) → stock được release, order FAILED, không rò rỉ reservation.
 8. Mongo `event_log` (mongo-express :8089) có documents cho TẤT CẢ domain events xảy ra trong demo — action ở UI → dòng log xuất hiện.
 9. Elasticsearch: index `products` có documents sau seed/reindex (`curl :9200/products/_count` > 0); search endpoint trả kết quả qua ES; ES down → fallback PG FTS (degraded, không crash).
+10. **SEO (D16)**: view-source trang PDP → HTML chứa tên + giá sản phẩm (server-render, không phải shell rỗng); `/sitemap.xml` + `/robots.txt` trả 200 với URL products; PDP có JSON-LD `Product` schema + OG tags.
 
 ## 6. SF split (10 SF — mỗi SF 8-15 tasks, contract-first)
 
@@ -186,11 +196,11 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 | SF-1 | platform-foundation | 0 | — | Repo scaffold (Makefile, compose infra PG/Redis/RabbitMQ/Mailpit/Mongo+mongo-express/Elasticsearch/stripe-cli, db init), Maven parent + **service template module** (health/springdoc/Flyway/Testcontainers/Dockerfile), frontend pnpm+turbo scaffold, gateway skeleton (routes/request-id/CORS), shared common-lib (envelope/outbox base/error), contracts dir skeleton (~14) |
 | SF-2 | contracts-design-foundation | 1 | SF-1 | **Freeze toàn bộ OpenAPI specs (7 service) + JSON Schema events (fat payloads — §6.1) + order state machine (§3.6) + admin stats endpoints**, TS codegen → packages/contracts, packages/auth (RS256 decode/refresh singleton), ui-kit v1 (tokens + primitives + 2 theme), i18n vi/en, designer mock-prototype 3 hướng Tiki-inspired (§4.1) → USER CHỌN, **federation harness (shell + 1 skeleton remote qua MF 2.0 runtime — shared singletons 1 instance, pattern `REMOTE_*_URL` proven; gate: harness xanh trước khi T2 fork)**. Freeze contracts KHÔNG chờ designer choice (contract trước; ui-kit tokens theo hướng được chọn sau) — 1 lựa chọn hướng GLOBAL, các SF sau implement screens theo hướng đó (~14) |
 | SF-3 | identity + account | 2 | SF-2 | identity-service (register/login/refresh/JWT RS256/RBAC, seed admin), mfe-account (login/register/profile — orders page là placeholder cho tới SF-9), gateway auth wiring, shell header auth state (~11) |
-| SF-4 | catalog + browse | 2 | SF-2 | catalog-service (products/categories/images/Redis cache+invalidate/seed, compare_price + flash_sale_ends_at + rating_avg/rating_count denormalized, **search: SearchEngine interface — EsEngine chính + PgFtsEngine fallback (D15), indexer consume product.changed + bulk reindex startup**), mfe-storefront (home/PLP filter-sort-paginate/PDP gallery + add-to-cart stub) (~14) |
+| SF-4 | catalog + browse | 2 | SF-2 | catalog-service (products/categories/images/Redis cache+invalidate/seed, compare_price + flash_sale_ends_at + rating_avg/rating_count denormalized, **search: SearchEngine interface — EsEngine chính + PgFtsEngine fallback (D15), indexer consume product.changed + bulk reindex startup**), **storefront-web Next.js (D16): home SSR + flash deal countdown, PLP SSR (sidebar/filter/sort/pagination), PDP SSR (gallery/variant/JSON-LD/OG) + add-to-cart stub, search page, coupon center, sitemap.xml/robots.txt** (~14) |
 | SF-5 | inventory + payment services | 2 | SF-2 | inventory-service (stock, variant-level reservations TTL, `POST /reservations` all-or-nothing + commit/release qua events), payment-service (Stripe intent/webhook verify/adapter SPI createIntent-void-refund/outbox), integration harness Testcontainers (~10) |
 | SF-6 | cart + checkout UX | 3 | SF-3, SF-4, SF-5 | cart-service (Redis guest+user qua cart_token cookie, merge-on-login POST /cart/merge, removed-product filter), mfe-checkout (cart UI, checkout steps, coupon apply, Stripe.js confirm — Stripe test keys từ `.env`, không key → lỗi rõ ràng không crash, confirmation page) — **gate: checkout/coupon/Stripe-confirm build trên contract stubs của ordering; live wiring tại SF-10** (~12) |
 | SF-7 | admin MFE | 3 | SF-3, SF-4, SF-5 | mfe-admin shell + RBAC guards, products/categories CRUD (**live** — catalog có từ T2), coupons CRUD + reviews moderation queue + orders list/detail + revenue stats (**mock-gate** theo contract — ordering chưa có ở T3; low-stock live qua SF-5), live-data verify SF-10 (~13) |
-| SF-8 | reviews + wishlist | 3 | SF-3, SF-4 | reviews aggregate trong catalog-service (moderation states, verified-purchase từ order.confirmed — **event harness Testcontainers với synthetic order.confirmed**, không đòi ordering chạy thật), PDP reviews + write flow (mọi user đăng nhập viết được, badge verified qua event), wishlist APIs + heart + wishlist page, my-reviews (~11) |
+| SF-8 | reviews + wishlist | 3 | SF-3, SF-4 | reviews aggregate trong catalog-service (moderation states, verified-purchase từ order.confirmed — **event harness Testcontainers với synthetic order.confirmed**, không đòi ordering chạy thật), **PDP (storefront-web Next) reviews section + write-review modal (client component — file-slice SF-8)** (mọi user đăng nhập viết được, badge verified qua event), wishlist APIs + heart (Next PDP/PLP + shell account) + wishlist page, my-reviews (~11) |
 | SF-9 | ordering saga + coupons | 3 | SF-5 | ordering-service + saga orchestrator (reserve sync all-or-nothing, compensation edges + late-payment refund — §3.3, fail-injection tests) + outbox relay, coupons validate/usage-reserve, order state machine §3.6 + my-orders APIs **+ my-orders UI trong mfe-account (`pages/orders/*` — file-slice)** (~13) |
 | SF-10 | convergence + ship | 4 | SF-6, SF-7, SF-8, SF-9 | Checkout **live wiring** (mfe-checkout → ordering thật), **notification-service (email Mailpit) + log-service (Mongo `event_log` fan-in — D14)**, golden-path Playwright E2E + admin CRUD spec + **review-flow E2E (§5.6)** + saga fail spec (§5.7) + asserts §5.3 (admin tạo product → thấy trên storefront) / §5.4 (mỗi service standalone) / §5.5 (gateway 403 admin), deterministic seed (coupon code cố định, product names cho search, Stripe test cards 4242-success + 4000...0002-declined), profile `full` compose + static MFE hosting qua gateway + **final mounts: đủ 4 remote apps + shell host, full route table, `make dev` full-stack**, demo README + script, ADR hoàn thiện, perf/security sanity (~14) |
 
@@ -211,7 +221,7 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 
 **Tier-gate:** gate mỗi SF CHỈ test những gì SF đó + các tier trước cung cấp. SF-4: add-to-cart stub theo cart contract. SF-6: checkout/coupon/Stripe-confirm trên ordering contract stubs + payment thật (SF-5) — live end-to-end ở SF-10. SF-7: orders/coupons-CRUD/moderation/revenue mock theo contract; products/categories + low-stock live (SF-5). SF-8: verified-purchase qua synthetic event harness, không đòi ordering thật. Cross-SF flow thật (golden path, review E2E, saga fail) chỉ ở SF-10.
 
-**Shared-file ownership (quy tắc merge song song):** (a) **shell** remote-manifest + routes + slot mounts — append-only per SF; header components (search/auth/cart-badge) qua **slot registry**: remote đăng ký widget từ app của mình, KHÔNG sửa file Header của shell; mount-verify cuối ở SF-10; (b) **mfe-account** — file-slice: SF-8 sở hữu `pages/wishlist/*` + `pages/my-reviews/*`, SF-9 sở hữu `pages/orders/*`, router registry additive-only; (c) **gateway routes** — append-only block per service (SF tự thêm route service mình); (d) **Makefile** — append-only target block per service; (e) **`contracts/` + `packages/contracts/`** — READ-ONLY sau khi SF-2 merge: SF dùng generated clients as-is, phát hiện freeze hỏng → flag coordinator amendment task, KHÔNG tự sửa; (f) `pnpm-lock.yaml` — pre-pin Tier 1, post-merge coordinator `pnpm install` regenerate, SF ưu tiên deps đã có trong workspace; (g) `docker-compose.yml` — append-only block per service.
+**Shared-file ownership (quy tắc merge song song):** (a) **shell** remote-manifest + routes + slot mounts — append-only per SF; header components (search/auth/cart-badge) qua **slot registry**: remote đăng ký widget từ app của mình, KHÔNG sửa file Header của shell; mount-verify cuối ở SF-10; (b) **mfe-account** — file-slice: SF-8 sở hữu `pages/wishlist/*` + `pages/my-reviews/*`, SF-9 sở hữu `pages/orders/*`, router registry additive-only; (b2) **storefront-web (Next)** — SF-4 sở hữu toàn bộ trừ: SF-8 sở hữu `components/reviews/*` + `components/wishlist/*` + khu vực PDP reviews section (chèn qua slot/props do SF-4 định sẵn); (c) **gateway routes** — append-only block per service + route split D16 (Next vs shell — SF-4 thêm khối Next, SF-6/7/9 thêm block service mình); (d) **Makefile** — append-only target block per service; (e) **`contracts/` + `packages/contracts/`** — READ-ONLY sau khi SF-2 merge: SF dùng generated clients as-is, phát hiện freeze hỏng → flag coordinator amendment task, KHÔNG tự sửa; (f) `pnpm-lock.yaml` — pre-pin Tier 1, post-merge coordinator `pnpm install` regenerate, SF ưu tiên deps đã có trong workspace (Next deps do SF-4 thêm — coordinator serialize lúc merge); (g) `docker-compose.yml` — append-only block per service.
 
 **Parallelism:** T2 chạy 3 SF song song (SF-3/4/5), T3 chạy 4 SF song song (SF-6/7/8/9 — file sets rời nhau theo shared-file ownership phía trên) — nhờ contracts freeze + append-only rules.
 

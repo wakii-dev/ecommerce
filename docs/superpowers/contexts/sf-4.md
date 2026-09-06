@@ -6,7 +6,7 @@
 
 ## Spec slice (chỉ phần SF-4 chịu trách nhiệm)
 
-1. **catalog-service** từ template (port 8082, db_catalog): Flyway `V1__catalog.sql` — `categories` (id, name, slug unique, parent_id tree, icon), `products` (id, name, slug unique, description, brand, category_id, status draft/published, price bigint VND, compare_price bigint nullable (giá gạch), flash_sale_ends_at timestamptz nullable, official boolean, rating_avg numeric(2,1) default 0, rating_count int default 0, created_at; search tsvector generated column), `product_images` (url, alt, sort), `product_variants` (id, product_id, size nullable, color nullable, price bigint nullable = override, sku_code). **KHÔNG lưu stock ở catalog** — stock là inventory (SF-5).
+1. **catalog-service** từ template (port 8082, db_catalog): Flyway `V1__catalog.sql` — `categories` (id, name, slug unique, parent_id tree, icon), `products` (id, name, slug unique editable, description, brand, category_id, status draft/published, price bigint VND, compare_price bigint nullable (giá gạch), flash_sale_ends_at timestamptz nullable, official boolean, **seo_title varchar nullable + seo_description varchar nullable (SEO override — D16: admin nhập, null → metadata tự sinh)**, rating_avg numeric(2,1) default 0, rating_count int default 0, created_at; search tsvector generated column), `product_images` (url, alt, sort), `product_variants` (id, product_id, size nullable, color nullable, price bigint nullable = override, sku_code). **KHÔNG lưu stock ở catalog** — stock là inventory (SF-5).
 2. **APIs theo `catalog.yaml`**: `GET /api/catalog/products` (filters: category slug, price_min/max, rating_min, brand, official; sort price_asc|price_desc|rating|newest; page/size=12), `GET /api/catalog/products/{slug}` (detail + images + variants + category path), `GET /api/catalog/categories` (tree), `GET /api/catalog/search?q=`, `GET /api/catalog/search/suggest?q=`. Admin (internal, guard ADMIN): products/categories CRUD + publish/unpublish.
 3. **SearchEngine abstraction (D15)**: interface `SearchEngine { search(q, filters), suggest(q), index(product), reindexAll() }`:
    - **PgFtsEngine** (fallback): PG FTS `simple` + `unaccent` (tsvector generated column từ migration), suggest `pg_trgm`.
@@ -15,20 +15,25 @@
 4. **ES indexer** (trong catalog-service): consume `product.changed` (outbox event) → index/refresh document ES (id = product id, fields: name, description, brand, category, price, rating_avg, official, status published only); **startup bulk reindex** (AppRunner: nếu ES reachable → đẩy toàn bộ published products). KHÔNG sync products unpublished/đã xóa (xóa document ES).
 5. **Redis cache**: product detail, category tree, home featured; TTL conventions; **invalidate qua consumer `product.changed`** — event này DÙNG CHUNG cho ES indexer + log-service (SF-10).
 6. **Seed**: profile `seed` hoặc script — ~24 sản phẩm, 5-6 danh mục kiểu Tiki (Điện tử, Thời trang, Nhà cửa, Sách, Làm đẹp, Mẹ & bé), ảnh placeholder, 3-4 sản phẩm có `compare_price` + `flash_sale_ends_at` = now + 2 ngày, rating_avg/count phân bố, tên tiếng Việt dễ search (cấu trúc dễ mở rộng — SF-10 sẽ pin tên cụ thể). Idempotent. **Seed xong → trigger reindexAll() để ES có documents** (criterion §5.9).
-6. **`frontend/apps/mfe-storefront`** (remote mới): routes `/` (home), `/c/:slug` (PLP), `/p/:slug` (PDP), `/search?q=`. Theo design direction + ui-kit:
-   - **Home**: hero carousel (banner static data), flash-deal section (products `flash_sale_ends_at > now`, **countdown component**), featured categories, product grid.
-   - **PLP**: sidebar category tree + filter panel (giá range, rating, brand) + sort dropdown + pagination + `ProductCard` (ảnh, tên 2 dòng, Price + compare_price gạch + badge % giảm, StarRating + count, badge "Chính hãng" nếu official + "Freeship").
-   - **PDP**: gallery trái + info phải (tên, rating + count, Price + badge, variant selector size/color cập nhật giá, qty stepper, **nút Add to cart STUB** — render theo cart contract shape, click gọi `POST /api/cart/items`; service chưa có → toast lỗi êm "Tính năng đang triển khai" — KHÔNG đòi hoạt động trong gate), tabs mô tả/spec, breadcrumb, tồn kho: gọi `GET /api/inventory/availability` theo contract — endpoint 404/503 (SF-5 chưa merge) → ẩn phần tồn kho gracefully.
-   - **Header search**: đăng ký search widget (search bar + suggest dropdown) qua **HeaderSlots** TỪ storefront bootstrap — KHÔNG sửa file Header shell.
-7. **IT tests**: search, filters, pagination, cache invalidation qua product.changed, admin CRUD APIs.
+6. **`frontend/apps/storefront-web`** (**Next.js App Router — D16, port 3000**): routes `/` (home), `/c/[slug]` (PLP), `/p/[slug]` (PDP), `/search`, `/coupons`, `/sitemap.xml`, `/robots.txt`. **SSR/ISR**: Server Components fetch catalog API qua gateway (env `GATEWAY_URL`), revalidate 60s. Theo design direction + ui-kit (React thuần — dùng được trong Next; **client components CHỈ cho tương tác**: countdown, variant selector, qty, modal — mọi nội dung phải có trong HTML server-render):
+   - **Home**: hero carousel + flash-deal countdown + featured grid.
+   - **PLP**: sidebar + filters (URL params — SEO friendly, kết quả server-rendered) + sort + pagination + `ProductCard` (giá gạch, badge %, StarRating, badge "Chính hãng"/"Freeship").
+   - **PDP**: `generateMetadata` (title/description/OG — **priority: `seo_title`/`seo_description` admin nhập → fallback tự sinh từ name/description**) + **JSON-LD `Product`/`Offer` script** + gallery + variant selector (client) + qty + **add-to-cart STUB** (client, gọi `POST /api/cart/items`; chưa có service → toast êm — KHÔNG đòi hoạt động trong gate) + tabs + breadcrumb; tồn kho gọi `GET /api/inventory/availability` — 404/503 → ẩn gracefully.
+   - **Search page**: kết quả `GET /api/catalog/search` (ES) + suggest.
+   - **Coupon center**: danh sách coupon public theo `GET /api/ordering/coupons/public` (contract SF-2) + nút copy mã — **mock-gate** (ordering là SF-9; live ở SF-10).
+   - **Sitemap/robots**: `sitemap.ts` sinh từ catalog products (mọi slug published) + static routes; `robots.txt` disallow `/cart|/checkout|/account|/admin`.
+   - **Header riêng của Next app** (theo direction): logo + search bar + suggest + link giỏ hàng (`/cart` → shell) + account (`/account` → shell). KHÔNG dùng HeaderSlots của shell (search không còn là slot shell — shell chỉ giữ auth/cart slots cho app pages).
+   - **Anti-duplicate cứng**: home/PLP/PDP/search/coupon center CHỈ ở đây — không làm bản Vite.
+7. **Gateway route split (D16)**: append block route `/`, `/c/*`, `/p/*`, `/search`, `/coupons`, `/sitemap.xml`, `/robots.txt` → upstream `storefront-web:3000` (dev localhost:3000). Makefile `dev-fe app=storefront-web` = `next dev`.
+8. **IT tests**: catalog APIs, search engines (ES primary + fallback), indexer/reindex; storefront-web render test (home/PDP HTML chứa tên + giá), sitemap/robots 200.
 
 ## Touch map (files SF-4 tạo/sở hữu)
 
 ```
 backend/services/catalog-service/**
-frontend/apps/mfe-storefront/**
-frontend/apps/shell: remote manifest + slot mount entry (append 1 block)
-docker-compose.yml (append block catalog-service) · Makefile (append target)
+frontend/apps/storefront-web/** (Next.js — SF-4 sở hữu trừ components/reviews/* + components/wishlist/* của SF-8)
+backend/gateway: routes/catalog.yml + khối route-split Next (D16) (append)
+docker-compose.yml (append block catalog-service) · Makefile (append targets)
 ```
 READ-ONLY: `contracts/**`, `packages/{contracts,auth,ui-kit,i18n}`, `backend/gateway` (append route block catalog vào routes/), services khác.
 
@@ -45,6 +50,7 @@ READ-ONLY: `contracts/**`, `packages/{contracts,auth,ui-kit,i18n}`, `backend/gat
 - **§5.9**: `curl :9200/products/_count` > 0 sau seed; dừng ES container (`docker stop`) → search VẪN chạy qua PG FTS fallback, KHÔNG 500.
 - PDP: gallery chuyển ảnh; đổi variant → giá đổi; breadcrumb đúng; nút add-to-cart hiển thị (stub).
 - Gọi admin API publish product mới (Swagger/curl) → PLP/PDP thấy trong ~60s (cache invalidate).
+- **§5.10 SEO**: view-source `/p/<slug>` → HTML chứa tên + giá (không phải shell rỗng); `/sitemap.xml` + `/robots.txt` 200; PDP có JSON-LD Product + OG tags; product có `seo_title`/`seo_description` → metadata dùng giá trị nhập tay (không fallback).
 
 ## Boundary (KHÔNG làm)
 

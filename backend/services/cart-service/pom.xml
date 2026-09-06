@@ -19,6 +19,26 @@
     <dependency>
       <groupId>com.ecommerce</groupId>
       <artifactId>common-lib</artifactId>
+      <exclusions>
+        <!-- common-lib compile-level kéo jpa/amqp cho outbox; cart KHÔNG có
+             DB/broker (D8) → exclude để JPA/Rabbit autoconfig backing-off tự
+             nhiên (classpath honest). jakarta.persistence-api giữ lại riêng vì
+             common-lib GlobalExceptionHandler reference
+             jakarta.persistence.EntityNotFoundException trong @ExceptionHandler. -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-amqp</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Classpath cho @ExceptionHandler reference của common-lib (xem trên) -->
+    <dependency>
+      <groupId>jakarta.persistence</groupId>
+      <artifactId>jakarta.persistence-api</artifactId>
     </dependency>
 
     <dependency>

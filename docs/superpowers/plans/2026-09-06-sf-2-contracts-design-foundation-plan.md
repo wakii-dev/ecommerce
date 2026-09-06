@@ -214,13 +214,13 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `frontend/packages/contracts/package.json`, `frontend/packages/contracts/src/**` (generated + client factory), `frontend/packages/contracts/vitest.config.ts`? (theo preset config package — nếu cần); Modify `frontend/pnpm-workspace.yaml` (catalog thêm `openapi-typescript`, `json-schema-to-typescript` nếu chưa có)
 
-- [ ] `package.json`: name `@ecommerce/contracts`; scripts: `gen` — chạy 2 bước: (1) `openapi-typescript` từng file `contracts/openapi/*.yaml` → `src/generated/<service>Schema.d.ts` (paths object types), (2) `json-schema-to-typescript` từng `contracts/events/*.schema.json` → `src/generated/events/<name>.d.ts`; `build` — tsc; `test` — vitest
-- [ ] `src/index.ts` export barrels: `export type * from './generated/...'` + client factories
-- [ ] Client factory `src/client.ts`: `createApiClient(service, opts)` — fetch wrapper: nhận `{baseURL, getToken?: () => string | null, fetchImpl?}`; tự gắn `Authorization: Bearer` khi có token + `X-Request-Id` (crypto.randomUUID nếu có — framework-portable: KHÔNG dùng browser API top-level, chỉ trong hàm); parse error → throw `ApiErrorClient` (mirror problem+json shape); method theo paths của từng service
-- [ ] Smoke test (vitest): compile 1 client call kiểu-an-toàn (ví dụ `createIdentityClient(...).login({...})` typecheck) + mock fetch assert URL/header/parse problem+json → pass
-- [ ] `pnpm -C frontend --filter @ecommerce/contracts gen && build && test` xanh
-- [ ] COMMIT generated code (pack yêu cầu)
-- [ ] Commit: `feat(contracts): TS codegen pipeline + typed clients + smoke test`
+- [x] `package.json`: name `@ecommerce/contracts`; scripts: `gen` — chạy 2 bước: (1) `openapi-typescript` từng file `contracts/openapi/*.yaml` → `src/generated/<service>Schema.d.ts` (paths object types), (2) `json-schema-to-typescript` từng `contracts/events/*.schema.json` → `src/generated/events/<name>.d.ts`; `build` — tsc; `test` — vitest
+- [x] `src/index.ts` export barrels: `export type * from './generated/...'` + client factories
+- [x] Client factory `src/client.ts`: `createApiClient(service, opts)` — fetch wrapper: nhận `{baseURL, getToken?: () => string | null, fetchImpl?}`; tự gắn `Authorization: Bearer` khi có token + `X-Request-Id` (crypto.randomUUID nếu có — framework-portable: KHÔNG dùng browser API top-level, chỉ trong hàm); parse error → throw `ApiErrorClient` (mirror problem+json shape); method theo paths của từng service
+- [x] Smoke test (vitest): compile 1 client call kiểu-an-toàn (ví dụ `createIdentityClient(...).login({...})` typecheck) + mock fetch assert URL/header/parse problem+json → pass
+- [x] `pnpm -C frontend --filter @ecommerce/contracts gen && build && test` xanh
+- [x] COMMIT generated code (pack yêu cầu)
+- [x] Commit: `feat(contracts): TS codegen pipeline + typed clients + smoke test`
 
 ### Task 11: packages-auth-rs256-refresh-rolesingleton
 

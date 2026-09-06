@@ -65,15 +65,30 @@ public class OrderConfirmedEligibilityConsumer {
             log.warn("[review-eligibility] envelope parse fail — ack bỏ qua (poison): {}", e.getMessage());
             return;
         }
+        if (envelope == null) {
+            // body "null" parse ra null — NPE ở dưới sẽ requeue vô hạn (review P1)
+            log.warn("[review-eligibility] envelope null — ack bỏ qua (poison)");
+            return;
+        }
         if (!RabbitMqConfig.ROUTING_ORDER_CONFIRMED.equals(envelope.eventType())) {
             log.warn("[review-eligibility] bỏ qua eventType lạ: {}", envelope.eventType());
             return; // không consume marker — queue chỉ bind order.confirmed
+        }
+        if (envelope.eventId() == null) {
+            // không guard → marker "elig:null" dùng chung cho mọi event hỏng
+            log.warn("[review-eligibility] eventId thiếu — ack bỏ qua (poison)");
+            return;
         }
         if (!idempotentConsumer.tryConsume(MARKER_PREFIX + envelope.eventId())) {
             return; // đã xử lý (at-least-once duplicate)
         }
 
         JsonNode payload = envelope.payload();
+        if (payload == null || payload.isMissingNode() || !payload.isObject()) {
+            log.warn("[review-eligibility] payload thiếu/không phải object — ack bỏ qua eventId={}",
+                envelope.eventId());
+            return;
+        }
         UUID orderId = parseUuid(payload.path("orderId").asText(null), "orderId", envelope);
         UUID userId = parseUuid(payload.path("userId").asText(null), "userId", envelope);
         if (orderId == null || userId == null) {

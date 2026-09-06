@@ -50,7 +50,14 @@ export default function PdpBuyBox({ product, locale }: { product: ProductDetail;
         onChange={onChange}
       />
 
-      <AddToCart productId={product.id} variantId={variantId} locale={locale} />
+      {/* SF-6: slug hint cho cart enrichment (catalog không có id-lookup —
+          REQUIREMENT-GAP FI-310) — product.slug đã có sẵn trong PDP data. */}
+      <AddToCart
+        productId={product.id}
+        variantId={variantId}
+        slug={product.slug}
+        locale={locale}
+      />
     </div>
   );
 }

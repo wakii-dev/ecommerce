@@ -5,23 +5,31 @@ import { useEffect, useRef, useState } from 'react';
 import type { Locale } from '../../lib/format';
 
 /**
- * AddToCartStub PDP (plan Task 13): qty stepper (−/+ 36px, input 44px, 1–99)
- * + 2 CTA §3 — "THÊM VÀO GIỎ" outline 2px + "MUA NGAY" gradient. Cả hai POST
- * `/api/cart/items` qua rewrites proxy (Conventions #10) — lỗi MỌI loại
- * (network/non-ok/SF-9 chưa có) → toast êm "Giỏ hàng sẽ sớm khả dụng", KHÔNG
- * crash. Toast = implementation nội bộ tối giản (ui-kit Toast là primitive
- * stateful client — không deep-import vào client graph).
+ * AddToCart PDP (SF-4 → wire THẬT ở SF-6): qty stepper (−/+ 36px, input 44px,
+ * 1–99) + 2 CTA §3 — "THÊM VÀO GIỎ" outline 2px + "MUA NGAY" gradient. Cả hai
+ * POST `/api/cart/items?slug={slug}` qua rewrites proxy (Conventions #10) —
+ * cart-service (SF-6, port 8083) nhận thật: auto-create guest + Set-Cookie
+ * cart_token; thành công → toast "Đã thêm vào giỏ" + dispatch
+ * `ecommerce:cart-changed` (CartBadge của shell cùng window qua gateway tự
+ * refresh) + nhớ cartToken (localStorage ecommerce.guest_cart_token) cho
+ * merge-on-login. Lỗi MẠNG (cart-service chết) → toast êm cũ, KHÔNG crash.
+ * "MUA NGAY" → thêm xong điều hướng /cart (shell app pages, cùng cookie jar
+ * localhost — cookie không phân biệt port).
+ *
+ * Slug hint: catalog không có lookup theo productId (REQUIREMENT-GAP FI-310)
+ * → cart-service enrich qua GET /api/catalog/products/{slug} bằng hint này.
  *
  * Tồn kho: fetch `GET /api/inventory/availability?variantIds={id}` (contract
  * inventory: availability theo VARIANT — bỏ qua khi chưa chọn variant).
- * Lỗi/404/non-array → KHÔNG render UI tồn kho (SF-5 chưa merge → ẩn luôn).
+ * Lỗi/404/non-array → KHÔNG render UI tồn kho (cart vẫn kiểm 409 lúc add).
  */
 
 const COPY = {
   vi: {
     add: 'THÊM VÀO GIỎ',
     buy: 'MUA NGAY',
-    toast: 'Giỏ hàng sẽ sớm khả dụng',
+    toastFail: 'Giỏ hàng sẽ sớm khả dụng',
+    toastOk: 'Đã thêm vào giỏ ✓',
     inStock: 'Còn hàng',
     outStock: 'Hết hàng',
     qty: 'Số lượng',
@@ -29,7 +37,8 @@ const COPY = {
   en: {
     add: 'ADD TO CART',
     buy: 'BUY NOW',
-    toast: 'Cart is coming soon',
+    toastFail: 'Cart is coming soon',
+    toastOk: 'Added to cart ✓',
     inStock: 'In stock',
     outStock: 'Out of stock',
     qty: 'Quantity',
@@ -53,13 +62,16 @@ interface AddToCartProps {
   productId: string;
   /** Variant đang chọn — null → POST không variantId (sản phẩm không variant). */
   variantId: string | null;
+  /** Slug vi của product — hint cho cart-service enrichment (SF-6). */
+  slug: string;
   locale: Locale;
 }
 
-export default function AddToCart({ productId, variantId, locale }: AddToCartProps) {
+export default function AddToCart({ productId, variantId, slug, locale }: AddToCartProps) {
   const copy = COPY[locale];
   const [qty, setQty] = useState(1);
   const [pending, setPending] = useState(false);
+  const [toastOk, setToastOk] = useState(false);
   const [toast, setToast] = useState(false);
   const [stock, setStock] = useState<number | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,26 +107,40 @@ export default function AddToCart({ productId, variantId, locale }: AddToCartPro
     if (toastTimer.current) clearTimeout(toastTimer.current);
   }, []);
 
-  function showToast(): void {
+  function showToast(ok: boolean): void {
+    setToastOk(ok);
     setToast(true);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(false), 2500);
   }
 
-  async function submit(): Promise<void> {
+  async function submit(buyNow: boolean): Promise<void> {
     if (pending) return; // chặn double-submit
     setPending(true);
     try {
-      const res = await fetch('/api/cart/items', {
+      const params = slug ? `?slug=${encodeURIComponent(slug)}` : '';
+      const res = await fetch(`/api/cart/items${params}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify(buildAddItemPayload(productId, variantId, qty)),
       });
-      // SF-9 chưa merge → mọi status đều rơi vào toast êm (giữ stub không crash).
       if (!res.ok) throw new Error(`cart ${res.status}`);
+      // Thành công thật (SF-6): nhớ guest token cho merge-on-login + báo badge
+      const cart = (await res.json()) as { cartToken?: string | null };
+      if (cart.cartToken) {
+        try {
+          window.localStorage.setItem('ecommerce.guest_cart_token', cart.cartToken);
+        } catch {
+          // private mode — merge sẽ dùng cookie leniency phía server
+        }
+      }
+      window.dispatchEvent(new CustomEvent('ecommerce:cart-changed'));
+      showToast(true);
+      if (buyNow) window.location.assign('/cart');
     } catch {
-      showToast();
+      // network/cart-service chết → toast êm (giữ hành vi cũ, không crash)
+      showToast(false);
     } finally {
       setPending(false);
     }
@@ -166,17 +192,27 @@ export default function AddToCart({ productId, variantId, locale }: AddToCartPro
       </div>
 
       <div className="pdp-cta-row">
-        <button type="button" className="pdp-cta pdp-cta--secondary" disabled={pending} onClick={submit}>
+        <button
+          type="button"
+          className="pdp-cta pdp-cta--secondary"
+          disabled={pending}
+          onClick={() => void submit(false)}
+        >
           {copy.add}
         </button>
-        <button type="button" className="pdp-cta pdp-cta--primary" disabled={pending} onClick={submit}>
+        <button
+          type="button"
+          className="pdp-cta pdp-cta--primary"
+          disabled={pending}
+          onClick={() => void submit(true)}
+        >
           {copy.buy}
         </button>
       </div>
 
       {toast ? (
         <div className="pdp-toast" role="status">
-          {copy.toast}
+          {toastOk ? copy.toastOk : copy.toastFail}
         </div>
       ) : null}
     </div>

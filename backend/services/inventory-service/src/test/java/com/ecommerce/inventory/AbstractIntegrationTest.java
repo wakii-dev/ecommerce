@@ -6,24 +6,34 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
+
 /**
- * IT harness base (fork từ template — pattern giữ nguyên): PG thật qua
- * Testcontainers + datasource động; KHÔNG mock repository layer.
- * Tag "integration" để lọc chạy; RabbitMQ IT tự khai container riêng.
+ * IT harness base — MỌI integration test của service kế thừa class này.
+ * Pattern: PG thật qua Testcontainers + datasource động; KHÔNG mock repository.
+ *
+ * <p><strong>Singleton container (static initializer, KHÔNG @Container):</strong>
+ * Spring context cache tái sử dụng context giữa các test class — nếu container
+ * per-class thì context của class sau trỏ vào container ĐÃ STOP (connection
+ * refused, Hikari timeout 30s/test). Start 1 lần trong static block + Ryuk dọn
+ * khi JVM exit → mọi class dùng chung container sống.</p>
  */
 @Tag("integration")
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16")
         .withDatabaseName("db_inventory")
         .withUsername("postgres")
-        .withPassword("postgres");
+        .withPassword("postgres")
+        .withStartupTimeout(Duration.ofMinutes(3));
+
+    static {
+        POSTGRES.start();
+    }
 
     @LocalServerPort
     int port;
@@ -33,7 +43,8 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
-        // IT chỉ dựng PG — rabbit health indicator sẽ kéo health DOWN nếu không tắt
+        // IT chỉ dựng PG — rabbit health indicator (starter-amqp) sẽ kéo health
+        // DOWN nếu không tắt; service thật chạy cùng compose RabbitMQ nên không cần.
         registry.add("management.health.rabbit.enabled", () -> "false");
     }
 }

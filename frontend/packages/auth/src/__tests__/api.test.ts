@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { authStore, configureAuth } from '../AuthStore';
-import { login, register, logout, updateProfile } from '../api';
+import { login, register, logout, updateProfile, fetchProfile } from '../api';
 
 // Stub fetch: queue responses theo thứ tự gọi.
 function stubFetch(responses: Array<{ status: number; body: unknown }>) {
@@ -55,6 +55,20 @@ describe('auth api', () => {
     configureAuth({ fetchImpl: impl });
     const me = await updateProfile({ fullName: 'A2' });
     expect(me.fullName).toBe('A2');
+    const urls = calls.map((c) => c.url);
+    expect(urls.filter((u) => u.includes('/auth/refresh'))).toHaveLength(1);
+    expect(urls.filter((u) => u.endsWith('/api/identity/me'))).toHaveLength(2);
+  });
+
+  it('fetchProfile 401 → refresh đúng 1 lần → retry GET /me', async () => {
+    const { impl, calls } = stubFetch([
+      { status: 401, body: { title: 'Unauthorized' } },          // GET /me lần đầu
+      { status: 200, body: { accessToken: okJwt, expiresIn: 900 } }, // refresh
+      { status: 200, body: { id: 'u-1', email: 'a@x.com', fullName: 'A', roles: ['CUSTOMER'], twoFactorEnabled: false } } // retry
+    ]);
+    configureAuth({ fetchImpl: impl });
+    const me = await fetchProfile();
+    expect(me.email).toBe('a@x.com');
     const urls = calls.map((c) => c.url);
     expect(urls.filter((u) => u.includes('/auth/refresh'))).toHaveLength(1);
     expect(urls.filter((u) => u.endsWith('/api/identity/me'))).toHaveLength(2);

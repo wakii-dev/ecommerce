@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Badge, Button, Card, Input } from '@ecommerce/ui-kit';
-import { useAuth } from '@ecommerce/auth';
-import { ApiErrorClient } from '@ecommerce/contracts';
+import { authStore, useAuth } from '@ecommerce/auth';
 import { fetchProfile, updateProfile } from '../api';
 import type { MeProfile } from '../api';
 import { appNavigate, authReady } from '../bootstrap';
@@ -22,9 +21,12 @@ export default function AccountPage(): ReactElement {
     let alive = true;
     // Guard CHỜ authReady (boot refresh settle) — không thì F5 tại /account
     // bị ném về /login do race (chưa kịp refresh cookie).
-    authReady.then((ok) => {
+    authReady.then(() => {
       if (!alive) return;
-      if (!ok) {
+      // authReady settle MỘT LẦN lúc boot — guest boot (refresh fail → false) rồi
+      // SPA login thành công vẫn thấy false cũ → bị ném về /login oan.
+      // Quyết theo state HIỆN TẠI; chờ authReady vẫn cần (boot refresh kịp xong).
+      if (!authStore.isAuthenticated()) {
         appNavigate('/login');
         return;
       }
@@ -64,7 +66,13 @@ export default function AccountPage(): ReactElement {
         setSaved(true);
       })
       .catch((err: unknown) => {
-        setBanner(err instanceof ApiErrorClient ? (err.detail ?? 'Có lỗi xảy ra') : 'Có lỗi xảy ra');
+        // Duck-type thay vì instanceof — @ecommerce/contracts không phải shared
+        // singleton qua MF boundary, class của thrower khác class của remote.
+        setBanner(
+          err instanceof Error && err.name === 'ApiErrorClient'
+            ? (err as Error & { detail?: string }).detail || err.message
+            : 'Có lỗi xảy ra — thử lại'
+        );
       })
       .finally(() => setLoading(false));
   };

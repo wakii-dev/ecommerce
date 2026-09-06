@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
-import { ApiErrorClient } from '@ecommerce/contracts';
 import { login } from '../api';
 import { appNavigate } from '../bootstrap';
 import './page.css';
@@ -29,7 +28,13 @@ export default function LoginPage(): ReactElement {
     login({ email, password })
       .then(() => appNavigate('/account'))
       .catch((err: unknown) => {
-        setBanner(err instanceof ApiErrorClient ? (err.detail ?? 'Có lỗi xảy ra') : 'Có lỗi xảy ra');
+        // Duck-type thay vì instanceof — @ecommerce/contracts không phải shared
+        // singleton qua MF boundary, class của thrower khác class của remote.
+        setBanner(
+          err instanceof Error && err.name === 'ApiErrorClient'
+            ? (err as Error & { detail?: string }).detail || err.message
+            : 'Có lỗi xảy ra — thử lại'
+        );
       })
       .finally(() => setLoading(false));
   };

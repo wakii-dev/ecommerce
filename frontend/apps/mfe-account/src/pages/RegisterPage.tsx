@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
-import { ApiErrorClient } from '@ecommerce/contracts';
 import { register } from '../api';
 import { appNavigate } from '../bootstrap';
 import './page.css';
@@ -31,10 +30,13 @@ export default function RegisterPage(): ReactElement {
     register({ email, password, fullName })
       .then(() => appNavigate('/account')) // register auto-login (packages/auth)
       .catch((err: unknown) => {
-        if (err instanceof ApiErrorClient) {
-          setBanner(err.status === 409 ? 'Email đã tồn tại' : (err.detail ?? 'Có lỗi xảy ra'));
+        // Duck-type thay vì instanceof — @ecommerce/contracts không phải shared
+        // singleton qua MF boundary, class của thrower khác class của remote.
+        if (err instanceof Error && err.name === 'ApiErrorClient') {
+          const apiErr = err as Error & { status?: number; detail?: string };
+          setBanner(apiErr.status === 409 ? 'Email đã tồn tại' : apiErr.detail || apiErr.message);
         } else {
-          setBanner('Có lỗi xảy ra');
+          setBanner('Có lỗi xảy ra — thử lại');
         }
       })
       .finally(() => setLoading(false));

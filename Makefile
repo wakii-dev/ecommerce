@@ -4,7 +4,7 @@
 
 COMPOSE ?= docker compose
 
-.PHONY: help infra down keys full
+.PHONY: help infra down keys full dev dev-fe
 
 help: ## Liệt kê targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -26,3 +26,31 @@ keys: ## Sinh RSA keypair JWT → infra/keys/ (gitignored, SF-3 identity dùng)
 
 full: ## (stub — SF-10 lấp: compose profile full, toàn bộ containerized)
 	@echo "make full: STUB — profile 'full' được SF-10 (FI-320) wire"; exit 1
+
+# ── Backend service name → maven module (append service mới ở case dưới) ──
+# dev svc=<tên-ngắn>: template-service gateway identity catalog cart inventory
+#                     ordering payment notification
+
+dev: ## Chạy 1 backend service dev mode — vd: make dev svc=template-service
+ifeq ($(svc),)
+	$(error svc=? — template-service | gateway | identity | catalog | cart | inventory | ordering | payment | notification)
+endif
+	@case "$(svc)" in \
+	  template-service) MOD=services/template-service ;; \
+	  gateway)          MOD=gateway ;; \
+	  identity)         MOD=services/identity-service ;; \
+	  catalog)          MOD=services/catalog-service ;; \
+	  cart)             MOD=services/cart-service ;; \
+	  inventory)        MOD=services/inventory-service ;; \
+	  ordering)         MOD=services/ordering-service ;; \
+	  payment)          MOD=services/payment-service ;; \
+	  notification)     MOD=services/notification-service ;; \
+	  *) echo "✗ svc '$(svc)' chưa có — xem bảng port trong README"; exit 1 ;; \
+	esac ; \
+	cd backend && mvn -pl $$MOD spring-boot:run
+
+dev-fe: ## Chạy 1 vite app dev mode — vd: make dev-fe app=shell
+ifeq ($(app),)
+	$(error app=? — shell | mfe-storefront | mfe-checkout | mfe-account | mfe-admin)
+endif
+	@pnpm -C frontend --filter $(app) dev

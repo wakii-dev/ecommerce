@@ -20,8 +20,10 @@ public class RabbitMqConfig {
 
     public static final String EVENTS_EXCHANGE = "ecommerce.events";
     public static final String ROUTING_PRODUCT_CHANGED = "product.changed";
+    public static final String ROUTING_ORDER_CONFIRMED = "order.confirmed";
     public static final String INDEXER_QUEUE = "q.catalog.product-changed.indexer";
     public static final String CACHE_QUEUE = "q.catalog.product-changed.cache";
+    public static final String ELIGIBILITY_QUEUE = "q.catalog.order-confirmed.eligibility";
 
     @Bean
     public TopicExchange eventsExchange() {
@@ -47,5 +49,16 @@ public class RabbitMqConfig {
     @Bean
     public Binding cacheBinding() {
         return BindingBuilder.bind(cacheQueue()).to(eventsExchange()).with(ROUTING_PRODUCT_CHANGED);
+    }
+
+    /** SF-8 append — verified-purchase eligibility consume order.confirmed (fat payload §6.1.5). */
+    @Bean
+    public Queue eligibilityQueue() {
+        return QueueBuilder.durable(ELIGIBILITY_QUEUE).build();
+    }
+
+    @Bean
+    public Binding eligibilityBinding() {
+        return BindingBuilder.bind(eligibilityQueue()).to(eventsExchange()).with(ROUTING_ORDER_CONFIRMED);
     }
 }

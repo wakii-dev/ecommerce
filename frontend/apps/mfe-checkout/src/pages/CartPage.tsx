@@ -102,8 +102,8 @@ export default function CartPage(): ReactElement {
     return (
       <div className="cart-page">
         <h1 className="page-title">Giỏ hàng</h1>
-        <Skeleton variant="rect" style={{ height: 120 }} />
-        <Skeleton variant="rect" style={{ height: 120 }} />
+        <Skeleton variant="rect" className="skeleton-line" />
+        <Skeleton variant="rect" className="skeleton-line" />
       </div>
     );
   }

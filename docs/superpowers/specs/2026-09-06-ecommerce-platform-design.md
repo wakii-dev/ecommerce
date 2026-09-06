@@ -44,6 +44,7 @@
 | D20 | **Affiliate module** (`affiliate-service`, Java, :8092, db_affiliate): affiliate = user đăng ký (status PENDING/APPROVED), ref code unique + link `?ref=<code>`; storefront capture ref → cookie attribution 30 ngày; checkout truyền code → order lưu `affiliate_code` (validate REST lúc POST /orders); **consume `order.confirmed`** (fat payload có `affiliate_code`) → ledger hoa hồng (rate per-affiliate, mặc định env `AFFILIATE_DEFAULT_RATE=5`); payout thủ công (ghi sổ, không trừ tiền thật MVP). UI: account dashboard affiliate (code + link generator + clicks/conversions/earnings) slice `pages/affiliate/*`; admin quản lý (duyệt + rate + stats). Contract `affiliate.yaml` freeze SF-2; `order.confirmed` payload thêm `affiliate_code` nullable | **USER** + AGENT chốt attribution + ledger pattern |
 | D21 | **Scope freeze — SF-13 "essentials & polish"** (batch A, USER chọn phương án 1): A1 password reset email · A2 COD payment (adapter no-op + saga bỏ bước intent) · A3 upload ảnh MinIO S3 (compose + multipart qua catalog admin + admin form) · A4 abandoned cart email · A5 audit log viewer admin (đọc Mongo event_log) · A6 recently viewed + related products (ES more_like_this) · A7 GA4/GTM + admin export CSV · A8 newsletter | **USER** (chọn 1) + AGENT đóng gói |
 | D22 | **Nhóm B — 2 SF cuối (USER: "làm cả B nữa")**: **SF-14 commerce extensions** — B1 RMA đổi trả (trạng thái REQUESTED→APPROVED→RECEIVED→REFUNDED/REJECTED trong ordering, hoàn tiền qua Stripe adapter refund sẵn có, emails) + B2 GHN vận chuyển (phí theo địa chỉ qua GHN API, tracking number, methods list) + B5 loyalty điểm (earn 1% CONFIRMED, burn lúc checkout giảm tiền — tables trong affiliate-service, cùng pattern ledger) · **SF-15 engagement & platform** — B3 social login Google/Facebook + 2FA TOTP (identity) · B4 stock alert ("nhắn tôi khi có hàng" — catalog + email) · B6 PWA + dark mode (ui-kit tokens) · B7 live chat embed (Crisp-style, env config). **SCOPE ĐÓNG SAU SF-15** — mọi yêu cầu mới → Linear backlog (trừ bugfix) | **USER** + AGENT đóng gói + MVP cuts (payout/thanh toán loyalty thật, carrier khác → backlog) |
+| D23 | **Release theo 5 phase** (USER): mỗi phase = 1 milestone release demo được trên nhánh đích — tag `phase-N` + GitHub Release + demo checklist. P1 Foundation (SF-1✅+SF-2) → P2 Catalog & Identity (SF-3/4/5) → P3 Transaction MVP (SF-6/7/9) → P4 Growth & Partners (SF-8/11/12) → P5 Complete v1 (SF-10/13/14/15). Phase KHÔNG đổi DAG — chỉ gate việc release; SF trong phase sau vẫn launch theo tier khi dep xong | **USER** + AGENT ánh xạ tier |
 
 ## 3. Kiến trúc
 
@@ -253,7 +254,19 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 
 **Parallelism:** T2 chạy 3 SF song song (SF-3/4/5), T3 chạy 4 SF song song (SF-6/7/8/9 — file sets rời nhau theo shared-file ownership phía trên), T4 chạy 2 SF song song (SF-11/12), T5 convergence SF-10, T6 chạy 3 SF song song (SF-13/14/15) — nhờ contracts freeze + append-only rules.
 
-## 7. Risks + mitigations
+## 7. Release plan — 5 phases (D23)
+
+| Phase | SF | Release tag | Demo được khi kết thúc |
+|---|---|---|---|
+| **P1 Foundation** | SF-1 ✅, SF-2 | `phase-1` | Compose + gateway + template chạy; contracts đóng băng; design direction đã chọn; federation harness xanh. Release: platform skeleton (nội bộ) |
+| **P2 Catalog & Identity** | SF-3, SF-4, SF-5 | `phase-2` | Đăng ký/đăng nhập; duyệt catalog Tiki-style trên Next.js (SEO SSR); search ES; tồn kho + Stripe intent nền. Release: storefront browse-live |
+| **P3 Transaction MVP** | SF-6, SF-7, SF-9 | `phase-3` | **Bán hàng end-to-end thật**: giỏ → checkout (coupon, Stripe test) → saga → đơn CONFIRMED + hóa đơn PDF; admin quản products/categories/orders (live) + dashboard cơ bản. Lưu ý: golden-path E2E + email tự động ở P5 |
+| **P4 Growth & Partners** | SF-8, SF-11, SF-12 | `phase-4` | Reviews (moderation + verified) + wishlist; partner Open API + webhooks; affiliate ref + hoa hồng |
+| **P5 Complete v1** | SF-10, SF-13, SF-14, SF-15 | `phase-5` | Convergence E2E + email cảm ơn/attachment + notification; essentials (COD, MinIO, reset password, abandoned cart, audit, related, GA4, CSV, newsletter); RMA + GHN + loyalty; social login + 2FA + stock alert + PWA/dark/chat. **GA v1** |
+
+Quy tắc release từng phase một: phase hoàn thành khi TẤT CẢ SF của phase Done + merge về nhánh đích → coordinator **tạo PR `story/...` → `main`** (GitHub chỉ cho 1 PR mở cặp head/base → dùng MỘT PR release duy nhất, cập nhật title/body mỗi phase; PR cũ đã merge → tạo PR mới cho phase kế) + **tag `phase-N` + `gh release create phase-N`** (release notes + demo checklist) + audit comment + báo user **"Phase N sẵn sàng — review + merge PR"**. **Merge PR vào main là HUMAN GATE** — agent/watchdog KHÔNG bao giờ merge main. SF thuộc phase sau vẫn launch bình thường khi dep xong (phase chỉ gate release, không gate launch).
+
+## 8. Risks + mitigations
 
 | # | Risk | Mitigation |
 |---|---|---|
@@ -265,7 +278,7 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 | R6 | Scope creep "đầy đủ tính năng" | Scope §4 ĐÓNG BĂNG; ngoài scope → Linear backlog items, không SF |
 | R7 | MFE composition sai (N bản React, token drift) | shared singletons bắt buộc trong shell config; packages/auth là ĐÚNG MỘT nguồn token; SF-2 verify federation trước khi tier sau fork |
 
-## 8. Assumptions (không hỏi lại — BALANCED mode, flag ở đây)
+## 9. Assumptions (không hỏi lại — BALANCED mode, flag ở đây)
 
 - Auth chỉ email/password (không social login) — D7.
 - Shipping: flat-fee demo, không tích hợp carrier.

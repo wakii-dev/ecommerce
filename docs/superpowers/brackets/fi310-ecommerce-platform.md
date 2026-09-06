@@ -7,14 +7,14 @@ Context packs: docs/superpowers/contexts/sf-<n>.md (mỗi SF đọc pack TRƯỚ
 
 ## SF-1 platform-foundation
 Tier: 0
-linear:
+linear: FI-311
 What: Nền móng chạy được — `docker compose up -d`healthy (PG 5 DB, Redis, RabbitMQ, Mailpit, stripe-cli) + `make dev svc=<tên>` boot được service từ template + gateway route smoke 200 với request-id + frontend pnpm/turbo workspace build xanh. demo: hệ khung sống, chưa có business.
 Depends on: —
 Tasks: monorepo-scaffold-makefile-readme-env / pnpm-turbo-frontend-workspace / maven-multimodule-parent-springboot3-java21 / compose-infra-stack-5db-redis-rabbitmq-mailpit-stripecli / service-template-module-health-actuator-dockerfile / template-springdoc-flyway-conventions / template-testcontainers-it-harness / gateway-skeleton-route-table-cors / gateway-requestid-filter / common-lib-event-envelope-outbox-base-error-model / contracts-dir-skeleton-openapi-lint / makefile-dev-targets-per-service / compose-healthchecks-wiring
 
 ## SF-2 contracts-design-foundation
 Tier: 1
-linear:
+linear: FI-312
 Design: mock-prototype
 What: Contract-first foundation — 7 OpenAPI specs + JSON Schema events ĐÓNG BĂNG (§6.1 spec), TS clients generated, packages/auth + ui-kit v1 + i18n vi/en, federation harness chứng minh shell nạp 1 skeleton remote với shared singletons 1 instance. Designer 3 hướng Tiki-inspired → USER CHỌN (gate riêng, không chặn freeze) → hand-off docs/superpowers/designs/. demo: shell load được remote, specs lint xanh, UI kit demo page.
 Depends on: SF-1
@@ -22,7 +22,7 @@ Tasks: openapi-identity-spec / openapi-catalog-spec / openapi-cart-spec / openap
 
 ## SF-3 identity + account
 Tier: 2
-linear:
+linear: FI-313
 Design: none
 What: Đăng ký/đăng nhập được end-to-end — user tạo account, login nhận JWT RS256, refresh giữ phiên, header shell hiện auth state + account menu; /api/admin/** chặn customer 403 server-side. demo: register → login → thấy tên trên header → vào admin API bị chặn.
 Depends on: SF-2
@@ -30,7 +30,7 @@ Tasks: identity-service-scaffold / flyway-users-roles-refreshtokens / register-a
 
 ## SF-4 catalog + browse
 Tier: 2
-linear:
+linear: FI-314
 Design: none
 What: Khách duyệt được catalog Tiki-style — home (hero + flash deal countdown + featured), PLP (sidebar danh mục + filter giá/rating + sort + pagination), search FTS, PDP (gallery + variant + tồn kho + add-to-cart stub theo cart contract), seed ~24 sản phẩm Tiki-categories. demo: guest search "tên sản phẩm" → ra kết quả → vào PDP → đổi variant đổi giá.
 Depends on: SF-2
@@ -38,7 +38,7 @@ Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-
 
 ## SF-5 inventory + payment services
 Tier: 2
-linear:
+linear: FI-315
 Design: none
 What: Hai service nền cho saga — inventory giữ stock theo variant với reservation TTL 30' (POST /reservations all-or-nothing, commit/release qua events), payment-service chạy Stripe test thật (intent/void/refund/webhook verify, adapter SPI). demo: reserve đủ stock → OK, vượt stock → 409; tạo Stripe intent thật từ test key.
 Depends on: SF-2
@@ -46,7 +46,7 @@ Tasks: inventory-service-scaffold / flyway-stocks-reservations-variantlevel / re
 
 ## SF-6 cart + checkout UX
 Tier: 3
-linear:
+linear: FI-316
 Design: none
 What: Giỏ hàng + checkout UX đầy đủ — guest cart (cart_token cookie), merge-on-login, cart page, checkout steps (địa chỉ/vận chuyển flat/coupon UI/review), Stripe.js confirm với payment thật (SF-5), confirmation page, cart badge trên shell header. Chạy trên ordering CONTRACT STUBS (mock local). demo: guest thêm hàng → đăng nhập → cart merge → đi hết checkout → trang confirmation (mock).
 Depends on: SF-3, SF-4, SF-5
@@ -54,7 +54,7 @@ Tasks: cart-service-scaffold / redis-cart-guesttoken-user / cart-crud-apis / mer
 
 ## SF-7 admin MFE
 Tier: 3
-linear:
+linear: FI-317
 Design: none
 What: Admin quản trị được — /admin với RBAC guard UI, products/categories CRUD LIVE (tạo product thấy ngay trên storefront), coupons CRUD + reviews moderation queue + orders list/detail + revenue stats theo CONTRACT MOCKS, dashboard KPI + charts (low-stock live). demo: admin login → tạo product → mở storefront thấy product mới; dashboard vẽ được biểu đồ.
 Depends on: SF-3, SF-4, SF-5
@@ -62,7 +62,7 @@ Tasks: mfe-admin-remote-registration-layout / rbac-route-guards-ui / products-li
 
 ## SF-8 reviews + wishlist
 Tier: 3
-linear:
+linear: FI-318
 Design: none
 What: Review + wishlist hoạt động — mọi user đăng nhập viết được review (vào PENDING moderation), admin approve qua API → hiện PDP với badge "Mua đã xác nhận" (verified-purchase qua order.confirmed synthetic harness — KHÔNG cần ordering thật), rating_avg trên card cập nhật; wishlist heart trên PDP/PLP + trang wishlist + my-reviews trong mfe-account. demo: viết review → approve → thấy trên PDP với badge verified.
 Depends on: SF-3, SF-4
@@ -70,7 +70,7 @@ Tasks: flyway-reviews-wishlist-tables / reviews-apis-submit-moderation-states / 
 
 ## SF-9 ordering saga + coupons
 Tier: 3
-linear:
+linear: FI-319
 Design: none
 What: Checkout saga chạy thật (backend) — POST /orders: re-price catalog → reserve coupon nguyên tử → reserve inventory all-or-nothing → Stripe intent → trả clientSecret; webhook → PAID → CONFIRMED → order.confirmed fat payload; 4 compensation edges + late-payment refund + TTL cancel, fail-injection tests xanh; my-orders APIs + trang my-orders trong mfe-account. demo (API level): đặt đơn → webhook succeeded → đơn CONFIRMED; card declined → FAILED + stock được release.
 Depends on: SF-5
@@ -78,7 +78,7 @@ Tasks: ordering-service-scaffold / flyway-orders-items-coupons-sagastate / coupo
 
 ## SF-10 convergence + ship
 Tier: 4
-linear:
+linear: FI-320
 Design: none
 What: Toàn hệ thống sống như một — mfe-checkout wire ordering THẬT (bỏ mocks), notification-service gửi email Mailpit, gateway full route table + đủ 5 remotes mounted, profile `full` compose chạy toàn bộ containerized, deterministic seed (coupon WELCOME10, sản phẩm search được, Stripe test cards), Playwright E2E: golden path + admin CRUD → storefront + review flow + saga fail. demo: 1 lệnh chạy cả hệ, mua hàng end-to-end thấy email, admin thấy đơn.
 Depends on: SF-6, SF-7, SF-8, SF-9

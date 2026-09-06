@@ -115,12 +115,20 @@ export function withFilters(query: PlpQuery, patch: Partial<PlpFilters>): PlpQue
 }
 
 /**
- * Serialize query → path + `?…` (giữ thứ tự ổn định: price, rating, brand,
- * sort, page). Giá trị mặc định (sort=newest, page=1) và filter rỗng được
- * BỎ → URL sạch, canonical /c/{slug} không query.
+ * Serialize query → path + `?…` (giữ thứ tự ổn định: extra, price, rating,
+ * brand, sort, page). Giá trị mặc định (sort=newest, page=1) và filter rỗng
+ * được BỎ → URL sạch, canonical /c/{slug} không query.
+ *
+ * `extra` (Task 14): tham số ngoài filters — trang /search cần giữ `q` khi
+ * Pagination đổi trang. sort/page/filters luôn override extra trùng key.
  */
-export function buildPlpUrl(basePath: string, query: PlpQuery): string {
+export function buildPlpUrl(basePath: string, query: PlpQuery, extra?: Record<string, string | undefined>): string {
   const params = new URLSearchParams();
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value !== undefined && value.length > 0) params.set(key, value);
+    }
+  }
   if (query.filters.price !== undefined) params.set('price', query.filters.price);
   if (query.filters.rating !== undefined) params.set('rating', String(query.filters.rating));
   if (query.filters.brand !== undefined) params.set('brand', query.filters.brand);

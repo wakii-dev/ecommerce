@@ -115,16 +115,95 @@ img {
   padding: 2px 6px;
 }
 
-/* Search bar — viền 2px primary (§2.1), flex trung tâm */
-.search-form {
+/* Search bar — viền 2px primary (§2.1), flex trung tâm.
+   .search-wrap (Task 14) thay layout của form: dropdown suggest absolute
+   dưới form — form giữ overflow:hidden để bo góc input, wrap là mốc position. */
+.search-wrap {
+  position: relative;
   flex: 1 1 auto;
   max-width: 760px;
   margin: 0 auto;
+}
+
+.search-form {
   display: flex;
   border: 2px solid var(--c-primary);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
   overflow: hidden;
+}
+
+/* Dropdown suggest §2.1: top calc(100%+4px), full-width, surface + border +
+   radius-md + shadow-2; title nhóm uppercase 11px; item hover #FAFAFA. */
+.search-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: 60;
+  overflow: hidden;
+}
+
+.search-suggest ul {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
+
+.search-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--c-text-muted);
+  padding: 8px 14px 4px;
+}
+
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--c-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.search-item:hover,
+.search-item.is-active {
+  background: #fafafa;
+  color: var(--c-primary);
+}
+
+.search-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-item-price {
+  color: var(--c-danger);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.search-item-hot {
+  background: var(--c-danger);
+  color: var(--c-surface);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 
 .search-input {
@@ -219,7 +298,7 @@ img {
     flex-wrap: wrap;
   }
 
-  .search-form {
+  .search-wrap {
     order: 3;
     flex-basis: 100%;
     max-width: none;
@@ -1612,6 +1691,127 @@ img {
 /* ≤900px: PDP 1 cột (direction §4 — grid 2 cột tối thiểu) */
 @media (max-width: 900px) {
   .pdp-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Search page extras (Task 14): chips gợi ý từ khóa khi 0 kết quả ─────── */
+
+.search-keywords {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.search-keyword-chip {
+  display: inline-block;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--c-text);
+  text-decoration: none;
+  background: var(--c-surface);
+}
+
+.search-keyword-chip:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+/* ── Coupon center (Task 14 — mock-gate đến SF-9) ────────────────────────── */
+
+.coupons-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  padding: var(--space-7) 0;
+}
+
+.coupons-empty-icon {
+  font-size: 40px;
+}
+
+.coupons-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.coupons-empty-desc {
+  font-size: 13px;
+  color: var(--c-text-muted);
+  margin: 0;
+}
+
+.coupons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.coupon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
+}
+
+.coupon-code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--c-primary);
+  border: 1px dashed var(--c-primary);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  background: var(--tint-primary-bg);
+}
+
+.coupon-desc {
+  font-size: 13px;
+  margin: 0;
+}
+
+.coupon-value {
+  color: var(--c-danger);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.coupon-meta {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.coupon-copy {
+  border: 0;
+  background: var(--c-primary);
+  color: var(--c-surface);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-top: auto;
+}
+
+.coupon-copy:hover {
+  background: var(--c-primary-hover);
+}
+
+/* ≤900px: coupon grid 1 cột (direction §4) */
+@media (max-width: 900px) {
+  .coupons-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -101,12 +101,12 @@
 
 **Files:** Create `cache/CatalogCacheService`, `cache/CacheInvalidateConsumer`, `config/RedisConfig`; Modify `service/CatalogQueryService` (wrap detail/tree/home), `config/RabbitMqConfig` (**append cache Queue + Binding — queue phải được khai báo hoặc listener 404-loop**)
 
-- [ ] Keys + TTL: `cat:prod:{slugVi}:vi|en` (600s — key theo slugVi gốc cả 2 locale), `cat:cat-tree:{locale}` (1800s), `cat:home:{locale}` (300s — featured grid JSON)
-- [ ] Cache-aside: query service check Redis trước; miss → load PG → serialize JSON (`ObjectMapper`, có `@ClassProperty`? KHÔNG — record DTO thuần, GenericJackson2JsonRedisTemplate hoặc String + ObjectMapper) → set TTL
-- [ ] `CacheInvalidateConsumer`: `@RabbitListener("q.catalog.product-changed.cache")` idempotent → xóa `cat:prod:{slugVi}:*` + `cat:prod:{slugEn}:*` (SCAN match, không KEYS), + `cat:cat-tree:*` + `cat:home:*`; DELETED cũng invalidate tương tự
-- [ ] Home featured endpoint? KHÔNG có endpoint riêng — **CHỐT: cache `cat:home:{locale}` áp cho CHÍNH call listProducts(sort=discount, size=24) mà home storefront dùng** (đồng bộ Task 11) qua CatalogCacheService helper `getOrLoad(key, ttl, supplier)`; PLP/PDP vào cache prod-detail; category tree `cat:cat-tree:{locale}`
-- [ ] Verify: IT Redis `GenericContainer("redis:7")` — detail gọi 2 lần (hit Redis, assert 1 query PG qua counter hoặc key tồn tại TTL>0); publish event → key biến mất
-- [ ] Commit: `feat(catalog): redis cache detail/tree/home + product.changed invalidate consumer`
+- [x] Keys + TTL: `cat:prod:{slugVi}:vi|en` (600s — key theo slugVi gốc cả 2 locale; lookup qua slugEn resolve entity trước rồi key theo slugVi), `cat:cat-tree:{locale}` (1800s); `cat:home:{locale}` BỎ (xem bullet home bên dưới)
+- [x] Cache-aside: query service check Redis trước; miss → load PG → serialize JSON (`ObjectMapper`, có `@ClassProperty`? KHÔNG — record DTO thuần, GenericJackson2JsonRedisTemplate hoặc String + ObjectMapper) → set TTL *(chọn String + ObjectMapper qua `config/RedisConfig`; mọi redis op bọc try/catch — Redis chết → WARN rate-limited 1 phút/lần, bypass cache serve nguồn, không throw — §5)*
+- [x] `CacheInvalidateConsumer`: `@RabbitListener("q.catalog.product-changed.cache")` idempotent → xóa `cat:prod:{slugVi}:*` + `cat:prod:{slugEn}:*` (SCAN match, không KEYS); DELETED cũng invalidate tương tự *(KHÔNG wipe `cat:cat-tree:*` — tree chỉ đổi khi write category, mà category write KHÔNG emit event (T8b) nên wipe ở đây vô nghĩa; tree stale tự hết TTL 1800s)*
+- [x] cat:home backend cache BỎ (deviation: Next ISR 60s đã cache home listing; double-cache = YAGNI — invalidate consumer chỉ wipe prod keys; coordinator duyệt trong dispatch)
+- [x] Verify: IT Redis `GenericContainer("redis:7")` — detail gọi 2 lần (hit Redis, key tồn tại TTL>0); publish event → key biến mất *(thêm: redis-down bypass test + marker `cache:` prefix per-consumer — marker IdempotentConsumer global theo messageId, 2 queue cùng eventId không prefix = consumer poll trước "ăn" marker của queue kia)*
+- [x] Commit: `feat(catalog): redis cache detail/tree + product.changed invalidate consumer`
 
 ### Task 8: product-fields-compareprice-flash-rating
 
@@ -198,14 +198,14 @@
 
 **Files:** Create `app/[locale]/search/page.tsx`, `app/[locale]/coupons/page.tsx`, `app/sitemap.ts`, `app/robots.ts`, `components/SearchBar.tsx` (client); Modify gateway (nếu thiếu), docker-compose (đã ở Task 1)
 
-- [ ] `/search?q=`: server fetch `searchProducts({q, locale, page, size:12})` → grid ProductCardView + pagination + count; q rỗng → empty state; không kết quả → EmptyState gợi ý từ khóa
-- [ ] `SearchBar` client (header): input viền 2px primary + nút search; focus mở dropdown suggest — debounce 250ms gọi `suggestProducts({q, locale})` → nhóm "Sản phẩm" (5, link PDP) + "Danh mục" (5, link PLP); blur/click-outside đóng; Enter → navigate `/search?q=`; tag "ĐANG HOT" cho item flash (nếu có flashSaleEndsAt)
-- [ ] `/coupons`: server fetch `GET /api/ordering/coupons/public` qua gateway fetch helper — **lỗi mọi loại (route chưa có/SF-9) → render empty state "Chưa có mã giảm giá nào — quay lại sau nhé"** (mock-gate đúng pack); khi có data → card list mã + nút "Copy" (client, clipboard + toast)
-- [ ] `app/sitemap.ts`: fetch products (loop size=100 all pages, locale vi dùng slug_vi + en dùng slug_en qua alternates) + static routes (`/`, `/search`, `/coupons` + `/en/...`) → `MetadataRoute.Sitemap` với `alternates.languages`; cache 3600; lỗi fetch → trả static-only (không crash build)
-- [ ] `app/robots.ts`: allow all, disallow `/cart|/checkout|/account|/admin`, sitemap absolute URL từ env `SITE_URL` default `http://localhost:3000`
-- [ ] Wiring check cuối: `make dev svc=catalog` + `make dev-fe app=storefront-web` + `make dev svc=gateway` → qua gateway :8080: `/` 200 Next HTML, `/api/catalog/products` JSON, `/robots.txt` 200, `/_next/static` asset 200
-- [ ] Verify: curl qua gateway từng route trên + `/search?q=xiaomi` trả HTML có kết quả (**export ELASTICSEARCH_URI=http://localhost:9200 khi chạy catalog**; ES container up)
-- [ ] Commit: `feat(storefront): search page + suggest bar + coupon center mock-gate + sitemap/robots + gateway wiring`
+- [x] `/search?q=`: server fetch `searchProducts({q, locale, page, size:12})` → grid ProductCardView + pagination + count; q rỗng → empty state; không kết quả → EmptyState gợi ý từ khóa
+- [x] `SearchBar` client (header): input viền 2px primary + nút search; focus mở dropdown suggest — debounce 250ms gọi `suggestProducts({q, locale})` → nhóm "Sản phẩm" (5, link PDP) + "Danh mục" (5, link PLP); blur/click-outside đóng; Enter → navigate `/search?q=`; tag "ĐANG HOT" cho item flash (nếu có flashSaleEndsAt)
+- [x] `/coupons`: server fetch `GET /api/ordering/coupons/public` qua gateway fetch helper — **lỗi mọi loại (route chưa có/SF-9) → render empty state "Chưa có mã giảm giá nào — quay lại sau nhé"** (mock-gate đúng pack); khi có data → card list mã + nút "Copy" (client, clipboard + toast)
+- [x] `app/sitemap.ts`: fetch products (loop size=100 all pages, locale vi dùng slug_vi + en dùng slug_en qua alternates) + static routes (`/`, `/search`, `/coupons` + `/en/...`) → `MetadataRoute.Sitemap` với `alternates.languages`; cache 3600; lỗi fetch → trả static-only (không crash build)
+- [x] `app/robots.ts`: allow all, disallow `/cart|/checkout|/account|/admin`, sitemap absolute URL từ env `SITE_URL` default `http://localhost:3000`
+- [ ] Wiring check cuối: `make dev svc=catalog` + `make dev-fe app=storefront-web` + `make dev svc=gateway` → qua gateway :8080: `/` 200 Next HTML, `/api/catalog/products` JSON, `/robots.txt` 200, `/_next/static` asset 200 — **DEFER → Phase 5** (backend/gateway ngoài boundary executor Task 14; verify full-stack bằng render-smoke + browser ở Phase 5)
+- [ ] Verify: curl qua gateway từng route trên + `/search?q=xiaomi` trả HTML có kết quả (**export ELASTICSEARCH_URI=http://localhost:9200 khi chạy catalog**; ES container up) — **DEFER → Phase 5** (cần catalog+ES live); curl storefront standalone (:3000, gateway down) đã pass tại Task 14
+- [x] Commit: `feat(storefront): search page + suggest bar + coupon center mock-gate + sitemap/robots` (wiring verify defer Phase 5)
 
 ### Task 15: storefront-it-tests + acceptance sweep chuẩn bị
 

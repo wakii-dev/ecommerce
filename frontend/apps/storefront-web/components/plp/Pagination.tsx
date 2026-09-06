@@ -10,9 +10,11 @@ export interface PaginationProps {
   basePath: string;
   query: PlpQuery;
   totalPages: number;
+  /** Tham số giữ nguyên qua các trang ngoài filters/sort — /search truyền `{ q }` (Task 14). */
+  extraParams?: Record<string, string | undefined>;
 }
 
-export default function Pagination({ basePath, query, totalPages }: PaginationProps) {
+export default function Pagination({ basePath, query, totalPages, extraParams }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const items = pageWindow(query.page, totalPages);
@@ -22,7 +24,7 @@ export default function Pagination({ basePath, query, totalPages }: PaginationPr
       {query.page > 1 ? (
         <a
           className="plp-page-btn plp-page-btn--nav"
-          href={buildPlpUrl(basePath, { ...query, page: query.page - 1 })}
+          href={buildPlpUrl(basePath, { ...query, page: query.page - 1 }, extraParams)}
           rel="prev"
           aria-label="Trang trước"
         >
@@ -35,7 +37,7 @@ export default function Pagination({ basePath, query, totalPages }: PaginationPr
           <a
             key={item}
             className={`plp-page-btn${item === query.page ? ' is-active' : ''}`}
-            href={buildPlpUrl(basePath, { ...query, page: item })}
+            href={buildPlpUrl(basePath, { ...query, page: item }, extraParams)}
             aria-current={item === query.page ? 'page' : undefined}
           >
             {item}
@@ -50,7 +52,7 @@ export default function Pagination({ basePath, query, totalPages }: PaginationPr
       {query.page < totalPages ? (
         <a
           className="plp-page-btn plp-page-btn--nav"
-          href={buildPlpUrl(basePath, { ...query, page: query.page + 1 })}
+          href={buildPlpUrl(basePath, { ...query, page: query.page + 1 }, extraParams)}
           rel="next"
           aria-label="Trang sau"
         >

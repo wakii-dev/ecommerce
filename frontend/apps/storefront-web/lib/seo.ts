@@ -94,6 +94,60 @@ export function homeMetadata(locale: Locale): HomeMetadataResult {
  * robots.index = false khi locale `en` VÀ có fallback (thiếu bản dịch SEO —
  * trang en nội dung vi không nên index).
  */
+// ── Sitemap entry builders (Task 14 — pure, unit-test được) ─────────────────
+
+/** Card tối thiểu cần cho sitemap (subset ProductCard — slug/slugEn luôn có). */
+export interface SitemapProduct {
+  slug: string;
+  slugEn: string;
+}
+
+export interface SitemapEntry {
+  url: string;
+  changeFrequency: 'daily' | 'weekly';
+  alternates: { languages: { vi: string; en: string } };
+}
+
+/**
+ * Entries sản phẩm: vi = `/p/{slug}` (slug đã resolve vi), en = `/en/p/{slugEn}`
+ * — mỗi entry mang alternates.languages cặp hreflang (plan Task 14: 1 loop vi
+ * là đủ nhờ slugEn luôn trả trên card).
+ */
+export function buildProductSitemapEntries(products: readonly SitemapProduct[], base: string): SitemapEntry[] {
+  return products.map((product) => ({
+    url: `${base}/p/${product.slug}`,
+    changeFrequency: 'weekly',
+    alternates: {
+      languages: {
+        vi: `${base}/p/${product.slug}`,
+        en: `${base}/en/p/${product.slugEn}`,
+      },
+    },
+  }));
+}
+
+/** Route tĩnh (vi bare + en prefix) — emit CẢ HAI url, mỗi url đủ alternates. */
+const STATIC_ROUTES: ReadonlyArray<readonly [viPath: string, enPath: string]> = [
+  ['/', '/en/'],
+  ['/search', '/en/search'],
+  ['/coupons', '/en/coupons'],
+];
+
+export function buildStaticSitemapEntries(base: string): SitemapEntry[] {
+  return STATIC_ROUTES.flatMap(([viPath, enPath]) => {
+    const languages = { vi: `${base}${viPath}`, en: `${base}${enPath}` };
+    return [
+      { url: `${base}${viPath}`, changeFrequency: 'daily', alternates: { languages } },
+      { url: `${base}${enPath}`, changeFrequency: 'daily', alternates: { languages } },
+    ];
+  });
+}
+
+/**
+ * Metadata PDP: seoTitle/seoDescription priority, fallback name/description.
+ * robots.index = false khi locale `en` VÀ có fallback (thiếu bản dịch SEO —
+ * trang en nội dung vi không nên index).
+ */
 export function pdpMetadata(product: SeoProduct, locale: Locale): PdpMetadataResult {
   const hasSeoTitle = hasText(product.seoTitle);
   const hasSeoDescription = hasText(product.seoDescription);

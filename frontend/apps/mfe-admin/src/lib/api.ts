@@ -44,3 +44,14 @@ export function orderingApi(): OrderingClient {
 export function isStubOn(): boolean {
   return import.meta.env.VITE_ADMIN_STUB !== '0';
 }
+
+// Stub SINGLETON — mutations in-memory phải sống qua renders/navigation trong
+// session (reload reset — chấp nhận cho mock tới SF-10).
+import { createStubApi, type StubApi } from './adminStub';
+
+let stubInstance: StubApi | null = null;
+
+export function stubApi(): StubApi {
+  stubInstance ??= createStubApi();
+  return stubInstance;
+}

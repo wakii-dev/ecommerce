@@ -30,8 +30,12 @@ ecom:
         # trực tiếp để lấy clientSecret (pack SF-6: confirm thật qua SF-5).
         - /api/cart/**
         - /api/payment/intents
+        # SF-12 (2026-09-07): track click public theo contract affiliate.yaml —
+        # storefront capture ?ref không auth (204 im lặng, cookie do service set)
+        - /api/affiliate/track/click
       admin-prefixes:
         - /api/admin/**                      # chữ ACCEPTANCE (path chưa route → 403 trước 404)
         - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
         - /api/ordering/admin/**             # SF-9 — 2 lớp (gateway + @PreAuthorize ordering)
+        - /api/affiliate/admin/**            # SF-12 — 2 lớp (gateway + @PreAuthorize affiliate)
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

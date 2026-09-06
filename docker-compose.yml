@@ -156,6 +156,36 @@ services:
       timeout: 5s
       retries: 3
 
+  # SF-4 (2026-09-06): catalog-service (port 8082, db_catalog) — KHÔNG chạy dev:
+  # compose là infra-only, service chạy host JVM `make dev svc=catalog`.
+  # Bật image chỉ ở profile full (SF-10): docker compose --profile full up catalog-service
+  catalog-service:
+    build:
+      # repo root — Dockerfile COPY backend/... từ context gốc (như template-service)
+      context: .
+      dockerfile: backend/services/catalog-service/Dockerfile
+    container_name: ecommerce-catalog-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_catalog
+      RABBITMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+      ELASTICSEARCH_URI: http://elasticsearch:9200
+    expose:
+      - "8082"   # internal — gateway (full profile) gọi qua service name
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:

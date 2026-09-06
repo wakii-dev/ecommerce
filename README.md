@@ -149,15 +149,15 @@ flowchart TD
         N2["SF-2 contracts-design<br/>FI-312 · 14 tasks<br/>✅ Done"]
     end
     subgraph T2["TIER 2"]
-        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>🔨 In Progress"]
-        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>🔨 In Progress"]
-        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>🔨 In Progress"]
+        N3["SF-3 identity + account<br/>FI-313 · 13 tasks<br/>✅ Done"]
+        N4["SF-4 catalog + browse<br/>FI-314 · 15 tasks<br/>✅ Done"]
+        N5["SF-5 inventory + payment<br/>FI-315 · 13 tasks<br/>✅ Done"]
     end
     subgraph T3["TIER 3"]
-        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks"]
-        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks"]
-        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks"]
-        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks"]
+        N6["SF-6 cart + checkout UX<br/>FI-316 · 14 tasks<br/>✅ Done"]
+        N7["SF-7 admin MFE<br/>FI-317 · 11 tasks<br/>🔨 In Progress"]
+        N8["SF-8 reviews + wishlist<br/>FI-318 · 12 tasks<br/>🔨 In Progress"]
+        N9["SF-9 ordering saga<br/>FI-319 · 14 tasks<br/>🔨 In Progress"]
     end
     subgraph T4["TIER 4"]
         N11["SF-11 partner Open API<br/>FI-321 · 10 tasks"]
@@ -205,9 +205,9 @@ flowchart TD
     classDef done fill:#26AA99,stroke:#1d8275,color:#fff
     classDef running fill:#FF9C08,stroke:#d68206,color:#fff
     classDef todo fill:#555,stroke:#444,color:#eee
-    class N1,N2 done
-    class N3,N4,N5 running
-    class N6,N7,N8,N9,N10,N11,N12,N13,N14,N15 todo
+    class N1,N2,N3,N4,N5,N6 done
+    class N7,N8,N9 running
+    class N10,N11,N12,N13,N14,N15 todo
 ```
 
 > Bản render tương tác (hết hạn ~30 ngày): [share.onorca.dev/a/YghPe0uD5FEQ](https://share.onorca.dev/a/YghPe0uD5FEQ) · Nguồn: [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md)
@@ -221,10 +221,10 @@ flowchart TD
 | SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ✅ Done |
 | SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ✅ Done |
 | SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ✅ Done |
-| SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ⏳ Todo |
-| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | ⏳ Todo |
-| SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | ⏳ Todo |
-| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ⏳ Todo |
+| SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ✅ Done |
+| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | 🔨 In Progress |
+| SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | 🔨 In Progress |
+| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | 🔨 In Progress |
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
 | SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
 | SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |

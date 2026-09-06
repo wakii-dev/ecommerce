@@ -1,0 +1,18 @@
+# Spectral ruleset cho contracts/openapi (SF-2 tạo specs).
+extends: ["spectral:oas"]
+rules:
+  # Thư giãn 2 rule default cho context backend nội bộ:
+  info-contact: off
+  info-license: off
+  # Convention repo: operationId camelCase — codegen TS phụ thuộc nó
+  operation-tag-defined: error
+  paths-kebab-case:
+    description: Paths dùng kebab-case (trừ /api/<service> prefix).
+    severity: warn
+    given: $.paths[*]~
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^(/api/[a-z-]+)?(/[a-z0-9-{}])*$
+"

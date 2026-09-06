@@ -43,7 +43,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 // MỌI IT tự seed qua repository + đếm CHÍNH XÁC → tắt SeedDataRunner mặc định
 // (subclass @TestPropertySource thay thế inlined properties — SeedDataRunnerTest bật = true).
-@TestPropertySource(properties = "catalog.seed.enabled=false")
+// relay + listener AMQP tắt mặc định qua ĐÂY (static) — KHÔNG đặt trong
+// @DynamicPropertySource: cùng key thì giá trị dynamic của subclass BỊ BASE GHI ĐÈ
+// (đã gặp thật với EsIndexerSearchTest); @DynamicPropertySource thắng
+// @TestPropertySource nên subclass chỉ cần registry.add là override được.
+@TestPropertySource(properties = {
+    "catalog.seed.enabled=false",
+    "outbox.relay.enabled=false",
+    "spring.rabbitmq.listener.simple.auto-startup=false"
+})
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16")
@@ -82,9 +90,6 @@ public abstract class AbstractIntegrationTest {
         // chạy cùng compose RabbitMQ/Redis nên không cần.
         registry.add("management.health.rabbit.enabled", () -> "false");
         registry.add("management.health.redis.enabled", () -> "false");
-        // Tắt outbox relay poller trong IT — không có RabbitMQ, poll 2s/lần chỉ
-        // gây ồn log + rỉ connection trên container PG dùng chung nhiều context.
-        registry.add("outbox.relay.enabled", () -> "false");
         // Security (Task 8b): decoder đọc PEM IT-generated — CWD surefire = module dir.
         registry.add("JWT_PUBLIC_KEY_PATH", () -> "target/it-keys/jwt-public.pem");
     }

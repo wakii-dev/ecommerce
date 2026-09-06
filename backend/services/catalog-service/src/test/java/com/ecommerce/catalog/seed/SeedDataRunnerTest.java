@@ -30,6 +30,9 @@ import com.ecommerce.catalog.search.SearchEngine;
 @TestPropertySource(properties = {
     "catalog.seed.enabled=true", // override base (inlined properties của subclass THAY base)
     "elasticsearch.uri=",        // PgFts trực tiếp, không ping ES 2s
+    // base inline bị thay → khai báo lại 2 default AMQP (Task 5)
+    "outbox.relay.enabled=false",
+    "spring.rabbitmq.listener.simple.auto-startup=false"
 })
 class SeedDataRunnerTest extends AbstractIntegrationTest {
 

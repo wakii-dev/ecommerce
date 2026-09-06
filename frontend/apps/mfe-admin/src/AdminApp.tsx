@@ -122,6 +122,27 @@ function AdminShell({ path }: { path: string }): ReactElement {
   );
 }
 
+// Boot auth DÙNG CHUNG cho mọi mount của AdminApp trong 1 trang. Refresh-on-boot
+// chạy ĐỒNG THỜI với refresher instance khác (initAccountShell eager refresh —
+// mfe-account/bootstrap.tsx) trong khi identity XOAY refresh cookie mỗi lần dùng
+// → caller song song ăn 401 (thua race) và logout() xóa token vừa set, guard
+// bounce login dù user đã đăng nhập (bắt được qua browser walkthrough 16:27 —
+// 3 call song song trong cửa sổ 23ms). Vì vậy: (1) mọi mount chia sẻ ĐÚNG 1
+// promise boot; (2) thua race → chờ call kia xoay xong cookie (đo thực tế
+// 10-150ms) rồi thử ĐÚNG 1 lần nữa trước khi kết luận guest.
+let bootAuth: Promise<boolean> | null = null;
+function bootAuthenticate(): Promise<boolean> {
+  bootAuth ??= (async () => {
+    if (authStore.isAuthenticated()) return true;
+    if (await authStore.refresh().catch(() => false)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return authStore.refresh().catch(() => false);
+  })().finally(() => {
+    bootAuth = null;
+  });
+  return bootAuth;
+}
+
 /**
  * Khu quản trị — RBAC guard UX (server-side vẫn là gateway/identity):
  * booting (refresh settle) → guest (redirect login trong shell / hướng dẫn
@@ -159,11 +180,8 @@ export default function AdminApp(): ReactElement {
       identityBaseUrl: '',
       loginPath: '/login'
     });
-    const boot: Promise<boolean> = authStore.isAuthenticated()
-      ? Promise.resolve(true)
-      : authStore.refresh();
+    const boot: Promise<boolean> = bootAuthenticate();
     void boot
-      .catch(() => false)
       .then((authenticated) => {
         if (!alive) return;
         const next = resolveGuardState(authenticated, authStore.getUser()?.roles ?? []);

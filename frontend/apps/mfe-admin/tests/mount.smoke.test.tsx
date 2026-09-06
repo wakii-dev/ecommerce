@@ -26,27 +26,31 @@ function fakeJwt(roles: string[]): string {
   return `.${b64(payload)}.`;
 }
 
+/** Response JSON giả dùng chung (fetch stub theo URL). */
+function json(body: unknown): Response {
+  return {
+    ok: true,
+    status: 200,
+    headers: new Map([['content-type', 'application/json']]) as unknown as Headers,
+    json: async () => body
+  } as unknown as Response;
+}
+
 /** Fetch stub theo URL — đủ cho guard + Dashboard/Dashboard queries. */
 function stubFetch(): void {
-  const json = (body: unknown): Response =>
-    ({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]) as unknown as Headers,
-      json: async () => body
-    }) as unknown as Response;
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/auth/refresh')) return json({ accessToken: fakeJwt(['admin']) });
-      if (url.includes('/admin/products')) return json({ items: [], page: 1, size: 10, total: 0 });
-      if (url.includes('/admin/categories')) return json([]);
-      if (url.includes('/admin/low-stock')) return json([]);
-      if (url.includes('/stats')) return json({});
-      return json({});
-    })
-  );
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => stubRoute(input)));
+}
+
+function stubRoute(input: RequestInfo | URL): Promise<Response> {
+  return (async () => {
+    const url = String(input);
+    if (url.includes('/auth/refresh')) return json({ accessToken: fakeJwt(['admin']) });
+    if (url.includes('/admin/products')) return json({ items: [], page: 1, size: 10, total: 0 });
+    if (url.includes('/admin/categories')) return json([]);
+    if (url.includes('/admin/low-stock')) return json([]);
+    if (url.includes('/stats')) return json({});
+    return json({});
+  })();
 }
 
 beforeAll(async () => {
@@ -108,6 +112,89 @@ describe('AdminApp mount smoke (jsdom)', () => {
     await waitFor(() => {
       expect(screen.getByText('Không có quyền')).toBeTruthy();
     });
+  });
+
+  it('refresh thua race (401 rồi 200 — cookie bị instance account xoay) → retry ĐÚNG 1 lần rồi vào layout', async () => {
+    const calls: number[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/auth/refresh')) {
+          calls.push(Date.now());
+          if (calls.length === 1) {
+            return { ok: false, status: 401, json: async () => ({}) } as unknown as Response;
+          }
+          return {
+            ok: true,
+            status: 200,
+            headers: new Map([['content-type', 'application/json']]) as unknown as Headers,
+            json: async () => ({ accessToken: fakeJwt(['admin']) })
+          } as unknown as Response;
+        }
+        if (url.includes('/admin/products')) return json({ items: [], page: 1, size: 10, total: 0 });
+        if (url.includes('/admin/categories')) return json([]);
+        if (url.includes('/admin/low-stock')) return json([]);
+        if (url.includes('/stats')) return json({});
+        return json({});
+      })
+    );
+    render(<AdminApp />);
+    await waitFor(
+      () => {
+        expect(screen.getByRole('navigation')).toBeTruthy();
+      },
+      { timeout: 3000 }
+    );
+    // Đúng 2 lần gọi refresh (lần 1 thua race, lần 2 retry sau khi cookie ổn định)
+    expect(calls.length).toBe(2);
+  });
+
+  it('mount 2 lần khi refresh đang treo → chia sẻ ĐÚNG 1 boot-refresh, không bắn call thứ 2', async () => {
+    let resolveFirst!: (v: Response) => void;
+    const firstRefresh = new Promise<Response>((resolve) => {
+      resolveFirst = resolve;
+    });
+    let refreshCount = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/auth/refresh')) {
+          refreshCount += 1;
+          if (refreshCount === 1) return firstRefresh;
+          return {
+            ok: true,
+            status: 200,
+            headers: new Map([['content-type', 'application/json']]) as unknown as Headers,
+            json: async () => ({ accessToken: fakeJwt(['admin']) })
+          } as unknown as Response;
+        }
+        if (url.includes('/admin/products')) return json({ items: [], page: 1, size: 10, total: 0 });
+        if (url.includes('/admin/categories')) return json([]);
+        if (url.includes('/admin/low-stock')) return json([]);
+        if (url.includes('/stats')) return json({});
+        return json({});
+      })
+    );
+    const first = render(<AdminApp />);
+    // Mount lần 2 khi refresh đầu chưa resolve — phải tái sử dụng promise chung.
+    first.unmount();
+    render(<AdminApp />);
+    // Cho microtask chạy: nếu mount 2 tự bắn refresh riêng thì callCount đã = 2.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(refreshCount).toBe(1);
+    resolveFirst({
+      ok: false,
+      status: 401,
+      json: async () => ({})
+    } as unknown as Response);
+    await waitFor(
+      () => {
+        expect(screen.getByRole('navigation')).toBeTruthy();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('theme mount = admin, unmount restore', async () => {

@@ -1,78 +1,155 @@
-# Ecommerce Platform
+<div align="center">
 
-Microservices (Spring Boot 3 / Java 21) + micro frontends (Vite / React 18 / Module Federation).
-Story: FI-310 · Spec: `docs/superpowers/specs/2026-09-06-ecommerce-platform-design.md`.
+# 🛒 Ecommerce Platform
 
-## Yêu cầu
+**Website thương mại điện tử đầy đủ tính năng — kiến trúc microservices + micro frontends**
 
-| Tool | Version |
+Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán Stripe test · Checkout saga phân tán
+
+![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
+
+🚧 **Đang xây dựng** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · 10 sub-features · 5 tier · [📊 Tiến độ](#-tiến-độ-story)
+
+</div>
+
+---
+
+## 🏗️ Kiến trúc
+
+```mermaid
+flowchart LR
+    B["🌐 Browser"]
+    subgraph FE["Micro frontends — Vite + MF 2.0"]
+        SHELL["Shell :5173<br/>host · routing · auth"]
+        SF["storefront<br/>home · PLP · PDP"]
+        CK["checkout<br/>cart · Stripe.js"]
+        AC["account<br/>login · orders"]
+        AD["admin<br/>dashboard · CRUD"]
+    end
+    GW["🚪 API Gateway :8080<br/>JWT RS256 · RBAC · request-id"]
+    subgraph SVC["Spring Boot 3 microservices"]
+        ID["identity<br/>:8081"]
+        CAT["catalog<br/>:8082"]
+        CART["cart<br/>:8083"]
+        INV["inventory<br/>:8084"]
+        ORD["ordering<br/>:8085 · saga"]
+        PAY["payment<br/>:8086"]
+        NOTI["notification<br/>:8087"]
+        LOG["log<br/>:8088"]
+    end
+    subgraph DS["Polyglot persistence"]
+        PG[("PostgreSQL<br/>5 DB / service")]
+        RD[("Redis")]
+        ES[("Elasticsearch<br/>search")]
+        MO[("MongoDB<br/>event_log")]
+        MQ{{"RabbitMQ<br/>events + saga"}}
+    end
+    STR["💳 Stripe test"]
+
+    B --> SHELL
+    SHELL --> GW
+    GW --> SVC
+    CAT -.search.-> ES
+    ID & CAT & INV & ORD & PAY --> PG
+    CART --> RD
+    LOG --> MO
+    SVC <--> MQ
+    ORD <--> STR
+```
+
+**Nguyên tắc:** database-per-service (cấm cross-DB join) · contract-first (OpenAPI freeze trước khi code) · transactional outbox + idempotent consumers · saga orchestration có compensation · event schema additive-only.
+
+---
+
+## 🧩 Services
+
+| Service | Port | Trách nhiệm | Datastore |
+|---|---|---|---|
+| `gateway` | 8080 | Routing, JWT verify, RBAC guard, request-id, CORS, serve static MFE (prod) | — |
+| `identity` | 8081 | Đăng ký/đăng nhập, JWT RS256, refresh rotation, JWKS | `db_identity` |
+| `catalog` | 8082 | Products · categories · variants · **search (ES chính + PG FTS fallback)** · reviews · wishlist · cache | `db_catalog` + ES |
+| `cart` | 8083 | Guest cart (cart_token), user cart, merge-on-login | Redis |
+| `inventory` | 8084 | Stock theo variant, reservation TTL 30' all-or-nothing | `db_inventory` |
+| `ordering` | 8085 | Orders, **checkout saga**, coupons, state machine, admin stats | `db_ordering` |
+| `payment` | 8086 | Stripe test (intent/webhook/refund), `PaymentProviderAdapter` SPI | `db_payment` |
+| `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | — |
+| `log` | 8088 | Fan-in **mọi domain event** → Mongo `event_log` (audit trail) | MongoDB |
+
+## 🖥️ Micro frontends
+
+| App | Vai trò |
 |---|---|
-| JDK | 21+ (`java -version`) |
-| Maven | 3.9+ |
-| Docker + Compose | daemon đang chạy |
-| Node | 20+ |
-| pnpm | 9+ (`corepack enable`) |
+| `shell` | MF host: layout, routing gốc, auth context, header slots (search/auth/cart-badge) |
+| `mfe-storefront` | Home (hero, flash deal countdown, featured) · PLP filter/sort/paginate kiểu Tiki · PDP |
+| `mfe-checkout` | Cart · checkout 3 bước · coupon · Stripe.js confirm · cart badge |
+| `mfe-account` | Login/register · profile · my orders · wishlist · reviews |
+| `mfe-admin` | Dashboard KPI + charts · products/categories CRUD · coupons · moderation · orders |
 
-## Quickstart
+**Shared packages:** `contracts` (OpenAPI → TS codegen) · `auth` (token singleton federation-shared) · `ui-kit` (2 theme) · `i18n` (vi/en) · `config`.
+
+---
+
+## ✨ Tính năng MVP
+
+| Storefront | Admin | Kiến trúc nổi bật |
+|---|---|---|
+| Duyệt/search/filter/sort kiểu Tiki | Dashboard KPI + biểu đồ | **Checkout saga** 4 services, 4 compensation edges |
+| Flash deal countdown, badge giảm giá | Products/categories CRUD → thấy ngay trên storefront | **Polyglot persistence** — đúng DB cho đúng việc |
+| Giỏ hàng guest + merge-on-login | Coupons CRUD (%, fixed, window, limit) | **Swap engine không đổi contract** — ES↔PG FTS, Stripe↔PSP khác |
+| Checkout + Stripe test + email | Reviews moderation + badge "Mua đã xác nhận" | Event audit trail trên Mongo |
+| My orders / wishlist / reviews | Orders: ship/deliver/cancel + low-stock | RBAC server-side 2 lớp (gateway + service) |
+
+---
+
+## 🚀 Getting started
+
+> ⚙️ Services + FE apps đang được xây dần theo từng SF — dưới đây là lệnh THẬT
+> của nền móng (SF-1): infra + service template + gateway + FE workspace.
 
 ```bash
-# 1. Copy env (Stripe keys test lấy từ dashboard Stripe)
-cp .env.example .env
+# Yêu cầu: JDK 21 · Maven 3.9+ · Docker Desktop · Node 20+ · pnpm 9+
+cp .env.example .env        # điền STRIPE_SECRET_KEY (sk_test_...) để bật payment
 
-# 2. Bật infra: postgres (5 DB), redis, rabbitmq, mailpit
-make infra
+make infra                  # postgres (5 DB) · redis · rabbitmq · mailpit · mongo · elasticsearch
+cd backend && mvn install -DskipTests && cd ..   # lần đầu: đẩy parent + common-lib vào ~/.m2
 
-# 3. Build backend lần đầu (đẩy common-lib + parent vào ~/.m2)
-cd backend && mvn install -DskipTests && cd ..
+make dev svc=template-service   # chạy 1 service dev mode (template | gateway | identity | ...)
+make dev svc=gateway            # smoke: http://localhost:8080/api/smoke
 
-# 4. Chạy 1 service dev mode (host JVM, không containerize)
-make dev svc=template-service     # :8099 — http://localhost:8099/actuator/health
-make dev svc=gateway              # :8080 — http://localhost:8080/api/smoke
-
-# 5. Frontend workspace
-pnpm -C frontend install
-pnpm -C frontend build
+pnpm -C frontend install && pnpm -C frontend build   # FE workspace (turbo)
 ```
 
-## Port table
+**Port DB:** postgres host = **5433** (container nội bộ 5432; máy dev có postgres
+compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 
-| Service | Port | Ghi chú |
-|---|---|---|
-| gateway | 8080 | Spring Cloud Gateway — smoke: `/api/smoke` |
-| identity | 8081 | SF-3 |
-| catalog | 8082 | SF-4 |
-| cart | 8083 | SF-6 |
-| inventory | 8084 | SF-5 |
-| ordering | 8085 | SF-9 |
-| payment | 8086 | SF-5 |
-| notification | 8087 | SF-10 |
-| template | 8099 | Service template (scaffold nguồn) |
+**Infra UIs:** RabbitMQ `:15672` · Mailpit `:8025` · mongo-express `:8089` · Elasticsearch `:9200` · stripe-cli (profile `stripe`)
 
-| Infra | Port | Ghi chú |
-|---|---|---|
-| postgres | 5432 | 1 container — DB-per-service (`db_identity`, `db_catalog`, `db_ordering`, `db_payment`, `db_inventory` + `db_template` sandbox) |
-| redis | 6379 | cart + cache |
-| rabbitmq | 5672 / 15672 | AMQP / Management UI (guest/guest) |
-| mailpit | 1025 / 8025 | SMTP sink / UI xem email |
+**Make targets khác:** `make dev-fe app=<name>` · `make keys` (RSA keypair JWT, SF-3) · `make down` · `make full` (stub — SF-10)
 
-## Make targets
+---
 
-| Target | Ý nghĩa |
+## 📊 Tiến độ story
+
+| SF | Nội dung | Issue | Trạng thái |
+|---|---|---|---|
+| SF-1 | Nền móng: monorepo, compose, gateway, service template | [FI-311](https://linear.app/my-app-hoivu/issue/FI-311) | 🔨 In Progress |
+| SF-2 | Contracts freeze (7 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ⏳ Todo |
+| SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ⏳ Todo |
+| SF-4 | Catalog + browse (Tiki-style) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
+| SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ⏳ Todo |
+| SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ⏳ Todo |
+| SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | ⏳ Todo |
+| SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | ⏳ Todo |
+| SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ⏳ Todo |
+| SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
+
+---
+
+## 📚 Tài liệu
+
+| | |
 |---|---|
-| `make infra` | `docker compose up -d` (infra only — services JVM chạy host) |
-| `make infra profile=stripe` | + stripe-cli forward webhook `/api/payment/webhook` |
-| `make dev svc=<name>` | chạy 1 backend service dev mode |
-| `make dev-fe app=<name>` | chạy 1 vite app |
-| `make keys` | sinh RSA keypair JWT vào `infra/keys/` (SF-3) |
-| `make down` | stop infra |
-| `make full` | (stub) compose profile `full` — SF-10 lấp |
-
-## Repo layout
-
-```
-backend/       Maven multi-module — gateway, services/*, shared/common-lib
-frontend/      pnpm workspace + Turborepo — apps/*, packages/*
-contracts/     OpenAPI + event schemas (SOURCE OF TRUTH, freeze tại SF-2)
-infra/         db init scripts, keys (gitignored)
-docs/          specs, brackets, context packs, plans, ADR
-```
+| 📐 **Epic spec** | [`docs/superpowers/specs/2026-09-06-ecommerce-platform-design.md`](docs/superpowers/specs/2026-09-06-ecommerce-platform-design.md) — kiến trúc, decision log D1-D15, success criteria, saga design |
+| 🧱 **Bracket** | [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md) — 10 SF × 5 tier |
+| 📦 **Context packs** | [`docs/superpowers/contexts/`](docs/superpowers/contexts/) — spec slice per SF |
+| 🗂 **ADR** | `docs/adr/` — quyết định kiến trúc chi tiết (SF-10 hoàn thiện) |

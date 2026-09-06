@@ -6,7 +6,7 @@
 
 Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán Stripe test · Checkout saga phân tán
 
-![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
+![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![Next.js](https://img.shields.io/badge/Next.js-SSR%2FISR-000000) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
 
 🚧 **Đang xây dựng** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · 10 sub-features · 5 tier · [📊 Tiến độ](#-tiến-độ-story)
 
@@ -19,12 +19,9 @@ Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán 
 ```mermaid
 flowchart LR
     B["🌐 Browser"]
-    subgraph FE["Micro frontends — Vite + MF 2.0"]
-        SHELL["Shell :5173<br/>host · routing · auth"]
-        SF["storefront<br/>home · PLP · PDP"]
-        CK["checkout<br/>cart · Stripe.js"]
-        AC["account<br/>login · orders"]
-        AD["admin<br/>dashboard · CRUD"]
+    subgraph FE["Frontends — hybrid (D16)"]
+        NW["storefront-web (Next.js :3000)<br/>SSR/ISR · SEO · JSON-LD"]
+        SHELL["Shell MF :5173<br/>checkout · account · admin"]
     end
     GW["🚪 API Gateway :8080<br/>JWT RS256 · RBAC · request-id"]
     subgraph SVC["Spring Boot 3 microservices"]
@@ -36,6 +33,9 @@ flowchart LR
         PAY["payment<br/>:8086"]
         NOTI["notification<br/>:8087"]
         LOG["log<br/>:8088"]
+        INV["🐍 invoice<br/>:8090 PDF"]
+        PART["partner-api<br/>:8091 Open API"]
+        AFF["affiliate<br/>:8092"]
     end
     subgraph DS["Polyglot persistence"]
         PG[("PostgreSQL<br/>5 DB / service")]
@@ -46,7 +46,9 @@ flowchart LR
     end
     STR["💳 Stripe test"]
 
+    B --> NW
     B --> SHELL
+    NW --> GW
     SHELL --> GW
     GW --> SVC
     CAT -.search.-> ES
@@ -74,16 +76,19 @@ flowchart LR
 | `payment` | 8086 | Stripe test (intent/webhook/refund), `PaymentProviderAdapter` SPI | `db_payment` |
 | `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | `db_notification` |
 | `log` | 8088 | Fan-in **mọi domain event** → Mongo `event_log` (audit trail) | MongoDB |
+| `invoice` 🐍 | 8090 | **Python (FastAPI + ReportLab)** — stateless PDF renderer hóa đơn VN (internal-only) | — |
+| `partner-api` | 8091 | **Open API cho đối tác** `/open-api/v1/**`: API key + rate-limit, catalog/orders, webhook HMAC, docs portal | `db_partner` |
+| `affiliate` | 8092 | Affiliate: ref code, attribution 30 ngày, ledger hoa hồng | `db_affiliate` |
 
 ## 🖥️ Micro frontends
 
 | App | Vai trò |
 |---|---|
-| `shell` | MF host: layout, routing gốc, auth context, header slots (search/auth/cart-badge) |
-| `mfe-storefront` | Home (hero, flash deal countdown, featured) · PLP filter/sort/paginate kiểu Tiki · PDP |
+| `storefront-web` | **Next.js SSR/ISR (SEO)**: home (hero, flash deal countdown) · PLP kiểu Tiki · PDP (JSON-LD Product + OG) · search · coupon center · sitemap/robots |
+| `shell` | MF host (app pages cần auth): layout, routing, auth context, header slots (auth/cart-badge) |
 | `mfe-checkout` | Cart · checkout 3 bước · coupon · Stripe.js confirm · cart badge |
 | `mfe-account` | Login/register · profile · my orders · wishlist · reviews |
-| `mfe-admin` | Dashboard KPI + charts · products/categories CRUD · coupons · moderation · orders |
+| `mfe-admin` | Dashboard KPI + charts · products/categories CRUD (có trường SEO) · coupons · moderation · orders |
 
 **Shared packages:** `contracts` (OpenAPI → TS codegen) · `auth` (token singleton federation-shared) · `ui-kit` (2 theme) · `i18n` (vi/en) · `config`.
 
@@ -97,7 +102,11 @@ flowchart LR
 | Flash deal countdown, badge giảm giá | Products/categories CRUD → thấy ngay trên storefront | **Polyglot persistence** — đúng DB cho đúng việc |
 | Giỏ hàng guest + merge-on-login | Coupons CRUD (%, fixed, window, limit) | **Swap engine không đổi contract** — ES↔PG FTS, Stripe↔PSP khác |
 | Checkout + Stripe test + email | Reviews moderation + badge "Mua đã xác nhận" | Event audit trail trên Mongo |
-| My orders / wishlist / reviews | Orders: ship/deliver/cancel + low-stock | RBAC server-side 2 lớp (gateway + service) |
+| **PDP chuẩn SEO**: SSR + JSON-LD Product + OG + sitemap | SEO override per-product (seoTitle/description/slug) | **Hybrid rendering**: Next.js SSR (SEO) + Vite MF (app) |
+| **Đa ngôn ngữ vi/en** — kể cả dữ liệu sản phẩm (`/en/*` + hreflang) | Form sản phẩm tabs vi/en, fallback tự động | **i18n data**: JSONB {vi,en} trong Postgres, ES index per-locale |
+| **Open API đối tác**: `/open-api/v1` API key + webhook HMAC + docs portal | Quản lý affiliate: duyệt, rate, stats | **Affiliate**: ref link, attribution 30 ngày, ledger hoa hồng event-driven |
+| My orders / wishlist / reviews · **tải hóa đơn PDF** | Orders: ship/deliver/cancel + low-stock + **tải hóa đơn** | **Polyglot**: Python (FastAPI/ReportLab) PDF service — stateless renderer tách khỏi business |
+| — | **Email cảm ơn** kèm hóa đơn PDF khi mua hàng | RBAC server-side 2 lớp (gateway + service) |
 
 ---
 
@@ -135,13 +144,15 @@ compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
 | SF-1 | Nền móng: monorepo, compose, gateway, service template | [FI-311](https://linear.app/my-app-hoivu/issue/FI-311) | 🔨 In Progress |
 | SF-2 | Contracts freeze (7 OpenAPI + events), ui-kit, federation harness, design direction | [FI-312](https://linear.app/my-app-hoivu/issue/FI-312) | ⏳ Todo |
 | SF-3 | Identity + account | [FI-313](https://linear.app/my-app-hoivu/issue/FI-313) | ⏳ Todo |
-| SF-4 | Catalog + browse (Tiki-style) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
+| SF-4 | Catalog + browse Tiki-style (storefront **Next.js SSR**) + Elasticsearch | [FI-314](https://linear.app/my-app-hoivu/issue/FI-314) | ⏳ Todo |
 | SF-5 | Inventory + payment services | [FI-315](https://linear.app/my-app-hoivu/issue/FI-315) | ⏳ Todo |
 | SF-6 | Cart + checkout UX | [FI-316](https://linear.app/my-app-hoivu/issue/FI-316) | ⏳ Todo |
 | SF-7 | Admin MFE | [FI-317](https://linear.app/my-app-hoivu/issue/FI-317) | ⏳ Todo |
 | SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | ⏳ Todo |
 | SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ⏳ Todo |
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
+| SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
+| SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |
 
 ---
 

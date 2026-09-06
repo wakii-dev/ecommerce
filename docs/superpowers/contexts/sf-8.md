@@ -13,7 +13,7 @@
 4. **Verified-purchase consumer**: consume `order.confirmed` (fat payload §6.1: items có product_id + user_id) → insert `review_eligibility` (dedupe). Idempotent.
 5. **Synthetic event harness**: IT Testcontainers RabbitMQ publish synthetic `order.confirmed` + 1 CLI/tool `ReviewSeedTool` (profile test) để demo verified flow không cần ordering.
 6. **Wishlist APIs**: `GET /api/catalog/me/wishlist` (paginate + product enrich), `PUT /api/catalog/me/wishlist/{productId}` (add), `DELETE ...` (remove), `GET /api/catalog/me/wishlist/ids` (cho heart state).
-7. **mfe-storefront additions**: PDP **reviews section** (rating breakdown bars + list APPROVED + badge "Mua đã xác nhận" nếu verified + pagination), **write-review modal** (StarRating interactive + title + content; guest → redirect login; sau submit → toast "đang chờ duyệt"), my-review edit/delete khi PENDING. **Wishlist heart** trên PDP + ProductCard (PLP): toggle `PUT/DELETE`, guest → redirect login; state từ `/wishlist/ids`.
+7. **storefront-web additions (Next — file-slice D16: CHỈ `components/reviews/*` + `components/wishlist/*` + chèn vào PDP/PLP qua chỗ SF-4 định sẵn)**: PDP **reviews section** (server component fetch APPROVED + rating breakdown bars + badge "Mua đã xác nhận" nếu verified + pagination), **write-review modal** (client component: StarRating interactive + title + content; guest → link sang `/account` (shell) đăng nhập; sau submit → toast "đang chờ duyệt"), my-review edit/delete khi PENDING. **Wishlist heart** client component trên PDP + ProductCard: toggle `PUT/DELETE`, guest → link `/account`; state từ `/wishlist/ids`.
 8. **mfe-account additions** (file-slice CHỈ `pages/wishlist/*` + `pages/my-reviews/*`): wishlist page (grid ProductCard + remove + link sang PDP), my-reviews page (list review của tôi + trạng thái badge PENDING/APPROVED/REJECTED). Shell manifest append 2 routes `/account/wishlist`, `/account/reviews`.
 9. **IT**: submit → PENDING (không hiện public); approve → hiện + aggregate cập nhật đúng; reject → không hiện; verified qua synthetic event (badge true cho đúng user); wishlist CRUD + dedupe.
 
@@ -22,7 +22,7 @@
 ```
 backend/services/catalog-service/src/main/java/.../reviews/** · .../wishlist/**
 backend/services/catalog-service/src/main/resources/db/migration/V2__* (V1 của SF-4 KHÔNG đụng)
-frontend/apps/mfe-storefront: PDP reviews + write modal + ProductCard heart (edit file SF-4 đã merge — additive)
+frontend/apps/storefront-web/components/reviews/** · components/wishlist/** (+ chèn section vào PDP/PLP qua chỗ SF-4 định — edit tối thiểu)
 frontend/apps/mfe-account/pages/wishlist/** · pages/my-reviews/**
 frontend/apps/shell: manifest append 2 routes
 ```

@@ -257,7 +257,7 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
 
 **Files:** Create `frontend/apps/shell/**` (package.json, vite.config.ts, index.html, src/{main.tsx, App.tsx, header/{Header.tsx, HeaderSlots.ts}, routes.tsx? (registry), pages/{Home.tsx, RemotePage.tsx, UiKitDemoPage.tsx}}), Create `frontend/apps/_skeleton-remote/**` (package.json, vite.config.ts, index.html, src/{main.tsx, Page.tsx, HeaderWidget.tsx}), Modify `.env.example` (append `REMOTE_SKELETON_URL=http://localhost:5178` + comment skeleton là harness fixture), Modify `frontend/packages/config/vite-preset.mjs` (additive: thêm `@ecommerce/auth`, `@ecommerce/ui-kit`, `@ecommerce/i18n` vào SHARED_SINGLETONS — pack pin shared: react, react-dom, auth, ui-kit, i18n; react-router VẪN không shared)
 
-- [ ] `shell` (host, port **5173**): `defineMfeConfig({name: 'shell_host', remotes: {skeleton: \`skeleton@\${process.env.REMOTE_SKELETON_URL ?? 'http://localhost:5178'}/remoteEntry.js\`}})`; routes: `/` Home, `/skeleton` → remote `skeleton/Page` (import qua module federation), `/ui-kit` → UiKitDemo; Header dùng **SLOT REGISTRY**:
+- [x] `shell` (host, port **5173**): `defineMfeConfig({name: 'shell_host', remotes: {skeleton: \`skeleton@\${process.env.REMOTE_SKELETON_URL ?? 'http://localhost:5178'}/remoteEntry.js\`}})`; routes: `/` Home, `/skeleton` → remote `skeleton/Page` (import qua module federation), `/ui-kit` → UiKitDemo; Header dùng **SLOT REGISTRY**:
   ```ts
   // HeaderSlots — registry API (additive, SF-6/7 đăng ký từ remote của chúng)
   type SlotKey = 'left' | 'center' | 'right';
@@ -267,17 +267,17 @@ Mọi error response `content: application/problem+json: { schema: { $ref: '#/co
     list(slot: SlotKey): React.ComponentType[]
   };
   ```
-  Shell đăng ký 1 item mặc định (logo/nav) + **load HeaderWidget từ skeleton remote rồi `HeaderSlots.register('right', 'skeleton-demo', HeaderWidget)`** — chứng minh remote đăng ký được mà KHÔNG sửa file Header
-- [ ] `_skeleton-remote` (port **5178**, package name `@ecommerce/skeleton-remote`): expose `./Page` + `./HeaderWidget`; Page dùng `@ecommerce/ui-kit` Button + `useT()` + đọc `authStore` (chứng minh shared singletons xuyên boundary); **Page render chip kiểm chứng React singleton:**
+  Shell đăng ký 1 item mặc định (logo/nav) + **load HeaderWidget từ skeleton remote rồi `HeaderSlots.register('right', 'skeleton-demo', HeaderWidget)`** — chứng minh remote đăng ký được mà KHÔNG sửa file Header. *Ghi chú thực thi: remote entry là ESM nên host dùng object form `{type:'module', name:'mfe_skeleton', entry}` — string form `skeleton@url` mặc định `type:'var'` chỉ hợp remote global-format (README @module-federation/vite).*
+- [x] `_skeleton-remote` (port **5178**, package name `@ecommerce/skeleton-remote`): expose `./Page` + `./HeaderWidget`; Page dùng `@ecommerce/ui-kit` Button + `useT()` + đọc `authStore` (chứng minh shared singletons xuyên boundary); **Page render chip kiểm chứng React singleton:**
   ```tsx
   import React from 'react';
   // shell gắn window.__shellReact__ trước khi load remote
   const sameReact = (window as any).__shellReact__ === React;
   <span data-testid="react-singleton">{sameReact ? 'REACT ✓ 1 INSTANCE' : 'REACT ✗ DUPLICATE'}</span>
   ```
-- [ ] Ports: shell 5173 / skeleton 5178 (5174-5177 dành storefront/checkout/account/admin theo .env.example SF-1)
-- [ ] Chạy: `pnpm -C frontend install` → 2 terminal: `pnpm -C frontend --filter @ecommerce/skeleton-remote dev` + `pnpm -C frontend --filter shell dev` (Makefile dev-fe KHÔNG có skeleton — READ-ONLY, flag coordinator trong báo cáo)
-- [ ] Verify thủ công (bắt buộc trước commit): mở `http://localhost:5173/skeleton` — page remote render TRONG layout shell (header shell vẫn hiện) + chip `REACT ✓ 1 INSTANCE`; console sạch duplicate-react warning; widget từ remote hiện trong header
+- [x] Ports: shell 5173 / skeleton 5178 (5174-5177 dành storefront/checkout/account/admin theo .env.example SF-1)
+- [x] Chạy: `pnpm -C frontend install` → 2 terminal: `pnpm -C frontend --filter @ecommerce/skeleton-remote dev` + `pnpm -C frontend --filter shell dev` (Makefile dev-fe KHÔNG có skeleton — READ-ONLY, flag coordinator trong báo cáo)
+- [ ] Verify thủ công (bắt buộc trước commit): mở `http://localhost:5173/skeleton` — page remote render TRONG layout shell (header shell vẫn hiện) + chip `REACT ✓ 1 INSTANCE`; console sạch duplicate-react warning; widget từ remote hiện trong header *(server-side đã verify: vite build 2 app xanh, dev boot 5173+5178, curl remoteEntry.js 200 + shell `/`, `/skeleton` 200; trình duyệt chip/widget/console chờ coordinator mở browser)*
 - [ ] Commit: `feat(harness): MF shell + skeleton remote — slot registry, shared singletons 1 React`
 
 ### Task 15: designer-mockup-3huong-user-gate (song song từ đầu — KHÔNG chặn Task 1-14)

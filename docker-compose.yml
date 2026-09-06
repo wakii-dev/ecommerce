@@ -188,6 +188,28 @@ services:
     networks:
       - ecommerce-net
 
+  # SF-6 (2026-09-06): cart-service (port 8083, KHÔNG DB — Redis thuần D8).
+  # Dev: host JVM `make dev svc=cart`. Profile full (SF-10) build image.
+  cart-service:
+    build:
+      context: .
+      dockerfile: backend/services/cart-service/Dockerfile
+    container_name: ecommerce-cart-service
+    profiles:
+      - full
+    environment:
+      REDIS_HOST: redis
+      # enrichment gọi service khác qua service name (full profile)
+      CATALOG_BASE_URL: http://catalog-service:8082
+      INVENTORY_BASE_URL: http://inventory-service:8084
+    expose:
+      - "8083"   # internal — gateway (full profile) gọi qua service name
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:

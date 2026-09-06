@@ -22,6 +22,11 @@ const AccountPage = lazy(() => import('account/AccountPage'));
 const WishlistPage = lazy(() => import('account/WishlistPage'));
 const MyReviewsPage = lazy(() => import('account/MyReviewsPage'));
 
+// Trang cart/checkout của mfe-checkout (SF-6) — LAZY + fallback pattern account.
+const CheckoutCartPage = lazy(() => import('checkout/CartPage'));
+const CheckoutPage = lazy(() => import('checkout/CheckoutPage'));
+const CheckoutConfirmationPage = lazy(() => import('checkout/ConfirmationPage'));
+
 const mainStyle = {
   padding: 'var(--space-4, 16px)',
   maxWidth: 960,
@@ -58,6 +63,26 @@ function AccountErrorFallback({ error }: { error: Error }): ReactElement {
           <>
             {error.message} — chạy{' '}
             <code>pnpm -C frontend --filter @ecommerce/mfe-account dev</code>
+          </>
+        }
+        action={
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        }
+      />
+    </Card>
+  );
+}
+
+/** Fallback cho các trang mfe-checkout (SF-6) — cùng pattern. */
+function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
+  return (
+    <Card>
+      <EmptyState
+        title="mfe-checkout không chạy"
+        description={
+          <>
+            {error.message} — chạy{' '}
+            <code>pnpm -C frontend --filter @ecommerce/mfe-checkout dev</code>
           </>
         }
         action={
@@ -134,6 +159,30 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <MyReviewsPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/cart') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutCartPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/checkout') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/order/confirmation') {
+    page = (
+      <ErrorBoundary fallback={(error) => <CheckoutErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <CheckoutConfirmationPage />
         </Suspense>
       </ErrorBoundary>
     );

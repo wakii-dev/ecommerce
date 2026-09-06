@@ -32,6 +32,13 @@ import('account/bootstrap')
   .then((m) => m.initAccountShell({ HeaderSlots, navigate, onRegistryChange: onHeaderSlotsChanged }))
   .catch((error) => console.warn('[shell] mfe-account chưa chạy — auth widget tạm vắng:', error.message));
 
+// mfe-checkout (SF-6) — eager bootstrap: đăng ký CartBadge slot 'right' +
+// merge-on-login watcher (authStore subscribe). KHÔNG chặn render nếu remote
+// down — badge tạm vắng, cart/checkout vẫn mở được qua route khác.
+import('checkout/bootstrap')
+  .then((m) => m.initCheckoutShell({ HeaderSlots, navigate, onRegistryChange: onHeaderSlotsChanged }))
+  .catch((error) => console.warn('[shell] mfe-checkout chưa chạy — cart badge tạm vắng:', error.message));
+
 void initI18n().then(() => {
   createRoot(document.getElementById('root')!).render(<App />);
 });

@@ -12,8 +12,8 @@ import { moveActive, suggestUrl } from '../lib/search';
  * suggest (relative `/api/...` qua Next rewrites proxy → gateway, same-origin
  * không CORS); AbortController hủy request cũ mỗi keystroke. Dropdown đóng:
  * mousedown ngoài wrapper / blur ra ngoài / Escape. Enter (không chọn item)
- * → /search?q=; ArrowUp/Down chọn item (aria-activedescendant). Form GET
- * `/search` giữ cho no-JS fallback.
+ * → localePath('/search') + ?q= (giữ locale); ArrowUp/Down chọn item
+ * (aria-activedescendant). Form GET cùng path (no-JS fallback).
  */
 
 const PLACEHOLDER: Record<Locale, string> = {
@@ -136,7 +136,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
     const target =
       active >= 0 && items[active] !== undefined
         ? items[active].href
-        : `/search?q=${encodeURIComponent(query.trim())}`;
+        : `${localePath('/search', locale)}?q=${encodeURIComponent(query.trim())}`;
     setOpen(false);
     router.push(target);
   }
@@ -150,7 +150,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
 
   return (
     <div className="search-wrap" ref={wrapRef} onBlur={onBlur}>
-      <form className="search-form" action="/search" method="get" role="search" onSubmit={onSubmit}>
+      <form className="search-form" action={localePath('/search', locale)} method="get" role="search" onSubmit={onSubmit}>
         <input
           className="search-input"
           type="search"

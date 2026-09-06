@@ -36,6 +36,19 @@ const COPY = {
   },
 } as const;
 
+/**
+ * Payload AddItemRequest (contracts/generated/cartSchema.d.ts — POST /items):
+ * `qty` (KHÔNG phải `quantity`); variantId OMIT khi null (contract: string khi
+ * có mặt). Pure fn — unit-test được shape ở tests/pdp.test.ts.
+ */
+export function buildAddItemPayload(
+  productId: string,
+  variantId: string | null,
+  qty: number,
+): { productId: string; variantId?: string; qty: number } {
+  return { productId, ...(variantId ? { variantId } : {}), qty };
+}
+
 interface AddToCartProps {
   productId: string;
   /** Variant đang chọn — null → POST không variantId (sản phẩm không variant). */
@@ -96,7 +109,7 @@ export default function AddToCart({ productId, variantId, locale }: AddToCartPro
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ productId, variantId, quantity: qty }),
+        body: JSON.stringify(buildAddItemPayload(productId, variantId, qty)),
       });
       // SF-9 chưa merge → mọi status đều rơi vào toast êm (giữ stub không crash).
       if (!res.ok) throw new Error(`cart ${res.status}`);

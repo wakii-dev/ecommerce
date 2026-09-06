@@ -161,8 +161,13 @@ export default async function ProductPage({ params }: PdpPageProps) {
 
   return (
     <div className="container pdp">
-      {/* JSON-LD Product schema — stringify toàn khối (an toàn injection). */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* JSON-LD Product schema — stringify + escape `<` → `<` để `</script>`
+          trong field admin-enter (name/description/brand...) không thể đóng
+          sớm thẻ script (stored XSS). JSON vẫn parse đúng sau revert. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">
         <a href={localePath('/', locale)}>{copy.home}</a>

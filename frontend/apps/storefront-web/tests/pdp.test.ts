@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildAddItemPayload } from '../components/pdp/AddToCart';
 import type { Category } from '../lib/catalog-api';
 import { categoryPathById, collectOptions, jsonLdFor, pickVariant, priceWithDelta } from '../lib/pdp';
 
@@ -76,7 +77,34 @@ describe('jsonLdFor', () => {
   it('JSON.stringify toàn khối luôn thành công (dữ liệu API bất hợp lý cũng không ném)', () => {
     const jsonLd = jsonLdFor({ ...BASE_INPUT, description: 'Dấu nháy " và <script>' }, 'vi', 'http://test.local');
     expect(() => JSON.stringify(jsonLd)).not.toThrow();
-    expect(JSON.stringify(jsonLd)).toContain('<script>');
+  });
+
+  it('P0 XSS: field chứa `</script>` → chuỗi script render KHÔNG còn raw `<` (escape \\u003c)', () => {
+    // Cùng transform với app/[locale]/p/[slug]/page.tsx — lock contract escape.
+    const jsonLd = jsonLdFor(
+      { ...BASE_INPUT, name: 'X </script><img src=x onerror=alert(1)>' },
+      'vi',
+      'http://test.local',
+    );
+    const raw = JSON.stringify(jsonLd);
+    expect(raw).toContain('</script>'); // stringify thô vẫn có — nên page BẮT BUỘC escape
+    const rendered = raw.replace(/</g, '\\u003c');
+    expect(rendered).not.toContain('<'); // không còn `<` raw nào → không thể đóng thẻ script
+    expect(rendered).toContain('\\u003c');
+    // Escape chỉ ở tầng chuỗi script — JSON vẫn parse về đúng giá trị gốc.
+    expect(JSON.parse(rendered.replace(/\\u003c/g, '<')).name).toBe('X </script><img src=x onerror=alert(1)>');
+  });
+});
+
+describe('buildAddItemPayload', () => {
+  it('payload theo cart contract AddItemRequest: `qty` (không quantity); variantId string khi đã chọn', () => {
+    expect(buildAddItemPayload('p1', 'v9', 3)).toEqual({ productId: 'p1', variantId: 'v9', qty: 3 });
+  });
+
+  it('chưa chọn variant → OMIT variantId (không gửi null — contract: string khi có mặt)', () => {
+    const payload = buildAddItemPayload('p1', null, 1);
+    expect(payload).toEqual({ productId: 'p1', qty: 1 });
+    expect('variantId' in payload).toBe(false);
   });
 });
 

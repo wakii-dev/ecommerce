@@ -216,3 +216,13 @@
 .admin-cat-row:last-child {
   border-bottom: none;
 }
+
+/* ── Variant / image rows (product form) ─────────────────────────────── */
+.admin-variant-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 1.4fr 0.8fr 0.8fr auto;
+  gap: var(--space-2, 8px);
+  align-items: end;
+  padding-block: var(--space-2, 8px);
+  border-bottom: 1px dashed var(--c-border, #e5e7eb);
+}

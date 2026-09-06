@@ -5,6 +5,7 @@ import type { FormEvent, ReactElement } from 'react';
 
 import { buildReviewPayload } from '../../lib/reviews-api';
 import { authedFetch, ensureSession } from '../../lib/account-session';
+import { shellUrl } from '../../lib/site';
 import type { Locale } from '../../lib/format';
 
 /**
@@ -146,7 +147,7 @@ export default function WriteReviewModal({
           <div className="rv-guest">
             <h3>{copy.guestTitle}</h3>
             <p>{copy.guestDesc}</p>
-            <a className="rv-cta" href="/account">
+            <a className="rv-cta" href={`${shellUrl()}/account`}>
               {copy.guestCta}
             </a>
           </div>

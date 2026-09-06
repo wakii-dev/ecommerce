@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactElement, MouseEvent } from 'react';
 
 import { ensureSession } from '../../lib/account-session';
+import { shellUrl } from '../../lib/site';
 import type { Locale } from '../../lib/format';
 import { applyToggle, bustWishlistIdsCache, fetchWishlistIds, toggleWishlist } from './wishlist-api';
 
@@ -57,7 +58,9 @@ export default function WishlistHeart({
     event.preventDefault();
     event.stopPropagation();
     if (authed === false) {
-      window.location.href = '/account';
+      // Shell là app Vite riêng — link relative '/account' 404 trên origin
+      // storefront (cùng bug SF-6 P1 với /cart) → absolute qua shellUrl().
+      window.location.href = `${shellUrl()}/account`;
       return;
     }
     const next = !active;

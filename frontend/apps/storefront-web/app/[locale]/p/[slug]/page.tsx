@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
 import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
 import { EmptyState, StarRating } from '../../../../components/ui-kit';
@@ -285,6 +286,8 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
         <section id="tab-reviews" className="pdp-panel">
           {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay "Sắp ra mắt" SF-4 */}
           <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
+          {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
+          <MyPendingReviewPanel productId={product.id} locale={locale} />
         </section>
       </div>
     </div>

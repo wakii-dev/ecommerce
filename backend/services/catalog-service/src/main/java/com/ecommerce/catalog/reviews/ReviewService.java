@@ -20,9 +20,13 @@ import com.ecommerce.catalog.domain.ReviewStatus;
 import com.ecommerce.catalog.repo.ProductRepository;
 import com.ecommerce.catalog.repo.ReviewEligibilityRepository;
 import com.ecommerce.catalog.repo.ReviewRepository;
+import com.ecommerce.catalog.reviews.web.dto.ReviewAdminDto;
+import com.ecommerce.catalog.reviews.web.dto.ReviewAdminPageDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewListDto;
 import com.ecommerce.catalog.reviews.web.dto.ReviewSubmitRequest;
+import com.ecommerce.common.outbox.OutboxWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Review service (SF-8) — submit (202, policy 1 review/user/product) + public
@@ -48,12 +52,19 @@ public class ReviewService {
     private final ProductRepository productRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewEligibilityRepository eligibilityRepository;
+    private final OutboxWriter outboxWriter;
+    private final ObjectMapper objectMapper;
+    private final RatingAggregateService ratingAggregateService;
 
     public ReviewService(ProductRepository productRepository, ReviewRepository reviewRepository,
-                         ReviewEligibilityRepository eligibilityRepository) {
+                         ReviewEligibilityRepository eligibilityRepository, OutboxWriter outboxWriter,
+                         ObjectMapper objectMapper, RatingAggregateService ratingAggregateService) {
         this.productRepository = productRepository;
         this.reviewRepository = reviewRepository;
         this.eligibilityRepository = eligibilityRepository;
+        this.outboxWriter = outboxWriter;
+        this.objectMapper = objectMapper;
+        this.ratingAggregateService = ratingAggregateService;
     }
 
     /** Submit review — 202 no-body; status luôn PENDING. */
@@ -112,6 +123,85 @@ public class ReviewService {
             result.getContent().stream().map(ReviewService::toDto).toList(),
             breakdown,
             result.getTotalElements());
+    }
+
+    // ── admin moderation (T3) ───────────────────────────────────────────────
+
+    /**
+     * Admin moderation queue — filter status (default PENDING), mới nhất trước
+     * (contract GET /admin/reviews).
+     */
+    @Transactional(readOnly = true)
+    public ReviewAdminPageDto adminList(String status, int page, int size) {
+        ReviewStatus statusFilter = parseStatus(status);
+        if (page < 1) {
+            throw bad("page phải >= 1 (1-based)");
+        }
+        if (size < 1 || size > 100) {
+            throw bad("size phải trong khoảng [1, 100] (mặc định 20)");
+        }
+        Page<ReviewEntity> result = statusFilter == null
+            ? reviewRepository.findAll(PageRequest.of(page - 1, size))
+            : reviewRepository.findByStatusOrderByCreatedAtDesc(statusFilter, PageRequest.of(page - 1, size));
+        return new ReviewAdminPageDto(
+            result.getContent().stream().map(ReviewService::toAdminDto).toList(),
+            page, size, result.getTotalElements());
+    }
+
+    /**
+     * Approve/reject (contract POST /admin/reviews/{id}/approve|reject) — 1 tx:
+     * transition + outbox {@code review.moderated} + recompute aggregate
+     * (pessimistic lock product — RatingAggregateService). Chỉ PENDING được
+     * transition, trạng thái khác → 409 (spec Q7). Payload khít
+     * contracts/events/review.moderated.schema.json.
+     */
+    @Transactional
+    public ReviewAdminDto moderate(UUID reviewId, boolean approve, String correlationId) {
+        ReviewEntity review = reviewRepository.findById(reviewId).orElseThrow(
+            () -> notFound("Không tìm thấy review"));
+        ReviewStatus target = approve ? ReviewStatus.APPROVED : ReviewStatus.REJECTED;
+        if (review.getStatus() != ReviewStatus.PENDING) {
+            throw conflict("Review đã ở trạng thái " + review.getStatus() + " — chỉ PENDING được duyệt/từ chối");
+        }
+        review.setStatus(target);
+
+        java.time.Instant moderatedAt = java.time.Instant.now();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("reviewId", review.getId().toString());
+        payload.put("productId", review.getProductId().toString());
+        payload.put("userId", review.getUserId().toString());
+        payload.put("status", target.name());
+        payload.put("rating", review.getRating());
+        payload.put("moderatedAt", moderatedAt.toString());
+        outboxWriter.write("review.moderated", objectMapper.valueToTree(payload), correlationId);
+
+        ratingAggregateService.recompute(review.getProductId());
+        return toAdminDto(review);
+    }
+
+    private static ReviewStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null; // default PENDING xử lý ở controller? — contract: default PENDING
+        }
+        try {
+            return ReviewStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw bad("status phải là PENDING|APPROVED|REJECTED");
+        }
+    }
+
+    public static ReviewAdminDto toAdminDto(ReviewEntity review) {
+        return new ReviewAdminDto(
+            review.getId(),
+            review.getUserId(),
+            review.getUserName(),
+            review.getRating(),
+            review.getTitle(),
+            review.getContent(),
+            review.isVerified(),
+            review.getCreatedAt(),
+            review.getProductId(),
+            review.getStatus().name());
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────

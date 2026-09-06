@@ -99,3 +99,10 @@ export function discountPercent(price: number, comparePrice?: number | null): nu
   if (!comparePrice || comparePrice <= price || price <= 0) return undefined;
   return Math.round(((comparePrice - price) * 100) / comparePrice);
 }
+
+// ── Entity types (Task 11 — derive từ client thay vì export schema nội bộ) ──
+
+/** Card sản phẩm (list/search) — shape `ProductCard` của contracts schema. */
+export type ProductCard = ProductCardPage['items'][number];
+/** Node danh mục gốc (getCategories trả mảng node, children đệ quy). */
+export type Category = CategoryTree[number];

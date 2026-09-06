@@ -160,14 +160,14 @@
 
 **Files:** Create `app/[locale]/page.tsx` (home server) + `components/home/*` + client components
 
-- [ ] Server component: fetch `listProducts?size=24&sort=discount&locale=` (1 call) → flash rail = items `flashSaleEndsAt > now` (≤10), featured grid = còn lại sort rating desc (8), categories = `getCategories` cho tile grid 6 cột (+ tile "Xem thêm" dashed)
-- [ ] Hero carousel (client `HeroCarousel`): 3 slide gradient `120deg` §1.8, kicker + title 44px + nút "Mua ngay" accent, arrows/dots, auto-rotate 5s (nếu đơn giản), track translateX .45s
-- [ ] FlashDealSection: nền gradient vàng `180deg #FFD839→#FFB800`, h2 + `<Countdown endsAt>` client (hh:mm:ss, tabular-nums, hộp #212121 chữ accent, tick 1s, hết → ẩn block); card 186px scroll-x: badge -% primary, gradient thumb theo category, giá danger + gạch
-- [ ] CategoryTiles: grid 6 cột, gradient theo danh mục + emoji, hover translateY(-2px)
-- [ ] FeaturedGrid: dùng `ProductCardView` DÙNG CHUNG (components/ProductCardView.tsx — anatomy §2.3: thumb 190px gradient + badge -% + tint badges §1.6 từ tags, tên clamp 2 dòng 13px/600, giá danger 17px/800 + gạch, StarRating ui-kit + count) — link `/p/{slug}` (en: `/en/p/{slugEn}`)
-- [ ] Footer 4 cột nền #212121 (§2.2.5)
-- [ ] Verify: IT-ready — `curl :3000/` HTML chứa tên sản phẩm seed + giá (SSR thật, KHÔNG skeleton-only); `/en` HTML chứa tên tiếng Anh; chạy `pnpm --filter @ecommerce/storefront-web test` (vitest smoke render lib) xanh
-- [ ] Commit: `feat(storefront): home SSR — hero carousel + flash countdown + featured grid`
+- [x] Server component: fetch `listProducts?size=24&sort=discount&locale=` (1 call) → flash rail = items `flashSaleEndsAt > now` (≤10), featured grid = còn lại sort rating desc (8), categories = `getCategories` cho tile grid 6 cột (+ tile "Xem thêm" dashed)
+- [x] Hero carousel (client `HeroCarousel`): 3 slide gradient `120deg` §1.8, kicker + title 44px + nút "Mua ngay" accent, arrows/dots, auto-rotate 5s (nếu đơn giản), track translateX .45s
+- [x] FlashDealSection: nền gradient vàng `180deg #FFD839→#FFB800`, h2 + `<Countdown endsAt>` client (hh:mm:ss, tabular-nums, hộp #212121 chữ accent, tick 1s, hết → ẩn block); card 186px scroll-x: badge -% primary, gradient thumb theo category, giá danger + gạch
+- [x] CategoryTiles: grid 6 cột, gradient theo danh mục + emoji, hover translateY(-2px)
+- [x] FeaturedGrid: dùng `ProductCardView` DÙNG CHUNG (components/ProductCardView.tsx — anatomy §2.3: thumb 190px gradient + badge -% + tint badges §1.6 từ tags, tên clamp 2 dòng 13px/600, giá danger 17px/800 + gạch, StarRating ui-kit + count) — link `/p/{slug}` (en: `/en/p/{slugEn}`)
+- [x] Footer 4 cột nền #212121 (§2.2.5)
+- [x] Verify: IT-ready — `curl :3000/` HTML chứa tên sản phẩm seed + giá (SSR thật, KHÔNG skeleton-only); `/en` HTML chứa tên tiếng Anh; chạy `pnpm --filter @ecommerce/storefront-web test` (vitest smoke render lib) xanh
+- [x] Commit: `feat(storefront): home SSR — hero carousel + flash countdown + featured grid`
 
 ### Task 12: plp-ssr-sidebar-filter-grid-pagination
 

@@ -55,6 +55,40 @@ export interface PdpMetadataResult {
   robots: { index: boolean; follow: boolean };
 }
 
+/** Copy home theo locale — title.default + description bilingual (Task 11). */
+const HOME_COPY: Record<Locale, { title: string; description: string }> = {
+  vi: {
+    title: 'Shop VN — Chợ sôi động',
+    description: 'Chợ sôi động — hàng nghìn sản phẩm chính hãng, giá tốt mỗi ngày.',
+  },
+  en: {
+    title: 'Shop VN — Vibrant marketplace',
+    description: 'Shop VN — thousands of official products at great prices, every day.',
+  },
+};
+
+export interface HomeMetadataResult {
+  /** absolute — home KHÔNG áp template `%s | Shop VN` của layout. */
+  title: { absolute: string };
+  description: string;
+  alternates: Alternates;
+}
+
+/**
+ * Metadata trang chủ — overrides title/description của layout theo
+ * locale (layout dùng chung 1 chuỗi vi cho cả hai); metadataBase kế thừa,
+ * alternates = cặp vi/en gốc.
+ */
+export function homeMetadata(locale: Locale): HomeMetadataResult {
+  const copy = HOME_COPY[locale];
+  return {
+    title: { absolute: copy.title },
+    description: copy.description,
+    alternates: buildAlternates('/'),
+  };
+}
+
+
 /**
  * Metadata PDP: seoTitle/seoDescription priority, fallback name/description.
  * robots.index = false khi locale `en` VÀ có fallback (thiếu bản dịch SEO —

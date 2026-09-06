@@ -32,4 +32,23 @@ class GatewaySmokeTest {
             .expectStatus().isOk()
             .expectHeader().valueEquals("X-Request-Id", "req-test-42");
     }
+
+    @Test
+    void corsPreflightAllowsViteDevServer() {
+        client.options().uri("/api/smoke")
+            .header("Origin", "http://localhost:5173")
+            .header("Access-Control-Request-Method", "GET")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().valueEquals("Access-Control-Allow-Origin", "http://localhost:5173");
+    }
+
+    @Test
+    void corsRejectsUnknownOrigin() {
+        client.options().uri("/api/smoke")
+            .header("Origin", "http://evil.example.com")
+            .header("Access-Control-Request-Method", "GET")
+            .exchange()
+            .expectHeader().doesNotExist("Access-Control-Allow-Origin");
+    }
 }

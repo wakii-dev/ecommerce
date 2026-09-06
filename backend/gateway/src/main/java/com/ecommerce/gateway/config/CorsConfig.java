@@ -10,17 +10,30 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * CORS dev — 5 Vite server MFE (5173 shell + 5174-5177 remotes, 5178-5179 dư địa).
+ * CORS dev — 7 Vite server MFE (5173 shell + 5174-5179 remotes).
+ * DANH SÁCH TƯỜNG MINH, KHÔNG dùng regex kiểu `517[3-9]`: Spring
+ * {@code OriginPattern} chỉ hiểu wildcard `*` (phần còn lại được \Q..\E
+ * quote thành literal) — `[3-9]` sẽ từ chối TẤT CẢ origin.
  * Profile `dev` only; prod gateway serve static same-origin (SF-10).
  */
 @Configuration
 @Profile("dev")
 public class CorsConfig {
 
+    static final List<String> ALLOWED_ORIGINS = List.of(
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://localhost:5178",
+        "http://localhost:5179"
+    );
+
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:517[3-9]"));
+        config.setAllowedOrigins(ALLOWED_ORIGINS);
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

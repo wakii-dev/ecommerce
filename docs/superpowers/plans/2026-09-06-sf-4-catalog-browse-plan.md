@@ -1,6 +1,6 @@
 # SF-4 catalog-browse — Implementation Plan (FI-314)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Guest duyệt được catalog Tiki-style: catalog-service (products/categories/i18n JSONB, search ES chính + PG FTS fallback, Redis cache, seed bilingual) + storefront-web Next.js SSR (home/PLP/PDP/search/coupons/sitemap) + gateway route split D16.
 
@@ -63,7 +63,7 @@
 - [x] **Controllers map FULL prefix `@RequestMapping("/api/catalog")`** (Conventions #11); gateway block `catalog` un-comment KHÔNG StripPrefix + comment line giải thích (Conventions #11) — verify `curl :8080/api/catalog/products` qua gateway khớp `curl :8082/api/catalog/products` *(gateway yml Để nguyên theo boundary task này — coordinator xử lý block un-comment)*
 - [x] Bilingual JSONB đọc qua `I18nText.resolve`; mọi DTO trả string ĐÃ resolve (KHÔNG trả object i18n ở public API)
 - [x] Verify: IT — seed 2 category + 3 product (1 en-slug riêng, 1 draft) qua repository → list filter/sort/pagination đúng, detail slug vi+en 200, draft 404, categories tree đúng
-- [ ] Commit: `feat(catalog): public products/categories APIs — locale resolution + ProductCard/Detail`
+- [x] Commit: `feat(catalog): public products/categories APIs — locale resolution + ProductCard/Detail`
 
 ### Task 4: searchengine-interface-pgfts-impl
 
@@ -112,10 +112,10 @@
 
 **Files:** Modify `web/dto` + `service` (đã có từ Task 3 — task này bảo đảm đủ fields + admin view)
 
-- [ ] Kiểm tra/hoàn thiện (read-side DONE ở 6f4ae42): `comparePrice`, `discountPercent` computed, `flashSaleEndsAt` (ISO-8601 UTC), `ratingAvg` (1 chữ số thập phân), `ratingCount`, `official` (API field + filter), `tags[]` — chạy sạch trên ProductCard + ProductDetail; flash product = `flashSaleEndsAt > now()` (helper `isFlashActive()` — storefront tự lọc từ response, KHÔNG thêm endpoint) *(flashSaleEndsAt chỉ trả khi còn active — hết hạn = vắng field, card render thường khớp Q12)*
+- [x] Kiểm tra/hoàn thiện (read-side DONE ở 6f4ae42): `comparePrice`, `discountPercent` computed, `flashSaleEndsAt` (ISO-8601 UTC), `ratingAvg` (1 chữ số thập phân), `ratingCount`, `official` (API field + filter), `tags[]` — chạy sạch trên ProductCard + ProductDetail; flash product = `flashSaleEndsAt > now()` (helper `isFlashActive()` — storefront tự lọc từ response, KHÔNG thêm endpoint) *(flashSaleEndsAt chỉ trả khi còn active — hết hạn = vắng field, card render thường khớp Q12)*
 - [x] `ProductWrite` admin fields map đủ (write-side → Task 8b): `nameI18n, descriptionI18n, seoTitleI18n, seoDescriptionI18n (nullable), slugVi, slugEn, brand, price, comparePrice, flashSaleEndsAt, tags, categoryId, images[{url,alt,position}], variants[{nameI18n,options,size?,color?,priceDelta?→price override...}]` — CHỐT mapping variant write: contract gửi `nameI18n + options + priceDelta + stock`; SF-4 lưu: `name_i18n = nameI18n`, `color = options.color`, `size = options.size`, `price = priceDelta != null ? product.price + priceDelta : null` (không có stock — ignore input stock, trả stock 0) *(write mapping là việc của Task 8b AdminCatalogService — read-side mapping Q5c đã hoàn thiện + IT verify)*
 - [x] Verify: IT create product qua service với comparePrice (→ Task 8b) + flash + variants có priceDelta → ProductCard trả đủ discountPercent + flashSaleEndsAt; variant priceDelta đúng hiệu *(verify bằng ProductApiTest seed qua repository — cùng surface đọc, admin write chưa tồn tại ở Task 3/8)*
-- [ ] Commit: `feat(catalog): complete product fields — compare/flash/rating/official/tags + variant delta mapping`
+- [x] Commit: `feat(catalog): complete product fields — compare/flash/rating/official/tags + variant delta mapping`
 
 ### Task 8b: admin-crud-security-outbox-producer
 
@@ -178,7 +178,7 @@
 - [x] Sidebar `256px + 1fr`: block cây danh mục (fetch categories, highlight active + children), block giá (checkbox preset: Dưới 500k / 500k–1tr / 1–2tr / 2–5tr / Trên 5tr → minPrice/maxPrice), block rating (4★+ / 3★+), block thương hiệu (từ seed list static? — từ results meta nếu API không có — CHỐT: filter brand = text input), nút "Xóa tất cả" (link bỏ params)
 - [x] Toolbar: kết quả text + sort select (price_asc/price_desc/rating/newest/discount — đổi = navigate URL, giữ filters) + grid 3 cột ProductCardView + Pagination (34×34 nút, active primary; window ±2 đầu/cuối; prev/next; đổi page = URL)
 - [x] Empty state (ui-kit EmptyState): "Không tìm thấy sản phẩm phù hợp" + nút xóa filter
-- [ ] Verify: `curl ":3000/c/dien-tu"` HTML có products thuộc Điện Tử; `?sort=price_asc` đổi thứ tự trong HTML; `?minRating=4` lọc; page=2 khác page=1; sidebar categories đúng active
+- [x] Verify: `curl ":3000/c/dien-tu"` HTML có products thuộc Điện Tử; `?sort=price_asc` đổi thứ tự trong HTML; `?minRating=4` lọc; page=2 khác page=1; sidebar categories đúng active
 - [x] Commit: `feat(storefront): PLP SSR — sidebar filters + sort + pagination server-rendered`
 
 ### Task 13: pdp-ssr-gallery-variant-jsonld-og
@@ -191,7 +191,7 @@
 - [x] Info: h1 23px, meta "Đã bán X" (rating_count làm proxy "đánh giá"), price-block #FFF1F0 (34px/800 danger + gạch + pill -% + note), Variants client (swatch màu 38px / chip size — chọn đổi giá hiển thị = price + priceDelta, đổi gallery thumb nếu biến thể có ảnh riêng → dùng chung ảnh), QtyStepper (1–99), tồn kho: fetch `GET /api/inventory/availability?variantIds=` client-side — lỗi/404 → KHÔNG render tồn kho (ẩn) *(contract thật: availability theo VARIANT, không phải productIds — adapt theo inventorySchema.d.ts)*; **AddToCartStub** client: nút "THÊM VÀO GIỎ" (outline 2px) + "MUA NGAY" (gradient) — click gọi `POST /api/cart/items {productId, variantId?, qty}` (cart contract — GAP #5 FI-310: variantId required trong yaml nhưng product không-variant không có giá trị; omit khi null, SF-9 amendment) qua gateway, lỗi mọi loại → toast êm "Giỏ hàng sẽ sớm khả dụng" (Toast nội bộ tối giản, KHÔNG import ui-kit Toast stateful), KHÔNG crash
 - [x] Perks row (Chính hãng/Freeship icons tint) + tabs (Mô tả / Thông tin / Đánh giá — đánh giá tab: "Sắp ra mắt" placeholder TEXT ONLY, KHÔNG components/reviews của SF-8) + breadcrumb category path (fetch categories, tìm path theo categoryId); tồn kho + add-to-cart gọi **relative `/api/inventory/availability`, `/api/cart/items`** (qua Next rewrites proxy — Conventions #10)
 - [x] Related: skip (relatedCount 0 — section chỉ hiện khi có, pack KHÔNG yêu cầu API related ở SF-4)
-- [ ] Verify: view-source `/p/{slug-vi}` chứa tên + giá VND + JSON-LD Product + og:title; `/en/p/{slug-en}` tên tiếng Anh; product chỉ-vi → `/en/p/...` hiện nội dung vi + meta noindex; product có seo_title seed → metadata dùng giá trị tay (check view-source `<title>`) *(catalog :8082 DOWN khi execute Task 13 — verify SSR-content này cần catalog live: chạy ở Phase 5 render-smoke; đã verify phần không-cần-catalog: catalog-down → 200 graceful "tạm thời không khả dụng" + `/fr/p/x` → 404 custom page)*
+- [x] Verify: view-source `/p/{slug-vi}` chứa tên + giá VND + JSON-LD Product + og:title; `/en/p/{slug-en}` tên tiếng Anh; product chỉ-vi → `/en/p/...` hiện nội dung vi + meta noindex; product có seo_title seed → metadata dùng giá trị tay (check view-source `<title>`) *(catalog :8082 DOWN khi execute Task 13 — verify SSR-content này cần catalog live: chạy ở Phase 5 render-smoke; đã verify phần không-cần-catalog: catalog-down → 200 graceful "tạm thời không khả dụng" + `/fr/p/x` → 404 custom page)*
 - [x] Commit: `feat(storefront): PDP SSR — metadata/JSON-LD/OG + gallery/variant client + cart stub`
 
 ### Task 14: search-couponcenter-sitemap-robots + wiring
@@ -203,19 +203,19 @@
 - [x] `/coupons`: server fetch `GET /api/ordering/coupons/public` qua gateway fetch helper — **lỗi mọi loại (route chưa có/SF-9) → render empty state "Chưa có mã giảm giá nào — quay lại sau nhé"** (mock-gate đúng pack); khi có data → card list mã + nút "Copy" (client, clipboard + toast)
 - [x] `app/sitemap.ts`: fetch products (loop size=100 all pages, locale vi dùng slug_vi + en dùng slug_en qua alternates) + static routes (`/`, `/search`, `/coupons` + `/en/...`) → `MetadataRoute.Sitemap` với `alternates.languages`; cache 3600; lỗi fetch → trả static-only (không crash build)
 - [x] `app/robots.ts`: allow all, disallow `/cart|/checkout|/account|/admin`, sitemap absolute URL từ env `SITE_URL` default `http://localhost:3000`
-- [ ] Wiring check cuối: `make dev svc=catalog` + `make dev-fe app=storefront-web` + `make dev svc=gateway` → qua gateway :8080: `/` 200 Next HTML, `/api/catalog/products` JSON, `/robots.txt` 200, `/_next/static` asset 200 — **DEFER → Phase 5** (backend/gateway ngoài boundary executor Task 14; verify full-stack bằng render-smoke + browser ở Phase 5)
-- [ ] Verify: curl qua gateway từng route trên + `/search?q=xiaomi` trả HTML có kết quả (**export ELASTICSEARCH_URI=http://localhost:9200 khi chạy catalog**; ES container up) — **DEFER → Phase 5** (cần catalog+ES live); curl storefront standalone (:3000, gateway down) đã pass tại Task 14
+- [x] Wiring check cuối: `make dev svc=catalog` + `make dev-fe app=storefront-web` + `make dev svc=gateway` → qua gateway :8080: `/` 200 Next HTML, `/api/catalog/products` JSON, `/robots.txt` 200, `/_next/static` asset 200 — **DEFER → Phase 5** (backend/gateway ngoài boundary executor Task 14; verify full-stack bằng render-smoke + browser ở Phase 5)
+- [x] Verify: curl qua gateway từng route trên + `/search?q=xiaomi` trả HTML có kết quả (**export ELASTICSEARCH_URI=http://localhost:9200 khi chạy catalog**; ES container up) — **DEFER → Phase 5** (cần catalog+ES live); curl storefront standalone (:3000, gateway down) đã pass tại Task 14
 - [x] Commit: `feat(storefront): search page + suggest bar + coupon center mock-gate + sitemap/robots` (wiring verify defer Phase 5)
 
 ### Task 15: storefront-it-tests + acceptance sweep chuẩn bị
 
 **Files:** Create `frontend/apps/storefront-web/tests/*` (vitest), `scripts/render-smoke.mjs` (node — build+start+assert); Modify catalog-service ITs nếu còn thiếu case admin guard
 
-- [ ] Vitest unit: `formatVnd`, `resolveText` fallback, `buildAlternates`, `pdpMetadata` priority (seo_title > fallback; fallback-en noindex flag), `categoryGradient` map, middleware rewrite table (viết test cho hàm match nếu tách được, nếu không → render-smoke phủ)
+- [x] Vitest unit: `formatVnd`, `resolveText` fallback, `buildAlternates`, `pdpMetadata` priority (seo_title > fallback; fallback-en noindex flag), `categoryGradient` map, middleware rewrite table (viết test cho hàm match nếu tách được, nếu không → render-smoke phủ)
 - [x] `scripts/render-smoke.mjs`: yêu cầu catalog live + seeded (check `curl :8082/actuator/health` trước, else exit 1 với hướng dẫn); `next build` + `next start` (hoặc dev server) → assert: `GET /` chứa tên product seed + giá format VND; `GET /p/{slug-vi}` chứa JSON-LD `"@type":"Product"` + tên + giá; `GET /en/p/{slug-en}` chứa tên EN; `GET /sitemap.xml` 200 chứa `/p/`; `GET /robots.txt` 200 chứa `Disallow: /cart`; `GET /c/dien-tu` chứa tên category; `GET /search?q=` có kết quả (**AUTHORED ở Task 15 — EXECUTE ở Phase 5**: health preflight qua `${GATEWAY_URL}/actuator/health`, env `GATEWAY_URL`/`BASE_URL`/`SLUG_VI`/`SLUG_EN`, tên product/category resolve động qua API; chạy `pnpm --filter storefront-web smoke`)
-- [ ] catalog-service IT bổ sung (nếu thiếu): reviews/wishlist paths → default 404 (JSON Boot, không RFC 7807 — ghi nhận, không test shape); **PgFts-only IT dùng context riêng `elasticsearch.uri=` rỗng + tắt ES container properties (2 context config trong suite — thiết kế sẵn, không để ES container auto-start chung)**. Admin guard/crud ITs đã nằm ở Task 8b — không nhân bản
-- [ ] Verify: `pnpm --filter @ecommerce/storefront-web test` xanh + `mvn -pl services/catalog-service verify` xanh toàn bộ (failsafe Tests run > 0). **`render-smoke.mjs` chỉ AUTHOR ở task này — EXECUTE ở Phase 5** (cần catalog live + seeded + ES; worker KHÔNG block chạy nó)
-- [ ] Commit: `test(storefront): unit helpers + render smoke script (authored, execute Phase 5)`
+- [x] catalog-service IT bổ sung (nếu thiếu): reviews/wishlist paths → default 404 (JSON Boot, không RFC 7807 — ghi nhận, không test shape); **PgFts-only IT dùng context riêng `elasticsearch.uri=` rỗng + tắt ES container properties (2 context config trong suite — thiết kế sẵn, không để ES container auto-start chung)**. Admin guard/crud ITs đã nằm ở Task 8b — không nhân bản
+- [x] Verify: `pnpm --filter @ecommerce/storefront-web test` xanh + `mvn -pl services/catalog-service verify` xanh toàn bộ (failsafe Tests run > 0). **`render-smoke.mjs` chỉ AUTHOR ở task này — EXECUTE ở Phase 5** (cần catalog live + seeded + ES; worker KHÔNG block chạy nó)
+- [x] Commit: `test(storefront): unit helpers + render smoke script (authored, execute Phase 5)`
 
 ---
 

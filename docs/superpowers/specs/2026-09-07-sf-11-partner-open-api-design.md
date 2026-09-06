@@ -55,7 +55,9 @@ Bucket cache in-memory `ConcurrentHashMap` (đổi `rate_limit_per_min` có hi�
 | Partner endpoint | Catalog target (REST, base :8082) | Mapping |
 |---|---|---|
 | `GET /products?page&size&category` | `GET /api/catalog/products?page&size&category` | card → `PartnerProduct` (id, slug, name, price, updatedAt=thời điểm proxy¹) |
-| `GET /products/{idOrSlug}` | slug → `GET /api/catalog/products/{slug}`; UUID-shaped → thêm `GET /api/catalog/admin/products/{id}` (chỉ khi `CATALOG_API_TOKEN` có — interim như ordering pricing) | detail → `PartnerProductDetail` (+description, variants: price = base + priceDelta) |
+| `GET /products/{idOrSlug}` | slug → `GET /api/catalog/products/{slug}`; UUID-shaped → `GET /api/catalog/admin/products/{id}` (guard ROLE_ADMIN — cần `CATALOG_API_TOKEN`) | detail → `PartnerProductDetail` (+description, variants: price = base + priceDelta) |
+
+**Hành vi detail-by-UUID khi token thiếu/lỗi** (GAP-3, flag FI-310): `CATALOG_API_TOKEN` rỗng → **502** problem+json detail "UUID lookup chưa cấu hình trên platform — hãy dùng slug" (ops-visible, không mù 500); token có mà catalog trả 401/403 → **502** (config hỏng); catalog 404 → **404** partner. Docs portal khuyến nghị partner dùng **slug** (đường chính, không cần token) — `id` UUID lấy từ list chỉ resolve được khi platform cấu hình token.
 | `GET /categories` | `GET /api/catalog/categories` (tree) | **flatten** đệ quy → `PartnerCategory[]` (parentId) |
 | `GET /search?q&page&size` | `GET /api/catalog/search?q&page&size` | card page → `PartnerProductPage` |
 
@@ -72,27 +74,32 @@ Ordering `POST /orders` bắt buộc customer JWT (`sub`+`email`). Không sửa 
   - header `Idempotency-Key` = UUID deterministic `nameUUIDFromBytes(partnerId + ":" + partnerRef)` (layer 2 — saga replay an toàn nếu layer 1 race),
   - `Authorization: Bearer <service-account token>`,
   - body: `items[{productId, variantId, qty}]`, `shippingMethod: "standard"`, `paymentMethod: "stripe"`, `address{fullName=name, phone, line1=address, ward/district/city="—"}` (contract PartnerCustomer chỉ có 1 dòng địa chỉ),
-  - 201 → insert ref + trả `{orderId, partnerRef, status}`; ordering 409 → 409 (hết hàng); 400 → 400; 5xx → 502.
+  - 201 → insert ref + trả `{orderId, partnerRef, status}`. Mapping lỗi ordering: **409** → re-check `partner_order_refs` TRƯỚC (race 2 request cùng `partnerRef` khác payload → ordering 409 IdempotencyConflict nhưng đơn đã tồn tại → trả 201 đơn cũ nếu ref có; không thấy ref → 409 hết hàng/ngừng bán); **422** (`ItemUnavailableException` — sản phẩm ngừng bán/variant sai) → **409** (contract mô tả "hết hàng hoặc ngừng bán"); **400** (validation — vd `variantId` thiếu) → **400** pass-through problem+json; 5xx/timeout → **502**.
   - Concurrent duplicate `partnerRef`: UNIQUE(partner_id, partner_ref) bắt → catch → re-fetch → trả đơn cũ.
-- `GET /orders/{id}`: ref phải thuộc partner này (khác → **404**, không lộ sự tồn tại) → gọi ordering `GET /me/orders/{id}` (service-account là owner mọi đơn partner) → map `PartnerOrder{orderId, partnerRef, status, items[{productId, variantId, name, qty, unitPrice}], updatedAt}`.
+  - `variantId`: contract partner để optional nhưng ordering bắt buộc `@NotNull` (mọi đơn đều variant-level) → docs portal pin "items[].variantId BẮT BUỘC — lấy từ product detail"; thiếu → 400 từ ordering pass-through.
+- `GET /orders/{id}`: **lookup `partner_order_refs` theo `order_id` (path param = orderId trả về lúc tạo — contract), filter `partner_id` của key** (không khớp → **404**, không lộ sự tồn tại) → gọi ordering `GET /me/orders/{id}` (service-account là owner mọi đơn partner) → map `PartnerOrder{orderId, partnerRef, status, items[{productId, variantId, name, qty, unitPrice}], updatedAt}`.
 
-Đơn partner là **đơn thật** (saga chuẩn: re-price → reserve → Stripe intent) → thấy trong admin. Trạng thái tiến khi platform thanh toán/fulfil; partner theo dõi qua webhook + GET.
+Đơn partner là **đơn thật** (saga chuẩn: re-price → reserve → Stripe intent) → thấy trong admin. **Lưu ý lifecycle (ADR-11c):** contract không có `clientSecret` → partner không tự thanh toán; đơn PENDING do platform xử lý fulfil; **PENDING quá 30' → TTL sweeper tự CANCELLED** (hành vi ordering có sẵn) → partner nhận webhook `CANCELLED` — ghi rõ trong docs portal.
 
 ### 3.4 Webhook HMAC delivery
 
-Queue `partner.orders` (durable) bind `order.*` trên exchange `ecommerce.events` (created/paid/confirmed/cancelled/failed). Consumer (pattern `OrderConfirmedEligibilityConsumer`: parse envelope + `IdempotentConsumer` marker prefix `wh:`):
+Queue `partner.orders` (durable) bind `order.*` trên exchange `ecommerce.events`. **Tập event THỰC có hôm nay: `order.created/paid/confirmed/cancelled/failed`** — ordering `ship()/deliver()` (AdminOrderController) chỉ `transitionTo` + save, **KHÔNG ghi outbox** → **SHIPPED/DELIVERED chưa bao giờ có webhook (GAP-4, flag FI-310)**; partner theo dõi 2 trạng thái đó qua GET. Filter **additive-aware**: eventType trong 5 keys trên → xử lý; `order.*` lạ (ordering thêm event sau) → WARN + skip (không crash, không marker) — thêm mapping là edit additive khi ordering bổ sung.
 
-1. eventType ∈ 5 keys trên; status map deterministic (created→PENDING, paid→PAID, confirmed→CONFIRMED, cancelled→CANCELLED, failed→FAILED); occurredAt/eventId từ envelope.
+Consumer (pattern `OrderConfirmedEligibilityConsumer`: parse envelope + `IdempotentConsumer` marker prefix `wh:`):
+
+1. eventType ∈ 5 keys; status map deterministic (created→PENDING, paid→PAID, confirmed→CONFIRMED, cancelled→CANCELLED, failed→FAILED); occurredAt/eventId từ envelope.
 2. Lookup `partner_order_refs` theo `orderId` — không có → bỏ qua (không phải đơn partner).
-3. Partner có `webhook_url`? Không → bỏ qua. Có → insert `webhook_deliveries` (PENDING) + attempt POST ngay.
+3. Partner có `webhook_url` + status `ACTIVE`? (SUSPENDED → skip delivery — nhất quán auth 401) Không → bỏ qua. Có → insert `webhook_deliveries` (PENDING) + attempt POST ngay.
 
-Delivery: POST JSON `{eventId, orderId, partnerRef, status, occurredAt}` (contract `PartnerOrderChangedEvent`) + header `X-Signature: hex(HMAC-SHA256(webhook_secret, rawBody))`. **2xx** → DELIVERED; lỗi → retry exponential (`base_ms * 2^attempt`, config, dev 5s): **3 attempts tổng** → `DEAD` (DLQ — bảng giữ nguyên payload + last_error để ops tra cứu; ADR: DLQ queue Rabbit khi cần replay tooling).
+Delivery: POST JSON `{eventId, orderId, partnerRef, status, occurredAt}` (contract `PartnerOrderChangedEvent`) + header `X-Signature: <hex lowercase>` của `HMAC-SHA256(webhook_secret, rawBody)`. **2xx** → DELIVERED; lỗi → retry exponential (`base_ms * 2^attempt`, config, dev 5s): **3 attempts tổng** → `DEAD` (DLQ — bảng giữ nguyên payload + last_error để ops tra cứu; ADR: DLQ queue Rabbit khi cần replay tooling).
 
 `WebhookRetryScheduler` (fixedDelay config, dev 5s) quét PENDING đến hạn → attempt → cùng logic. **Race note:** event đến trước khi ref commit → lookup miss → bỏ qua (window ≤ outbox poll 2s; chấp nhận MVP, ghi spec).
 
 ### 3.5 Docs portal
 
-springdoc: `api-docs.path=/open-api/v1/api-docs`, `swagger-ui.path=/open-api/v1/docs` (cả hai dưới namespace — route gateway chỉ có `/open-api/**`). OpenAPI info mô tả: auth `X-API-Key` + scopes + 401/403/429 semantics, idempotency `partnerRef`, rate-limit, webhook contract + **code mẫu verify HMAC** (Java + Node + curl). Browser-verify bắt buộc (Rule 0).
+springdoc: `api-docs.path=/open-api/v1/api-docs`, `swagger-ui.path=/open-api/v1/docs` (cả hai dưới namespace — route gateway chỉ có `/open-api/**`). OpenAPI info mô tả: auth `X-API-Key` + scopes + 401/403/429 semantics, idempotency `partnerRef`, rate-limit, **hướng dẫn dùng slug cho product detail** (UUID cần platform cấu hình token — GAP-3), **items[].variantId bắt buộc**, lifecycle đơn partner (PENDING → platform fulfil; **PENDING >30' TTL tự CANCELLED**), SHIPPED/DELIVERED chưa có webhook (GAP-4 — theo dõi qua GET), webhook contract + **code mẫu verify HMAC** (Java + Node + curl; `X-Signature` hex lowercase). Browser-verify bắt buộc (Rule 0).
+
+**Contract-gap ghi chú (GAP-5, flag FI-310):** yaml freeze không định nghĩa response **403** (scope thiếu — context pack yêu cầu scope enforcement) và `CreatePartnerOrderRequest` không có trường coupon (context pack nhắc `coupon_code?`) — implement theo pack cho 403, bỏ coupon theo contract; coordinator quyết định amendment.
 
 ## 4. Data model (Flyway `db_partner`)
 
@@ -111,7 +118,7 @@ api_keys        (id UUID PK, partner_id UUID FK→partners, key_hash VARCHAR(64)
 partner_order_refs (id UUID PK, partner_id UUID FK, partner_ref VARCHAR NOT NULL,
                  order_id UUID NOT NULL, created_at, UNIQUE(partner_id, partner_ref))
 webhook_deliveries (id UUID PK, partner_id UUID FK, event_id UUID, order_id UUID,
-                 status VARCHAR, payload TEXT, attempts INT DEFAULT 0,
+                 order_status VARCHAR, payload TEXT, attempts INT DEFAULT 0,
                  delivery_status VARCHAR CHECK IN (PENDING, DELIVERED, DEAD),
                  next_retry_at TIMESTAMPTZ, last_error VARCHAR(512),
                  created_at, delivered_at NULL, INDEX(delivery_status, next_retry_at))
@@ -119,7 +126,7 @@ webhook_deliveries (id UUID PK, partner_id UUID FK, event_id UUID, order_id UUID
 
 ## 5. Infra wiring (append-only)
 
-- **Gateway routes** (+block, không strip): `Path=/open-api/** → http://localhost:8091`.
+- **Gateway routes** (+block, không strip): `backend/gateway/src/main/resources/gateway-routes.yml` — `Path=/open-api/** → http://localhost:8091` (KHÔNG có file-per-service; touch map pack ghi nhầm đường — file thật là đây).
 - **Gateway auth**: public-paths +1 dòng `/open-api/**` (chủ đích: auth là API key ở service, gateway không ép JWT).
 - **compose**: block `partner-api` profile `full` (mirror SF-9: build Dockerfile, db_partner, env JWKS/catalog/ordering/identity) — dev vẫn host JVM.
 - **Makefile**: case `partner-api) MOD=services/partner-api` + usage line.
@@ -137,11 +144,12 @@ webhook_deliveries (id UUID PK, partner_id UUID FK, event_id UUID, order_id UUID
   - auth: thiếu key 401 · sai 401 · revoke 401 · expire 401 · hợp lệ 200.
   - scope: key chỉ `catalog:read` POST /orders → 403.
   - rate-limit: key limit 2 → request 3 → 429 + Retry-After.
-  - catalog proxy: WireMock catalog → shape partner đúng + 502 khi catalog lỗi.
-  - order create: 201 + ref row; **replay cùng partnerRef → ordering nhận đúng 1 call, cùng orderId**; ordering 409 → 409.
+  - catalog proxy: WireMock catalog → shape partner đúng (variants price = base + priceDelta) + 502 khi catalog lỗi + **detail-by-UUID: token có → 200 (WireMock admin path), token rỗng → 502 với detail rõ, catalog 404 → 404**.
+  - order create: 201 + ref row; **replay cùng partnerRef → ordering nhận đúng 1 call, cùng orderId**; ordering 409 → 409; **ordering 422 (ngừng bán) → 409 partner**; validation 400 pass-through.
   - order get: đơn partner mình 200 · đơn partner khác 404.
-  - webhook: publish envelope → receiver nhận POST, `X-Signature` khớp HMAC (test tự recompute); receiver 500 → retry đúng lịch → DEAD sau 3 attempts; event không phải đơn partner → không POST.
-- **Browser (Rule 0):** docs portal swagger mở được + screenshot; flow thật: curl key demo → products → POST order → webhook receiver nhận HMAC đúng → admin transition → webhook tiếp.
+  - webhook: publish envelope → receiver nhận POST, `X-Signature` khớp HMAC (test tự recompute); receiver 500 → retry đúng lịch → DEAD sau 3 attempts; event không phải đơn partner → không POST; partner SUSPENDED → không POST.
+  - identity client: token hết hạn (WireMock 401 lần đầu) → re-login 1 lần rồi gọi lại thành công.
+- **Browser (Rule 0):** docs portal swagger mở được + screenshot; flow thật: curl key demo → products → POST order → webhook receiver nhận HMAC đúng → **admin transition phát-event duy nhất hiện có = `POST /admin/orders/{id}/cancel`** (ship/deliver KHÔNG phát event — GAP-4) → webhook `order.cancelled` nhận tiếp.
 
 ## 8. Risks & mở (đã xử lý)
 
@@ -149,7 +157,11 @@ webhook_deliveries (id UUID PK, partner_id UUID FK, event_id UUID, order_id UUID
 |---|---|
 | GAP-1 ordering không có service-auth order path | Service-account interim (flag FI-310) — swap bằng config khi amendment |
 | GAP-2 catalog DTO thiếu updatedAt | Thời điểm proxy + docs note (flag FI-310) |
+| GAP-3 detail-by-UUID cần token ADMIN | 502 khi thiếu token + docs khuyến nghị slug (flag FI-310) |
+| GAP-4 SHIPPED/DELIVERED không có outbox event từ ordering | Docs: theo dõi qua GET; filter additive-aware (flag FI-310) |
+| GAP-5 contract freeze thiếu 403 response def + coupon field | 403 implement theo pack; bỏ coupon theo contract (flag FI-310) |
 | Payment degraded (không Stripe key) làm saga fail bước intent | Hành vi SF-5 có sẵn — verify cần key test; docs portal ghi rõ |
+| Đơn partner PENDING >30' → TTL auto-CANCELLED | Ghi docs lifecycle (ADR-11c); đồng thời là đường demo webhook |
 | springdoc UI path dưới /open-api/v1 | Browser-verify sớm ở Phase 4, chỉnh config nếu redirect sai |
 | Race event trước ref commit | Chấp nhận (window 2s), ghi docs |
 | Bucket cache stale sau đổi rate_limit | Restart mới nhận — ADR note |

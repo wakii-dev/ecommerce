@@ -13,7 +13,6 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -236,8 +235,17 @@ public abstract class AbstractSagaTest {
 
     // ── Boot inventory + payment THẬT (args có precedence cao nhất) ─────────
 
+    /**
+     * Boot MỘT LẦN cho CẢ JVM: @AfterAll của leaf class đầu tiên KHÔNG được
+     * tắt side contexts — class sau (@SpringBootTest context cache) vẫn cần
+     * inventory/payment sống (Connection refused = chết ở POST /orders 502).
+     * Contexts + containers sống theo JVM; Ryuk dọn khi JVM thoát.
+     */
     @BeforeAll
     static void bootSideServices() {
+        if (inventoryCtx != null && inventoryCtx.isActive()) {
+            return; // class khác đã boot — dùng chung
+        }
         inventoryCtx = new SpringApplicationBuilder(SagaInventoryTestApp.class).run(
             "--server.port=0",
             "--spring.application.name=inventory-service",
@@ -263,16 +271,6 @@ public abstract class AbstractSagaTest {
             "--outbox.relay.poll-interval-ms=500"
         );
         paymentPort = ((WebServerApplicationContext) paymentCtx).getWebServer().getPort();
-    }
-
-    @AfterAll
-    static void stopSideServices() {
-        if (inventoryCtx != null) {
-            inventoryCtx.close();
-        }
-        if (paymentCtx != null) {
-            paymentCtx.close();
-        }
     }
 
     // ── Props cho context ORDERING (boot SAU @BeforeAll → đã có port) ───────
@@ -382,5 +380,17 @@ public abstract class AbstractSagaTest {
              "data":{"object":{"id":"%s","object":"payment_intent","amount":%d,
                      "currency":"vnd","status":"succeeded","client_secret":"cs_x","livemode":false}}}
             """.formatted(UUID.randomUUID(), Instant.now().getEpochSecond(), type, piId, amount);
+    }
+
+    /**
+     * Bind tham số dạng UUID-shape thành {@link UUID} thật — PG không cho so
+     * sánh cột {@code uuid = character varying} (param String mặc định là
+     * varchar). Dùng cho JdbcTemplate helper của test; SQL literal đã tự ép kiểu.
+     */
+    protected static Object[] uuidArgs(Object... args) {
+        return java.util.Arrays.stream(args)
+            .map(a -> (a instanceof String s && s.length() == 36 && s.charAt(8) == '-')
+                ? UUID.fromString(s) : a)
+            .toArray();
     }
 }

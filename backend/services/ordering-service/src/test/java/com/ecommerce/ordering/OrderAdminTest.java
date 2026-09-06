@@ -6,6 +6,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -41,6 +42,17 @@ class OrderAdminTest extends AbstractSagaTest {
     @Autowired
     ObjectMapper om;
 
+    /**
+     * Seed stock MỖI test (không lệ thuộc SagaTest chạy trước — test-order
+     * coupling): các đơn PENDING trong test khác giữ reservation mãi → available
+     * giảm dần qua class → seed dư để mọi test tự đủ.
+     */
+    @BeforeEach
+    void seedStockForAdmin() {
+        seedStock(VARIANT_A, 200);
+        seedStock(VARIANT_B, 100);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private HttpHeaders auth(String token) {
@@ -67,11 +79,18 @@ class OrderAdminTest extends AbstractSagaTest {
                 + "\"status\":\"requires_payment_method\",\"client_secret\":\"cs_adm\",\"livemode\":false}")
                 .formatted(UUID.randomUUID().toString().replace("-", "").substring(0, 12)))));
         ResponseEntity<String> created = rest.exchange("/orders", HttpMethod.POST,
-            new HttpEntity<>(body(VARIANT_A, 1), auth(token)), String.class);
+            new HttpEntity<>(body(VARIANT_A, 1), createHeaders(token)), String.class);
         assertThat(created.getStatusCode().value()).isEqualTo(201);
         String orderId = om.readTree(created.getBody()).path("order").path("id").asText();
-        String pi = jdbc.queryForObject("SELECT stripe_intent_id FROM orders WHERE id = ?", String.class, orderId);
+        String pi = q("SELECT stripe_intent_id FROM orders WHERE id = ?", String.class, orderId);
         return new String[]{orderId, pi, token};
+    }
+
+    /** POST /orders BẮT BUỘC Idempotency-Key (contract) — thiếu → 400/500. */
+    private HttpHeaders createHeaders(String token) {
+        HttpHeaders headers = auth(token);
+        headers.set("Idempotency-Key", UUID.randomUUID().toString());
+        return headers;
     }
 
     /** Webhook succeeded → chờ CONFIRMED (chuỗi Rabbit thật). */
@@ -81,12 +100,17 @@ class OrderAdminTest extends AbstractSagaTest {
             HttpMethod.POST, signedWebhook(event), String.class);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         Awaitility.await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(200))
-            .untilAsserted(() -> assertThat(jdbc.queryForObject(
+            .untilAsserted(() -> assertThat(q(
                 "SELECT status FROM orders WHERE id = ?", String.class, orderId)).isEqualTo("CONFIRMED"));
     }
 
     private <T> ResponseEntity<T> exchange(String path, String token, HttpMethod method, Class<T> type) {
         return rest.exchange(path, method, new HttpEntity<>(auth(token)), type);
+    }
+
+    /** Query 1 cột — bind UUID-shape args qua {@link AbstractSagaTest#uuidArgs} (PG: uuid ≠ varchar). */
+    private <T> T q(String sql, Class<T> type, Object... args) {
+        return jdbc.queryForObject(sql, type, uuidArgs(args));
     }
 
     private String pdfText(byte[] pdf) throws Exception {
@@ -125,14 +149,18 @@ class OrderAdminTest extends AbstractSagaTest {
 
     @Test
     void userCancelsPendingOrder_releasesReservation() throws Exception {
-        seedStock(VARIANT_B, 10);
+        // body() hardcode PRODUCT_A — dùng VARIANT_A (không phải VARIANT_B:
+        // product A + variant B → 422 sai nghĩa, orderId rỗng → 405 ảo ở cancel)
+        seedStock(VARIANT_A, 10);
         String token = customerJwt("canceler@ecommerce.local");
         STRIPE.stubFor(post(urlEqualTo("/v1/payment_intents")).willReturn(okJson(
             ("{\"id\":\"pi_%s\",\"object\":\"payment_intent\",\"amount\":1,\"currency\":\"vnd\","
                 + "\"status\":\"requires_payment_method\",\"client_secret\":\"cs_cancel\",\"livemode\":false}")
                 .formatted(UUID.randomUUID().toString().replace("-", "").substring(0, 12)))));
         ResponseEntity<String> created = rest.exchange("/orders", HttpMethod.POST,
-            new HttpEntity<>(body(VARIANT_B, 2), auth(token)), String.class);
+            new HttpEntity<>(body(VARIANT_A, 2), createHeaders(token)), String.class);
+        assertThat(created.getStatusCode().value())
+            .as("create phải 201 — body: %s", created.getBody()).isEqualTo(201);
         String orderId = om.readTree(created.getBody()).path("order").path("id").asText();
 
         ResponseEntity<String> cancelled = exchange("/me/orders/" + orderId + "/cancel", token,
@@ -145,7 +173,7 @@ class OrderAdminTest extends AbstractSagaTest {
         // Stock hoàn lại qua inventory thật (order.cancelled → release)
         Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
             ResponseEntity<String> availability = exchange(
-                "http://localhost:" + inventoryPort + "/inventory/availability?variantIds=" + VARIANT_B,
+                "http://localhost:" + inventoryPort + "/inventory/availability?variantIds=" + VARIANT_A,
                 customerJwt("probe2@ecommerce.local"), HttpMethod.GET, String.class);
             assertThat(om.readTree(availability.getBody()).get(0).path("available").asInt()).isEqualTo(10);
         });
@@ -206,9 +234,11 @@ class OrderAdminTest extends AbstractSagaTest {
         Awaitility.await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
             STRIPE.verify(com.github.tomakehurst.wiremock.client.WireMock
                 .postRequestedFor(urlEqualTo("/v1/refunds")).withRequestBody(containing(pi))));
-        // outbox order.cancelled refunded=true
+        // outbox order.cancelled refunded=true — outbox.payload = EventEnvelope
+        // BỌC business payload (OutboxWriter) → orderId/refunded nằm ở ->'payload'
         String payload = jdbc.queryForObject(
-            "SELECT payload::text FROM outbox WHERE event_type='order.cancelled' AND payload->>'orderId' = ?",
+            "SELECT payload->'payload' FROM outbox "
+                + "WHERE event_type='order.cancelled' AND payload->'payload'->>'orderId' = ?",
             String.class, orderId);
         assertThat(om.readTree(payload).path("refunded").asBoolean()).isTrue();
     }
@@ -251,7 +281,7 @@ class OrderAdminTest extends AbstractSagaTest {
         driveToConfirmed(o1[0], o1[1]);
 
         String admin = adminJwt();
-        long total = jdbc.queryForObject("SELECT total FROM orders WHERE id = ?", Long.class, o1[0]);
+        long total = q("SELECT total FROM orders WHERE id = ?", Long.class, o1[0]);
         long beforeRevenue = jdbc.queryForObject("""
             SELECT COALESCE(SUM(total), 0) FROM orders
             WHERE status IN ('PAID','CONFIRMED','SHIPPED','DELIVERED')""", Long.class);
@@ -262,7 +292,11 @@ class OrderAdminTest extends AbstractSagaTest {
         assertThat(summaryBody.path("confirmed").asLong()).isGreaterThanOrEqualTo(1);
         assertThat(summaryBody.path("todayOrders").asLong()).isGreaterThanOrEqualTo(1);
 
-        String today = LocalDate.now().toString();
+        // Ngày bucket theo DB (created_at UTC) — LocalDate.now() máy client lệch
+        // TZ (UTC+7 nửa đêm) sẽ trôi sang ngày khác → doanh thu 0 (flaky)
+        String today = jdbc.queryForObject(
+            "SELECT created_at::date::text FROM orders WHERE id = ?", String.class,
+            java.util.UUID.fromString(o1[0]));
         ResponseEntity<String> revenue = exchange(
             "/admin/stats/revenue-by-day?from=" + today + "&to=" + today, admin, HttpMethod.GET, String.class);
         JsonNode revenueBody = om.readTree(revenue.getBody());
@@ -302,14 +336,14 @@ class OrderAdminTest extends AbstractSagaTest {
         assertThat(pdf1.getHeaders().getContentType().toString()).isEqualTo("application/pdf");
         assertThat(new String(pdf1.getBody(), java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF");
 
-        long number1 = jdbc.queryForObject("SELECT invoice_number FROM orders WHERE id = ?", Long.class, first[0]);
-        long number2 = jdbc.queryForObject("SELECT invoice_number FROM orders WHERE id = ?", Long.class, second[0]);
+        long number1 = q("SELECT invoice_number FROM orders WHERE id = ?", Long.class, first[0]);
+        long number2 = q("SELECT invoice_number FROM orders WHERE id = ?", Long.class, second[0]);
         assertThat(number2).as("số HĐ tăng dần giữa các đơn (D18)").isGreaterThan(number1);
 
         // Tải LẠI cùng đơn → cùng số (không cấp thêm)
         ResponseEntity<byte[]> pdf1again = exchange("/me/orders/" + first[0] + "/invoice", first[2],
             HttpMethod.GET, byte[].class);
-        long number1again = jdbc.queryForObject("SELECT invoice_number FROM orders WHERE id = ?", Long.class, first[0]);
+        long number1again = q("SELECT invoice_number FROM orders WHERE id = ?", Long.class, first[0]);
         assertThat(number1again).isEqualTo(number1);
         assertThat(pdf1again.getStatusCode().value()).isEqualTo(200);
 

@@ -104,11 +104,11 @@ class SagaTest extends AbstractSagaTest {
     }
 
     private String scalar(String sql, Object... args) {
-        return jdbc.queryForObject(sql, String.class, args);
+        return jdbc.queryForObject(sql, String.class, uuidArgs(args));
     }
 
     private Integer intScalar(String sql, Object... args) {
-        return jdbc.queryForObject(sql, Integer.class, args);
+        return jdbc.queryForObject(sql, Integer.class, uuidArgs(args));
     }
 
     /** Query DB INVENTORY (jdbc autowire của test trỏ db_ordering). */
@@ -280,7 +280,8 @@ class SagaTest extends AbstractSagaTest {
         assertThat(insufficient.get(0).path("requested").asLong()).isEqualTo(99_999);
         assertThat(insufficient.get(0).path("available").asLong()).isEqualTo(STOCK_A);
 
-        String orderId = scalar("SELECT id FROM orders WHERE idempotency_key = ?", idem);
+        // idempotency_key VARCHAR — ép ?::text để uuidArgs không bind UUID nhầm cột
+        String orderId = scalar("SELECT id FROM orders WHERE idempotency_key = ?::text", idem);
         assertThat(scalar("SELECT status FROM orders WHERE id = ?", orderId)).isEqualTo("FAILED");
         // Không rò rỉ reservation + không trừ stock + coupon trả lại
         assertThat(inventoryScalar(
@@ -302,8 +303,10 @@ class SagaTest extends AbstractSagaTest {
         AtomicReference<Integer> first = new AtomicReference<>();
         AtomicReference<Integer> second = new AtomicReference<>();
         CountDownLatch start = new CountDownLatch(1);
-        Thread t1 = new Thread(() -> first.set(tryCreate(token, start, "LIMIT1", VARIANT_A)));
-        Thread t2 = new Thread(() -> second.set(tryCreate(token, start, "LIMIT1", VARIANT_B)));
+        // thread 2 dùng SLOT variantB (truyền VARIANT_B vào slot variantA → item
+        // = product A + variant B → 422 sai nghĩa, che mất kịch bản coupon limit)
+        Thread t1 = new Thread(() -> first.set(tryCreate(token, start, "LIMIT1", VARIANT_A, true)));
+        Thread t2 = new Thread(() -> second.set(tryCreate(token, start, "LIMIT1", VARIANT_B, false)));
         t1.start();
         t2.start();
         start.countDown();
@@ -316,11 +319,13 @@ class SagaTest extends AbstractSagaTest {
         assertThat(scalar("SELECT used_count FROM coupons WHERE code = 'LIMIT1'")).isEqualTo("1");
     }
 
-    private Integer tryCreate(String token, CountDownLatch start, String coupon, String variant) {
+    private Integer tryCreate(String token, CountDownLatch start, String coupon, String variant, boolean slotA) {
         try {
             start.await();
-            return createOrder(token, UUID.randomUUID().toString(), coupon, variant, 1, null, null)
-                .getStatusCode().value();
+            ResponseEntity<String> response = slotA
+                ? createOrder(token, UUID.randomUUID().toString(), coupon, variant, 1, null, null)
+                : createOrder(token, UUID.randomUUID().toString(), coupon, null, 0, variant, 1);
+            return response.getStatusCode().value();
         } catch (Exception e) {
             return -1;
         }
@@ -344,7 +349,7 @@ class SagaTest extends AbstractSagaTest {
         assertThat(replay.getStatusCode().value()).isEqualTo(201);
         assertThat(om.readTree(replay.getBody()).path("order").path("id").asText()).isEqualTo(orderId);
         assertThat(om.readTree(replay.getBody()).path("clientSecret").asText()).isEqualTo(clientSecret);
-        assertThat(intScalar("SELECT count(*) FROM orders WHERE idempotency_key = ?", idem)).isEqualTo(1);
+        assertThat(intScalar("SELECT count(*) FROM orders WHERE idempotency_key = ?::text", idem)).isEqualTo(1);
 
         // Cùng key KHÁC payload → 409, KHÔNG có insufficient[]
         ResponseEntity<String> conflict = httpPost("/orders", token, idem, body(null, VARIANT_B, 5, null, null));
@@ -391,8 +396,10 @@ class SagaTest extends AbstractSagaTest {
         String token = customerJwt("sweeper@ecommerce.local");
         String idem = UUID.randomUUID().toString();
 
-        ResponseEntity<String> created = createOrder(token, idem, "SAFE20", VARIANT_B, 1, null, null);
-        assertThat(created.getStatusCode().value()).isEqualTo(201);
+        // variant B nằm ở SLOT THỨ 2 (body định vị: variantA trước, variantB sau)
+        ResponseEntity<String> created = createOrder(token, idem, "SAFE20", null, 0, VARIANT_B, 1);
+        assertThat(created.getStatusCode().value())
+            .as("create phải 201 — body: %s", created.getBody()).isEqualTo(201);
         String orderId = om.readTree(created.getBody()).path("order").path("id").asText();
 
         execOrdering("UPDATE orders SET created_at = now() - interval '2 hours' WHERE id = '" + orderId + "'");

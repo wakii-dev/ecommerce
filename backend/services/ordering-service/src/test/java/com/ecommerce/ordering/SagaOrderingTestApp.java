@@ -12,7 +12,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * → boot fail / hành vi sai. Flyway TẮT (conflict V10 3 jar) — AbstractSagaTest
  * áp migration tay qua JDBC.
  */
-@SpringBootApplication(scanBasePackages = {"com.ecommerce.ordering", "com.ecommerce.common"})
+@SpringBootApplication(scanBasePackages = {
+    "com.ecommerce.ordering.api", "com.ecommerce.ordering.config",
+    "com.ecommerce.ordering.consumer", "com.ecommerce.ordering.saga",
+    "com.ecommerce.ordering.service", "com.ecommerce.common"})
 @EntityScan({"com.ecommerce.ordering.domain", "com.ecommerce.common.outbox"})
 @EnableScheduling
 public class SagaOrderingTestApp {

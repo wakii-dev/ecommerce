@@ -52,6 +52,12 @@ class InvoiceDegradedTest extends AbstractSagaTest {
                       {"status":"CONFIRMED","at":"2026-09-06T00:02:00Z"}]',
                     '%s', 'hash')
             """.formatted(orderId, userId, UUID.randomUUID()));
+        // invoice-service pydantic OrderRef yêu cầu items min_length=1 — seed
+        // thiếu → payload rỗng → 400 upstream bị mask thành 503 sai nghĩa.
+        execOrdering("""
+            INSERT INTO order_items (id, order_id, product_id, variant_id, name, unit_price, qty, line_total)
+            VALUES ('%s', '%s', '%s', '%s', 'Sản phẩm Degraded', 120000, 1, 120000)
+            """.formatted(UUID.randomUUID(), orderId, UUID.randomUUID(), UUID.randomUUID()));
 
         // Invoice-service sống → 200 PDF
         ResponseEntity<byte[]> up = rest.exchange("/admin/orders/" + orderId + "/invoice",

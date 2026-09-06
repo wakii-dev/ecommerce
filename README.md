@@ -226,8 +226,8 @@ flowchart TD
 | SF-8 | Reviews + wishlist | [FI-318](https://linear.app/my-app-hoivu/issue/FI-318) | 🔨 In Progress |
 | SF-9 | Ordering saga + coupons | [FI-319](https://linear.app/my-app-hoivu/issue/FI-319) | ✅ Done |
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ⏳ Todo |
-| SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ⏳ Todo |
-| SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ⏳ Todo |
+| SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ✅ Done |
+| SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ✅ Done |
 | SF-13 | Essentials: password reset, COD, MinIO upload, abandoned cart, audit viewer, related, GA4, CSV, newsletter | [FI-323](https://linear.app/my-app-hoivu/issue/FI-323) | ⏳ Todo |
 | SF-14 | Commerce extensions: RMA đổi trả, GHN shipping, loyalty điểm | [FI-324](https://linear.app/my-app-hoivu/issue/FI-324) | ⏳ Todo |
 | SF-15 | Engagement: social login + 2FA, stock alert, PWA + dark mode, live chat | [FI-325](https://linear.app/my-app-hoivu/issue/FI-325) | ⏳ Todo |
@@ -243,7 +243,7 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 | **P1** Foundation | Nền móng + contracts freeze + design direction + federation harness | SF-1 ✅ + SF-2 xong | ✅ **[phase-1 released + merged main](https://github.com/wakii-dev/ecommerce/releases/tag/phase-1)** |
 | **P2** Catalog & Identity | Đăng ký/đăng nhập · storefront Next.js SEO · search ES · tồn kho + Stripe nền | SF-3 ✅ + SF-4 ✅ + SF-5 ✅ | ✅ **[phase-2 released + merged main](https://github.com/wakii-dev/ecommerce/pull/2)** |
 | **P3** Transaction MVP | Giỏ → checkout (coupon, Stripe/COD) → saga → đơn + hóa đơn PDF · admin vận hành | SF-6 ✅ + SF-7 ✅ + SF-9 ✅ | ✅ **[phase-3 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-3)** |
-| **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 + SF-11 + SF-12 |
+| **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 ✅ + SF-11 ✅ + SF-12 ✅ | ✅ **[phase-4 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-4)** |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |
 
 ## 📚 Tài liệu

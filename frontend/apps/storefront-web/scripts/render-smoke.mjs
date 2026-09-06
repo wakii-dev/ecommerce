@@ -85,7 +85,11 @@ async function main() {
   }
   const viBySlug = viItems.find((p) => p?.slug === SLUG_VI);
   const enBySlug = enItems.find((p) => p?.slug === SLUG_EN || p?.slugEn === SLUG_EN);
-  const homeName = viItems[0]?.name; // tên product đầu danh sách — assert home
+  // home render từ list sort=discount (flash rail + featured, Task 11) — expected
+  // name lấy từ CÙNG list đó, không phải default-sort items[0] (review Phase 5)
+  const discountPage = await getJson(`${GATEWAY_URL}/api/catalog/products?size=24&sort=discount&locale=vi`);
+  const discountItems = Array.isArray(discountPage?.items) ? discountPage.items : viItems;
+  const homeName = discountItems[0]?.name;
   const viName = viBySlug?.name ?? homeName;
   const enName = enBySlug?.name;
 

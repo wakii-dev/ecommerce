@@ -50,6 +50,8 @@
     <module>services/cart-service</module>
     <!-- SF-9 (FI-319) -->
     <module>services/ordering-service</module>
+    <!-- SF-11 (FI-321) -->
+    <module>services/partner-api</module>
   </modules>
 
   <dependencyManagement>

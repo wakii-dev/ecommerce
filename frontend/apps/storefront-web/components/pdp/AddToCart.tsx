@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Locale } from '../../lib/format';
+import { shellUrl } from '../../lib/site';
 
 /**
  * AddToCart PDP (SF-4 → wire THẬT ở SF-6): qty stepper (−/+ 36px, input 44px,
@@ -25,9 +26,8 @@ import type { Locale } from '../../lib/format';
  */
 
 /** Shell origin (cart/checkout là trang shell, KHÔNG phải route Next —
- *  code-review P1: '/cart' relative 404 trên mọi dev topology). Default 5173
- *  theo .env.example; override khi dev port đụng độ. */
-const SHELL_URL = import.meta.env.VITE_SHELL_URL ?? 'http://localhost:5173';
+ *  code-review P1: '/cart' relative 404 trên mọi dev topology). Next app dùng
+ *  process.env.NEXT_PUBLIC_* (KHÔNG import.meta.env — Vite-only, crash PDP). */
 
 const COPY = {
   vi: {
@@ -142,7 +142,7 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
       }
       window.dispatchEvent(new CustomEvent('ecommerce:cart-changed'));
       showToast(true);
-      if (buyNow) window.location.assign(`${SHELL_URL}/cart`);
+      if (buyNow) window.location.assign(`${shellUrl()}/cart`);
     } catch {
       // network/cart-service chết → toast êm (giữ hành vi cũ, không crash)
       showToast(false);

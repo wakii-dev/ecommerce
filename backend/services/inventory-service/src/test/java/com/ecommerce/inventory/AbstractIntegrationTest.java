@@ -46,5 +46,8 @@ public abstract class AbstractIntegrationTest {
         // IT chỉ dựng PG — rabbit health indicator (starter-amqp) sẽ kéo health
         // DOWN nếu không tắt; service thật chạy cùng compose RabbitMQ nên không cần.
         registry.add("management.health.rabbit.enabled", () -> "false");
+        // Tắt background sweep trong IT (1h) — test gọi sweeper.releaseExpired()
+        // TRỰC TIẾP khi cần (deterministic; scheduler ngang test = flaky count).
+        registry.add("inventory.reservation.sweep-interval-ms", () -> "3600000");
     }
 }

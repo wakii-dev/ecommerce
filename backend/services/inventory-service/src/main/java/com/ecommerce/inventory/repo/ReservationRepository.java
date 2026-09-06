@@ -2,12 +2,14 @@ package com.ecommerce.inventory.repo;
 
 import com.ecommerce.inventory.domain.Reservation;
 import com.ecommerce.inventory.domain.ReservationStatus;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +21,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     /** Reservation active = RESERVED còn hạn (định nghĩa "active" pin spec §4.2). */
     Optional<Reservation> findFirstByOrderIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
         String orderId, ReservationStatus status, Instant now);
+
+    /** Batch hết hạn cho sweeper (Limit chặn batch size — pattern OutboxRelay). */
+    List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, Instant now, Limit limit);
 
     /**
      * GUARDED conditional transition — CHỈ thắng khi còn ở {@code from}.

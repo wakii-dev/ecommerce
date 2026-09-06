@@ -191,6 +191,8 @@ class ReservationApiTest extends AbstractIntegrationTest {
     void reReserveWhenOldReservationExpiredButNotSweptSelfHeals() {
         String variant = seedStock(10);
         String orderId = "order-" + SEQ.incrementAndGet();
+        Long releasedBefore = jdbc.queryForObject(
+            "SELECT count(*) FROM outbox WHERE event_type = 'inventory.released'", Long.class);
 
         // Seed reservation RESERVED đã hết hạn chưa quét (stock 10 = sau khi trừ 2)
         UUID oldId = UUID.randomUUID();
@@ -210,9 +212,10 @@ class ReservationApiTest extends AbstractIntegrationTest {
         Integer newActive = jdbc.queryForObject(
             "SELECT count(*) FROM reservations WHERE order_id = ? AND status = 'RESERVED'", Integer.class, orderId);
         assertThat(newActive).isEqualTo(1);
-        Integer releasedEvents = jdbc.queryForObject(
-            "SELECT count(*) FROM outbox WHERE event_type = 'inventory.released'", Integer.class);
-        assertThat(releasedEvents).as("self-heal emit inventory.released (payload schema-exact)").isEqualTo(1);
+        Long releasedAfter = jdbc.queryForObject(
+            "SELECT count(*) FROM outbox WHERE event_type = 'inventory.released'", Long.class);
+        assertThat(releasedAfter).as("self-heal emit inventory.released (delta +1)")
+            .isEqualTo(releasedBefore + 1);
     }
 
     @Test

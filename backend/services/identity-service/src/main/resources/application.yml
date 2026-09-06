@@ -1,0 +1,71 @@
+# identity :8081 · db_identity (D8). Path service-ngắn — gateway StripPrefix=2.
+server:
+  port: 8081
+
+spring:
+  application:
+    name: identity-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_identity}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+# JWT RS256 — key sinh bằng `make keys` (make dev chạy `cd backend && mvn` nên
+# default relative từ backend/ → ../infra/keys). PRODUCTION phải set env thật.
+identity:
+  jwt:
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:../infra/keys/jwt-private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:../infra/keys/jwt-public.pem}
+    kid: ${JWT_KID:identity-1}
+    access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}   # 15'
+  refresh:
+    ttl-days: ${IDENTITY_REFRESH_TTL_DAYS:30}
+    cookie-path: ${IDENTITY_COOKIE_PATH:/api/identity}   # path của BROWSER (qua gateway)
+  seed:
+    admin-email: ${ADMIN_EMAIL:}        # rỗng = skip seed (dev có thể export từ .env)
+    admin-password: ${ADMIN_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+outbox:
+  relay:
+    exchange: ecommerce.events
+    poll-interval-ms: 2000
+    max-attempts: 5
+    batch-size: 100
+    enabled: true
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

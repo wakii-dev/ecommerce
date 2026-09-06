@@ -14,7 +14,7 @@
 5. **Categories CRUD (LIVE)**: tree view, create/edit (parent select), delete với check ràng buộc (có product → chặn mềm + message).
 6. **Coupons CRUD (MOCK theo ordering.yaml)**: table (code, type percent/fixed, value, window, usage_limit/used, active toggle), form create/edit.
 7. **Reviews moderation queue (MOCK theo catalog.yaml admin endpoints)**: list PENDING (product, user, rating, nội dung), actions Approve/Reject (gọi shape `POST /admin/reviews/{id}/approve|reject` qua mock).
-8. **Orders (MOCK theo ordering.yaml admin)**: list (filter status/date, paginate), detail (items, địa chỉ, tổng, timeline), actions theo state machine §3.6: **ship/deliver/cancel — KHÔNG có nút confirm**.
+8. **Orders (MOCK theo ordering.yaml admin)**: list (filter status/date, paginate), detail (items, địa chỉ, tổng, timeline, **nút "Tải hóa đơn" — mock-gate theo endpoint invoice D18; live ở SF-10**), actions theo state machine §3.6: **ship/deliver/cancel — KHÔNG có nút confirm**.
 9. **Dashboard**: KPI tiles (doanh thu hôm nay/tuần, số đơn, AOV) từ ordering stats (mock); **low-stock table LIVE** từ `GET /api/inventory/admin/low-stock` (SF-5); charts: revenue-by-day line + top-products bar (recharts — check pre-pin; nếu thiếu → thêm vào mfe-admin local deps, tránh đụng lockfile chung nếu có thể) màu theo ui-kit tokens, i18n labels.
 10. **IT**: guards (guest/customer/admin), products CRUD flow LIVE (Testcontainers hoặc chạy catalog thật theo harness SF-4), mock pages render + actions shape đúng.
 

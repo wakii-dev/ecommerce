@@ -74,7 +74,7 @@ linear: FI-319
 Design: none
 What: Checkout saga chạy thật (backend) — POST /orders: re-price catalog → reserve coupon nguyên tử → reserve inventory all-or-nothing → Stripe intent → trả clientSecret; webhook → PAID → CONFIRMED → order.confirmed fat payload; 4 compensation edges + late-payment refund + TTL cancel, fail-injection tests xanh; my-orders APIs + trang my-orders trong mfe-account. demo (API level): đặt đơn → webhook succeeded → đơn CONFIRMED; card declined → FAILED + stock được release.
 Depends on: SF-5
-Tasks: ordering-service-scaffold / flyway-orders-items-coupons-sagastate / coupon-crud-validate-apis / coupon-usage-reserve-finalize-release / checkout-saga-orchestrator-reprice-reserve-intent / payment-event-consumers-late-refund / reservation-commit-consumers / compensation-edges-fail-injection-tests / outbox-relay-polling / order-state-machine-guards / ttl-scheduler-cancel / my-orders-apis / my-orders-ui-mfe-account-slice / ordering-it-tests
+Tasks: ordering-service-scaffold-outbox-wiring / flyway-orders-items-coupons-sagastate-invoiceseq / coupon-crud-validate-apis / coupon-usage-reserve-finalize-release / checkout-saga-orchestrator-reprice-reserve-intent / payment-inventory-event-consumers-late-refund / compensation-edges-fail-injection-tests / order-state-machine-guards / ttl-scheduler-cancel / my-orders-apis / invoice-pdfbox-spi-vn-template-vat / invoice-apis-download-numbering / my-orders-ui-invoice-download / ordering-it-tests
 
 ## SF-10 convergence + ship
 Tier: 4
@@ -82,4 +82,4 @@ linear: FI-320
 Design: none
 What: Toàn hệ thống sống như một — mfe-checkout wire ordering THẬT (bỏ mocks), notification-service gửi email Mailpit, gateway full route table + đủ 5 remotes mounted, profile `full` compose chạy toàn bộ containerized, deterministic seed (coupon WELCOME10, sản phẩm search được, Stripe test cards), Playwright E2E: golden path + admin CRUD → storefront + review flow + saga fail. demo: 1 lệnh chạy cả hệ, mua hàng end-to-end thấy email, admin thấy đơn.
 Depends on: SF-6, SF-7, SF-8, SF-9
-Tasks: checkout-live-wiring-real-ordering / notification-service-mailpit-emails / log-service-mongo-scaffold / events-fanin-consumer-mongo-eventlog / gateway-full-routetable-final-mounts / make-dev-fullstack-compose-profile-full / deterministic-seed-coupons-products-stripecards / e2e-golden-path / e2e-admin-crud-storefront-assert / e2e-review-flow / e2e-saga-fail-declined / sanity-checks-standalone-rbac-perf-security / docs-demo-readme-adr
+Tasks: checkout-live-wiring-real-ordering / notification-service-thankyou-email-invoice-attach / log-service-mongo-scaffold / events-fanin-consumer-mongo-eventlog / gateway-full-routetable-final-mounts / make-dev-fullstack-compose-profile-full / deterministic-seed-coupons-products-stripecards / e2e-golden-path / e2e-admin-crud-storefront-assert / e2e-review-flow / e2e-saga-fail-declined / sanity-checks-standalone-rbac-perf-security / docs-demo-readme-adr

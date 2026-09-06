@@ -60,7 +60,7 @@ Checkout submit (stub ON):
 - **lib/orderingStub.ts (1 file duy nhất chạm ordering — SF-10 thay):** toggle `VITE_ORDERING_STUB !== '0'`.
   - `validateCoupon(code, subtotal)` → `ValidateCouponResponse`: `WELCOME10` → valid, `discount = floor(subtotal × 10 / 100)`; code khác → `{valid:false, discount:0, message}`.
   - `createOrder(req)` → build `CreateOrderRequest` đúng shape (items chỉ item khả dụng — **line non-variant gửi `variantId: ""`** vì contract `CreateOrderItem.required` gồm variantId; ghi chú leniency stub, SF-10/SF-9 revisit cho non-variant) · address · shippingMethod `standard` · couponCode? · Idempotency-Key uuid → mock `Order` ĐỦ field required (id `mock-…`, `userId` từ authStore, status **PENDING**, timeline `[{status:'PENDING', at}]`, createdAt/updatedAt, currency VND, paymentMethod stripe, subtotal/discount/shippingFee/total tự tính) → gọi **THẬT** `POST /api/payment/intents` `{orderId, amount: total, currency:'VND', idempotencyKey}` → `clientSecret`. Payment 503/unconfigured → throw `PaymentUnavailableError` (FE rơi mock panel). Không đụng gateway route ordering (chưa tồn tại).
-  - **Trạng thái mock sau confirm:** `confirmPayment` thành công → stub advance PENDING→**PAID**→**CONFIRMED** (mock webhook, đúng thứ tự state machine §3.6) → order CONFIRMED mới được ghi sessionStorage + hiển thị "Đang xử lý" ở confirmation. Declined → order KHÔNG advance, chỉ hiện lỗi.
+  - **Trạng thái mock sau confirm:** `confirmPayment` thành công → stub advance PENDING→**PAID**→**CONFIRMED** (mock webhook, đúng thứ tự state machine `ordering.yaml OrderStatus`) → order CONFIRMED mới được ghi sessionStorage + hiển thị "Đang xử lý" ở confirmation. Declined → order KHÔNG advance, chỉ hiện lỗi.
 - **Cart page:** danh sách line (ảnh, tên link PDP theo slug, giá, qty stepper −/+, remove) · badge `Không còn khả dụng` + line không tính subtotal, không sửa qty (chỉ remove) · summary subtotal (từ server) · CTA "Thanh toán" → /checkout (**disable khi 0 item khả dụng** — contract `CreateOrderRequest.items minItems: 1`) · empty state + link về trang chủ.
 - **Checkout (stepper 3 bước, state giữ khi back/forward bước):**
   1. **Địa chỉ:** fullName, phone, line1, ward, district, city (đủ `Address` contract — required validation client).
@@ -95,7 +95,10 @@ Checkout submit (stub ON):
 
 | Lỗi | Hành vi |
 |---|---|
-| Catalog 404/không reachable | item `unavailable: true`, giữ snapshot, không chặn phần còn lại |
+| Catalog 404 (enrichment lúc GET) | item `unavailable: true`, giữ snapshot, không chặn phần còn lại |
+| Catalog chết (enrichment lúc GET) | giữ snapshot + trạng thái unavailable trước đó, không 500 |
+| Catalog 404 lúc ADD | reject — POST /items trả 404 (product/variant không tồn tại) |
+| Catalog chết lúc ADD | nhận item không enrichment (unitPrice 0, unavailable ở GET) |
 | Inventory 0 (variant) | add/patch → 409 (nếu !allowOos); GET → unavailable |
 | Guest GET chưa có giỏ | 404 → badge 0, cart page empty state |
 | Merge guest token hết hạn | 404 → FE clear token, không lỗi user |

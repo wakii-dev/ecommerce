@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "order.created.schema.json",
+  "title": "order.created",
+  "description": "Đơn vừa tạo (PENDING) — ordering-service phát sau khi persist + reservation. Producer: ordering-service.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "order.created",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["orderId", "userId", "status", "total", "createdAt"],
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "description": "Mirror enum order status §3.6 — tại thời điểm phát là PENDING",
+          "enum": ["PENDING", "PAID", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "FAILED"]
+        },
+        "total": {
+          "type": "integer",
+          "description": "Tổng tiền VND nguyên"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

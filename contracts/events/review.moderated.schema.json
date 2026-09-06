@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review.moderated.schema.json",
+  "title": "review.moderated",
+  "description": "Admin duyệt/từ chối review — catalog cập nhật rating_avg denormalized của product. Producer: catalog-service.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "review.moderated",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["reviewId", "productId", "userId", "status", "rating", "moderatedAt"],
+      "properties": {
+        "reviewId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Consumer cập nhật rating_avg denormalized theo productId"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Người viết review (để notification gửi kết quả)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["APPROVED", "REJECTED"]
+        },
+        "rating": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "moderatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

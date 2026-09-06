@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "payment.failed.schema.json",
+  "description": "Payment intent thất bại (bị từ chối / lỗi adapter). Producer: payment-service. Ordering nhận → order.failed stage PAYMENT.",
+  "title": "payment.failed",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "payment.failed",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["orderId", "paymentIntentId", "amount", "currency"],
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "paymentIntentId": {
+          "type": "string",
+          "description": "pi_... của Stripe (hoặc adapter tương ứng)"
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Số tiền VND nguyên (zero-decimal) — số tiền đã thử thu"
+        },
+        "currency": {
+          "type": "string",
+          "default": "VND"
+        },
+        "failureReason": {
+          "type": "string",
+          "description": "Optional — mã/lý do thất bại từ adapter (vd card_declined)"
+        }
+      }
+    }
+  }
+}

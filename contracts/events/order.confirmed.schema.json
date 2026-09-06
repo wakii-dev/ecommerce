@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "order.confirmed.schema.json",
+  "title": "order.confirmed",
+  "description": "FAT PAYLOAD (§6.1.5) — event quan trọng nhất chuỗi consumer: notification (email xác nhận), cart (xóa đã đặt), catalog (thống kê bán), log, partner, affiliate (tính hoa hồng). Payload ĐỦ dữ liệu cho MỌI consumer — CẤM consumer call-back HTTP để lấy field thiếu. Producer: ordering-service.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "const": "order.confirmed",
+      "description": "Routing key dạng <domain>.<event>"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — additive-only"
+    },
+    "payload": {
+      "type": "object",
+      "description": "FAT — snapshot đủ dùng của đơn tại thời điểm CONFIRMED",
+      "required": [
+        "orderId",
+        "userId",
+        "email",
+        "items",
+        "subtotal",
+        "discount",
+        "shippingFee",
+        "total",
+        "currency",
+        "confirmedAt"
+      ],
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email nhận xác nhận — notification dùng ngay, không cần tra identity"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["productId", "variantId", "qty", "price"],
+            "properties": {
+              "productId": {
+                "type": "string"
+              },
+              "variantId": {
+                "type": "string"
+              },
+              "qty": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "price": {
+                "type": "integer",
+                "description": "Đơn giá VND tại thời điểm đặt"
+              }
+            }
+          }
+        },
+        "subtotal": {
+          "type": "integer",
+          "description": "Tổng hàng VND (chưa giảm)"
+        },
+        "discount": {
+          "type": "integer",
+          "description": "Tổng giảm giá VND (coupon + điểm)"
+        },
+        "shippingFee": {
+          "type": "integer",
+          "description": "Phí ship VND"
+        },
+        "total": {
+          "type": "integer",
+          "description": "Tổng thanh toán VND = subtotal - discount + shippingFee"
+        },
+        "currency": {
+          "type": "string",
+          "default": "VND"
+        },
+        "couponCode": {
+          "type": "string",
+          "description": "Optional — code coupon đã áp (nếu có)"
+        },
+        "affiliateCode": {
+          "type": ["string", "null"],
+          "description": "Optional nullable — ref code affiliate được attribution; null khi không qua affiliate"
+        },
+        "confirmedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

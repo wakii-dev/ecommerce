@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Envelope chung cho mọi event trên exchange topic 'ecommerce.events'. Mỗi event schema tự chứa (không $ref liên file) vì json-schema-to-typescript không resolve ref liên file — chấp nhận lặp, xem README.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "correlationId", "producer", "schemaVersion", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 — consumer dùng dedupe (idempotent receive)"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z-]+$",
+      "description": "Routing key dạng <domain>.<event> — domain trùng tên service sở hữu event"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Thời điểm sự kiện xảy ra (UTC, ISO 8601)"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Truyền từ header X-Request-Id của gateway — nối chuỗi các event cùng 1 request"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Tên service phát event (vd identity-service, ordering-service)"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Phiên bản payload schema — tăng khi thêm field (additive-only)"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Nội dung riêng từng event — xem file <eventType>.schema.json"
+    }
+  }
+}

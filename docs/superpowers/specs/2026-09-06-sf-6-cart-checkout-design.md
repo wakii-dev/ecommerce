@@ -81,7 +81,9 @@ Checkout submit (stub ON):
 
 ### 3.4 Gateway + compose + env (append-only)
 
-- `gateway-routes.yml`: un-comment block cart (port 8083) + **XÓA dòng `StripPrefix=1`** của placeholder (controller map full `/api/cart/**` — precedent SF-4 đã sửa cùng kiểu ở catalog) + append block shell pages `/cart,/checkout,/order/confirmation,/login,/register,/account` → :5173 (same-origin cookie jar xuyên PDP→login là điều kiện sống của merge acceptance; /login… là route shell SF-3 chưa ai append).
+> **Cookie continuity (dev):** `cart_token` host-only trên `localhost`, cookie không tách theo port — PDP add (:3000) và shell badge (:5173) dùng chung jar qua proxy /api của từng app.
+
+- `gateway-routes.yml`: un-comment block cart (port 8083) + **XÓA dòng `StripPrefix=1`** của placeholder (controller map full `/api/cart/**` — precedent SF-4 đã sửa cùng kiểu ở catalog). **KHÔNG thêm route shell-pages**: dev flow KHÔNG cần nó — cookie `cart_token` là host-only trên `localhost` và cookie KHÔNG phân biệt port (RFC 6265) → giỏ thêm từ PDP (:3000/:8080) thấy ngay ở shell (:5173) qua proxy từng app; single-origin (gateway serve shell static) là việc SF-10 profile `full`.
 - `docker-compose.yml`: append `cart-service` (profile `full`, REDIS_HOST=redis, không datasource).
 - `.env.example`: `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx` + `VITE_SHIPPING_FLAT_FEE=25000` + `VITE_ORDERING_STUB=1`.
 - `backend/pom.xml`: + module `services/cart-service`. Makefile đã wire sẵn (`svc=cart`, `dev-fe app=mfe-checkout`).

@@ -45,7 +45,7 @@ Khách duyệt được nhưng không mua được — epic chưa có luồng ti
 - **Non-functional:** security (JWT validate khi có, httpOnly cookie, không client-price) · perf (enrichment N≤vài item/request) · a11y (label form, role=status cho toast/badge) · i18n (vi hardcode như mfe-account precedent).
 
 ## 5. Implementation outline
-- **Tasks (14, theo bracket):** backend 1-5 → FE 6-12 → wire 13 → tests 14. Chi tiết từng task bên dưới.
+- **Tasks (14, theo bracket):** backend 1-5 → FE 6-12 → wire 13 → tests 14. Chi tiết từng task bên dưới. *(plan-critic P1: T9/T10 cùng sửa `orderingStub.ts` — inline serial T9→T10 nên không race; DAG giữ sibling chỉ là bookkeeping.)*
 - **File structure:** cart-service theo pattern catalog (config/web/domain/service/repo→store); mfe-checkout theo mfe-account (bootstrap/pages/lib + page.css).
 - **Testing strategy:** vitest cho stub/store/math; JUnit `*Test` (không `*IT`) + Testcontainers Redis singleton + WireMock catalog/inventory; cuối: browser walkthrough 3 tầng (Rule 0).
 
@@ -170,7 +170,7 @@ Line identity helper: `sameLine(a, b) = a.productId equals b.productId && Object
 
 ### Task 6: mfe-checkout-remote-registration
 
-**Files:** Create `frontend/apps/mfe-checkout/{package.json,vite.config.ts,index.html,tsconfig.json? (kế thừa preset),src/{main.tsx,bootstrap.tsx,page.css}}`; Modify `frontend/apps/shell/vite.config.ts` (+remote checkout), `src/remotes.d.ts` (+declare modules), `frontend/pnpm-workspace.yaml` (+@stripe/stripe-js catalog).
+**Files:** Create `frontend/apps/mfe-checkout/{package.json,vite.config.ts,index.html,tsconfig.json? (kế thừa preset),src/{main.tsx,bootstrap.tsx,page.css,CartBadge.tsx (stub tối giản — T7 thay thật)}}`; Modify `frontend/apps/shell/vite.config.ts` (+remote checkout), `src/remotes.d.ts` (+declare modules), `frontend/pnpm-workspace.yaml` (+@stripe/stripe-js catalog).
 
 - [ ] **Step 1:** package.json — name `@ecommerce/mfe-checkout`, scripts dev/build= tsc --noEmit, deps: react/react-dom/@ecommerce/ui-kit/@ecommerce/auth/@ecommerce/contracts/@ecommerce/i18n (catalog:), devDeps như mfe-account + `@stripe/stripe-js: catalog:`.
 - [ ] **Step 2:** pnpm-workspace.yaml catalog append:
@@ -181,7 +181,8 @@ Line identity helper: `sameLine(a, b) = a.productId equals b.productId && Object
 ```
 
 - [ ] **Step 3:** vite.config.ts — copy mfe-account, name `mfe_checkout`, port **5175**, exposes `./bootstrap ./CartBadge ./CartPage ./CheckoutPage ./ConfirmationPage`, proxy /api → GATEWAY_URL:8080.
-- [ ] **Step 4:** bootstrap.tsx — `ShellContext` như mfe-account (HeaderSlots/navigate/onRegistryChange) + `initCheckoutShell(ctx)`:
+- [ ] **Step 4a:** `src/CartBadge.tsx` **stub tối giản compile-được** (nút 🛒 tĩnh, chưa fetch — T7 thay bằng badge thật): tránh forward-reference trong bootstrap (plan-critic P0). bootstrap import `./CartBadge` này.
+- [ ] **Step 4b:** bootstrap.tsx — `ShellContext` như mfe-account (HeaderSlots/navigate/onRegistryChange) + `initCheckoutShell(ctx)`:
 
 ```ts
 export function initCheckoutShell(ctx: ShellContext): void {
@@ -219,11 +220,11 @@ import('checkout/bootstrap')
 - [ ] **Step 2:** CartPage — line items: ảnh (img 80px fallback), tên (link PDP `/p/{slug}` — điều hướng qua `window.location` vì PDP ở Next qua gateway), `formatPrice(unitPrice)`, qty stepper −/+ (disable khi unavailable), nút xóa; unavailable line: badge đỏ `Không còn khả dụng`, không stepper; summary: subtotal (từ server) + ghi chú "Cập nhật lúc thanh toán"; CTA `Button variant="primary"` "Thanh toán" → appNavigate('/checkout'), disable khi subtotal=0; empty state `EmptyState` + link trang chủ.
 - [ ] **Step 3:** CartBadge — nút 🛒 + badge số (`Σ qty`): mount → GET; listener `ecommerce:cart-changed` → re-fetch; count>0 → badge đỏ; click → appNavigate('/cart') (nếu standalone dev → window.location).
 - [ ] **Step 4:** shell App.tsx routes append: `/cart` → lazy `checkout/CartPage` trong ErrorBoundary + Suspense (fallback pattern AccountErrorFallback — thêm CheckoutErrorFallback dùng chung).
-- [ ] **Step 5:** vitest `__tests__/cartPage.test.ts`: subtotal render, unavailable không có stepper, empty state. Run PASS. Commit `feat(checkout): cart page + badge + cart store (SF-6)`.
+- [ ] **Step 5:** vitest `__tests__/cartPage.test.ts`: subtotal render, unavailable không có stepper, empty state, **cartStore dispatch `ecommerce:cart-changed` sau mutation** (spec §5). Run PASS. Commit `feat(checkout): cart page + badge + cart store (SF-6)`.
 
 ### Task 8: checkout-steps-address-shipping-review
 
-**Files:** Create `src/pages/CheckoutPage.tsx` (stepper 3 bước, state một nơi), `src/lib/format.ts` nếu cần.
+**Files:** Create `src/pages/CheckoutPage.tsx` (stepper 3 bước, state một nơi), `src/lib/format.ts` nếu cần; Modify `frontend/apps/shell/src/App.tsx` (+route `/checkout` lazy `checkout/CheckoutPage` — plan-critic P0: route này không task nào sở hữu nếu để cuối).
 
 - [ ] **Step 1:** Stepper UI 3 bước (1 Địa chỉ · 2 Vận chuyển · 3 Thanh toán) — step state trong page, back/forward giữ state form. Guest gate: `authStore.isAuthenticated()` false → banner "Đăng nhập để thanh toán" + link /login (authStore.subscribe để vào lại được sau login).
 - [ ] **Step 2:** Step 1 Địa chỉ — form fields fullName, phone, line1, ward, district, city (đủ `Address` contract) — Input ui-kit + label; validate required + phone regex; Next disable khi invalid.
@@ -281,25 +282,19 @@ export function validateCoupon(code: string, subtotal: number): ValidateCouponRe
 **Files:** Modify `frontend/apps/storefront-web/components/pdp/{PdpBuyBox.tsx,AddToCart.tsx}`.
 
 - [ ] **Step 1:** PdpBuyBox nhận thêm `slug: string` prop từ page (`[locale]/p/[slug]/page.tsx` truyền `product.slug` — đọc file trước khi sửa), thread vào AddToCart.
-- [ ] **Step 2:** AddToCart submit: `POST /api/cart/items?slug=${encodeURIComponent(slug)}` → ok: parse body Cart → `cartToken` guest → localStorage; `window.dispatchEvent(new CustomEvent('ecommerce:cart-changed'))`; toast "Đã thêm vào giỏ ✓" (badge shell tự refresh qua event — cùng window khi chạy qua gateway); "MUA NGAY" → thêm xong `window.location.assign('/cart')`. Lỗi network → toast cũ "Giỏ hàng sẽ sớm khả dụng".
+- [ ] **Step 2:** AddToCart submit: `POST /api/cart/items?slug=${encodeURIComponent(slug)}` → ok: parse body Cart → `cartToken` guest → **localStorage key đúng literal `ecommerce.guest_cart_token`** (phải khớp T6 merge-on-login đọc key này — lệch key = merge câm); `window.dispatchEvent(new CustomEvent('ecommerce:cart-changed'))`; toast "Đã thêm vào giỏ ✓" (badge shell tự refresh qua event — cùng window khi chạy qua gateway); "MUA NGAY" → thêm xong `window.location.assign('/cart')`. Lỗi network → toast cũ "Giỏ hàng sẽ sớm khả dụng".
 - [ ] **Step 3:** Verify build storefront (`pnpm --filter storefront-web lint` / next build tùy nhanh). Commit `feat(checkout): wire PDP add-to-cart → cart-service thật + cart-changed event (SF-6)`.
 
 ### Task 14: gateway/compose/env append + checkout-it-tests (bundle cuối)
 
 **Files:** Modify `backend/gateway/src/main/resources/gateway-routes.yml`, `docker-compose.yml`, `.env.example`; Create cart-service tests còn thiếu + mfe-checkout vitest suite gộp.
 
-- [ ] **Step 1:** gateway-routes.yml — un-comment block cart **XÓA dòng StripPrefix** (comment SF-4 precedent) + append:
+- [ ] **Step 1:** gateway-routes.yml — un-comment block cart **XÓA dòng StripPrefix** (SF-4 precedent); KHÔNG thêm shell-pages route (cookie port-agnostic trên localhost xuyên PDP↔shell qua proxy; single-origin = SF-10):
 
 ```yaml
         - id: cart                                          # SF-6 · port 8083
           uri: http://localhost:8083
           predicates: [ "Path=/api/cart/**" ]
-        # SF-6 (2026-09-06): shell app pages qua gateway — same-origin cookie jar
-        # (cart_token) xuyên PDP(:3000 Next) → login → /cart trên MỘT origin :8080.
-        # Dev: shell Vite :5173 (REMOTE khác mount qua remoteEntry).
-        - id: shell-pages                                   # SF-6 · port 5173
-          uri: http://localhost:5173
-          predicates: [ "Path=/cart,/checkout,/order/confirmation,/login,/register,/account" ]
 ```
 
 - [ ] **Step 2:** docker-compose append block `cart-service` (profile `full`, build Dockerfile path, REDIS_HOST: redis, expose 8083) + Dockerfile copy từ template (nếu template có Dockerfile — copy catalog's, đổi path). `.env.example` append:
@@ -311,7 +306,7 @@ VITE_SHIPPING_FLAT_FEE=25000
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx   # trống → checkout hiện mock pay panel
 ```
 
-- [ ] **Step 3:** Full test suite: `mvn -pl services/cart-service test` (Redis IT + WireMock) + `pnpm -C frontend --filter '@ecommerce/mfe-checkout' test` + lint shell → ALL PASS.
+- [ ] **Step 3:** Verify gateway compile + route hợp lệ: `mvn -pl gateway -am compile -q` (từ backend/) + boot gateway → `curl :<port>/api/smoke` 200. Assert Makefile có target cart (`grep "cart)" Makefile`). Dockerfile: **check-then-copy** — `ls backend/services/template-service/Dockerfile` tồn tại → copy đổi path; không → tạo Dockerfile mới theo catalog pattern. Full test suite: `mvn -pl services/cart-service test` (Redis IT + WireMock) + `pnpm -C frontend --filter '@ecommerce/mfe-checkout' test` + lint shell → ALL PASS.
 - [ ] **Step 4:** Commit `feat(cart): gateway routes + compose + env + integration tests (SF-6)`.
 
 ---

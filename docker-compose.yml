@@ -76,6 +76,65 @@ services:
       timeout: 3s
       retries: 10
 
+  # D14 (2026-09-06): mongo cho log-service (SF-10 build service; container từ SF-1)
+  mongo:
+    image: mongo:7
+    container_name: ecommerce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: ecommerce-mongo-express
+    ports:
+      - "8089:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"   # dev-only UI — không auth (k8s/prod sẽ không chạy mongo-express)
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    healthcheck:
+      # image node-alpine — không có wget/curl, dùng http.get của node
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8081',r=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # D15 (2026-09-06): Elasticsearch cho search (SF-4 build engine/indexer; container từ SF-1)
+  elasticsearch:
+    image: elasticsearch:8.17.4
+    container_name: ecommerce-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
   # Chỉ bật khi cần test webhook Stripe thật: docker compose --profile stripe up -d stripe-cli
   # Forward → payment-service chạy host :8086 (SF-5 sở hữu endpoint).
   stripe-cli:
@@ -102,6 +161,8 @@ volumes:
   redisdata:
   rabbitmqdata:
   mailpitdata:
+  mongodata:
+  esdata:
 
 networks:
   ecommerce-net:

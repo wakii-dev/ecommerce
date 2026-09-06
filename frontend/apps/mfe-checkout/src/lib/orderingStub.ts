@@ -178,8 +178,18 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
       ? crypto.randomUUID()
       : `idem-${orderId}`;
 
-  const clientSecret = await createPaymentIntent(orderId, total, idempotencyKey);
-  return { order, clientSecret };
+  // 503 payment_unconfigured (không STRIPE_SECRET_KEY) → mock panel branch:
+  // order VẪN được tạo (clientSecret null) — nút "Đặt hàng (demo)" finalize
+  // được; KHÔNG throw ra ngoài (bug đã gặp: mockPanel hiện nhưng created null).
+  try {
+    const clientSecret = await createPaymentIntent(orderId, total, idempotencyKey);
+    return { order, clientSecret };
+  } catch (err) {
+    if (err instanceof PaymentUnavailableError) {
+      return { order, clientSecret: null };
+    }
+    throw err;
+  }
 }
 
 /** Mock webhook Stripe succeeded — PENDING→PAID→CONFIRMED (đúng thứ tự §3.6).

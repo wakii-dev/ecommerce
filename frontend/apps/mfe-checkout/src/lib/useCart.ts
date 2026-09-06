@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { authStore } from '@ecommerce/auth';
 import {
   CART_CHANGED_EVENT,
   fetchCart,
@@ -10,7 +11,8 @@ import {
 /**
  * useCart — hook đọc giỏ + mutate, dùng chung CartPage/CartBadge qua event
  * `ecommerce:cart-changed` (một nơi mutation → mọi nơi re-fetch; không cần
- * state library cho tier demo này).
+ * state library cho tier demo này). CẢNG NHẮC authStore: login/logout đổi
+ * giỏ (guest ↔ user) — mount lúc auth chưa settle thì re-fetch khi settle.
  */
 export function useCart(): {
   cart: Cart | null;
@@ -41,7 +43,11 @@ export function useCart(): {
     void refresh();
     const onChanged = (): void => refresh();
     window.addEventListener(CART_CHANGED_EVENT, onChanged);
-    return () => window.removeEventListener(CART_CHANGED_EVENT, onChanged);
+    const unsubAuth = authStore.subscribe(onChanged);
+    return () => {
+      window.removeEventListener(CART_CHANGED_EVENT, onChanged);
+      unsubAuth();
+    };
   }, [refresh]);
 
   const changeQty = useCallback(async (itemId: string, qty: number): Promise<void> => {

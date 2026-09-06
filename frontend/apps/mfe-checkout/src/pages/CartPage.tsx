@@ -108,6 +108,20 @@ export default function CartPage(): ReactElement {
     );
   }
 
+  if (error && !cart) {
+    return (
+      <div className="cart-page">
+        <h1 className="page-title">Giỏ hàng</h1>
+        <Card>
+          <div className="pay-error" role="alert">
+            {error}
+          </div>
+          <Button onClick={() => window.location.reload()}>Thử lại</Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (!cart || cart.items.length === 0) {
     return (
       <div className="cart-page">

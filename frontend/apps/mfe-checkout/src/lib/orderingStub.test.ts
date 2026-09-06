@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  PaymentUnavailableError,
   confirmOrderMock,
   createOrder,
   validateCoupon,
@@ -101,14 +100,18 @@ describe('orderingStub.createOrder', () => {
     expect(order.total).toBe(200000 - 20000 + 25000);
   });
 
-  it('payment 503 (unconfigured) → PaymentUnavailableError', async () => {
+  it('payment 503 (unconfigured) → order vẫn tạo, clientSecret null (mock panel)', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 503,
       json: async () => ({ title: 'payment_unconfigured' })
     } as unknown as Response);
 
-    await expect(createOrder(baseInput())).rejects.toBeInstanceOf(PaymentUnavailableError);
+    const result = await createOrder(baseInput());
+
+    expect(result.clientSecret).toBeNull();
+    expect(result.order.status).toBe('PENDING');
+    expect(result.order.total).toBe(225000);
   });
 
   it('items rỗng → chặn trước khi gọi payment (contract minItems 1)', async () => {

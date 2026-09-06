@@ -13,11 +13,20 @@ public interface PaymentProviderAdapter {
     /** Tạo intent — adapter BẮT BUỘC gởi {@code idempotencyKey} lên provider (chống orphan double `pi_` khi local rollback). */
     AdapterIntent createIntent(IntentCommand command);
 
-    /** Void (hủy trước capture) — provider từ chối → adapter ném exception chuẩn. */
-    AdapterIntent voidIntent(String providerIntentId);
+    /**
+     * Void (hủy trước capture) — provider từ chối → adapter ném exception chuẩn.
+     * {@code idempotencyKey} nullable — khi có, gởi lên provider (chống double-void
+     * khi network-retry; security-audit M-1).
+     */
+    AdapterIntent voidIntent(String providerIntentId, String idempotencyKey);
 
-    /** Refund (full khi {@code amountVnd} null, partial khi có). */
-    AdapterRefund refund(String providerIntentId, Long amountVnd);
+    /**
+     * Refund (full khi {@code amountVnd} null, partial khi có). {@code idempotencyKey}
+     * nullable — ordering (SF-9) supply UUID mỗi refund request → Stripe dedupe
+     * network-retry; KHÔNG tự deterministic từ (intentId|amount) — 2 partial refund
+     * hợp lệ cùng số tiền bị chặn oan.
+     */
+    AdapterRefund refund(String providerIntentId, Long amountVnd, String idempotencyKey);
 
     /**
      * Verify chữ ký webhook (HMAC) rồi parse event. Sai chữ ký / header hỏng →

@@ -57,12 +57,20 @@ public class PaymentController {
     }
 
     @PostMapping("/refunds")
-    public ResponseEntity<RefundCreatedResponse> refund(@Valid @RequestBody RefundRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(intentService.refund(request));
+    public ResponseEntity<RefundCreatedResponse> refund(
+        @Valid @RequestBody RefundRequest request,
+        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
+    ) {
+        // Idempotency-Key optional (additive — contract không cấm header): ordering
+        // (SF-9) supply UUID mỗi refund request → Stripe dedupe network-retry (M-1)
+        return ResponseEntity.status(HttpStatus.CREATED).body(intentService.refund(request, idempotencyKey));
     }
 
     @PostMapping("/void")
-    public ResponseEntity<VoidResultResponse> voidIntent(@Valid @RequestBody VoidRequest request) {
-        return ResponseEntity.ok(intentService.voidIntent(request));
+    public ResponseEntity<VoidResultResponse> voidIntent(
+        @Valid @RequestBody VoidRequest request,
+        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey
+    ) {
+        return ResponseEntity.ok(intentService.voidIntent(request, idempotencyKey));
     }
 }

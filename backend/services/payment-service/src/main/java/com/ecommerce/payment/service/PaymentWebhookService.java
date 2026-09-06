@@ -74,6 +74,12 @@ public class PaymentWebhookService {
                 "payment.failed", event.failureMessage());
             case "charge.refunded" -> {
                 intents.findByStripeIntentId(event.intentId()).ifPresentOrElse(intent -> {
+                    if (intent.getStatus() == PaymentIntentStatus.REFUNDED
+                        || intent.getStatus() == PaymentIntentStatus.VOIDED) {
+                        log.warn("Bỏ qua charge.refunded cho intent {} — đã {} (re-delivery/out-of-order)",
+                            event.intentId(), intent.getStatus());
+                        return;
+                    }
                     intent.markStatus(PaymentIntentStatus.REFUNDED);
                     intents.save(intent);
                     log.info("Intent {} REFUNDED (charge.refunded)", event.intentId());
@@ -100,6 +106,14 @@ public class PaymentWebhookService {
                 || intent.getStatus() == PaymentIntentStatus.VOIDED)) {
             log.warn("Bỏ qua {} cho intent {} — đã terminal-positive {} (event out-of-order)",
                 event.type(), intent.getStripeIntentId(), intent.getStatus());
+            return;
+        }
+        // succeeded sau REFUNDED (security-audit L-1): tiền đã trả lại — không
+        // resurrect REFUNDED → SUCCEEDED (state divergence local vs Stripe)
+        if (lifecycleStatus == PaymentIntentStatus.SUCCEEDED
+            && intent.getStatus() == PaymentIntentStatus.REFUNDED) {
+            log.warn("Bỏ qua {} cho intent {} — đã REFUNDED (event out-of-order)",
+                event.type(), intent.getStripeIntentId());
             return;
         }
         intent.markStatus(lifecycleStatus);

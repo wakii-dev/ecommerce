@@ -31,15 +31,22 @@ public class InventoryQueryController {
         this.defaultLowStockThreshold = defaultLowStockThreshold;
     }
 
-    /** `?variantIds=a,b,c` (form explode=false — Spring tách comma tự động). */
+    /** `?variantIds=a,b,c` (form explode=false — Spring tách comma tự động). Cap 100 (DoS bound — security-audit L-2). */
     @GetMapping("/availability")
     public List<VariantAvailabilityView> availability(@RequestParam List<String> variantIds) {
+        if (variantIds.size() > 100) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, "Tối đa 100 variantIds mỗi request");
+        }
         return queries.findAvailability(variantIds);
     }
 
     @GetMapping("/admin/low-stock")
     public List<LowStockView> lowStock(@RequestParam(required = false) Integer threshold) {
         int effective = threshold != null ? threshold : defaultLowStockThreshold;
+        // Clamp — threshold khổng lồ dump cả bảng (security-audit L-3); dashboard
+        // thật không bao giờ cần > 10000
+        effective = Math.min(effective, 10_000);
         return queries.findLowStock(effective);
     }
 }

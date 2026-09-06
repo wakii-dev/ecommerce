@@ -109,6 +109,26 @@ class PaymentIntentsTest extends AbstractPaymentIntegrationTest {
     }
 
     @Test
+    void newKeySameOrderWhileActiveIntentExistsReturns409() {
+        // security-audit note + contract case 2: order đã có intent active →
+        // key MỚI (không phải replay) → 409, KHÔNG tạo pi_ thứ 2 (double-charge surface)
+        String orderId = "o-active-" + SEQ.incrementAndGet();
+        jdbc.update("""
+                INSERT INTO payment_intents (id, order_id, stripe_intent_id, amount_vnd, currency,
+                                             status, idempotency_key, payload_hash, stripe_status)
+                VALUES (?::uuid, ?, 'pi_active_seed', 250000, 'VND', 'REQUIRES_CONFIRMATION', ?, 'hash', 'REQUIRES_CONFIRMATION')
+                """,
+            java.util.UUID.randomUUID(), orderId, "key-active-seed-" + orderId);
+
+        ResponseEntity<Map> response = createIntent("key-active-new-" + SEQ.incrementAndGet(), orderId, 250000, "VND");
+
+        assertThat(response.getStatusCode().value()).as("active intent tồn tại → 409").isEqualTo(409);
+        Integer count = jdbc.queryForObject(
+            "SELECT count(*) FROM payment_intents WHERE order_id = ?", Integer.class, orderId);
+        assertThat(count).as("KHÔNG tạo pi_ thứ 2").isEqualTo(1);
+    }
+
+    @Test
     void headerKeyWinsOverBodyKey() {
         String orderId = "o-header-" + SEQ.incrementAndGet();
         ResponseEntity<Map> viaHeader = createIntent("key-t6-header", orderId, 250000, "VND");

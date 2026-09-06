@@ -2324,8 +2324,8 @@ curl -s -X POST localhost:8080/api/identity/auth/register -H 'Content-Type: appl
 
 | # | ACCEPTANCE | Bằng chứng |
 |---|---|---|
-| 1 | Register → login, header tên; F5 giữ phiên | Task 8 flow 1-2 + AuthApiIT + vitest register auto-login |
+| 1 | Register → login, header tên; F5 giữ phiên | Task 8 flow 1-2 + AuthApiIntegrationTest + vitest register auto-login |
 | 2 | Token hết hạn tự refresh, user không thấy lỗi | vitest 401→refresh→retry + IT refresh rotate; browser refresh-on-boot |
-| 3 | Customer → /api/admin/** 403 TỪ GATEWAY | GatewayAuthIT (customer 403 không chạm stub) + browser console fetch 403 |
-| 4 | Admin seed login; logout reuse 401 | SeedAdminIT + Task 8 flow 5-7 |
+| 3 | Customer → /api/admin/** 403 TỪ GATEWAY | GatewayAuthIntegrationTest (customer 403 không chạm stub) + browser console fetch 403 |
+| 4 | Admin seed login; logout reuse 401 | SeedAdminIntegrationTest + Task 8 flow 5-7 |
 | 5 | /account sửa được fullName/phone | Task 8 flow 3 + IT PATCH /me + prefill phone |

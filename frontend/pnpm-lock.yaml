@@ -208,6 +208,9 @@ importers:
 
   packages/auth:
     dependencies:
+      '@ecommerce/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       react:
         specifier: 'catalog:'
         version: 18.3.1

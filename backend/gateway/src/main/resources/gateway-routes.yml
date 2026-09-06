@@ -33,10 +33,10 @@ spring:
       #   uri: http://localhost:8083
       #   predicates: [ "Path=/api/cart/**" ]
       #   filters: [ "StripPrefix=1" ]
-      # - id: inventory                                  # SF-5 · port 8084
-      #   uri: http://localhost:8084
-      #   predicates: [ "Path=/api/inventory/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      - id: inventory                                    # SF-5 · port 8084
+        uri: http://localhost:8084
+        predicates: [ "Path=/api/inventory/**" ]
+        filters: [ "StripPrefix=1" ]
       # - id: ordering                                   # SF-9 · port 8085
       #   uri: http://localhost:8085
       #   predicates: [ "Path=/api/ordering/**" ]

@@ -27,13 +27,13 @@
 - Create: `src/main/resources/application.yml`, `src/main/resources/db/migration/V1__users_roles_refresh.sql`
 - Create: `src/test/java/com/ecommerce/identity/AbstractIntegrationTest.java`, `src/test/java/com/ecommerce/identity/IdentityScaffoldIntegrationTest.java`, `src/test/resources/docker-java.properties`
 
-- [ ] **Step 1: Append module vào parent pom** — `backend/pom.xml`, trong `<modules>` thêm dòng (append-only, không đổi dòng khác):
+- [x] **Step 1: Append module vào parent pom** — `backend/pom.xml`, trong `<modules>` thêm dòng (append-only, không đổi dòng khác):
 
 ```xml
     <module>services/identity-service</module>
 ```
 
-- [ ] **Step 2: pom.xml của service** — `backend/services/identity-service/pom.xml` (copy structure template pom, đổi artifactId + thêm security deps):
+- [x] **Step 2: pom.xml của service** — `backend/services/identity-service/pom.xml` (copy structure template pom, đổi artifactId + thêm security deps):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -144,7 +144,7 @@
 </project>
 ```
 
-- [ ] **Step 3: Application + Flyway migration** — `V1__users_roles_refresh.sql` ĐÚNG schema spec §4.2:
+- [x] **Step 3: Application + Flyway migration** — `V1__users_roles_refresh.sql` ĐÚNG schema spec §4.2:
 
 ```sql
 -- users + refresh_tokens — SF-3 (pack pin; role single column, API expose roles[])
@@ -188,7 +188,7 @@ public class IdentityServiceApplication {
 }
 ```
 
-- [ ] **Step 4: Entities + repositories** — `user/UserEntity.java`:
+- [x] **Step 4: Entities + repositories** — `user/UserEntity.java`:
 
 ```java
 package com.ecommerce.identity.user;
@@ -329,7 +329,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
 }
 ```
 
-- [ ] **Step 5: PemKeys + JwtProperties + TokenService** — `security/PemKeys.java`:
+- [x] **Step 5: PemKeys + JwtProperties + TokenService** — `security/PemKeys.java`:
 
 ```java
 package com.ecommerce.identity.security;
@@ -467,7 +467,7 @@ public class TokenService {
 }
 ```
 
-- [ ] **Step 6: SecurityConfig (service)** — `config/SecurityConfig.java`:
+- [x] **Step 6: SecurityConfig (service)** — `config/SecurityConfig.java`:
 
 ```java
 package com.ecommerce.identity.config;
@@ -529,7 +529,7 @@ public class SecurityConfig {
 }
 ```
 
-- [ ] **Step 7: application.yml** — `src/main/resources/application.yml` (copy cấu trúc template, đổi port/db + thêm identity.jwt):
+- [x] **Step 7: application.yml** — `src/main/resources/application.yml` (copy cấu trúc template, đổi port/db + thêm identity.jwt):
 
 ```yaml
 # identity :8081 · db_identity (D8). Path service-ngắn — gateway StripPrefix=2.
@@ -607,7 +607,7 @@ logging:
 
 LƯU Ý (đổi so với đoạn trên — seed mặc định RỖNG để tránh secret-in-code; chạy dev: `export $(grep -v '^#' ../.env | xargs)` hoặc set tay `ADMIN_EMAIL=admin@ecommerce.local ADMIN_PASSWORD=admin123 make dev svc=identity`. IT không phụ thuộc env này.)
 
-- [ ] **Step 8: IT harness + scaffold IT** — `src/test/resources/docker-java.properties` copy Y NGUYÊN từ template (`api.version=1.44` — Docker 29 máy này bắt buộc). `AbstractIntegrationTest.java` — sinh keypair RSA trong test, viết PEM vào temp dir:
+- [x] **Step 8: IT harness + scaffold IT** — `src/test/resources/docker-java.properties` copy Y NGUYÊN từ template (`api.version=1.44` — Docker 29 máy này bắt buộc). `AbstractIntegrationTest.java` — sinh keypair RSA trong test, viết PEM vào temp dir:
 
 ```java
 package com.ecommerce.identity;
@@ -736,9 +736,9 @@ class IdentityScaffoldIntegrationTest extends AbstractIntegrationTest {
 }
 ```
 
-- [ ] **Step 9: Build + chạy IT** — `cd backend && mvn -pl services/identity-service -am test — LƯU Ý: test class PHẢI đuôi `*Test`/`*IntegrationTest` (surefire default includes, KHÔNG chạy `*IT`). Expected: BUILD SUCCESS, IT PASS (Docker phải chạy — đã healthy).
+- [x] **Step 9: Build + chạy IT** — `cd backend && mvn -pl services/identity-service -am test — LƯU Ý: test class PHẢI đuôi `*Test`/`*IntegrationTest` (surefire default includes, KHÔNG chạy `*IT`). Expected: BUILD SUCCESS, IT PASS (Docker phải chạy — đã healthy).
 
-- [ ] **Step 10: Commit** — stage từ `git status`:
+- [x] **Step 10: Commit** — stage từ `git status`:
 
 ```bash
 git add backend/pom.xml backend/services/identity-service
@@ -753,7 +753,7 @@ git commit -m "feat(identity): scaffold service — flyway users/refresh_tokens,
 - Create: `user/dto` records (`RegisterRequest, LoginRequest, LoginSuccess, RefreshResponse, UserSummary, MeResponse, UpdateMeRequest, AdminUserDto, AdminUserPage`), `user/MeController.java`, `user/AdminUserController.java`, `token/RefreshTokenService.java`, `token/RefreshCookieProperties.java`, `auth/AuthController.java`, `auth/SeedAdmin.java`, `config/RefreshProperties.java`
 - Test: `auth/AuthApiIntegrationTest.java`, `auth/AdminApiIntegrationTest.java`, `auth/SeedAdminIntegrationTest.java`, `auth/OutboxIntegrationTest.java`
 
-- [ ] **Step 1: DTO records** (pack §4.2 — khớp contract identity.yaml):
+- [x] **Step 1: DTO records** (pack §4.2 — khớp contract identity.yaml):
 
 ```java
 // auth/dto — package com.ecommerce.identity.auth (đặt cùng package AuthController)
@@ -779,7 +779,7 @@ public record AdminUserDto(UUID id, String email, String fullName, List<String> 
 public record AdminUserPage(List<AdminUserDto> items, int page, int size, int total) {}
 ```
 
-- [ ] **Step 2: RefreshTokenService + cookie props** — `config/RefreshProperties.java`:
+- [x] **Step 2: RefreshTokenService + cookie props** — `config/RefreshProperties.java`:
 
 ```java
 @ConfigurationProperties(prefix = "identity.refresh")
@@ -896,7 +896,7 @@ public class RefreshTokenService {
 }
 ```
 
-- [ ] **Step 3: AuthController** — register (tx + outbox), login, refresh, logout; cookie helper:
+- [x] **Step 3: AuthController** — register (tx + outbox), login, refresh, logout; cookie helper:
 
 ```java
 package com.ecommerce.identity.auth;
@@ -1035,7 +1035,7 @@ public class AuthController {
 }
 ```
 
-- [ ] **Step 4: MeController + JwksController + AdminUserController**:
+- [x] **Step 4: MeController + JwksController + AdminUserController**:
 
 ```java
 // MeController.java (package user)
@@ -1117,7 +1117,7 @@ public class AdminUserController {
 // imports: org.springframework.data.domain.{Page,PageRequest}, PreAuthorize, RequestParam...
 ```
 
-- [ ] **Step 5: SeedAdmin** — ApplicationRunner idempotent, KHÔNG publish user.created, không log password:
+- [x] **Step 5: SeedAdmin** — ApplicationRunner idempotent, KHÔNG publish user.created, không log password:
 
 ```java
 // auth/SeedAdmin.java
@@ -1175,7 +1175,7 @@ public record SeedProperties(String adminEmail, String adminPassword) {}
 
 (yml block `identity.seed` như Task 1 Step 7 đã có.)
 
-- [ ] **Step 6: AuthApiIntegrationTest** — matrix chính (helper: `register(email, name)` helper POST; đọc Set-Cookie bằng `returnResult(Void.class).getResponseHeaders().getFirst(HttpHeaders.SET_COOKIE)`; helper `cookieValue(String setCookie)` tách raw sau `refresh_token=` đến `;` đầu tiên):
+- [x] **Step 6: AuthApiIntegrationTest** — matrix chính (helper: `register(email, name)` helper POST; đọc Set-Cookie bằng `returnResult(Void.class).getResponseHeaders().getFirst(HttpHeaders.SET_COOKIE)`; helper `cookieValue(String setCookie)` tách raw sau `refresh_token=` đến `;` đầu tiên):
 
 ```java
 package com.ecommerce.identity.auth;
@@ -1348,7 +1348,7 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
 **CHỈNH (executor):** test `meRequiresJwt` lấy `accessToken` từ body login — dùng `WebTestClient.BodyContentSpec` + `JsonPath.read` hoặc `expectBody(Map.class).returnResult().getResponseBody()` rồi `((Map<?,?>) body).get("accessToken").toString()`. Đoạn `returnResult(Void.class).toString()` ở trên là SAI — thay bằng cách đọc Map. Email normalize: thêm 1 case register `A@X.com` → login `a@x.com` OK.
 
-- [ ] **Step 7: AdminApiIntegrationTest + SeedAdminIntegrationTest + OutboxIntegrationTest**:
+- [x] **Step 7: AdminApiIntegrationTest + SeedAdminIntegrationTest + OutboxIntegrationTest**:
 
 ```java
 // AdminApiIntegrationTest: tạo customer (register) + admin (save trực tiếp qua UserRepository + passwordEncoder)
@@ -1367,7 +1367,7 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 // outboxRelay.poll() → nhận message trên queue bind "user.created" → envelope nguyên vẹn.
 ```
 
-- [ ] **Step 8: Chạy full IT** — `cd backend && mvn -pl services/identity-service -am test`. Expected: BUILD SUCCESS tất cả IT. Fail → 3-WHY trước khi fix (debugging discipline).
+- [x] **Step 8: Chạy full IT** — `cd backend && mvn -pl services/identity-service -am test`. Expected: BUILD SUCCESS tất cả IT. Fail → 3-WHY trước khi fix (debugging discipline).
 
 - [ ] **Step 9: Smoke chạy thật với compose infra** (keys + env):
 
@@ -1385,7 +1385,7 @@ curl -s -X POST localhost:8081/auth/login -H 'Content-Type: application/json' \
 kill %1
 ```
 
-- [ ] **Step 10: Commit** — `git add backend/services/identity-service && git commit -m "feat(identity): auth APIs — register/login/refresh rotation/logout/me/admin/seed + user.created outbox"`
+- [x] **Step 10: Commit** — `git add backend/services/identity-service && git commit -m "feat(identity): auth APIs — register/login/refresh rotation/logout/me/admin/seed + user.created outbox"`
 
 ---
 
@@ -1396,7 +1396,7 @@ kill %1
 - Create: `backend/gateway/src/main/resources/routes/identity.yml`, `backend/gateway/src/main/resources/routes/gateway-auth.yml`, `src/main/java/com/ecommerce/gateway/config/{GatewayAuthProperties,GatewaySecurityConfig}.java`
 - Test: `backend/gateway/src/test/java/com/ecommerce/gateway/GatewayAuthIntegrationTest.java`
 
-- [ ] **Step 1: pom + config imports** — gateway pom thêm:
+- [x] **Step 1: pom + config imports** — gateway pom thêm:
 
 ```xml
     <dependency>
@@ -1435,7 +1435,7 @@ spring:
           filters: [ "StripPrefix=2" ]
 ```
 
-- [ ] **Step 3: routes/gateway-auth.yml** (public-paths TẬP TRUNG 1 FILE — pack pin):
+- [x] **Step 3: routes/gateway-auth.yml** (public-paths TẬP TRUNG 1 FILE — pack pin):
 
 ```yaml
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1466,7 +1466,7 @@ ecom:
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)
 ```
 
-- [ ] **Step 4: GatewayAuthProperties + GatewaySecurityConfig**:
+- [x] **Step 4: GatewayAuthProperties + GatewaySecurityConfig**:
 
 ```java
 // GatewayAuthProperties.java
@@ -1531,7 +1531,7 @@ public class GatewaySecurityConfig {
 }
 ```
 
-- [ ] **Step 5: CorsConfig @Order** — sửa file SF-1 THÊM ĐÚNG 2 dòng (import + annotation trên bean). Lý do: security chain order -100, WebFilter không order chạy sau → preflight OPTIONS của API cần auth bị 401 TRƯỚC KHI CORS trả header. **Phần JWT/auth là của SF-3 — edit này thuộc wiring auth, các dòng khác KHÔNG đụng:**
+- [x] **Step 5: CorsConfig @Order** — sửa file SF-1 THÊM ĐÚNG 2 dòng (import + annotation trên bean). Lý do: security chain order -100, WebFilter không order chạy sau → preflight OPTIONS của API cần auth bị 401 TRƯỚC KHI CORS trả header. **Phần JWT/auth là của SF-3 — edit này thuộc wiring auth, các dòng khác KHÔNG đụng:**
 
 ```java
 import org.springframework.core.Ordered;
@@ -1542,7 +1542,7 @@ import org.springframework.core.annotation.Order;
     public CorsWebFilter corsWebFilter() {
 ```
 
-- [ ] **Step 6: GatewayAuthIntegrationTest** — stub JWKS + identity bằng `com.sun.net.httpserver.HttpServer` (0 dep mới):
+- [x] **Step 6: GatewayAuthIntegrationTest** — stub JWKS + identity bằng `com.sun.net.httpserver.HttpServer` (0 dep mới):
 
 ```java
 package com.ecommerce.gateway;
@@ -1714,9 +1714,9 @@ class GatewayAuthIntegrationTest {
 
 **CHỈNH (executor thực hiện):** `DynamicPropertySource` chạy TRƯỚC `@BeforeAll` — chuyển logic start-stub vào **static initializer** của class (sinh key + start server + set stubPort), để registry đọc đúng `stubPort`. Nhớ khai báo `GatewayApplication` thêm `@ConfigurationPropertiesScan` (hoặc `@EnableConfigurationProperties(GatewayAuthProperties.class)` đã có ở config — đủ).
 
-- [ ] **Step 7: Chạy** — `cd backend && mvn -pl gateway -am test`. Expected: GatewaySmokeTest CŨ vẫn xanh (public /api/smoke) + GatewayAuthIntegrationTest 8 test xanh.
+- [x] **Step 7: Chạy** — `cd backend && mvn -pl gateway -am test`. Expected: GatewaySmokeTest CŨ vẫn xanh (public /api/smoke) + GatewayAuthIntegrationTest 8 test xanh.
 
-- [ ] **Step 8: Commit** — `git add backend/gateway && git commit -m "feat(gateway): JWT auth qua JWKS identity — public-paths tập trung, admin guard 403, route identity"`
+- [x] **Step 8: Commit** — `git add backend/gateway && git commit -m "feat(gateway): JWT auth qua JWKS identity — public-paths tập trung, admin guard 403, route identity"`
 
 ---
 
@@ -1939,7 +1939,7 @@ describe('auth api', () => {
 **Files:**
 - Create: `frontend/apps/mfe-account/{package.json,vite.config.ts,tsconfig.json,index.html}`, `src/{api.ts,main.tsx,bootstrap.tsx,AuthWidget.tsx,styles.css}`, `src/pages/{LoginPage,RegisterPage,AccountPage}.tsx`
 
-- [ ] **Step 1: Scaffold** — copy structure `_skeleton-remote` (package.json đổi name `@ecommerce/mfe-account`, THÊM dep `"@ecommerce/contracts": "workspace:*"`). vite.config.ts:
+- [x] **Step 1: Scaffold** — copy structure `_skeleton-remote` (package.json đổi name `@ecommerce/mfe-account`, THÊM dep `"@ecommerce/contracts": "workspace:*"`). vite.config.ts:
 
 ```ts
 // mfe-account — remote đăng nhập/đăng ký/profile (SF-3). Port 5176 (.env.example
@@ -1971,7 +1971,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: bootstrap.tsx** — đăng ký widget TỪ remote (ctx nhận registry từ host):
+- [x] **Step 2: bootstrap.tsx** — đăng ký widget TỪ remote (ctx nhận registry từ host):
 
 ```tsx
 import type { ComponentType } from 'react';
@@ -2017,7 +2017,7 @@ export function initAccountShell(ctx: ShellContext): void {
 }
 ```
 
-- [ ] **Step 2b: src/api.ts** — re-export (pages/AuthWidget import `./api` / `../api`):
+- [x] **Step 2b: src/api.ts** — re-export (pages/AuthWidget import `./api` / `../api`):
 
 ```ts
 // mfe-account/src/api.ts — mỏng, chuyển tiếp từ packages/auth (singleton federation).
@@ -2032,7 +2032,7 @@ export {
 export type { RegisterInput, CredentialsInput, ProfileInput, MeProfile } from '@ecommerce/auth';
 ```
 
-- [ ] **Step 3: AuthWidget.tsx** — guest links / user dropdown (ui-kit + tokens; `useAuth` reactive nhờ AuthProvider ở shell):
+- [x] **Step 3: AuthWidget.tsx** — guest links / user dropdown (ui-kit + tokens; `useAuth` reactive nhờ AuthProvider ở shell):
 
 ```tsx
 import { useEffect, useRef, useState } from 'react';
@@ -2120,7 +2120,7 @@ export default function AuthWidget(): ReactElement {
 }
 ```
 
-- [ ] **Step 4: pages** — theo direction A (ui-kit classes `uk-*` + tokens). `LoginPage.tsx`:
+- [x] **Step 4: pages** — theo direction A (ui-kit classes `uk-*` + tokens). `LoginPage.tsx`:
 
 ```tsx
 import { useState } from 'react';
@@ -2145,9 +2145,9 @@ import { appNavigate, authReady } from '../bootstrap';
 ```
 (Guard — ĐÃ SỬA theo code-review FE round 1: `useEffect(() => { let alive = true; authReady.then(() => { if (alive && !authStore.isAuthenticated()) appNavigate('/login'); }); return () => { alive = false; }; }, [])` — CHỜ authReady settle (boot refresh xong) rồi quyết theo `authStore.isAuthenticated()` HIỆN TẠI, KHÔNG tin giá trị settled của authReady (guest boot settle false → SPA login xong vẫn false → bounce về /login — bug P0 đã fix). Prefill: sau authReady OK → GET profile bằng `updateProfile({})`? KHÔNG — PATCH rỗng đụng data; thêm `fetchProfile()` vào packages/auth api.ts: `executeRequest(clientOptions(), ['GET', '/api/identity/me'], {})` (route GET /me — export `fetchProfile()` từ api.ts, thêm 5 dòng + 1 test). Form: fullName + phone (prefill), email + role badge (chỉ đọc — badge primary tint), Button Lưu loading, thành công → inline "Đã lưu" + authStore.setToken giữ nguyên (profile claim mới áp ở refresh sau — header tên vẫn đọc từ user hiện tại, gọi `authStore.setToken` KHÔNG đổi được claims → UI cập nhật tên qua state cục bộ dùng cho dropdown; đơn giản: hiện toast "Đã lưu" và update state fullName cục bộ).)
 
-- [ ] **Step 5: main.tsx standalone** (debug khi chạy riêng :5176 — pattern skeleton, render LoginPage trong div center) + `page.css` (class `.auth-page` center, `.auth-card` max-width 400 — dùng tokens var, KHÔNG hex ngoài tokens).
+- [x] **Step 5: main.tsx standalone** (debug khi chạy riêng :5176 — pattern skeleton, render LoginPage trong div center) + `page.css` (class `.auth-page` center, `.auth-card` max-width 400 — dùng tokens var, KHÔNG hex ngoài tokens).
 
-- [ ] **Step 6: pnpm install + build + test**:
+- [x] **Step 6: pnpm install + build + test**:
 
 ```bash
 pnpm -C frontend install                      # regen lockfile (importer mfe-account)
@@ -2166,7 +2166,7 @@ sleep 6
 # Mở http://localhost:5173/login — trang login render từ remote (kiem tab console sạch)
 ```
 
-- [ ] **Step 8: Commit** — `git add frontend/apps/mfe-account frontend/pnpm-lock.yaml && git commit -m "feat(mfe-account): remote login/register/account + bootstrap đăng ký auth widget + pages theo direction A"`
+- [x] **Step 8: Commit** — `git add frontend/apps/mfe-account frontend/pnpm-lock.yaml && git commit -m "feat(mfe-account): remote login/register/account + bootstrap đăng ký auth widget + pages theo direction A"`
 
 ---
 
@@ -2175,7 +2175,7 @@ sleep 6
 **Files:**
 - Modify: `frontend/apps/shell/vite.config.ts`, `src/remotes.d.ts`, `src/App.tsx`, `src/main.tsx`
 
-- [ ] **Step 1: vite.config.ts** — remotes thêm account + server proxy (giữ nguyên skeleton block):
+- [x] **Step 1: vite.config.ts** — remotes thêm account + server proxy (giữ nguyên skeleton block):
 
 ```ts
 import react from '@vitejs/plugin-react';
@@ -2211,7 +2211,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: remotes.d.ts** — append declarations (đọc file hiện có trước, giữ nguyên phần skeleton):
+- [x] **Step 2: remotes.d.ts** — append declarations (đọc file hiện có trước, giữ nguyên phần skeleton):
 
 ```ts
 declare module 'account/bootstrap' {
@@ -2234,7 +2234,7 @@ declare module 'account/RegisterPage' { const c: ComponentType; export default c
 declare module 'account/AccountPage' { const c: ComponentType; export default c; }
 ```
 
-- [ ] **Step 3: App.tsx** — AuthProvider + 3 routes lazy (ErrorBoundary cho từng remote page — fallback chung "mfe-account không chạy — `pnpm -C frontend --filter @ecommerce/mfe-account dev`"):
+- [x] **Step 3: App.tsx** — AuthProvider + 3 routes lazy (ErrorBoundary cho từng remote page — fallback chung "mfe-account không chạy — `pnpm -C frontend --filter @ecommerce/mfe-account dev`"):
 
 ```tsx
 // imports thêm: AuthProvider từ '@ecommerce/auth'; lazy pages từ 'account/LoginPage' v.v.
@@ -2255,7 +2255,7 @@ useEffect(() => {
 }, [bumpRegistry]);
 ```
 
-- [ ] **Step 4: main.tsx** — eager bootstrap sau ShellNav register (KHÔNG chặn render nếu remote down):
+- [x] **Step 4: main.tsx** — eager bootstrap sau ShellNav register (KHÔNG chặn render nếu remote down):
 
 ```tsx
 // Sau HeaderSlots.register('left', 'shell-nav', ShellNav):
@@ -2268,18 +2268,18 @@ import('account/bootstrap')
 // navigate import từ './router' (shell dùng chính router của mình truyền vào remote)
 ```
 
-- [ ] **Step 5: tsc + build** — `pnpm -C frontend --filter @ecommerce/shell build`. Expected: sạch.
+- [x] **Step 5: tsc + build** — `pnpm -C frontend --filter @ecommerce/shell build`. Expected: sạch.
 
-- [ ] **Step 6: Commit** — `git add frontend/apps/shell && git commit -m "feat(shell): account remote manifest + auth routes + AuthProvider + /api proxy + eager bootstrap"`
+- [x] **Step 6: Commit** — `git add frontend/apps/shell && git commit -m "feat(shell): account remote manifest + auth routes + AuthProvider + /api proxy + eager bootstrap"`
 
 ---
 
 ### Task 7: Full build + integration xanh + stack chạy thật (dep T2, T3, T5, T6)
 
-- [ ] **Step 1:** `cd backend && mvn -am -pl services/identity-service,gateway test` — BUILD SUCCESS (IntegrationTests + smoke).
-- [ ] **Step 2:** `pnpm -C frontend exec turbo build test` — sạch (tất cả workspace).
-- [ ] **Step 3:** fix mọi fail phát hiện (3-WHY mỗi lỗi; attempt-log qua `~/.claude/bin/story-attempt log`).
-- [ ] **Step 4: Bật stack thật cho Task 8** (tất cả process chạy nền, log ra /tmp):
+- [x] **Step 1:** `cd backend && mvn -am -pl services/identity-service,gateway test` — BUILD SUCCESS (IntegrationTests + smoke).
+- [x] **Step 2:** `pnpm -C frontend exec turbo build test` — sạch (tất cả workspace).
+- [x] **Step 3:** fix mọi fail phát hiện (3-WHY mỗi lỗi; attempt-log qua `~/.claude/bin/story-attempt log`).
+- [x] **Step 4: Bật stack thật cho Task 8** (tất cả process chạy nền, log ra /tmp):
 
 ```bash
 make keys                                   # infra/keys (đã có thì skip)
@@ -2299,14 +2299,14 @@ curl -s -X POST localhost:8080/api/identity/auth/register -H 'Content-Type: appl
   -d '{"email":"smoke2@test.local","password":"password123","fullName":"Smoke"}' -o /dev/null -w '%{http_code}\n'  # 201 QUA GATEWAY
 ```
 
-- [ ] **Step 5:** commit nếu có fix — `fix(sf-3): ...`. Giữ stack chạy cho Task 8.
+- [x] **Step 5:** commit nếu có fix — `fix(sf-3): ...`. Giữ stack chạy cho Task 8.
 
 ### Task 8: BROWSER VERIFY Rule 0 (3 tầng) + verify ACCEPTANCE pack (dep Task 7)
 
-- [ ] **Step 0: Cửa sổ browser** — `orca tab create --url http://localhost:5173` (app shell), identity + gateway + shell + mfe-account đang chạy (Task 7 smoke).
-- [ ] **Step 1 (DOM):** snapshot `/login` — đủ Input email/password + Button; `/register` đủ 3 field; header có `data-testid="auth-guest"`.
-- [ ] **Step 2 (VISUAL):** screenshot login + register + account + header guest vs logged-in → so direction A (card center, primary #F53D2D, error tint) — lưu PNG evidence.
-- [ ] **Step 3 (FLOW — đi trọn, KHÔNG curl thay UI):**
+- [x] **Step 0: Cửa sổ browser** — `orca tab create --url http://localhost:5173` (app shell), identity + gateway + shell + mfe-account đang chạy (Task 7 smoke).
+- [x] **Step 1 (DOM):** snapshot `/login` — đủ Input email/password + Button; `/register` đủ 3 field; header có `data-testid="auth-guest"`.
+- [x] **Step 2 (VISUAL):** screenshot login + register + account + header guest vs logged-in → so direction A (card center, primary #F53D2D, error tint) — lưu PNG evidence.
+- [x] **Step 3 (FLOW — đi trọn, KHÔNG curl thay UI):**
   1. Register user mới qua UI → tự vào `/account`, header hiện tên
   2. F5 tại `/account` → vẫn đăng nhập (boot refresh), KHÔNG ném về /login (guard chờ authReady)
   3. Sửa fullName + phone → Lưu → thấy "Đã lưu" → F5 → vẫn mới (prefill từ GET /me có phone)
@@ -2315,8 +2315,8 @@ curl -s -X POST localhost:8080/api/identity/auth/register -H 'Content-Type: appl
   6. **403 server-side:** console fetch `/api/admin/users` và `/api/identity/admin/users` với token customer → cả hai **403 từ gateway**; với token admin → `/api/identity/admin/users` 200
   7. Logout admin → reuse cookie cũ (curl POST /api/identity/auth/refresh với cookie cũ thu trước đó) → **401**
   8. Auto-refresh (cơ chế): IT chứng minh 401→refresh→retry; browser chỉ chứng minh refresh-on-boot (cùng code path — TTL 15' không chờ thật, nói rõ trong report)
-- [ ] **Step 4:** FAIL gì → fix → đi lại flow → PASS hết → `touch .browser-test-passed` (nếu script yêu cầu).
-- [ ] **Step 5:** commit evidence/docs nếu có — sau đó KHÔNG commit nữa trước story-verify (bài học SF-2: commit muộn làm B4 FAIL).
+- [x] **Step 4:** FAIL gì → fix → đi lại flow → PASS hết → `touch .browser-test-passed` (nếu script yêu cầu).
+- [x] **Step 5:** commit evidence/docs nếu có — sau đó KHÔNG commit nữa trước story-verify (bài học SF-2: commit muộn làm B4 FAIL).
 
 ---
 

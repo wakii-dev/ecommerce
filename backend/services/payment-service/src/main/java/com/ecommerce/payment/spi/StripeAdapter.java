@@ -49,7 +49,7 @@ public class StripeAdapter implements PaymentProviderAdapter {
             .build();
         try {
             PaymentIntent intent = PaymentIntent.create(params, requestOptions(command.idempotencyKey()));
-            return new AdapterIntent(intent.getId(), intent.getClientSecret(), intent.getStatus());
+            return new AdapterIntent(intent.getId(), intent.getClientSecret(), mirrorStatus(intent.getStatus()));
         } catch (StripeException e) {
             throw wrap("create intent cho order " + command.orderId(), e);
         }
@@ -60,7 +60,7 @@ public class StripeAdapter implements PaymentProviderAdapter {
         try {
             PaymentIntent intent = PaymentIntent.retrieve(providerIntentId, requestOptions(null));
             intent = intent.cancel(PaymentIntentCancelParams.builder().build(), requestOptions(null));
-            return new AdapterIntent(intent.getId(), intent.getClientSecret(), intent.getStatus());
+            return new AdapterIntent(intent.getId(), intent.getClientSecret(), mirrorStatus(intent.getStatus()));
         } catch (StripeException e) {
             throw wrap("void intent " + providerIntentId, e);
         }
@@ -126,6 +126,11 @@ public class StripeAdapter implements PaymentProviderAdapter {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** Mirror status UPPERCASE — khớp enum contract `PaymentIntentStatus` (Stripe trả lowercase). */
+    private String mirrorStatus(String status) {
+        return status != null ? status.toUpperCase(Locale.ROOT) : null;
     }
 
     /** Stripe-side idempotency key + base-url override (IT WireMock). */

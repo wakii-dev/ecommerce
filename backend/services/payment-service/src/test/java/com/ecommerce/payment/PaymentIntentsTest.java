@@ -80,7 +80,7 @@ class PaymentIntentsTest extends AbstractPaymentIntegrationTest {
         assertThat(response.getStatusCode().value()).isEqualTo(201);
         assertThat(response.getBody().get("paymentIntentId")).asString().startsWith("pi_it_");
         assertThat(response.getBody().get("clientSecret")).isEqualTo("cs_it_secret");
-        assertThat(response.getBody().get("status")).as("mirror Stripe status").isEqualTo("requires_confirmation");
+        assertThat(response.getBody().get("status")).as("mirror Stripe status (enum contract UPPERCASE)").isEqualTo("REQUIRES_CONFIRMATION");
     }
 
     @Test

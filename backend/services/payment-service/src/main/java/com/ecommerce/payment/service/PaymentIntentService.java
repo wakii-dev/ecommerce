@@ -108,4 +108,52 @@ public class PaymentIntentService {
         return new PaymentIntentCreatedResponse(
             intent.getStripeIntentId(), intent.getClientSecret(), intent.getStripeStatus());
     }
+
+    /**
+     * Refund (spec §5.5): precheck LOCAL trước adapter — 404 không có pi_, 409
+     * status != SUCCEEDED (chưa capture). Full refund (amount null hoặc == amount)
+     * → REFUNDED; partial giữ SUCCEEDED. KHÔNG publish event (ordering nhận sync
+     * response — coordination note SF-9). Cumulative-refund tracking delegate
+     * Stripe (refund vượt amount → ProviderConflict → 409 payment_conflict).
+     */
+    public com.ecommerce.payment.api.dto.RefundCreatedResponse refund(
+        com.ecommerce.payment.api.dto.RefundRequest request) {
+        PaymentIntent intent = intents.findByStripeIntentId(request.paymentIntentId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "paymentIntentId không tồn tại"));
+        if (intent.getStatus() != com.ecommerce.payment.domain.PaymentIntentStatus.SUCCEEDED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Intent chưa capture thành công — không refund được (status " + intent.getStatus() + ")");
+        }
+        boolean full = request.amount() == null || request.amount() == intent.getAmountVnd();
+        com.ecommerce.payment.spi.AdapterRefund refund = adapter.refund(
+            intent.getStripeIntentId(), request.amount());
+        if (full) {
+            intent.markStatus(com.ecommerce.payment.domain.PaymentIntentStatus.REFUNDED);
+            intents.save(intent);
+        }
+        return new com.ecommerce.payment.api.dto.RefundCreatedResponse(
+            refund.refundId(), refund.status(), refund.amount());
+    }
+
+    /**
+     * Void (spec §5.5): chỉ CREATED/REQUIRES_CONFIRMATION (chưa capture); đã
+     * SUCCEEDED → refund path. Response status = mirror (CANCELED) — DB = VOIDED.
+     */
+    public com.ecommerce.payment.api.dto.VoidResultResponse voidIntent(
+        com.ecommerce.payment.api.dto.VoidRequest request) {
+        PaymentIntent intent = intents.findByStripeIntentId(request.paymentIntentId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "paymentIntentId không tồn tại"));
+        if (intent.getStatus() != com.ecommerce.payment.domain.PaymentIntentStatus.CREATED
+            && intent.getStatus() != com.ecommerce.payment.domain.PaymentIntentStatus.REQUIRES_CONFIRMATION) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Intent đã capture/void — không void được nữa (status " + intent.getStatus() + ")");
+        }
+        com.ecommerce.payment.spi.AdapterIntent canceled = adapter.voidIntent(intent.getStripeIntentId());
+        intent.markStatus(com.ecommerce.payment.domain.PaymentIntentStatus.VOIDED);
+        intent.markStripeStatus(canceled.status());
+        intents.save(intent);
+        return new com.ecommerce.payment.api.dto.VoidResultResponse(canceled.status());
+    }
 }

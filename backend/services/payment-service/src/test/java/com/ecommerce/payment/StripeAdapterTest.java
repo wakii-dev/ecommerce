@@ -84,7 +84,7 @@ class StripeAdapterTest {
 
         assertThat(result.providerIntentId()).isEqualTo("pi_test_123");
         assertThat(result.clientSecret()).isEqualTo("cs_test_secret");
-        assertThat(result.status()).isEqualTo("requires_confirmation");
+        assertThat(result.status()).as("mirror UPPERCASE (enum contract)").isEqualTo("REQUIRES_CONFIRMATION");
         wiremock.verify(postRequestedFor(urlEqualTo("/v1/payment_intents"))
             .withHeader("Authorization", containing("sk_test_abc"))
             .withHeader("Idempotency-Key", equalTo("idem-key-1"))
@@ -104,7 +104,7 @@ class StripeAdapterTest {
         AdapterIntent result = adapter.voidIntent("pi_test_123");
 
         assertThat(result.providerIntentId()).isEqualTo("pi_test_123");
-        assertThat(result.status()).isEqualTo("canceled");
+        assertThat(result.status()).as("mirror UPPERCASE (enum contract)").isEqualTo("CANCELED");
     }
 
     @Test

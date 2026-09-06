@@ -30,6 +30,9 @@ class PaymentDegradedTest extends AbstractPaymentIntegrationTest {
     @Autowired
     TestRestTemplate rest;
 
+    @Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     @Test
     void bootsWithoutKeyAndHealthIsUp() {
         ResponseEntity<String> health = rest.getForEntity("/actuator/health", String.class);
@@ -51,5 +54,43 @@ class PaymentDegradedTest extends AbstractPaymentIntegrationTest {
         assertThat(response.getBody()).contains("payment_unconfigured");
         assertThat(response.getHeaders().getContentType())
             .as("problem+json RFC 7807").asString().contains("problem+json");
+    }
+
+    @Test
+    void webhookRefundVoidAllReturn503InDegradedMode() {
+        HttpHeaders json = new HttpHeaders();
+        json.setContentType(MediaType.APPLICATION_JSON);
+
+        // refund/void: local precheck 404 chạy TRƯỚC adapter — seed intent SUCCEEDED/CREATED
+        // (jdbc cùng POSTGRES singleton) để request đi tới adapter → Unconfigured → 503
+        String piSucceeded = "pi_degraded_succ_" + System.nanoTime();
+        jdbc.update("""
+                INSERT INTO payment_intents (id, order_id, stripe_intent_id, amount_vnd, currency,
+                                             status, idempotency_key, payload_hash)
+                VALUES (?::uuid, 'o-degraded', ?, 250000, 'VND', 'SUCCEEDED', ?, 'hash')
+                """,
+            java.util.UUID.randomUUID(), piSucceeded, "key-" + piSucceeded);
+        String piCreated = "pi_degraded_created_" + System.nanoTime();
+        jdbc.update("""
+                INSERT INTO payment_intents (id, order_id, stripe_intent_id, amount_vnd, currency,
+                                             status, idempotency_key, payload_hash)
+                VALUES (?::uuid, 'o-degraded', ?, 250000, 'VND', 'CREATED', ?, 'hash')
+                """,
+            java.util.UUID.randomUUID(), piCreated, "key-" + piCreated);
+
+        assertThat(rest.postForEntity("/payment/refunds",
+            new HttpEntity<>(Map.of("paymentIntentId", piSucceeded, "reason", "r"), json), String.class)
+            .getStatusCode().value()).isEqualTo(503);
+        assertThat(rest.postForEntity("/payment/void",
+            new HttpEntity<>(Map.of("paymentIntentId", piCreated), json), String.class)
+            .getStatusCode().value()).isEqualTo(503);
+        // webhook: header phải CÓ (thiếu → 400 — đúng behavior); có header → adapter
+        // Unconfigured verifyWebhook ném Unconfigured → 503
+        HttpHeaders withSig = new HttpHeaders();
+        withSig.setContentType(MediaType.APPLICATION_JSON);
+        withSig.set("Stripe-Signature", "t=1,v1=degraded");
+        assertThat(rest.postForEntity("/payment/webhook",
+            new HttpEntity<>("{}", withSig), String.class)
+            .getStatusCode().value()).isEqualTo(503);
     }
 }

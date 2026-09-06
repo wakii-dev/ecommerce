@@ -32,6 +32,14 @@ public class PaymentExceptionHandlers {
             "Chữ ký Stripe-Signature không hợp lệ hoặc thiếu");
     }
 
+    /** Thiếu header Stripe-Signature → 400 (common-lib catch-all sẽ 500 — không đúng contract webhook). */
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<ApiError> missingSignatureHeader(
+        org.springframework.web.bind.MissingRequestHeaderException e) {
+        return problem(HttpStatus.BAD_REQUEST, "webhook_signature_invalid",
+            "Thiếu header " + e.getHeaderName() + " — không verify được webhook");
+    }
+
     @ExceptionHandler(ProviderConflictException.class)
     public ResponseEntity<ApiError> providerConflict(ProviderConflictException e) {
         return problem(HttpStatus.CONFLICT, "payment_conflict",

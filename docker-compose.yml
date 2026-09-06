@@ -13,7 +13,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      # Host 5433 (không phải 5432): máy dev đang có postgres compose khác
+      # (hub-store) giữ 5432 — override bằng PG_HOST_PORT trong .env nếu cần.
+      - "${PG_HOST_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro

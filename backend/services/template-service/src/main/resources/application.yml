@@ -15,7 +15,8 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/db_template}
+    # Host port 5433 — máy dev có postgres compose khác giữ 5432 (compose map 5433:5432)
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_template}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:

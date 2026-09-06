@@ -62,6 +62,15 @@ public class PaymentIntentService {
             }
             return toResponse(existing);
         }
+        // Contract 409 case 2: "order đã có intent active" — chặn double-charge
+        // (cùng order + key MỚI → pi_ thứ 2). Retry đúng (= same key) đã replay ở trên.
+        if (intents.existsByOrderIdAndStatusIn(
+            request.orderId(), java.util.List.of(
+                com.ecommerce.payment.domain.PaymentIntentStatus.CREATED,
+                com.ecommerce.payment.domain.PaymentIntentStatus.REQUIRES_CONFIRMATION))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Order đã có intent active — retry phải dùng CÙNG Idempotency-Key");
+        }
 
         try {
             AdapterIntent created = adapter.createIntent(
@@ -75,8 +84,11 @@ public class PaymentIntentService {
             return toResponse(saved);
         } catch (DataIntegrityViolationException e) {
             // race 2 request cùng key — cái đã thắng insert trả kết quả
+            // (re-check hash: same-key-khác-payload phải 409, không nhầm 201)
             PaymentIntent winner = intents.findByIdempotencyKey(idempotencyKey)
-                .orElseThrow(() -> e);
+                .filter(w -> w.getPayloadHash().equals(payloadHash))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Idempotency-Key đã dùng cho payload khác"));
             return toResponse(winner);
         }
     }

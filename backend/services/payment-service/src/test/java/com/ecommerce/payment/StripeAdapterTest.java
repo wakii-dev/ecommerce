@@ -114,7 +114,7 @@ class StripeAdapterTest {
         AdapterRefund result = adapter.refund("pi_test_123", 100000L);
 
         assertThat(result.refundId()).isEqualTo("re_test_1");
-        assertThat(result.status()).isEqualTo("succeeded");
+        assertThat(result.status()).as("mirror UPPERCASE (contract RefundStatus enum)").isEqualTo("SUCCEEDED");
         assertThat(result.amount()).isEqualTo(100000);
         wiremock.verify(postRequestedFor(urlEqualTo("/v1/refunds"))
             .withRequestBody(containing("payment_intent=pi_test_123"))

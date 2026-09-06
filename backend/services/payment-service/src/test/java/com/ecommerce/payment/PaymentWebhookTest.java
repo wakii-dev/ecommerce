@@ -216,6 +216,57 @@ class PaymentWebhookTest extends AbstractPaymentIntegrationTest {
     }
 
     @Test
+    void chargeRefundedMarksRefundedSilentlyNoOutbox() throws Exception {
+        String pi = "pi_web_" + SEQ.incrementAndGet();
+        String orderId = seedIntent(pi, "SUCCEEDED", 250000);
+        long succeededBefore = outboxCount("payment.succeeded");
+        long failedBefore = outboxCount("payment.failed");
+
+        // charge.refunded: data.object = CHARGE (không phải PaymentIntent) — chiếu
+        // qua branch instanceof Charge của adapter; silent → KHÔNG outbox row
+        String event = """
+            {"id":"evt_%s","object":"event","created":%d,
+             "type":"charge.refunded",
+             "data":{"object":{"id":"ch_%s","object":"charge","amount":250000,
+                     "amount_refunded":250000,"currency":"vnd","payment_intent":"%s",
+                     "status":"succeeded","livemode":false}}}
+            """.formatted(UUID.randomUUID(), Instant.now().getEpochSecond(), pi, pi);
+        ResponseEntity<Map> response = rest.postForEntity("/payment/webhook",
+            new HttpEntity<>(event, signedHeaders(event)), Map.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(jdbc.queryForObject(
+            "SELECT status FROM payment_intents WHERE stripe_intent_id = ?", String.class, pi))
+            .as("charge.refunded → REFUNDED (silent)").isEqualTo("REFUNDED");
+        assertThat(outboxCount("payment.succeeded")).as("silent — không emit event").isEqualTo(succeededBefore);
+        assertThat(outboxCount("payment.failed")).isEqualTo(failedBefore);
+    }
+
+    @Test
+    void outOfOrderFailureDoesNotDowngradeSucceededIntent() throws Exception {
+        String pi = "pi_web_" + SEQ.incrementAndGet();
+        seedIntent(pi, "SUCCEEDED", 250000);
+        long failedBefore = outboxCount("payment.failed");
+        // attempt-1-fail event (payment_failed) tới SAU khi attempt-2 đã succeeded
+        String event = """
+            {"id":"evt_%s","object":"event","created":%d,
+             "type":"payment_intent.payment_failed",
+             "data":{"object":{"id":"%s","object":"payment_intent","amount":250000,
+                     "currency":"vnd","status":"requires_payment_method","client_secret":"cs_x",
+                     "last_payment_error":{"message":"late decline"},"livemode":false}}}
+            """.formatted(UUID.randomUUID(), Instant.now().getEpochSecond(), pi);
+        ResponseEntity<Map> response = rest.postForEntity("/payment/webhook",
+            new HttpEntity<>(event, signedHeaders(event)), Map.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(jdbc.queryForObject(
+            "SELECT status FROM payment_intents WHERE stripe_intent_id = ?", String.class, pi))
+            .as("out-of-order FAILED KHÔNG được hạ cấp SUCCEEDED (double-charge/false-failed)")
+            .isEqualTo("SUCCEEDED");
+        assertThat(outboxCount("payment.failed")).as("không emit false payment.failed").isEqualTo(failedBefore);
+    }
+
+    @Test
     void unknownIntentIsAckedWithoutOutbox() throws Exception {        long before = outboxCount("payment.succeeded");
 
         ResponseEntity<Map> response = postWebhook("payment_intent.succeeded", "pi_khong_ton_tai", 250000);

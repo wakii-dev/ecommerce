@@ -42,10 +42,11 @@ class PaymentDegradedTest extends AbstractPaymentIntegrationTest {
 
     @Test
     void createIntentWithoutKeyReturns503PaymentUnconfigured() {
-        var body = Map.<String, Object>of("orderId", "o-degraded", "amount", 250000, "currency", "VND");
+        var body = Map.<String, Object>of("orderId", "o-degraded-" + System.nanoTime(),
+            "amount", 250000, "currency", "VND");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Idempotency-Key", "key-degraded-1");
+        headers.set("Idempotency-Key", "key-degraded-" + System.nanoTime());
 
         ResponseEntity<String> response = rest.postForEntity(
             "/payment/intents", new HttpEntity<>(body, headers), String.class);
@@ -62,21 +63,22 @@ class PaymentDegradedTest extends AbstractPaymentIntegrationTest {
         json.setContentType(MediaType.APPLICATION_JSON);
 
         // refund/void: local precheck 404 chạy TRƯỚC adapter — seed intent SUCCEEDED/CREATED
-        // (jdbc cùng POSTGRES singleton) để request đi tới adapter → Unconfigured → 503
+        // (jdbc cùng POSTGRES singleton) để request đi tới adapter → Unconfigured → 503.
+        // orderId RIÊNG mỗi seed — active-intent check của createIntent không đụng test khác.
         String piSucceeded = "pi_degraded_succ_" + System.nanoTime();
         jdbc.update("""
                 INSERT INTO payment_intents (id, order_id, stripe_intent_id, amount_vnd, currency,
                                              status, idempotency_key, payload_hash)
-                VALUES (?::uuid, 'o-degraded', ?, 250000, 'VND', 'SUCCEEDED', ?, 'hash')
+                VALUES (?::uuid, ?, ?, 250000, 'VND', 'SUCCEEDED', ?, 'hash')
                 """,
-            java.util.UUID.randomUUID(), piSucceeded, "key-" + piSucceeded);
+            java.util.UUID.randomUUID(), "o-degraded-succ-" + piSucceeded, piSucceeded, "key-" + piSucceeded);
         String piCreated = "pi_degraded_created_" + System.nanoTime();
         jdbc.update("""
                 INSERT INTO payment_intents (id, order_id, stripe_intent_id, amount_vnd, currency,
                                              status, idempotency_key, payload_hash)
-                VALUES (?::uuid, 'o-degraded', ?, 250000, 'VND', 'CREATED', ?, 'hash')
+                VALUES (?::uuid, ?, ?, 250000, 'VND', 'CREATED', ?, 'hash')
                 """,
-            java.util.UUID.randomUUID(), piCreated, "key-" + piCreated);
+            java.util.UUID.randomUUID(), "o-degraded-created-" + piCreated, piCreated, "key-" + piCreated);
 
         assertThat(rest.postForEntity("/payment/refunds",
             new HttpEntity<>(Map.of("paymentIntentId", piSucceeded, "reason", "r"), json), String.class)

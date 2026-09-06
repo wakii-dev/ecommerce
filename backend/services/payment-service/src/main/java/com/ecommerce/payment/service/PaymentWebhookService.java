@@ -91,6 +91,17 @@ public class PaymentWebhookService {
                 event.type(), event.intentId());
             return;
         }
+        // Out-of-order guard (Stripe không đảm bảo thứ tự): attempt 1 fail (event A),
+        // attempt 2 succeed (event B) — nếu A tới SAU B thì KHÔNG được hạ cấp
+        // SUCCEEDED/REFUNDED/VOIDED → FAILED (false payment.failed). Chiều lên vẫn mở.
+        if (lifecycleStatus == PaymentIntentStatus.FAILED && intent.getStatus() != null
+            && (intent.getStatus() == PaymentIntentStatus.SUCCEEDED
+                || intent.getStatus() == PaymentIntentStatus.REFUNDED
+                || intent.getStatus() == PaymentIntentStatus.VOIDED)) {
+            log.warn("Bỏ qua {} cho intent {} — đã terminal-positive {} (event out-of-order)",
+                event.type(), intent.getStripeIntentId(), intent.getStatus());
+            return;
+        }
         intent.markStatus(lifecycleStatus);
         intent.markStripeStatus(mirrorOf(event.type()));
         intents.save(intent);

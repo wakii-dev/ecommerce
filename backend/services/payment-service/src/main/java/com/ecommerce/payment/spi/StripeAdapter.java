@@ -75,7 +75,7 @@ public class StripeAdapter implements PaymentProviderAdapter {
         }
         try {
             Refund refund = Refund.create(builder.build(), requestOptions(null));
-            return new AdapterRefund(refund.getId(), refund.getStatus(), refund.getAmount());
+            return new AdapterRefund(refund.getId(), mirrorStatus(refund.getStatus()), refund.getAmount());
         } catch (StripeException e) {
             throw wrap("refund intent " + providerIntentId, e);
         }

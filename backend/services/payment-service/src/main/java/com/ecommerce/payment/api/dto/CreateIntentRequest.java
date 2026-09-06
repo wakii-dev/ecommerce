@@ -10,9 +10,9 @@ import jakarta.validation.constraints.Positive;
  * 400 khi thiếu CẢ HAI.
  */
 public record CreateIntentRequest(
-    @NotBlank String orderId,
+    @NotBlank @jakarta.validation.constraints.Size(max = 64) String orderId,
     @Positive long amount,
     String currency,
-    String idempotencyKey
+    @jakarta.validation.constraints.Size(max = 128) String idempotencyKey
 ) {
 }

@@ -34,7 +34,7 @@ linear: FI-314
 Design: none
 What: Khách duyệt được catalog Tiki-style qua storefront-web Next.js SSR (D16) — home (hero + flash deal countdown + featured), PLP (sidebar danh mục + filter giá/rating + sort + pagination), search, PDP (gallery + variant + tồn kho + add-to-cart stub theo cart contract + JSON-LD/OG), sitemap/robots; catalog-service với search Elasticsearch chính + PG FTS fallback (D15), seed ~24 sản phẩm Tiki-categories. demo: guest search "tên sản phẩm" → ra kết quả (ES) → vào PDP → view-source thấy HTML SSR tên + giá.
 Depends on: SF-2
-Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-category-apis / searchengine-interface-pgfts-impl / es-indexer-productchanged-reindex / es-search-query-suggest / filters-sort-pagination / redis-cache-invalidate-productchanged-outbox / product-fields-compareprice-flash-rating / seed-data-tiki-categories / nextjs-storefront-scaffold-home-flashdeal / plp-ssr-sidebar-filter-grid / pdp-ssr-gallery-variant-jsonld-og / search-couponcenter-sitemap-robots / storefront-it-tests
+Tasks: catalog-service-scaffold / flyway-products-categories-variants-i18n-jsonb / product-category-apis-locale-resolution / searchengine-interface-pgfts-impl / es-indexer-perlocale-productchanged-reindex / es-search-query-suggest-locale / redis-cache-invalidate-productchanged-outbox / product-fields-compareprice-flash-rating / seed-data-tiki-categories-bilingual / nextjs-storefront-scaffold-locale-routing-hreflang / home-ssr-flashdeal-featured / plp-ssr-sidebar-filter-grid-pagination / pdp-ssr-gallery-variant-jsonld-og / search-couponcenter-sitemap-robots / storefront-it-tests
 
 ## SF-5 inventory + payment services
 Tier: 2
@@ -58,7 +58,7 @@ linear: FI-317
 Design: none
 What: Admin quản trị được — /admin với RBAC guard UI, products/categories CRUD LIVE (tạo product thấy ngay trên storefront), coupons CRUD + reviews moderation queue + orders list/detail + revenue stats theo CONTRACT MOCKS, dashboard KPI + charts (low-stock live). demo: admin login → tạo product → mở storefront thấy product mới; dashboard vẽ được biểu đồ.
 Depends on: SF-3, SF-4, SF-5
-Tasks: mfe-admin-remote-registration-layout / rbac-route-guards-ui / products-list-table-live / product-form-variants-images-flashfields / categories-crud-ui-tree / coupons-crud-ui-mock / reviews-moderation-queue-mock / orders-list-detail-mock / dashboard-kpi-charts-revenue-top-lowstock / admin-theme-polish / admin-it-tests
+Tasks: mfe-admin-remote-registration-layout / rbac-route-guards-ui / products-list-table-live / product-form-variants-images-flashfields-i18n-tabs / categories-crud-ui-tree / coupons-crud-ui-mock / reviews-moderation-queue-mock / orders-list-detail-mock / dashboard-kpi-charts-revenue-top-lowstock / admin-theme-polish / admin-it-tests
 
 ## SF-8 reviews + wishlist
 Tier: 3

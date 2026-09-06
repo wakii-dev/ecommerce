@@ -29,7 +29,11 @@ public class CorsConfig {
         "http://localhost:5176",
         "http://localhost:5177",
         "http://localhost:5178",
-        "http://localhost:5179"
+        "http://localhost:5179",
+        // SF-6 (2026-09-06): storefront-web Next :3000 (D16) — PDP add-to-cart
+        // POST /api/cart/items đi qua gateway. Thiếu origin này = 403 mọi POST
+        // từ PDP (SF-4 che bằng toast fail-soft "giỏ sẽ sớm khả dụng").
+        "http://localhost:3000"
     );
 
     @Bean

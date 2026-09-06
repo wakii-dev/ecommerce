@@ -34,7 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * là việc của EsEngine Task 6). Seed tối thiểu qua repository, seed runner TẮT
  * (base class) + uri ES rỗng → config chọn PgFts không ping.
  */
-@TestPropertySource(properties = "elasticsearch.uri=")
+@TestPropertySource(properties = {"catalog.seed.enabled=false", "elasticsearch.uri="})
 class PgFtsEngineTest extends AbstractIntegrationTest {
 
     @Autowired

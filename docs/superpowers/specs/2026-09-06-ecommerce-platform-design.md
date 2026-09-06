@@ -16,7 +16,7 @@
 | **Input** | Không có Figma, không có code, không có data → UI đi qua designer mock-prototype (3 hướng, user chọn); seed data sinh tự động |
 | **Context** | Repo rỗng hoàn toàn (1 initial commit, branch `master`). Orca + Linear team `FI` sẵn sàng. Story chạy qua story-workflow: epic + 10 SF theo tier |
 | **Success criteria** | Xem §5 — 7 tiêu chí binary, demo được |
-| **Out-of-scope** | Mobile app, SSR/SEO server-render, K8s/helm manifests, CI/CD production pipeline, thanh toán thật production, Elasticsearch, social login, real-time WebSocket, multi-vendor/marketplace |
+| **Out-of-scope** | Mobile app, SSR/SEO server-render, K8s/helm manifests, CI/CD production pipeline, thanh toán thật production, social login, real-time WebSocket, multi-vendor/marketplace |
 
 ## 2. Quyết định đã chốt (decision log)
 
@@ -36,6 +36,7 @@
 | D12 | Deploy: docker-compose (dev: infra-only + apps trên host; profile `full`: toàn bộ containerized). Dockerfile per app. K8s chỉ ADR migration path | AGENT (phase0) |
 | D13 | **Design/product reference: https://tiki.vn** — storefront benchmark theo pattern UX Tiki (xem §4.1). Reference pattern, KHÔNG copy logo/brand/assets/data | **USER** (thêm sau spec draft) |
 | D14 | **MongoDB = central event/audit log store** (polyglot persistence): `log-service` (port 8088) fan-in TẤT CẢ domain events từ RabbitMQ → Mongo collection `event_log`. Consume-only — KHÔNG contract REST mới. Xem qua mongo-express (:8089). Admin activity page = backlog | **USER** (thêm sau APPROVE, trước SF-2 freeze) + AGENT chốt thiết kế fan-in |
+| D15 | **Elasticsearch = search engine chính** trong catalog-service qua `SearchEngine` interface (EsEngine khi có `ELASTICSEARCH_URI` / PgFtsEngine fallback — degraded không crash). Indexer consume `product.changed` + bulk reindex startup. ES 8 single-node, heap cap 512m, security off (dev). Contract search API KHÔNG đổi. ADR ghi extract-path thành search-service riêng | **USER** (thêm sau APPROVE, trước SF-4) + AGENT chốt abstraction |
 
 ## 3. Kiến trúc
 
@@ -85,7 +86,7 @@ ecommerce/
 | Service | Sở hữu | DB | Events publish | Events consume |
 |---|---|---|---|---|
 | identity | users, roles, JWT (RS256 private), refresh | db_identity | user.created | — |
-| catalog | products, categories, images, reviews, wishlist, rating aggregate | db_catalog | product.changed, review.moderated | order.confirmed (verified-purchase + rating aggregate — fat payload §6.1) |
+| catalog | products, categories, images, reviews, wishlist, rating aggregate; **search qua SearchEngine: ES chính + PG FTS fallback (D15)** | db_catalog + **Elasticsearch index `products`** | product.changed, review.moderated | order.confirmed (verified-purchase + rating aggregate — fat payload §6.1) |
 | cart | guest/user cart, merge-on-login | Redis | — | order.confirmed (xóa cart items theo user + items) |
 | inventory | stock, reservations (TTL 30') | db_inventory | inventory.reserved, inventory.released, inventory.committed | order.paid (commit reservation), order.cancelled/order.failed (release) |
 | ordering | orders, order_items, coupons, checkout saga, outbox | db_ordering | order.created, order.paid, order.confirmed, order.cancelled, order.failed (created/paid: published for future consumers — additive) | payment.succeeded, payment.failed |
@@ -176,15 +177,16 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 6. Review flow: mua xong → viết review → admin duyệt → review hiện trên PDP với badge verified.
 7. Saga compensation: fail-injection (payment declined) → stock được release, order FAILED, không rò rỉ reservation.
 8. Mongo `event_log` (mongo-express :8089) có documents cho TẤT CẢ domain events xảy ra trong demo — action ở UI → dòng log xuất hiện.
+9. Elasticsearch: index `products` có documents sau seed/reindex (`curl :9200/products/_count` > 0); search endpoint trả kết quả qua ES; ES down → fallback PG FTS (degraded, không crash).
 
 ## 6. SF split (10 SF — mỗi SF 8-15 tasks, contract-first)
 
 | SF | Tên | Tier | Depends | Theme (~tasks) |
 |---|---|---|---|---|
-| SF-1 | platform-foundation | 0 | — | Repo scaffold (Makefile, compose infra PG/Redis/RabbitMQ/Mailpit/Mongo+mongo-express/stripe-cli, db init), Maven parent + **service template module** (health/springdoc/Flyway/Testcontainers/Dockerfile), frontend pnpm+turbo scaffold, gateway skeleton (routes/request-id/CORS), shared common-lib (envelope/outbox base/error), contracts dir skeleton (~14) |
+| SF-1 | platform-foundation | 0 | — | Repo scaffold (Makefile, compose infra PG/Redis/RabbitMQ/Mailpit/Mongo+mongo-express/Elasticsearch/stripe-cli, db init), Maven parent + **service template module** (health/springdoc/Flyway/Testcontainers/Dockerfile), frontend pnpm+turbo scaffold, gateway skeleton (routes/request-id/CORS), shared common-lib (envelope/outbox base/error), contracts dir skeleton (~14) |
 | SF-2 | contracts-design-foundation | 1 | SF-1 | **Freeze toàn bộ OpenAPI specs (7 service) + JSON Schema events (fat payloads — §6.1) + order state machine (§3.6) + admin stats endpoints**, TS codegen → packages/contracts, packages/auth (RS256 decode/refresh singleton), ui-kit v1 (tokens + primitives + 2 theme), i18n vi/en, designer mock-prototype 3 hướng Tiki-inspired (§4.1) → USER CHỌN, **federation harness (shell + 1 skeleton remote qua MF 2.0 runtime — shared singletons 1 instance, pattern `REMOTE_*_URL` proven; gate: harness xanh trước khi T2 fork)**. Freeze contracts KHÔNG chờ designer choice (contract trước; ui-kit tokens theo hướng được chọn sau) — 1 lựa chọn hướng GLOBAL, các SF sau implement screens theo hướng đó (~14) |
 | SF-3 | identity + account | 2 | SF-2 | identity-service (register/login/refresh/JWT RS256/RBAC, seed admin), mfe-account (login/register/profile — orders page là placeholder cho tới SF-9), gateway auth wiring, shell header auth state (~11) |
-| SF-4 | catalog + browse | 2 | SF-2 | catalog-service (products/categories/images/search FTS/Redis cache+invalidate/seed, compare_price + flash_sale_ends_at + rating_avg/rating_count denormalized), mfe-storefront (home/PLP filter-sort-paginate/PDP gallery + add-to-cart stub), product.changed events (~14) |
+| SF-4 | catalog + browse | 2 | SF-2 | catalog-service (products/categories/images/Redis cache+invalidate/seed, compare_price + flash_sale_ends_at + rating_avg/rating_count denormalized, **search: SearchEngine interface — EsEngine chính + PgFtsEngine fallback (D15), indexer consume product.changed + bulk reindex startup**), mfe-storefront (home/PLP filter-sort-paginate/PDP gallery + add-to-cart stub) (~14) |
 | SF-5 | inventory + payment services | 2 | SF-2 | inventory-service (stock, variant-level reservations TTL, `POST /reservations` all-or-nothing + commit/release qua events), payment-service (Stripe intent/webhook verify/adapter SPI createIntent-void-refund/outbox), integration harness Testcontainers (~10) |
 | SF-6 | cart + checkout UX | 3 | SF-3, SF-4, SF-5 | cart-service (Redis guest+user qua cart_token cookie, merge-on-login POST /cart/merge, removed-product filter), mfe-checkout (cart UI, checkout steps, coupon apply, Stripe.js confirm — Stripe test keys từ `.env`, không key → lỗi rõ ràng không crash, confirmation page) — **gate: checkout/coupon/Stripe-confirm build trên contract stubs của ordering; live wiring tại SF-10** (~12) |
 | SF-7 | admin MFE | 3 | SF-3, SF-4, SF-5 | mfe-admin shell + RBAC guards, products/categories CRUD (**live** — catalog có từ T2), coupons CRUD + reviews moderation queue + orders list/detail + revenue stats (**mock-gate** theo contract — ordering chưa có ở T3; low-stock live qua SF-5), live-data verify SF-10 (~13) |
@@ -234,5 +236,5 @@ Storefront mô phỏng pattern UX của tiki.vn (không clone brand):
 - Flash-deal (§4.1) không có engine riêng: product có `compare_price` (giá gạch → badge %) + `flash_sale_ends_at` nullable (đếm ngược); admin chỉnh 2 trường này trong product form. Rating sao trên card đọc từ `rating_avg`/`rating_count` denormalized (seed sẵn, SF-8 cập nhật qua events).
 - Stripe test keys từ user `.env` (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`); không key → payment service khởi động degraded, checkout báo lỗi rõ ràng (R5).
 - Currency VND, locale vi mặc định; i18n `en` chỉ phủ chrome chung (nav/labels) — dịch đầy đủ là backlog.
-- Search tiếng Việt: PG FTS config `simple` + extension `unaccent` (Postgres không có stemming tiếng Việt) — acceptance §5.2 kiểm theo seed-term khớp chính xác.
+- Search tiếng Việt (D15): Elasticsearch `standard` analyzer là engine chính; PG FTS (`simple` + `unaccent`) là fallback — cả hai chấp nhận khớp seed-term chính xác, không stemming tiếng Việt đầy đủ (acceptance §5.2/§5.9 theo seed-term).
 - JVM 21 có sẵn trên máy; nếu không, Makefile check + hướng dẫn.

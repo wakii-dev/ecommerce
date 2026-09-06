@@ -10,7 +10,7 @@ Tier: 0
 linear: FI-311
 What: Nền móng chạy được — `docker compose up -d`healthy (PG 5 DB, Redis, RabbitMQ, Mailpit, stripe-cli) + `make dev svc=<tên>` boot được service từ template + gateway route smoke 200 với request-id + frontend pnpm/turbo workspace build xanh. demo: hệ khung sống, chưa có business.
 Depends on: —
-Tasks: monorepo-scaffold-makefile-readme-env / pnpm-turbo-frontend-workspace / maven-multimodule-parent-springboot3-java21 / compose-infra-stack-pg5db-redis-rabbitmq-mailpit-mongo-stripecli / service-template-module-health-actuator-dockerfile / template-springdoc-flyway-conventions / template-testcontainers-it-harness / gateway-skeleton-route-table-cors / gateway-requestid-filter / common-lib-event-envelope-outbox-base-error-model / contracts-dir-skeleton-openapi-lint / makefile-dev-targets-per-service / compose-healthchecks-wiring
+Tasks: monorepo-scaffold-makefile-readme-env / pnpm-turbo-frontend-workspace / maven-multimodule-parent-springboot3-java21 / compose-infra-stack-pg5db-redis-rabbitmq-mailpit-mongo-elasticsearch-stripecli / service-template-module-health-actuator-dockerfile / template-springdoc-flyway-conventions / template-testcontainers-it-harness / gateway-skeleton-route-table-cors / gateway-requestid-filter / common-lib-event-envelope-outbox-base-error-model / contracts-dir-skeleton-openapi-lint / makefile-dev-targets-per-service / compose-healthchecks-wiring
 
 ## SF-2 contracts-design-foundation
 Tier: 1
@@ -34,7 +34,7 @@ linear: FI-314
 Design: none
 What: Khách duyệt được catalog Tiki-style — home (hero + flash deal countdown + featured), PLP (sidebar danh mục + filter giá/rating + sort + pagination), search FTS, PDP (gallery + variant + tồn kho + add-to-cart stub theo cart contract), seed ~24 sản phẩm Tiki-categories. demo: guest search "tên sản phẩm" → ra kết quả → vào PDP → đổi variant đổi giá.
 Depends on: SF-2
-Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-category-apis / search-fts-unaccent-suggest / filters-sort-pagination / redis-cache-invalidate-productchanged / product-fields-compareprice-flash-rating / seed-data-tiki-categories / outbox-product-changed / mfe-storefront-remote-registration / home-tiki-hero-flashdeal-featured / plp-sidebar-filter-grid-card / pdp-gallery-variant-addtocart-stub / storefront-it-tests
+Tasks: catalog-service-scaffold / flyway-products-categories-variants / product-category-apis / searchengine-interface-pgfts-impl / es-indexer-productchanged-reindex / es-search-query-suggest / filters-sort-pagination / redis-cache-invalidate-productchanged-outbox / product-fields-compareprice-flash-rating / seed-data-tiki-categories / home-tiki-flashdeal-featured-storefront-remote / plp-sidebar-filter-grid-card / pdp-gallery-variant-addtocart-stub / storefront-it-tests
 
 ## SF-5 inventory + payment services
 Tier: 2

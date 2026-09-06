@@ -1369,7 +1369,7 @@ class AuthApiIntegrationTest extends AbstractIntegrationTest {
 
 - [x] **Step 8: Chạy full IT** — `cd backend && mvn -pl services/identity-service -am test`. Expected: BUILD SUCCESS tất cả IT. Fail → 3-WHY trước khi fix (debugging discipline).
 
-- [ ] **Step 9: Smoke chạy thật với compose infra** (keys + env):
+- [x] **Step 9: Smoke chạy thật với compose infra** (keys + env — đã chạy trong T7 bring-up, port override máy này):
 
 ```bash
 make keys                                     # sinh infra/keys (đã có thì skip)
@@ -2156,7 +2156,7 @@ pnpm -C frontend --filter @ecommerce/mfe-account exec tsc --noEmit
 pnpm -C frontend --filter @ecommerce/auth test
 ```
 
-- [ ] **Step 7: Smoke remote standalone + trong shell** (cần Task 6 xong cho shell — chạy lại ở Task 7):
+- [x] **Step 7: Smoke remote standalone + trong shell** (chạy trong T7/T8 — browser verify):
 
 ```bash
 make dev svc=identity &                        # nếu chưa

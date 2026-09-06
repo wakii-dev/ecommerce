@@ -21,7 +21,12 @@ const SHARED_SINGLETONS = {
   'react-dom': { singleton: true, requiredVersion: false },
   '@tanstack/react-query': { singleton: true, requiredVersion: false },
   i18next: { singleton: true, requiredVersion: false },
-  'react-i18next': { singleton: true, requiredVersion: false }
+  'react-i18next': { singleton: true, requiredVersion: false },
+  // Workspace packages dùng xuyên MF boundary (SF-2 Task 14 pack pin):
+  // 1 instance authStore/ui-kit/i18n toàn app — remote KHÔNG mang bản riêng.
+  '@ecommerce/auth': { singleton: true, requiredVersion: false },
+  '@ecommerce/ui-kit': { singleton: true, requiredVersion: false },
+  '@ecommerce/i18n': { singleton: true, requiredVersion: false }
 };
 
 /**

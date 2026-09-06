@@ -1,0 +1,320 @@
+openapi: 3.1.0
+info:
+  title: Payment API
+  version: 1.0.0
+  description: |
+    Payment service — REST surface mà ordering-service gọi đồng bộ (sync command edge §3.3).
+
+    Adapter SPI nội bộ: `createIntent` / `void` / `refund` / `verifyWebhook` — Stripe là
+    adapter đầu tiên; VNPay/MoMo bổ sung sau cùng interface, không đổi contract này.
+    COD KHÔNG đi qua service này (saga COD bỏ bước intent — D21).
+
+    Stripe VND là zero-decimal currency: mọi trường tiền `amount` = số nguyên đơn vị VND,
+    KHÔNG dùng số thập phân.
+servers:
+  - url: /
+    description: Same origin — ordering-service gọi nội bộ; baseURL inject qua config khi runtime.
+tags:
+  - name: payments
+    description: Intent / webhook / refund / void — ordering-service gọi sync.
+  - name: admin
+    description: Reserved cho admin payment views (SF sau — additive).
+paths:
+  /api/payment/intents:
+    post:
+      tags:
+        - payments
+      operationId: createPaymentIntent
+      summary: Tạo payment intent (Stripe, VND zero-decimal)
+      description: |
+        Ordering gọi ngay khi tạo order stripe. `idempotencyKey` bảo vệ retry: cùng key +
+        cùng payload → trả lại kết quả cũ (idempotent replay); cùng key + payload khác → 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntentRequest'
+      responses:
+        '201':
+          description: Intent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntentCreated'
+        '400':
+          description: Payload không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: IdempotencyKey trùng nhưng payload khác, hoặc order đã có intent active
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/payment/webhook:
+    post:
+      tags:
+        - payments
+      operationId: handlePaymentWebhook
+      summary: Nhận webhook Stripe (raw event passthrough)
+      description: |
+        Body là raw Stripe event giữ nguyên như Stripe gửi (không parse/đổi shape ở edge).
+        Verify chữ ký qua header `Stripe-Signature` trước khi xử lý; chữ ký sai → 400.
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          description: Chữ ký HMAC từ Stripe (t=<ts>,v1=<sig>)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeEvent'
+      responses:
+        '200':
+          description: Event nhận thành công (xử lý async sau ack)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAck'
+        '400':
+          description: Chữ ký sai / payload không parse được
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/payment/refunds:
+    post:
+      tags:
+        - payments
+      operationId: createRefund
+      summary: Hoàn tiền (full hoặc một phần)
+      description: |
+        Gọi khi admin cancel order đã PAID (refund tự động theo §3.6) hoặc RMA refund.
+        Bỏ `amount` → refund toàn bộ. Ordering lo cập nhật state order; service này chỉ
+        điều phối adapter và publish `payment.succeeded|failed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '201':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundCreated'
+        '400':
+          description: Payload không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: paymentIntentId không tồn tại
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Intent không refund được (chưa capture / tổng refund vượt amount)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/payment/void:
+    post:
+      tags:
+        - payments
+      operationId: voidPayment
+      summary: Void intent (hủy trước capture)
+      description: Chỉ void được intent chưa capture; đã succeeded → refund path thay thế.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+      responses:
+        '200':
+          description: Voided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidResult'
+        '400':
+          description: Payload không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: paymentIntentId không tồn tại
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Intent đã capture / đã void — không void được nữa
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  schemas:
+    ApiError:
+      type: object
+      description: RFC 7807 problem+json — mirror backend/shared/common-lib ApiError
+      properties:
+        type: { type: string, default: "about:blank" }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        timestamp: { type: string, format: date-time }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    CreateIntentRequest:
+      type: object
+      required:
+        - orderId
+        - amount
+        - currency
+        - idempotencyKey
+      properties:
+        orderId:
+          type: string
+          description: Order id bên ordering-service
+        amount:
+          type: integer
+          description: Tổng tiền đơn vị VND nguyên (Stripe zero-decimal) — bằng order.total
+        currency:
+          type: string
+          enum:
+            - VND
+        idempotencyKey:
+          type: string
+          description: UUID do ordering sinh 1 lần cho mỗi lần tạo intent (retry dùng lại key cũ)
+    PaymentIntentStatus:
+      type: string
+      description: Mirror trạng thái Stripe PaymentIntent (uppercase)
+      enum:
+        - REQUIRES_PAYMENT_METHOD
+        - REQUIRES_CONFIRMATION
+        - PROCESSING
+        - SUCCEEDED
+        - CANCELED
+    PaymentIntentCreated:
+      type: object
+      required:
+        - paymentIntentId
+        - clientSecret
+        - status
+      properties:
+        paymentIntentId:
+          type: string
+          description: pi_... của Stripe (adapter-generated)
+        clientSecret:
+          type: string
+          description: FE dùng cho Stripe Elements confirm — order.created response nhả lại cho client
+        status:
+          $ref: '#/components/schemas/PaymentIntentStatus'
+    StripeEvent:
+      type: object
+      description: Envelope event raw của Stripe — giữ nguyên shape Stripe gửi (passthrough)
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+          description: evt_... Stripe
+        object:
+          type: string
+          description: Luôn "event" theo Stripe
+        api_version:
+          type: string
+        created:
+          type: integer
+          description: Unix timestamp giây
+        type:
+          type: string
+          description: vd payment_intent.succeeded, charge.refunded
+        data:
+          type: object
+          description: 'Stripe data wrapper (object: payload thô) — raw, adapter tự parse'
+          additionalProperties: true
+      additionalProperties: true
+    WebhookAck:
+      type: object
+      required:
+        - received
+      properties:
+        received:
+          type: boolean
+          description: Luôn true — ack nhận trước khi xử lý (idempotent theo event id Stripe)
+    RefundRequest:
+      type: object
+      required:
+        - paymentIntentId
+        - reason
+      properties:
+        paymentIntentId:
+          type: string
+        amount:
+          type: integer
+          description: Số tiền refund đơn vị VND; bỏ trống = refund toàn bộ
+        reason:
+          type: string
+          description: duplicate | fraudulent | requested_by_customer | admin_cancel — tự do text, log lại
+    RefundStatus:
+      type: string
+      description: Mirror trạng thái Stripe Refund (uppercase)
+      enum:
+        - PENDING
+        - SUCCEEDED
+        - FAILED
+        - CANCELED
+    RefundCreated:
+      type: object
+      required:
+        - refundId
+        - status
+        - amount
+      properties:
+        refundId:
+          type: string
+          description: re_... của Stripe
+        status:
+          $ref: '#/components/schemas/RefundStatus'
+        amount:
+          type: integer
+          description: Số tiền thực refund (VND)
+    VoidRequest:
+      type: object
+      required:
+        - paymentIntentId
+      properties:
+        paymentIntentId:
+          type: string
+    VoidResult:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/PaymentIntentStatus'

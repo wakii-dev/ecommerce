@@ -6,6 +6,8 @@ rules:
   info-license: off
   # Convention repo: operationId camelCase — codegen TS phụ thuộc nó
   operation-tag-defined: error
+  # Paths kebab-case (trừ /api/<service> prefix) — MỘT DÒNG (regex gấp dòng
+  # làm YAML chèn space sau $ → warn sai mọi path, review FI-311 round 2)
   paths-kebab-case:
     description: Paths dùng kebab-case (trừ /api/<service> prefix).
     severity: warn
@@ -14,5 +16,4 @@ rules:
       field: "@key"
       function: pattern
       functionOptions:
-        match: "^(/api/[a-z-]+)?(/[a-z0-9-{}])*$
-"
+        match: "^(/api/[a-z-]+)?(/[a-z0-9-{}])*$"

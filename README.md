@@ -72,7 +72,7 @@ flowchart LR
 | `inventory` | 8084 | Stock theo variant, reservation TTL 30' all-or-nothing | `db_inventory` |
 | `ordering` | 8085 | Orders, **checkout saga**, coupons, state machine, admin stats | `db_ordering` |
 | `payment` | 8086 | Stripe test (intent/webhook/refund), `PaymentProviderAdapter` SPI | `db_payment` |
-| `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | — |
+| `notification` | 8087 | Email (Mailpit): xác nhận/hủy đơn, review | `db_notification` |
 | `log` | 8088 | Fan-in **mọi domain event** → Mongo `event_log` (audit trail) | MongoDB |
 
 ## 🖥️ Micro frontends
@@ -107,7 +107,7 @@ flowchart LR
 > của nền móng (SF-1): infra + service template + gateway + FE workspace.
 
 ```bash
-# Yêu cầu: JDK 21 · Maven 3.9+ · Docker Desktop · Node 20+ · pnpm 9+
+# Yêu cầu: JDK 21 · Maven 3.9+ · Docker Desktop · Node 20+ · pnpm 10 (corepack enable)
 cp .env.example .env        # điền STRIPE_SECRET_KEY (sk_test_...) để bật payment
 
 make infra                  # postgres (5 DB) · redis · rabbitmq · mailpit · mongo · elasticsearch

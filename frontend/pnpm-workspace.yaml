@@ -1,6 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # SF-10 (FI-320): Playwright E2E — pack touch map pin frontend/e2e/**
+  - "e2e"
 
 # ── PRE-PIN (R3) ─────────────────────────────────────────────────────────
 # Single source of truth versions cho TOÀN workspace. SF sau dùng `catalog:`
@@ -30,6 +32,8 @@ catalog:
   "@testing-library/react": ^16.1.0
   "@testing-library/dom": ^10.4.0
   playwright: ^1.49.1
+  # SF-10 (FI-320) — E2E runner (frontend/e2e)
+  "@playwright/test": ^1.49.1
   typescript: ^5.7.2
   turbo: ^2.3.3
   eslint: ^9.17.0

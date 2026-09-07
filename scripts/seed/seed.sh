@@ -160,5 +160,24 @@ else
   log "review APPROVED đã có — skip"
 fi
 
+# ── 6. Partner Open API demo key (deterministic — E2E §5.13) ────────────────
+# Raw key cố định (chỉ dùng dev/test): pk_ + 32 hex. DB giữ SHA-256 hash +
+# prefix 8 ký tự đầu (khớp ApiKeyService: raw KHÔNG lưu). PartnerSeedRunner
+# (SF-11) tạo DEMO-PARTNER — nếu chưa có (volume mới, service chưa boot) thì
+# script tự tạo partner row luôn cho idempotent tuyệt đối.
+PARTNER_KEY_RAW="pk_0123456789abcdef0123456789abcdef"
+PARTNER_KEY_HASH=$(printf '%s' "$PARTNER_KEY_RAW" | shasum -a 256 | cut -d' ' -f1)
+PARTNER_KEY_PREFIX="${PARTNER_KEY_RAW:0:8}"
+PSQL_PARTNER="docker compose exec -T postgres psql -U ${POSTGRES_USER:-postgres} -d db_partner -tAc"
+$PSQL_PARTNER "INSERT INTO partners (id,name,status,webhook_url,webhook_secret)
+SELECT '11111111-1111-4111-8111-111111111111','DEMO-PARTNER','ACTIVE','https://webhook.demo/v1','demo-webhook-secret'
+WHERE NOT EXISTS (SELECT 1 FROM partners WHERE name='DEMO-PARTNER') ON CONFLICT (id) DO NOTHING;" >/dev/null
+$PSQL_PARTNER "INSERT INTO api_keys (id,partner_id,key_hash,prefix,scopes)
+SELECT '22222222-2222-4222-8222-222222222222',
+  (SELECT id FROM partners WHERE name='DEMO-PARTNER'),
+  '$PARTNER_KEY_HASH','$PARTNER_KEY_PREFIX','{catalog:read,orders:read,orders:write}'
+ON CONFLICT (id) DO NOTHING;" >/dev/null
+log "partner demo key OK (raw: $PARTNER_KEY_RAW — E2E §5.13 dùng key này)"
+
 log "XONG — accounts: admin $ADMIN_EMAIL / user $DEMO_USER_EMAIL (password từ .env)"
 log "      affiliate demo: xem docs/demo-script.md §affiliate"

@@ -55,7 +55,10 @@ bash scripts/test/run-e2e.sh      # Playwright serial — CẦN make dev đang c
 
 ## Baseline report (run-batch)
 
-> Java batch 1 (00:58, chạy SONG SONG E2E — vi FLAKY-01): 143 pass / 2 error (ES container timeout, catalog); batch còn lại reactor dừng ở catalog. Re-run đơn sau fix: catalog 81/81 gồm RelatedTest 3/3 + EsIndexerSearchTest 7/7. Full sequential re-run:xem log `.run/test-logs/java-*.log` mới nhất.
+> Java batch 1 (00:58, chạy SONG SONG E2E — vi FLAKY-01): 143 pass / 2 error (ES container timeout, catalog). Batch 2 (01:31, sequential): dừng ở partner 2 fail (BUG-05/06) — fix → 45/45 solo. Batch final (02:18): dừng ở ordering — SagaTest/OrderAdminTest 401 do T10 (inventory guard) + test JWT sai JWKS + T11 mid-flight race → fix SECURITY_JWKS_URI side-context (89adcd9) → ordering 44/44 solo. **Chạy sạch cuối: xem java-*.log mới nhất (sau 02:53).**
+> ENV-04 (mới): Docker daemon half-death giữa suite (API 500, containers=0) — identity 39 errors "no valid Docker"; recovery: restart Docker Desktop + compose up + restart gateway/FE (turbo chết theo outage). 5-10' downtime, volume giữ nguyên.
+> FE: **12/12 XANH** (lần 1 + lần cuối 02:52) · pytest **7/7 XANH** (02:53).
+> E2E cuối (02:48): 34 pass / 2 fail (COD+saga kẹt /checkout) — root cause restart tay ordering với token rỗng (fix: re-mint loop ghi token file) → re-run 2 spec PASS → **36/36 non-stripe XANH, 2 skip [PENDING-STRIPE-KEYS]**. RBAC e2e 7/7 · auth-cookie 4/4.
 > FE (00:58): **12/12 turbo tasks XANH** — `.run/test-logs/fe-20260908-005758.log`
 > pytest: **7/7 XANH** (sau ENV-03 fix) — `.run/test-logs/pytest-20260908-005952.log`
 > E2E lần 1 (01:00): 11 fail = playwright browser thiếu (env) → install chromium. Lần 2 (01:01): 19 pass / 2 fail / 5 did-not-run — root cause BUG-02 (ES index wiped). Sau BUG-02 fix + reindex 56 docs: re-run 6 spec fail → **15 pass / 2 skip [PENDING-STRIPE-KEYS] / 0 fail** (01:19).

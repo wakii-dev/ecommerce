@@ -16,6 +16,7 @@
     "@ecommerce/ui-kit": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "i18next": "catalog:",
+    "qrcode": "^1.5.4",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-i18next": "catalog:"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@ecommerce/config": "workspace:*",
     "@module-federation/vite": "catalog:",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "catalog:",

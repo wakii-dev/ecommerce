@@ -47,6 +47,10 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                     "/.well-known/jwks.json",
+                    // SF-15 (FI-325): oauth browser flow + discovery nút login FE
+                    "/oauth/**", "/.well-known/oauth-providers",
+                    // SF-15: verify challenge bằng challengeToken (không JWT)
+                    "/2fa/verify",
                     "/actuator/health/**", "/actuator/info",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")

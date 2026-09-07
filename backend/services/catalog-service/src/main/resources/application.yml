@@ -68,6 +68,14 @@ outbox:
     batch-size: 100
     enabled: true
 
+# SF-15 (FI-325) — stock alert: inventory service trực tiếp + internal token
+# (service-to-service với notification — KHÔNG route public qua gateway).
+inventory:
+  base-url: ${INVENTORY_BASE_URL:http://localhost:8084}
+
+catalog:
+  internal-token: ${CATALOG_INTERNAL_TOKEN:dev-internal-token}
+
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

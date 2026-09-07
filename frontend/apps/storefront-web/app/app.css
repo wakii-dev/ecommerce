@@ -2236,3 +2236,73 @@ img {
 .wl-heart:hover {
   transform: scale(1.08);
 }
+
+/* ── SF-15 (FI-325) — stock alert PDP ────────────────────────────────────── */
+.pdp-stock-alert {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--c-border, #eeeeee);
+  border-radius: 10px;
+  background: var(--c-surface, #ffffff);
+}
+
+.pdp-stock-alert-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-text, #212121);
+}
+
+.pdp-stock-alert-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pdp-stock-alert-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border, #eeeeee);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.pdp-stock-alert-input:focus {
+  outline: 2px solid var(--c-focus, #f53d2d);
+  outline-offset: 1px;
+}
+
+.pdp-stock-alert-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--c-primary, #f53d2d);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pdp-stock-alert-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pdp-stock-alert-ok {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-success, #26aa99);
+  font-weight: 600;
+}
+
+.pdp-stock-alert-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--c-danger, #d0011b);
+}
+
+/* ── SF-15 (FI-325) — dark mode: biến phụ của app (tokens ui-kit đè riêng) ── */
+[data-theme='dark'] {
+  --footer-link: #8a8a8a;
+}

@@ -19,6 +19,12 @@ ecom:
         - /api/identity/auth/refresh
         - /api/identity/auth/logout          # contract: cookie-only, không bearerAuth
         - /api/identity/.well-known/**
+        # SF-15 (FI-325): oauth browser flow — authorize/callback/exchange + discovery
+        - /api/identity/oauth/**
+        # SF-15: verify challenge 2FA bằng challengeToken (không JWT)
+        - /api/identity/2fa/verify
+        # SF-15: guest đọc availability PDP (badge AddToCart + form stock-alert)
+        - /api/inventory/availability
         - /api/catalog/**                    # guest browse — public từ SF-4
         # SF-9 (FI-319): public theo contract (không security trên operation này)
         - /api/ordering/coupons/public       # coupon center — guest xem

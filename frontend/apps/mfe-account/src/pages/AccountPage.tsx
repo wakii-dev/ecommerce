@@ -4,6 +4,7 @@ import { Badge, Button, Card, Input } from '@ecommerce/ui-kit';
 import { authStore, useAuth } from '@ecommerce/auth';
 import { fetchProfile, updateProfile } from '../api';
 import type { MeProfile } from '../api';
+import TwoFactorSection from './twofa/TwoFactorSection';
 import { appNavigate, authReady } from '../bootstrap';
 import '../page.css';
 
@@ -134,6 +135,13 @@ export default function AccountPage(): ReactElement {
             </Button>
           </form>
         </Card>
+        {/* SF-15 (FI-325): bảo mật hai lớp — bật/tắt 2FA, sync qua fetchProfile. */}
+        <TwoFactorSection
+          enabled={profile?.twoFactorEnabled ?? false}
+          onChanged={() => {
+            fetchProfile().then(setProfile).catch(() => undefined);
+          }}
+        />
       </div>
     </div>
   );

@@ -14,7 +14,9 @@ public class UserEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    // SF-15: nullable cho OAuth-only user (login qua provider, không password).
+    // Login thường guard hash NULL ở AuthController (401, không NPE).
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false)

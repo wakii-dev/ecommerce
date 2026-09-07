@@ -4,6 +4,7 @@ import { shellUrl } from '../lib/site';
 
 import LocaleSwitcher from './LocaleSwitcher';
 import SearchBar from './SearchBar';
+import ThemeToggle from './ThemeToggle';
 
 /** Copy header — vi là brand voice mặc định, en dịch khi có bản (static Task 10). */
 const LABELS: Record<
@@ -49,6 +50,8 @@ export default function Header({ locale }: { locale: Locale }) {
         <SearchBar locale={locale} />
         <div className="header-actions">
           <LocaleSwitcher locale={locale} />
+          {/* SF-15: dark mode toggle (persist + system-first). */}
+          <ThemeToggle locale={locale} />
           <a className="header-action" href={`${shellUrl()}/cart`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.8L20 8H6" strokeLinecap="round" strokeLinejoin="round" />

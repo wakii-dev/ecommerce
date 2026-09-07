@@ -1,6 +1,9 @@
+import type { Metadata, Viewport } from 'next';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+
+import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';
 
 import './app.css';
 
@@ -21,11 +24,34 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 });
 
+/** PWA metadata (SF-15) — manifest qua app/manifest.ts; child generateMetadata
+ * ([locale]/layout) merge đè title/description, giữ manifest/icons. */
+export const metadata: Metadata = {
+  applicationName: 'ShopVN',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'ShopVN', statusBarStyle: 'default' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#F53D2D',
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const locale = headers().get('x-app-locale');
   return (
-    <html lang={locale === 'en' ? 'en' : 'vi'} className={beVietnamPro.className}>
-      <body>{children}</body>
+    // suppressHydrationWarning: boot script đổi data-theme TRƯỚC hydrate
+    // (server render không biết theme client) — chỉ suppress đúng attribute này.
+    <html
+      lang={locale === 'en' ? 'en' : 'vi'}
+      className={beVietnamPro.className}
+      suppressHydrationWarning
+    >
+      <body>
+        {/* Anti-FOUC (SF-15): set data-theme trước paint đầu — pattern next-themes. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {children}
+      </body>
     </html>
   );
 }

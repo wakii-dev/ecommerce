@@ -7,6 +7,8 @@ import App from './App';
 import { ShellNav } from './header/Header';
 import { HeaderSlots } from './header/HeaderSlots';
 import { navigate } from './router';
+import ThemeToggle from './ThemeToggle';
+import { injectLiveChat } from './livechat';
 
 // Chip kiểm chứng React singleton (Task 14): shell gắn bản React CỦA MÌNH lên
 // window TRƯỚC khi module nào của remote được nạp (import động chạy sau
@@ -14,12 +16,18 @@ import { navigate } from './router';
 // để chứng minh chỉ có 1 instance xuyên MF boundary.
 (window as any).__shellReact__ = React;
 
-// Theme mặc định cho ui-kit tokens (route /ui-kit cho phép switch 2 theme)
-document.documentElement.dataset.theme = 'storefront';
+// Theme: boot script trong index.html set data-theme TRƯỚC paint (anti-FOUC,
+// SF-15 dark mode) — main.tsx KHÔNG hard-set nữa (trước đây 'storefront' ghi
+// đè lựa chọn dark của user mỗi boot).
 
 // Nav mặc định của shell — registry pattern: chính shell cũng đăng ký qua
 // HeaderSlots như mọi consumer khác, Header.tsx không hardcode item nào.
 HeaderSlots.register('left', 'shell-nav', ShellNav);
+// Toggle dark mode (SF-15) — slot 'right' cạnh auth widget/cart badge.
+HeaderSlots.register('right', 'theme-toggle', ThemeToggle);
+
+// Live chat widget (SF-15) — env VITE_LIVECHAT_LICENSE_ID; thiếu → không load.
+injectLiveChat();
 
 // mfe-account (SF-3) — eager bootstrap: remote tự đăng ký auth widget vào slot
 // 'right' + khôi phục phiên (refresh-on-boot). KHÔNG chặn render nếu remote

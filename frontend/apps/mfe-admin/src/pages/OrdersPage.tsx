@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Card, Input, Select, Skeleton, Table } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
-import { stubApi } from '../lib/api';
+import { orderingApi } from '../lib/api';
 import { dayKeyOf, formatDateTime, formatVnd } from '../lib/format';
 import type { OrderStatusValue, StubOrder } from '../lib/types';
 
@@ -32,6 +32,13 @@ export function statusBadge(status: OrderStatusValue, t: (k: string) => string):
   return <Badge variant={variant}>{t(`admin.status.${status}`)}</Badge>;
 }
 
+/**
+ * Orders LIVE (SF-10): adminListOrders server params status/q/page (comment
+ * mock-gate SF-7: "list thật của ordering có status/q/page — SF-10 wire live
+ * chuyển sang server params"). Date range KHÔNG có trên contract → lọc
+ * client-side TRÊN TRANG HIỆN TẠI (limitation đã ghi chú — không thêm
+ * endpoint vì contracts READ-ONLY).
+ */
 export default function OrdersPage(): ReactElement {
   const { t } = useT();
 
@@ -42,30 +49,32 @@ export default function OrdersPage(): ReactElement {
   const [page, setPage] = useState(1);
 
   const ordersQuery = useQuery({
-    queryKey: ['stub-orders'],
-    queryFn: () => stubApi().listOrders()
+    queryKey: ['admin-orders', status, q.trim(), page],
+    queryFn: async () => {
+      const res = await orderingApi().adminListOrders({
+        ...(status ? { status } : {}),
+        ...(q.trim() ? { q: q.trim() } : {}),
+        page,
+        size: PAGE_SIZE
+      });
+      return res as { items: StubOrder[]; page: number; size: number; total: number };
+    }
   });
 
-  // Lọc CLIENT-SIDE (mock trong bộ nhớ; list thật của ordering có status/q/page
-  // — SF-10 wire live chuyển sang server params).
-  const filtered = useMemo(() => {
-    const list = ordersQuery.data ?? [];
-    const qLower = q.trim().toLowerCase();
+  // date-range lọc trên trang hiện tại (contract không có date param)
+  const rows = useMemo(() => {
+    const list = ordersQuery.data?.items ?? [];
+    if (fromDate === '' && toDate === '') return list;
     return list.filter((order) => {
-      if (status !== '' && order.status !== status) return false;
-      if (qLower !== '') {
-        const hay = `${order.id} ${order.userId} ${order.address.fullName} ${order.address.phone}`.toLowerCase();
-        if (!hay.includes(qLower)) return false;
-      }
       const day = dayKeyOf(new Date(order.createdAt));
       if (fromDate !== '' && day < fromDate) return false;
       if (toDate !== '' && day > toDate) return false;
       return true;
     });
-  }, [ordersQuery.data, status, q, fromDate, toDate]);
+  }, [ordersQuery.data, fromDate, toDate]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const total = ordersQuery.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const columns = [
     {
@@ -73,7 +82,7 @@ export default function OrdersPage(): ReactElement {
       header: t('admin.orders.order'),
       render: (row: StubOrder) => (
         <div>
-          <div style={{ fontWeight: 700 }}>#{row.id}</div>
+          <div style={{ fontWeight: 700 }}>#{row.id.slice(0, 8)}</div>
           <div className='admin-hint'>{formatDateTime(row.createdAt)}</div>
         </div>
       )
@@ -129,9 +138,7 @@ export default function OrdersPage(): ReactElement {
   return (
     <div>
       <div className='admin-page-head'>
-        <h1>
-          {t('admin.orders.title')} <span className='admin-badge-mock'>{t('admin.common.mock')}</span>
-        </h1>
+        <h1>{t('admin.orders.title')}</h1>
       </div>
 
       <div className='admin-filters'>

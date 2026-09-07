@@ -1,19 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Button, Card, EmptyState } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
-import type { Order } from '../lib/orderingStub';
+import { fetchMyOrder, type Order, type OrderStatus } from '../lib/orderingApi';
 import '../page.css';
 
 /**
- * Confirmation page (SF-6) — cảm ơn + order summary + trạng thái mock "Đang
- * xử lý" (CONFIRMED sau mock-webhook PENDING→PAID→CONFIRMED). Order đọc từ
- * sessionStorage (stub không có server persist; SF-10 sẽ fetch /me/orders).
- * Vào trang trực tiếp mà không có order → empty state, không crash.
+ * Confirmation page (SF-6 UI, SF-10 live) — cảm ơn + order summary + POLLING
+ * `GET /api/ordering/me/orders/{id}` tới trạng thái terminal: sau khi Stripe
+ * confirm OK, webhook → payment.succeeded → ordering PAID → CONFIRMED mất vài
+ * giây (stripe-cli forward + rabbit). CONFIRMED/SHIPPED/DELIVERED → dừng,
+ * hiện "Đang xử lý" + ghi chú email; FAILED/CANCELLED → dừng, hiện thất bại
+ * + lý do hết nguồn lực đã được trả lại (stock/coupon). Không vào được đơn
+ * (404/401/session khác) → hiển thị snapshot sessionStorage, không crash.
  */
 
 const LAST_ORDER_KEY = 'ecommerce.last_order';
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_ATTEMPTS = 45; // 90s — TTL webhook/stripe-cli thường < 10s
 
 function readLastOrder(): Order | null {
   try {
@@ -26,41 +31,125 @@ function readLastOrder(): Order | null {
   }
 }
 
-const STATUS_LABEL: Partial<Record<Order['status'], string>> = {
+const STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
   CONFIRMED: 'Đang xử lý',
+  SHIPPED: 'Đang giao',
+  DELIVERED: 'Đã giao',
   PENDING: 'Chờ thanh toán',
-  PAID: 'Đã thanh toán'
+  PAID: 'Đã thanh toán — đang xác nhận',
+  CANCELLED: 'Đã hủy',
+  FAILED: 'Thất bại'
 };
 
-export default function ConfirmationPage(): ReactElement {
-  const [order] = useState<Order | null>(readLastOrder);
+const TERMINAL_OK: OrderStatus[] = ['CONFIRMED', 'SHIPPED', 'DELIVERED'];
+const TERMINAL_BAD: OrderStatus[] = ['FAILED', 'CANCELLED'];
 
-  if (!order) {
+function useOrderPolling(orderId: string | null): {
+  live: Order | null;
+  pollError: string | null;
+} {
+  const [live, setLive] = useState<Order | null>(null);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const attempts = useRef(0);
+
+  useEffect(() => {
+    if (!orderId) return;
+    let cancelled = false;
+    attempts.current = 0;
+    const tick = async (): Promise<void> => {
+      try {
+        const order = await fetchMyOrder(orderId);
+        if (cancelled) return;
+        setLive(order);
+        setPollError(null);
+        if ([...TERMINAL_OK, ...TERMINAL_BAD].includes(order.status)) return; // terminal — dừng
+      } catch {
+        if (!cancelled && attempts.current === 0) {
+          // lỗi đầu (401 session khác / 404) — vẫn hiện snapshot, không spam
+          setPollError('Không tải được trạng thái mới nhất từ hệ thống');
+        }
+      }
+      attempts.current += 1;
+      if (!cancelled && attempts.current < POLL_MAX_ATTEMPTS) {
+        setTimeout(() => void tick(), POLL_INTERVAL_MS);
+      }
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  return { live, pollError };
+}
+
+export default function ConfirmationPage(): ReactElement {
+  const [snapshot] = useState<Order | null>(readLastOrder);
+  const { live, pollError } = useOrderPolling(snapshot?.id ?? null);
+
+  if (!snapshot) {
     return (
       <div className="cart-page">
         <h1 className="page-title">Xác nhận đơn hàng</h1>
         <Card>
           <EmptyState
             title="Không tìm thấy đơn hàng"
-            description="Đơn vừa đặt không còn trên máy này (sessionStorage). Với hệ thống thật, đơn nằm trong mục Đơn hàng của tôi (SF-9)."
-            action={<Button onClick={() => window.location.assign('/')}>Về trang chủ</Button>}
+            description="Đơn vừa đặt không còn trên máy này (sessionStorage). Đơn của bạn nằm trong mục Đơn hàng của tôi."
+            action={<Button onClick={() => appNavigate('/account/orders')}>Đơn hàng của tôi</Button>}
           />
         </Card>
       </div>
     );
   }
 
+  const order = live ?? snapshot;
+  const confirmedOk = TERMINAL_OK.includes(order.status);
+  const terminalBad = TERMINAL_BAD.includes(order.status);
+
   return (
     <div className="cart-page">
       <div className="confirm-hero">
-        <div className="confirm-check" aria-hidden="true">✓</div>
-        <h1 className="page-title">Cảm ơn bạn đã mua hàng!</h1>
+        <div className="confirm-check" aria-hidden="true">{terminalBad ? '!' : '✓'}</div>
+        <h1 className="page-title">
+          {terminalBad ? 'Rất tiếc, đơn hàng chưa thành công' : 'Cảm ơn bạn đã mua hàng!'}
+        </h1>
         <div>
           Đơn hàng <strong data-testid="order-id">{order.id}</strong> đã được ghi nhận.
         </div>
-        <span className="confirm-status" data-testid="order-status">
+        <span
+          className="confirm-status"
+          data-testid="order-status"
+          data-status-code={order.status}
+        >
           {STATUS_LABEL[order.status] ?? order.status}
         </span>
+        {terminalBad ? (
+          <div className="pay-warning" role="alert" data-testid="order-failed-note">
+            {order.status === 'FAILED'
+              ? 'Đơn không hoàn tất — kho và mã giảm giá đã được trả lại, bạn có thể đặt hàng lại.'
+              : 'Đơn đã bị hủy. Nếu bạn đã thanh toán, tiền sẽ được hoàn qua cổng thanh toán.'}
+            <div>
+              <a
+                href="/account/orders"
+                onClick={(e) => {
+                  e.preventDefault();
+                  appNavigate('/account/orders');
+                }}
+                style={{ color: 'var(--c-primary, #F53D2D)' }}
+              >
+                Xem Đơn hàng của tôi
+              </a>
+            </div>
+          </div>
+        ) : null}
+        {confirmedOk ? (
+          <div className="summary-note" data-testid="order-email-note">
+            Email xác nhận đã được gửi kèm hóa đơn PDF — kiểm tra hộp thư dev (Mailpit).
+          </div>
+        ) : null}
+        {pollError && !confirmedOk && !terminalBad ? (
+          <div className="summary-note">{pollError}</div>
+        ) : null}
       </div>
 
       <Card className="cart-summary">
@@ -97,9 +186,6 @@ export default function ConfirmationPage(): ReactElement {
           Giao tới: {[order.address.line1, order.address.ward, order.address.district, order.address.city]
             .filter(Boolean)
             .join(', ')}
-        </div>
-        <div className="summary-note">
-          Email xác nhận + trạng thái đơn sẽ khả dụng khi hệ thống đơn hàng chạy thật (SF-9/SF-10).
         </div>
         <Button variant="secondary" onClick={() => appNavigate('/cart')}>
           Tiếp tục mua sắm

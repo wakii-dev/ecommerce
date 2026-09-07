@@ -68,9 +68,11 @@ export interface StubAddress {
   postalCode?: string;
 }
 
+/** SF-10: timeline contract (ordering.yaml) = {status, at} — KHÔNG description. */
 export interface StubOrderEvent {
+  status: OrderStatusValue;
   at: string;
-  description: string;
+  description?: string;
 }
 
 export interface StubOrder {

@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# log-service (SF-10) — PORT 8088 (D14). KHÔNG PG (không datasource/flyway) —
+# Mongo duy nhất (container từ SF-1; mongo-express :8089 để đọc event_log).
+# Fan-in queue `log.events` bind `#` — xem RabbitMqConfig (exchange tự declare).
+# ─────────────────────────────────────────────────────────────────────────────
+server:
+  port: 8088
+
+spring:
+  application:
+    name: log-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017}
+      database: ${MONGO_DATABASE:db_log}
+      # @Indexed(unique=true) trên EventLogDocument.eventId CHỈ được tạo khi
+      # bật auto-index-creation (Boot 3.3 default false) — không bật thì dedupe
+      # eventId (DuplicateKeyException) chết (code-review P0).
+      auto-index-creation: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

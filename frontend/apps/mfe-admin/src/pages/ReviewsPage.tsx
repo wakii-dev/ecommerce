@@ -3,14 +3,12 @@ import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Card, Select, Skeleton, StarRating, useToast } from '@ecommerce/ui-kit';
-import { stubApi } from '../lib/api';
+import { catalogApi } from '../lib/api';
 import { formatDateTime } from '../lib/format';
-import { MOCK_PRODUCT_NAMES } from '../lib/adminStub';
 import type { ModerationStatus, StubReview } from '../lib/types';
 
-function productName(productId: string): string {
-  return MOCK_PRODUCT_NAMES[productId] ?? productId;
-}
+// SF-10: reviews LIVE — productId resolve tên qua adminListProducts 1 lần
+// (map id→name); review shape khớp ReviewAdmin (catalog.yaml).
 
 export default function ReviewsPage(): ReactElement {
   const { t } = useT();
@@ -19,17 +17,44 @@ export default function ReviewsPage(): ReactElement {
   const [status, setStatus] = useState<ModerationStatus | ''>('PENDING');
 
   const reviewsQuery = useQuery({
-    queryKey: ['stub-reviews'],
-    queryFn: () => stubApi().listReviews()
+    queryKey: ['admin-reviews', status],
+    queryFn: async () => {
+      const res = (await catalogApi().adminListReviews({
+        ...(status ? { status } : {}),
+        page: 1,
+        size: 100
+      })) as { items: StubReview[]; total: number };
+      return res.items;
+    }
   });
 
+  // map productId → tên (adminListProducts size 100 — seed 24 products)
+  const productNamesQuery = useQuery({
+    queryKey: ['admin-reviews', 'product-names'],
+    queryFn: async () => {
+      const res = (await catalogApi().adminListProducts({ page: 1, size: 100 })) as {
+        items: { id: string; name: { vi?: string } }[];
+      };
+      const map: Record<string, string> = {};
+      for (const p of res.items) map[p.id] = p.name?.vi ?? p.id;
+      return map;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
+  function productName(productId: string): string {
+    return productNamesQuery.data?.[productId] ?? productId;
+  }
+
   const invalidate = (): void => {
-    void queryClient.invalidateQueries({ queryKey: ['stub-reviews'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
   };
 
   const moderate = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'approve' | 'reject' }) =>
-      action === 'approve' ? stubApi().approveReview(id) : stubApi().rejectReview(id),
+      action === 'approve'
+        ? catalogApi().adminApproveReview({ id })
+        : catalogApi().adminRejectReview({ id }),
     onSuccess: (_data, vars) => {
       invalidate();
       toast.toast(
@@ -40,16 +65,13 @@ export default function ReviewsPage(): ReactElement {
     onError: (error) => toast.toast(String(error), { variant: 'danger' })
   });
 
-  const rows = (reviewsQuery.data ?? []).filter(
-    (r) => status === '' || r.status === status
-  );
+  // server đã lọc theo status; giữ shape mảng cho render
+  const rows = reviewsQuery.data ?? [];
 
   return (
     <div>
       <div className='admin-page-head'>
-        <h1>
-          {t('admin.reviews.title')} <span className='admin-badge-mock'>{t('admin.common.mock')}</span>
-        </h1>
+        <h1>{t('admin.reviews.title')}</h1>
         <div className='admin-page-head__actions'>
           <Select
             value={status}

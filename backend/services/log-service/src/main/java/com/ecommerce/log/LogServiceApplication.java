@@ -16,7 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * consume). common-lib exclude starter-data-jpa → auto-config backs off →
  * exchange tự declare (RabbitMqConfig, như cart-service SF-10).</p>
  */
-@SpringBootApplication(scanBasePackages = "com.ecommerce.log")
+@SpringBootApplication(scanBasePackages = {"com.ecommerce.log", "com.ecommerce.common.web"})
 public class LogServiceApplication {
 
     public static void main(String[] args) {

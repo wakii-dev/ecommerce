@@ -42,7 +42,22 @@ export const en = {
       coupons: 'Coupons',
       reviews: 'Reviews',
       orders: 'Orders',
+      audit: 'Audit log',
       affiliates: 'Affiliates'
+    },
+    audit: {
+      title: 'Audit log',
+      eventType: 'Event type',
+      from: 'From',
+      to: 'To',
+      apply: 'Filter',
+      time: 'Time',
+      eventTypeCol: 'Event',
+      correlation: 'Correlation ID',
+      payload: 'Payload',
+      events: 'events',
+      empty: 'No events found',
+      emptyDesc: 'No events match the filter — try clearing filters and applying again.'
     },
     topbar: {
       viewStorefront: 'View storefront',

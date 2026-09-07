@@ -103,6 +103,11 @@ spring:
           uri: ${MINIO_URI:http://localhost:9000}
           predicates: [ "Path=/media/**" ]
           filters: [ 'RewritePath=/media/(?<segment>.*), /$\{segment}' ]
+        # SF-13 (2026-09-07) A5: audit log viewer — log-service :8088 controllers
+        # map FULL /api/log/** (không StripPrefix, precedent catalog/cart).
+        - id: log                                           # SF-13 · port 8088
+          uri: ${LOG_URI:http://localhost:8088}
+          predicates: [ "Path=/api/log/**" ]
       #
       # Health: gateway expose actuator của chính nó tại /actuator/health
       # (không route riêng — service health đi qua route /api/<svc>/actuator/health

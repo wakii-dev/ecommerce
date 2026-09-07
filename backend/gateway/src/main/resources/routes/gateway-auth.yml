@@ -47,4 +47,5 @@ ecom:
         # SF-13 (FI-323) A2: COD capture chỉ ordering nội bộ gọi (HTTP thẳng
         # :8086, không qua gateway) — chặn customer qua gateway (review G1 P0)
         - /api/payment/cod/**
+        - /api/log/admin/**                  # SF-13 A5 — audit viewer, 2 lớp RBAC
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

@@ -43,7 +43,22 @@ export const vi = {
       coupons: 'Mã giảm giá',
       reviews: 'Đánh giá',
       orders: 'Đơn hàng',
-      affiliates: 'Affiliate'
+      affiliates: 'Affiliate',
+      audit: 'Nhật ký hệ thống'
+    },
+    audit: {
+      title: 'Nhật ký hệ thống',
+      eventType: 'Loại sự kiện',
+      from: 'Từ thời điểm',
+      to: 'Đến thời điểm',
+      apply: 'Lọc',
+      time: 'Thời gian',
+      eventTypeCol: 'Sự kiện',
+      correlation: 'Correlation ID',
+      payload: 'Dữ liệu',
+      events: 'sự kiện',
+      empty: 'Chưa có sự kiện nào',
+      emptyDesc: 'Không có event khớp bộ lọc — thử xóa filter hoặc bấm Lọc lại.'
     },
     topbar: {
       viewStorefront: 'Xem cửa hàng',

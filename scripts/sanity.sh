@@ -3,7 +3,12 @@
 # đang sống. Output = bằng chứng ghi vào audit comment (không assert cứng).
 set -uo pipefail
 cd "$(dirname "$0")/.."
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+# .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG
+# source trực tiếp (set -a . .env sẽ chạy value như command). Parse KEY=VALUE:
+while IFS= read -r _line; do
+  case "$_line" in ''|\#*) continue ;; esac
+  export "$_line" 2>/dev/null || true
+done < .env
 
 GW=http://localhost:8080
 

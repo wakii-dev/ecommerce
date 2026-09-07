@@ -8,7 +8,12 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+# .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG
+# source trực tiếp (set -a . .env sẽ chạy value như command). Parse KEY=VALUE:
+while IFS= read -r _line; do
+  case "$_line" in ''|\#*) continue ;; esac
+  export "$_line" 2>/dev/null || true
+done < .env
 
 declare -A PORT=(
   [identity]=8081 [catalog]=8082 [cart]=8083 [inventory]=8084 [ordering]=8085

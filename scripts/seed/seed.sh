@@ -21,7 +21,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+# .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG
+# source trực tiếp (set -a . .env sẽ chạy value như command). Parse KEY=VALUE:
+while IFS= read -r _line; do
+  case "$_line" in ''|\#*) continue ;; esac
+  export "$_line" 2>/dev/null || true
+done < .env
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.vn}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 DEMO_USER_EMAIL="${DEMO_USER_EMAIL:-user@demo.vn}"
@@ -57,11 +62,11 @@ register_or_login() { # $1 email $2 password
   api_post /api/identity/auth/login "{\"email\":\"$1\",\"password\":\"$2\"}"
 }
 
-log "admin $ADMIN_EMAIL…"
+log "admin ${ADMIN_EMAIL}…"
 ADMIN_TOKEN=$(register_or_login "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "Admin Demo" | python3 -c "import sys,json; print(json.load(sys.stdin).get('accessToken',''))")
 [ -n "$ADMIN_TOKEN" ] || { echo "✗ admin login fail — kiểm ADMIN_EMAIL/ADMIN_PASSWORD"; exit 1; }
 
-log "demo user $DEMO_USER_EMAIL…"
+log "demo user ${DEMO_USER_EMAIL}…"
 register_or_login "$DEMO_USER_EMAIL" "$DEMO_USER_PASSWORD" "Nguyen Van Demo" >/dev/null
 
 log "notification service-account + promote ADMIN…"
@@ -91,22 +96,17 @@ if [ "${EXISTING:-0}" -ge 2 ]; then
   log "orders đã seed ($EXISTING) — skip"
 else
   # product/variant thật từ db_catalog (tên pin trong seed SF-4) — -F ' ' để read tách
-  PSQL_CAT_FS="docker compose exec -T postgres psql -U ${POSTGRES_USER:-postgres} -d db_catalog -tA -F ' ' -c"
-  read -r PID1 VID1 PRICE1 SLUG1 < <(eval $PSQL_CAT_FS "SELECT p.id, v.id, COALESCE(v.price, p.price), p.slug_vi
-    FROM products p JOIN LATERAL (SELECT id, price FROM product_variants WHERE product_id=p.id LIMIT 1) v ON TRUE
-    WHERE p.name->>'vi' LIKE 'Tai nghe%' LIMIT 1;")
-  read -r PID2 VID2 PRICE2 SLUG2 < <(eval $PSQL_CAT_FS "SELECT p.id, v.id, COALESCE(v.price, p.price), p.slug_vi
-    FROM products p JOIN LATERAL (SELECT id, price FROM product_variants WHERE product_id=p.id LIMIT 1) v ON TRUE
-    WHERE p.name->>'vi' LIKE 'Áo thun%' LIMIT 1;")
+  psql_cat_fs() { docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_catalog -tA -F ' ' -c "$1"; }
+  read -r PID1 VID1 PRICE1 SLUG1 < <(psql_cat_fs "SELECT p.id, v.id, COALESCE(v.price, p.price), p.slug_vi FROM products p JOIN LATERAL (SELECT id, price FROM product_variants WHERE product_id=p.id LIMIT 1) v ON TRUE WHERE p.name->>'vi' ILIKE 'Áo thun%' LIMIT 1;")
+  read -r PID2 VID2 PRICE2 SLUG2 < <(psql_cat_fs "SELECT p.id, v.id, COALESCE(v.price, p.price), p.slug_vi FROM products p JOIN LATERAL (SELECT id, price FROM product_variants WHERE product_id=p.id LIMIT 1) v ON TRUE WHERE p.name->>'vi' ILIKE 'Áo sơ mi%' LIMIT 1;")
   [ -n "${PID1:-}" ] && [ -n "${PID2:-}" ] || { echo "✗ không tìm thấy product seed (Tai nghe/Áo thun)"; exit 1; }
 
   # cấp 2 số hóa đơn tuần tự (khớp INVOICE_MAU_SO/KY_HIEU)
-  PSQL_ORD_FS="docker compose exec -T postgres psql -U ${POSTGRES_USER:-postgres} -d db_ordering -tA -F ' ' -c"
-  read -r INV1 INV2 < <(eval $PSQL_ORD_FS "INSERT INTO invoice_sequences (mau_so,ky_hieu,year,last_number,updated_at)
-    VALUES ('$MAU_SO','$KY_HIEU',$YEAR,2,now())
-    ON CONFLICT (mau_so,ky_hieu,year) DO UPDATE SET last_number = invoice_sequences.last_number + 2, updated_at=now()
-    RETURNING last_number - 1, last_number;")
+  psql_ord_fs() { docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_ordering -tA -F ' ' -c "$1"; }
+  read -r INV1 INV2 < <(psql_ord_fs "INSERT INTO invoice_sequences (mau_so,ky_hieu,year,last_number,updated_at) VALUES ('$MAU_SO','$KY_HIEU',$YEAR,2,now()) ON CONFLICT (mau_so,ky_hieu,year) DO UPDATE SET last_number = invoice_sequences.last_number + 2, updated_at=now() RETURNING last_number - 1, last_number;")
 
+  NAME1=$(psql_cat_fs "SELECT name->>'vi' FROM products WHERE id='$PID1';")
+  NAME2=$(psql_cat_fs "SELECT name->>'vi' FROM products WHERE id='$PID2';")
   ADDR='{"fullName":"Nguyen Van Demo","phone":"0901234567","line1":"12 Nguyen Hue","ward":"Ben Nghe","district":"Quan 1","city":"TP. Hồ Chí Minh"}'
   NOW1=$(date -u +%Y-%m-%dT%H:%M:%SZ); NOW2=$(date -u -v-2d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '2 days ago' +%Y-%m-%dT%H:%M:%SZ)
   TL='[{"status":"PENDING","at":"$N"},{"status":"PAID","at":"$N"},{"status":"CONFIRMED","at":"$N"}]'
@@ -122,7 +122,7 @@ else
   VALUES ('$O1','$USER_ID','$DEMO_USER_EMAIL','CONFIRMED',$SUB1,$((SUB1/10)),25000,$TOT1,'VND','WELCOME10',
     'stripe','standard','$ADDR','$TL1', 'seed-$O1','seed', $INV1, now());
   INSERT INTO order_items (id,order_id,product_id,variant_id,name,unit_price,qty,line_total)
-  VALUES (gen_random_uuid(),'$O1','$PID1','$VID1',(SELECT name->>'vi' FROM products WHERE id='$PID1'),$PRICE1,1,$SUB1);
+  VALUES (gen_random_uuid(),'$O1','$PID1','$VID1','$NAME1',$PRICE1,1,$SUB1);
   INSERT INTO saga_state (order_id,step) VALUES ('$O1','DONE');
   UPDATE coupons SET used_count = used_count + 1 WHERE code='WELCOME10';
   INSERT INTO coupon_reservations (id,order_id,coupon_code,status) VALUES (gen_random_uuid(),'$O1','WELCOME10','FINALIZED');
@@ -134,7 +134,7 @@ else
   VALUES ('$O2','$USER_ID','$DEMO_USER_EMAIL','CONFIRMED',$SUB2,0,25000,$TOT2,'VND',
     'stripe','standard','$ADDR','$TL2', 'seed-$O2','seed', $INV2, now() - interval '2 days', now() - interval '2 days', now() - interval '2 days');
   INSERT INTO order_items (id,order_id,product_id,variant_id,name,unit_price,qty,line_total)
-  VALUES (gen_random_uuid(),'$O2','$PID2','$VID2',(SELECT name->>'vi' FROM products WHERE id='$PID2'),$PRICE2,2,$SUB2);
+  VALUES (gen_random_uuid(),'$O2','$PID2','$VID2','$NAME2',$PRICE2,2,$SUB2);
   INSERT INTO saga_state (order_id,step) VALUES ('$O2','DONE');
   COMMIT;" >/dev/null
 
@@ -150,7 +150,7 @@ if [ "${REVIEW_EXISTS:-0}" -eq 0 ]; then
   $PSQL_CAT "INSERT INTO reviews (id,product_id,user_id,user_name,rating,title,content,status,verified)
   SELECT gen_random_uuid(), p.id, u.uid, 'Nguyen Van Demo', 5,
     'Âm hay, đeo êm', 'Đã mua qua demo — đúng như mô tả, pin trâu. Sẽ ủng hộ tiếp.', 'APPROVED', TRUE
-  FROM (SELECT id product_id FROM products WHERE name->>'vi' LIKE 'Tai nghe%' LIMIT 1) p
+  FROM (SELECT id product_id FROM products WHERE name->>'vi' ILIKE 'Tai nghe%' LIMIT 1) p
   CROSS JOIN (SELECT '$USER_ID'::uuid uid) u
   ON CONFLICT (user_id, product_id) DO NOTHING;
   UPDATE products SET rating_avg = 5.0, rating_count = 1

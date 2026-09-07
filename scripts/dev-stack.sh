@@ -11,7 +11,12 @@ cd "$(dirname "$0")/.."
 RUN_DIR=".run"; LOG_DIR="$RUN_DIR/logs"; mkdir -p "$LOG_DIR"
 
 # ── env: đọc .env (compose tự đọc; host JVM cần export) ──────────────────────
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+# .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG
+# source trực tiếp (set -a . .env sẽ chạy value như command). Parse KEY=VALUE:
+while IFS= read -r _line; do
+  case "$_line" in ''|\#*) continue ;; esac
+  export "$_line" 2>/dev/null || true
+done < .env
 export GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
 export CATALOG_API_TOKEN="${CATALOG_API_TOKEN:-}"
 
@@ -66,7 +71,9 @@ done
 # ── 3. keys + jars ───────────────────────────────────────────────────────────
 [ -f infra/keys/jwt-private.pem ] || make keys
 log "build jar (skip tests, 1 lần)…"
-mvn -q -f backend/pom.xml -pl gateway,services/identity-service,services/catalog-service,services/cart-service,services/inventory-service,services/ordering-service,services/payment-service,services/notification-service,services/log-service,services/affiliate-service,services/partner-api -am package -DskipTests
+# -Dmaven.test.skip=true: skip cả test-COMPILE (SagaTest SF-9 import nội bộ
+# inventory — pre-existing, spring-boot:run không compile test nên không lộ)
+mvn -q -f backend/pom.xml -pl gateway,services/identity-service,services/catalog-service,services/cart-service,services/inventory-service,services/ordering-service,services/payment-service,services/notification-service,services/log-service,services/affiliate-service,services/partner-api -am package -Dmaven.test.skip=true
 
 # ── 4. invoice-service (python) ──────────────────────────────────────────────
 if ! curl -sf -m 2 http://localhost:8090/health >/dev/null; then

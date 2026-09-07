@@ -8,9 +8,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-RUN_DIR=".run"; LOG_DIR="$RUN_DIR/logs"; mkdir -p "$LOG_DIR"
-# dev-stop/shutdown có thể xoá .run — tạo lại trước mọi ghi PID/log
-mkdir -p "$RUN_DIR"
+RUN_DIR="$PWD/.run"; LOG_DIR="$RUN_DIR/logs"
+# ABSOLUTE: subshell `cd frontend` (FE boot) ghi PID/log qua ../.run — path
+# tương đối vỡ khi cwd đổi (boot 3 lần 08-09: "../.run/frontend.pid: No such
+# file or directory"). mkdir -p lại trước mọi ghi (dev-stop có thể xoá .run).
+mkdir -p "$RUN_DIR" "$LOG_DIR"
 
 # ── env: đọc .env (compose tự đọc; host JVM cần export) ──────────────────────
 # .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG
@@ -24,6 +26,36 @@ export CATALOG_API_TOKEN="${CATALOG_API_TOKEN:-}"
 
 log() { printf '\033[36m[dev-stack]\033[0m %s\n' "$*"; }
 fail() { printf '\033[31m[dev-stack] ✗ %s\033[0m\n' "$*" >&2; exit 1; }
+
+# ── single-session guard (FI-366 SF-1 T3) ────────────────────────────────────
+# Session = pid của re-mint loop (process sống dài nhất của session — script
+# này exit sau khi boot xong). Session khác đang chạy → chặn, không tự đoán.
+# dev-stop (rm .run/*.pid + kill) gỡ guard; crash để lại stale pid-dead → dọn.
+SESSION_PID_FILE="$RUN_DIR/dev-stack-session.pid"
+if [ -f "$SESSION_PID_FILE" ]; then
+  OLD_PID=$(cat "$SESSION_PID_FILE" 2>/dev/null || true)
+  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+    fail "dev-stack session đang chạy (PID $OLD_PID) — 'make dev-stop' trước khi start lại (single-session guard)"
+  fi
+  rm -f "$SESSION_PID_FILE"
+fi
+
+# ── TTL re-mint (FI-366 SF-1 T3) ─────────────────────────────────────────────
+# 2 nửa: (1) identity boot với access-TTL 3600s thay vì 15' (env overridable —
+# cải thiện improvements-log "CATALOG_API_TOKEN mint TTL 15' làm order create
+# 502 sau 15' uptime"); (2) loop scripts/dev-stack-re-mint.sh re-mint mỗi 25'
+# + restart ĐÚNG 2 consumer bake token lúc boot (ordering, partner-api —
+# HttpCatalogPricingClient defaultHeader build-time → re-export env vô dụng).
+export JWT_ACCESS_TTL_SECONDS="${JWT_ACCESS_TTL_SECONDS:-3600}"
+nohup bash scripts/dev-stack-re-mint.sh > /dev/null 2>&1 &
+RE_MINT_PID=$!
+echo "$RE_MINT_PID" > "$RUN_DIR/token-re-mint.pid"
+echo "$RE_MINT_PID" > "$SESSION_PID_FILE"
+log "single-session guard ON (session pid $RE_MINT_PID) · token re-mint loop mỗi $(( ${RE_MINT_INTERVAL:-1500} / 60 ))'"
+# Boot FAIL giữa chừng → session không được giữ (kẻ chặn make dev lần sau).
+# Boot thành công → script exit thường, trap gỡ ở cuối file (session sống cùng stack).
+cleanup_failed_session() { kill "$RE_MINT_PID" 2>/dev/null || true; rm -f "$SESSION_PID_FILE" "$RUN_DIR/token-re-mint.pid"; }
+trap cleanup_failed_session EXIT
 
 health() { curl -sf -m 2 "http://localhost:$1/actuator/health" 2>/dev/null | grep -q '"UP"'; }
 wait_health() { # $1 port $2 tên $3 timeout_s
@@ -40,7 +72,23 @@ record_pid() { echo "$2" > "$RUN_DIR/$1.pid"; }
 port_pid() { lsof -ti tcp:"$1" -sTCP:LISTEN 2>/dev/null | head -1 || true; }
 
 start_jvm() { # $1 tên $2 port $3 module-path
-  if health "$2"; then log "$1 đã UP — skip"; return 0; fi
+  if health "$2"; then
+    # health UP ≠ jar CỦA MÌNH — port có thể bị JVM worktree khác giữ
+    # (08-09: cả 10 port giữ bởi jar sf-13 cũ, dev-stack skip hết → test
+    # nhầm code cũ). Verify cwd của listener nằm trong repo này, không → fail.
+    local lpid lcwd
+    lpid=$(port_pid "$2")
+    if [ -n "$lpid" ]; then
+      lcwd=$(lsof -p "$lpid" 2>/dev/null | awk '$4=="cwd" {print $NF}')
+      case "$lcwd" in
+        "$PWD") log "$1 đã UP — skip (jar của worktree này)" ;;
+        *) fail "port $2 ($1) đang giữ bởi process ngoài worktree (pid $lpid, cwd $lcwd) — kill nó hoặc make dev-stop trước" ;;
+      esac
+    else
+      log "$1 đã UP — skip (listener không xác định PID)"
+    fi
+    return 0
+  fi
   if [ -f "$RUN_DIR/$1.pid" ] && kill -0 "$(cat "$RUN_DIR/$1.pid")" 2>/dev/null; then
     log "$1 pid $(cat "$RUN_DIR/$1.pid") đang chạy nhưng chưa health — chờ"; wait_health "$2" "$1" 60; return 0
   fi
@@ -117,7 +165,7 @@ start_jvm partner-api   8091 services/partner-api
 # ── 6. frontend (turbo dev --parallel: shell+account+checkout+admin+skeleton+next) ──
 if ! curl -sf -m 2 http://localhost:5173 >/dev/null; then
   log "boot FE (turbo dev --parallel :5173-5178 + :3000)…"
-  ( cd frontend && nohup pnpm turbo run dev --parallel > ../"$LOG_DIR/frontend.log" 2>&1 & echo $! > ../"$RUN_DIR/frontend.pid" )
+  ( cd frontend && nohup pnpm turbo run dev --parallel > "$LOG_DIR/frontend.log" 2>&1 & echo $! > "$RUN_DIR/frontend.pid" )
   sleep 8
 fi
 
@@ -131,3 +179,4 @@ cat <<'EOF'
   affiliate :8092 · Mailpit UI :8025 · RabbitMQ UI :15672
   logs: .run/logs/*.log · dừng: make dev-stop
 EOF
+trap - EXIT   # boot xong sạch — session sống cùng stack (guard giữ loop pid)

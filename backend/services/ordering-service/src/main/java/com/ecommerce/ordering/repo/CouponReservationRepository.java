@@ -27,4 +27,12 @@ public interface CouponReservationRepository extends JpaRepository<CouponReserva
     int transition(@Param("orderId") UUID orderId,
                    @Param("from") CouponReservationStatus from,
                    @Param("to") CouponReservationStatus to);
+
+    /**
+     * FI-366 SF-1 T11 — admin delete guard: mã đang có lượt giữ (RESERVED)
+     * là đã "hứa" usage cho đơn → chặn xóa để không vỡ checkout đang bay.
+     */
+    @Query("SELECT COUNT(r) FROM CouponReservation r WHERE r.couponCode = :code "
+        + "AND r.status = com.ecommerce.ordering.domain.CouponReservationStatus.RESERVED")
+    long countReservedForCoupon(@Param("code") String code);
 }

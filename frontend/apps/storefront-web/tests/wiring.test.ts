@@ -61,3 +61,15 @@ describe('wiring: scripts/render-smoke.mjs (meta — chặn mất assert)', () =
     expect(script).toContain('SMOKE FAIL');
   });
 });
+
+// FI-366 SF-1 (T12): GATEWAY_URL single-source — meta-test chặn drift quay
+// lại: e2e/helpers/env.ts phải đọc `GATEWAY_URL` (.env nguồn duy nhất), không
+// phải hardcode riêng E2E_GATEWAY_URL đứng đầu (drift thật đã gặp — T12).
+describe('wiring: GATEWAY_URL single-source (FI-366 SF-1)', () => {
+  const envHelperPath = fileURLToPath(new URL('../../../e2e/helpers/env.ts', import.meta.url));
+  const envHelper = readFileSync(envHelperPath, 'utf8');
+
+  it('e2e/helpers/env.ts đọc GATEWAY_URL (.env single-source, không hardcode :8080 riêng)', () => {
+    expect(envHelper).toContain("env('GATEWAY_URL')");
+  });
+});

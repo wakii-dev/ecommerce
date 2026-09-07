@@ -74,7 +74,8 @@ register_or_login "$NOTIFY_SVC_EMAIL" "$NOTIFY_SVC_PASSWORD" "Notification Servi
 $PSQL_ID "UPDATE users SET role='ADMIN' WHERE email IN ('$ADMIN_EMAIL','$NOTIFY_SVC_EMAIL');" >/dev/null
 log "roles OK (admin + notification-svc = ADMIN)"
 
-# ── 2. Coupons pack-correct (override V11) ───────────────────────────────────
+# ── 2. Coupons pack-correct (schema-level nguồn = V14__seed_coupons_repair.sql;
+# block này giữ đồng bộ 1:1 với V14 — seed runtime cho volume đã migrate) ────
 $PSQL_ORD "INSERT INTO coupons (code,type,value,min_order_value,starts_at,ends_at,usage_limit,active,description)
 VALUES
  ('WELCOME10','PERCENT',10,100000,now(),now()+interval '30 days',100,TRUE,'Giảm 10% tối đa đơn 100.000d — hạn 30 ngày'),
@@ -185,7 +186,9 @@ while IFS='|' read -r VIDX PIDX NAMEX; do
   docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_inventory -tAc \
     "INSERT INTO stocks (variant_id, quantity, threshold_low, product_id, product_name)
      VALUES ('$VIDX', 50, 10, NULLIF('$PIDX',''), NULLIF('$NAMEX',''))
-     ON CONFLICT (variant_id) DO NOTHING;" >/dev/null < /dev/null
+     ON CONFLICT (variant_id) DO UPDATE SET
+       quantity = 50, threshold_low = 10,
+       product_name = COALESCE(NULLIF('$NAMEX',''), stocks.product_name);" >/dev/null < /dev/null
 done < /tmp/seed-variants.$$
 rm -f /tmp/seed-variants.$$
 STOCK_COUNT=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_inventory -tAc "SELECT count(*) FROM stocks;" | tr -d ' ')

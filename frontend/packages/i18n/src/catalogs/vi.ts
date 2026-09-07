@@ -101,7 +101,9 @@ export const vi = {
       deleted: 'Đã xóa',
       error: 'Có lỗi xảy ra',
       image: 'Ảnh',
-      date: 'Ngày'
+      date: 'Ngày',
+      from: 'Từ ngày',
+      to: 'Đến ngày'
     },
     guard: {
       checking: 'Đang kiểm tra quyền...',
@@ -321,7 +323,9 @@ export const vi = {
       couponCode: 'Mã giảm giá',
       affiliateCode: 'Mã tiếp thị',
       empty: 'Chưa có đơn hàng nào',
-      phone: 'Điện thoại'
+      phone: 'Điện thoại',
+      subtotal: 'Tổng tiền hàng',
+      shipping: 'Vận chuyển'
     },
     dashboard: {
       title: 'Tổng quan',

@@ -1,0 +1,10 @@
+# FI-366 SF-1 (BUG-07): slim build context cho compose image builds (context = repo root)
+.git
+.run
+**/node_modules
+**/target
+**/.venv
+**/.mf
+**/.turbo
+docs/
+scripts/test/logs

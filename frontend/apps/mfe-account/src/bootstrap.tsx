@@ -3,6 +3,9 @@ import { authStore, configureAuth } from '@ecommerce/auth';
 import AuthWidget from './AuthWidget';
 import OrdersNavLink from './pages/orders/OrdersNavLink';
 import AffiliateNavLink from './pages/affiliate/AffiliateNavLink';
+// FI-368 T11: page.css chỉ import ở main.tsx (standalone) — dưới shell remote
+// không chạy main.tsx => page-specific css mất. Vite dedupe standalone.
+import './page.css';
 
 export type SlotKey = 'left' | 'center' | 'right';
 

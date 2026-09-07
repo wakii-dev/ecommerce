@@ -112,6 +112,28 @@ describe('buildProductWrite', () => {
     expect(result.payload).toBeNull();
   });
 
+  // FI-368 T8: "1e999" → Number = Infinity lọt payload (JSON → null) —
+  // guard finite phải chặn ở price/comparePrice/priceDelta.
+  it('guard "1e999" (Infinity): price chặn, comparePrice + priceDelta không lọt payload', () => {
+    const price = buildProductWrite({ ...baseForm(), price: '1e999' });
+    expect(price.errors).toContain('price');
+    expect(price.payload).toBeNull();
+
+    const compare = buildProductWrite({ ...baseForm(), comparePrice: '1e999' });
+    expect(compare.errors).toContain('comparePrice');
+    expect(compare.payload).toBeNull();
+
+    const delta = buildProductWrite({
+      ...baseForm(),
+      variants: [
+        { nameVi: 'Đỏ', nameEn: 'Red', optionsText: 'color=đỏ', priceDelta: '1e999', stock: '5' },
+        { nameVi: 'Xanh', nameEn: 'Blue', optionsText: 'color=xanh', priceDelta: '10000', stock: '3' }
+      ]
+    });
+    expect(delta.errors).toContain('variant-0');
+    expect(delta.payload).toBeNull();
+  });
+
   it('slug trống tự sinh từ tên (slugify tiếng Việt)', () => {
     const form = { ...baseForm(), slugVi: '', slugEn: '', nameVi: 'Đèn Đọc Sách', nameEn: '' };
     const result = buildProductWrite(form);

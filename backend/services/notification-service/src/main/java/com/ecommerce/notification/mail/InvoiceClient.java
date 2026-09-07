@@ -44,10 +44,12 @@ public class InvoiceClient {
         this.identity = identity;
     }
 
-    /** PDF bytes + tên file. Empty khi lỗi (đã log) — email vẫn gửi không attach. */
+    /** PDF bytes + tên file. Empty khi lỗi (đã log) — email vẫn gửi không attach.
+     *  getAccessToken NẰM TRONG try: identity down → degrade email-not-attach,
+     *  KHÔNG ném ra listener (requeue hot-loop head-of-line — code-review P2). */
     public Optional<Attachment> fetchInvoicePdf(String orderId) {
-        String token = identity.getAccessToken();
         try {
+            String token = identity.getAccessToken();
             var entity = rest.get()
                 .uri("/admin/orders/{id}/invoice", orderId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)

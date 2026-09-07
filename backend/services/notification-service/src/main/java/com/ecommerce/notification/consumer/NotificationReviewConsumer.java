@@ -51,10 +51,12 @@ public class NotificationReviewConsumer {
                 null, SendLog.STATUS_SKIPPED_NO_EMAIL, false, "payload không có email"));
             return;
         }
-        // Forward-compatible: contracts thêm email → gửi kết quả duyệt
-        log.info("review.moderated {} có email {} — gửi email kết quả duyệt ({})",
-            reviewId, email, payload.path("status").asText("?"));
+        // Forward-compatible: contracts thêm email → CẦN template + flow gửi
+        // THẬT trước khi ghi SENT (ghi SENT khi chưa send = log sai — review P2)
+        log.warn("review.moderated {} có email {} nhưng flow gửi chưa implement "
+            + "(cần amendment contracts + template)", reviewId, email);
         sendLog.save(new SendLog(envelope.eventId(), envelope.eventType(), email,
-            "Kết quả duyệt đánh giá #" + reviewId, SendLog.STATUS_SENT, false, null));
+            null, SendLog.STATUS_SKIPPED_NO_EMAIL, false,
+            "email có trong payload nhưng flow gửi chưa implement"));
     }
 }

@@ -104,9 +104,13 @@ export async function mailpitAttachmentNames(id: string): Promise<string[]> {
 export async function mongoEventLogCount(eventType?: string): Promise<number> {
   const { execSync } = await import('node:child_process');
   const filter = eventType ? `db.event_log.countDocuments({eventType:'${eventType}'})` : 'db.event_log.countDocuments({})';
+  // repo root từ __dirname (frontend/e2e/helpers → ../../..) — process.cwd()
+  // lệch khi chạy qua make e2e (code-review P1)
+  const path = require('node:path') as typeof import('node:path');
+  const repoRoot = path.resolve(__dirname, '../../..');
   const out = execSync(
     `docker compose exec -T mongo mongosh --quiet db_log --eval '${filter}'`,
-    { encoding: 'utf8', cwd: process.cwd() + '/../../..' }
+    { encoding: 'utf8', cwd: repoRoot }
   );
   return Number(out.trim().split('\n').pop());
 }

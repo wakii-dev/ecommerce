@@ -15,6 +15,10 @@ spring:
     mongodb:
       uri: ${MONGO_URI:mongodb://localhost:27017}
       database: ${MONGO_DATABASE:db_log}
+      # @Indexed(unique=true) trên EventLogDocument.eventId CHỈ được tạo khi
+      # bật auto-index-creation (Boot 3.3 default false) — không bật thì dedupe
+      # eventId (DuplicateKeyException) chết (code-review P0).
+      auto-index-creation: true
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}

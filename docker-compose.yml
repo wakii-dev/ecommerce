@@ -479,10 +479,8 @@ services:
         condition: service_started
       affiliate-service:
         condition: service_started
-      storefront-web:
-        condition: service_started
-      frontend-web:
-        condition: service_started
+    # storefront-web/frontend-web KHÔNG depends_on gateway (cycle — code-review
+    # P0): gateway route lazily, FE containers up sau cũng không sao.
     networks:
       - ecommerce-net
 
@@ -501,9 +499,6 @@ services:
       NEXT_PUBLIC_SHELL_URL: ${NEXT_PUBLIC_SHELL_URL:-http://localhost:8080}
     expose:
       - "3000"
-    depends_on:
-      gateway:
-        condition: service_started
     networks:
       - ecommerce-net
 

@@ -11,7 +11,7 @@ COMPOSE ?= docker compose
 help: ## Liệt kê targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-infra: ## Bật infra stack (postgres 5 DB / redis / rabbitmq / mailpit / mongo / es)
+infra: ## Bật infra stack (postgres 9 DB / redis / rabbitmq / mailpit / mongo / es)
 	$(COMPOSE) up -d
 	@echo "→ Trạng thái: docker compose ps"
 

@@ -66,7 +66,7 @@ done
 # ── 3. keys + jars ───────────────────────────────────────────────────────────
 [ -f infra/keys/jwt-private.pem ] || make keys
 log "build jar (skip tests, 1 lần)…"
-mvn -q -pl services/identity-service,services/catalog-service,services/cart-service,services/inventory-service,services/ordering-service,services/payment-service,services/notification-service,services/log-service,services/affiliate-service,services/partner-api -am package -DskipTests
+mvn -q -f backend/pom.xml -pl gateway,services/identity-service,services/catalog-service,services/cart-service,services/inventory-service,services/ordering-service,services/payment-service,services/notification-service,services/log-service,services/affiliate-service,services/partner-api -am package -DskipTests
 
 # ── 4. invoice-service (python) ──────────────────────────────────────────────
 if ! curl -sf -m 2 http://localhost:8090/health >/dev/null; then
@@ -77,6 +77,7 @@ fi
 
 # ── 5. backends (identity TRƯỚC — JWKS cho mọi service) ─────────────────────
 start_jvm identity      8081 services/identity-service
+start_jvm gateway       8080 gateway
 
 # Mint admin JWT cho CATALOG_API_TOKEN (interim GAP SF-9: ordering re-price
 # gọi catalog admin-by-id cần JWT ADMIN; TTL 15' — stack chạy dài cần boot lại

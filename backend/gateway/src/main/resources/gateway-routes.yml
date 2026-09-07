@@ -94,7 +94,7 @@ spring:
       # full (nginx serve dist). Không filter — nginx/vite serve paths gốc.
         - id: shell-web                                   # SF-10 · shell :5173 / nginx
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
-          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/remotes/**" ]
+          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]
       #
       # Health: gateway expose actuator của chính nó tại /actuator/health
       # (không route riêng — service health đi qua route /api/<svc>/actuator/health

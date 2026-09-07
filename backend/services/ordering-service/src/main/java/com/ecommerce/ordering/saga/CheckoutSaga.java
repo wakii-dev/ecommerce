@@ -21,6 +21,7 @@ import com.ecommerce.ordering.repo.OrderRepository;
 import com.ecommerce.ordering.repo.SagaStateRepository;
 import com.ecommerce.ordering.saga.PricingAuthority.PricedItem;
 import com.ecommerce.ordering.service.CouponService;
+import com.ecommerce.ordering.service.ShippingMethodsService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -73,6 +74,7 @@ public class CheckoutSaga {
     private final PricingAuthority pricing;
     private final InventoryClient inventory;
     private final PaymentClient payment;
+    private final ShippingMethodsService shippingMethods;
     private final OutboxWriter outbox;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate tx;
@@ -85,6 +87,7 @@ public class CheckoutSaga {
         PricingAuthority pricing,
         InventoryClient inventory,
         PaymentClient payment,
+        ShippingMethodsService shippingMethods,
         OutboxWriter outbox,
         ObjectMapper objectMapper,
         TransactionTemplate tx
@@ -96,6 +99,7 @@ public class CheckoutSaga {
         this.pricing = pricing;
         this.inventory = inventory;
         this.payment = payment;
+        this.shippingMethods = shippingMethods;
         this.outbox = outbox;
         this.objectMapper = objectMapper;
         this.tx = tx;
@@ -104,7 +108,11 @@ public class CheckoutSaga {
     public CreateOrderResponse createOrder(UUID userId, String email, CreateOrderRequest request,
                                            String idempotencyKey, String correlationId) {
         // (0) Validate những gì bean-validation không che được
-        ShippingMethods.Method shipping = ShippingMethods.byId(request.shippingMethod());
+        // SF-14: fee authority lúc đặt — GHN method tính phí theo địa chỉ thật
+        // (degraded → flat giữ nguyên shape). totalQty để tính weight GHN.
+        int totalQty = request.items().stream().mapToInt(CreateOrderRequest.Item::qty).sum();
+        ShippingMethodsService.Method shipping = shippingMethods.resolve(
+            request.shippingMethod(), request.address().city(), request.address().district(), totalQty);
         if ("cod".equalsIgnoreCase(request.paymentMethod())) {
             // COD (D21) là scope SF-13 — chặn rõ ràng, không âm thầm xử khác
             throw new UnsupportedFeatureException("Thanh toán COD chưa khả dụng — vui lòng chọn Stripe");

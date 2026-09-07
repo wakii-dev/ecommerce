@@ -3,6 +3,8 @@ import { Be_Vietnam_Pro } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 
+import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';
+
 import './app.css';
 
 /**
@@ -38,8 +40,18 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   const locale = headers().get('x-app-locale');
   return (
-    <html lang={locale === 'en' ? 'en' : 'vi'} className={beVietnamPro.className}>
-      <body>{children}</body>
+    // suppressHydrationWarning: boot script đổi data-theme TRƯỚC hydrate
+    // (server render không biết theme client) — chỉ suppress đúng attribute này.
+    <html
+      lang={locale === 'en' ? 'en' : 'vi'}
+      className={beVietnamPro.className}
+      suppressHydrationWarning
+    >
+      <body>
+        {/* Anti-FOUC (SF-15): set data-theme trước paint đầu — pattern next-themes. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {children}
+      </body>
     </html>
   );
 }

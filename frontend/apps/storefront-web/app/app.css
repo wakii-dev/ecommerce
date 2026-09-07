@@ -2301,3 +2301,8 @@ img {
   font-size: 13px;
   color: var(--c-danger, #d0011b);
 }
+
+/* ── SF-15 (FI-325) — dark mode: biến phụ của app (tokens ui-kit đè riêng) ── */
+[data-theme='dark'] {
+  --footer-link: #8a8a8a;
+}

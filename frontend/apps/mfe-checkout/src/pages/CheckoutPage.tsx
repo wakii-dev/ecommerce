@@ -16,7 +16,7 @@ import {
   type Address,
   type CreatedOrder,
   type Order,
-  type PaymentMethod
+  type PaymentMethod,
   type ShippingMethod
 } from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';

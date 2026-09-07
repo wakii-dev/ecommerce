@@ -1,6 +1,6 @@
 # SF-13 Essentials & Polish Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Batch cuối D21 — lấp 8 lỗ hổng thực dụng: password reset, COD, upload MinIO, abandoned cart email, audit viewer, recently viewed + related, GA4, CSV export, newsletter + E2E regression.
 
@@ -36,11 +36,11 @@ Key decisions:
   - `minio`: image `minio/minio:RELEASE.2024-09-13T20-26-02Z`, command `server /data --console-address ":9001"`, ports `9000:9000`/`9001:9001`, env `MINIO_ROOT_USER/PASSWORD: minioadmin`, healthcheck `curl -f http://localhost:9000/minio/health/live`.
   - `minio-init`: image `minio/mc:RELEASE.2024-08-26T15-33-06Z`, depends_on minio `service_healthy`, entrypoint sh: `mc alias set local http://minio:9000 minioadmin minioadmin && mc mb -p local/products && mc anonymous set download local/products`, `restart: "no"`.
 
-- [ ] UploadIT: png 1×1 → 201 + url match `/media/products/[0-9a-f-]{36}\.png` + GET thẳng MinIO trả 200 (policy anonymous); `.gif` → 400; >5MB → 400; customer → 403; anonymous → 401 — **KẾT QUẢ: 5/5 PASS (đã chạy)**
-- [ ] FE: nút "Tải ảnh lên" trong `ProductFormPage.tsx` images tab → `uploadAdminImage` (contracts client) → set row.url + preview (plan-critic P0: FE half của upload phải có chủ)
-- [ ] `mvn -pl services/catalog-service test` xanh (80/80 — IT mới + cũ không vỡ)
-- [ ] `docker compose up -d minio minio-init` → health 200; upload thật qua gateway bằng admin login (không có mint script — login admin@demo.vn lấy token) → GET url 200
-- [ ] Commit: `feat(catalog): minio image upload — compose + admin endpoint + gateway media + admin form button`
+- [x] UploadIT: png 1×1 → 201 + url match `/media/products/[0-9a-f-]{36}\.png` + GET thẳng MinIO trả 200 (policy anonymous); `.gif` → 400; >5MB → 400; customer → 403; anonymous → 401 — **KẾT QUẢ: 5/5 PASS (đã chạy)**
+- [x] FE: nút "Tải ảnh lên" trong `ProductFormPage.tsx` images tab → `uploadAdminImage` (contracts client) → set row.url + preview (plan-critic P0: FE half của upload phải có chủ)
+- [x] `mvn -pl services/catalog-service test` xanh (80/80 — IT mới + cũ không vỡ)
+- [x] `docker compose up -d minio minio-init` → health 200; upload thật qua gateway bằng admin login (không có mint script — login admin@demo.vn lấy token) → GET url 200
+- [x] Commit: `feat(catalog): minio image upload — compose + admin endpoint + gateway media + admin form button`
 
 ### Task 2: identity-password-reset-flow-email
 
@@ -61,10 +61,10 @@ Key shapes:
 - Mailer HTML: link `${notify.reset-password-url:http://localhost:5173/reset-password}?token=<raw>` + dòng "Nếu không phải bạn yêu cầu, bỏ qua email này". Consumer pattern y hệt NotificationOrderConsumer (IdempotentConsumer + SendLog).
 - FE: ForgotPasswordPage (Input email + Button → api POST `/api/identity/password/forgot` fetch trực tiếp, 202 → banner xanh); ResetPasswordPage (`new URLSearchParams(window.location.search).get('token')`, password ≥8, 204 → banner + link `/login`). UI-kit, error pattern `err.name === 'ApiErrorClient'`.
 
-- [ ] PasswordResetIT: forgot unknown email → 202 (body giống hệt known); forgot known → 1 row token_hash + outbox event; reset sai token → 401; reset OK → login MK mới 200 + MK cũ 401 + refresh cookie cũ → refresh 401 (revoked); reset 2 lần cùng token → lần 2 401
-- [ ] PasswordResetConsumerTest (Mailpit container): envelope qua `sendRaw` → Mailpit có 1 mail to=đúng subject chứa `/reset-password?token=`; dup eventId → vẫn 1 mail
-- [ ] `mvn -pl services/identity-service,services/notification-service test` xanh
-- [ ] Commit: `feat(identity): password forgot/reset — email qua notification, revoke-all refresh`
+- [x] PasswordResetIT: forgot unknown email → 202 (body giống hệt known); forgot known → 1 row token_hash + outbox event; reset sai token → 401; reset OK → login MK mới 200 + MK cũ 401 + refresh cookie cũ → refresh 401 (revoked); reset 2 lần cùng token → lần 2 401
+- [x] PasswordResetConsumerTest (Mailpit container): envelope qua `sendRaw` → Mailpit có 1 mail to=đúng subject chứa `/reset-password?token=`; dup eventId → vẫn 1 mail
+- [x] `mvn -pl services/identity-service,services/notification-service test` xanh
+- [x] Commit: `feat(identity): password forgot/reset — email qua notification, revoke-all refresh`
 
 ### Task 3: cod-payment-adapter-saga-skip
 
@@ -86,8 +86,8 @@ Key shapes:
 - `cancelByAdmin`/`refundSafely`: skip refund khi paymentMethod=cod (chưa thu tiền; tránh refund(null) lỗi requeue) — spec-critic P1.
 - Test COD happy: không stub Stripe intent; createOrder(cod) → poll status CONFIRMED, clientSecret null, outbox order.confirmed validate schema, coupon finalized. Deliver test (plan-critic P1 — ordering→payment là HTTP thật giữa 2 context thật, KHÔNG phải WireMock): assert payment DB đúng 1 intent `cod:<orderId>` SUCCEEDED (deliver 2 lần vẫn 1) + ordering outbox có order.paid row. Cancel test: cancel CONFIRMED COD → không refund call, status CANCELLED.
 
-- [ ] `mvn -pl services/payment-service,services/ordering-service test` xanh (COD mới + stripe cũ không vỡ)
-- [ ] Commit: `feat(ordering,payment): COD — adapter no-op, saga skip intent, PENDING→CONFIRMED, capture lúc giao`
+- [x] `mvn -pl services/payment-service,services/ordering-service test` xanh (COD mới + stripe cũ không vỡ)
+- [x] Commit: `feat(ordering,payment): COD — adapter no-op, saga skip intent, PENDING→CONFIRMED, capture lúc giao`
 
 ### Task 4: checkout-cod-option-ui
 
@@ -101,9 +101,9 @@ Chi tiết:
 - `placeOrder()`: `createOrder({... paymentMethod})`. Response `clientSecret === null || paymentMethod==='cod'` → `finalize(created.order)` NGAY (skip `awaiting-card` phase + mount effect phải guard `paymentMethod!=='cod'`).
 - Effect mount Stripe: `if (!created || created.clientSecret == null) return` (thay mount vô điều kiện).
 
-- [ ] Build `pnpm --filter @ecommerce/mfe-checkout build` xanh
-- [ ] Manual smoke (dev stack): COD → confirmation hiển thị CONFIRMED; Stripe path không key → panel "chưa mount" giữ nguyên behavior cũ
-- [ ] Commit: `feat(checkout): COD payment option — skip Stripe khi clientSecret null`
+- [x] Build `pnpm --filter @ecommerce/mfe-checkout build` xanh
+- [x] Manual smoke (dev stack): COD → confirmation hiển thị CONFIRMED; Stripe path không key → panel "chưa mount" giữ nguyên behavior cũ
+- [x] Commit: `feat(checkout): COD payment option — skip Stripe khi clientSecret null`
 
 ### Task 5: abandoned-cart-scheduler-email
 
@@ -120,8 +120,8 @@ Key:
 - Sweeper `@Scheduled(fixedDelayString "${cart.abandoned.sweep-interval-ms:60000}")`, gate `cart.abandoned.enabled:true`: `redis.scan("cart:user:*")` → load → `!items.isEmpty() && email != null && updatedAt.isBefore(now - idle)` (idle `${cart.abandoned.idle-minutes:120}`) → `Boolean hadKey = redis.opsForValue().setIfAbsent("cart:abandoned_notified:" + sub, "1", Duration.ofHours(24))` → true mới publish: envelope `EventEnvelope.of("cart-service","cart.abandoned","system:abandoned-cart", payload {userId, email, itemCount, updatedAt})`, `rabbitTemplate.send("ecommerce.events","cart.abandoned", msg)` headers `eventType`, contentType JSON, persistent (copy OutboxRelay.toAmqpMessage).
 - Test set trực tiếp redis key `cart:user:u1` JSON `{items:[1 line], updatedAt: <2h01' trước>, email:"u@x.vn"}` → gọi `sweeper.sweep()` trực tiếp → Awaitility đếm message trên queue `notification.carts` (bind sẵn) = 1; sweep lần 2 → vẫn 1; update cart updatedAt mới → sweep → không tăng. Cart không email / items rỗng → không publish.
 
-- [ ] `mvn -pl services/cart-service,services/notification-service test` xanh
-- [ ] Commit: `feat(cart): abandoned cart email — sweeper 2h + redis flag 24h + notification mailer`
+- [x] `mvn -pl services/cart-service,services/notification-service test` xanh
+- [x] Commit: `feat(cart): abandoned cart email — sweeper 2h + redis flag 24h + notification mailer`
 
 ### Task 6: audit-log-viewer-admin-mongo
 
@@ -138,9 +138,9 @@ Key:
 - Controller: `GET /api/log/admin/events?eventType=&from=&to=&page=1` — size cố định 50; `from/to` ISO-8601 Instant parse (bad → 400); MongoTemplate `Query(Criteria "eventType" is ... (nullable)).and("occurredAt").gte/lte (nullable))` `.with(Sort desc("occurredAt")).skip((page-1)*50L).limit(50)`; count riêng cùng filter → `{items, page, size:50, total}`. SecurityConfig: `/api/log/admin/**` hasRole ADMIN, actuator health permit, còn lại authenticated.
 - AuditPage: filter row (Input eventType placeholder "vd order.confirmed", 2 Input datetime-local → ISO convert), Table cột [Thời gian, eventType, correlationId, payload (JSON.stringify slice 120 chars)], Button `< Trước / Sau >` pagination (data-testid `audit-next`), fetch authed: `authStore.fetch('/api/log/admin/events?...')` qua gateway same-origin, loading + empty state.
 
-- [ ] AdminEventsIT: 3 docs (2A 1B occurredAt tăng dần) → filter eventType=A → total 2 sort desc; from/to chính xác biên; page=2 → rỗng; anonymous 401; customer token 403; admin 200
-- [ ] `mvn -pl services/log-service test` xanh; `pnpm --filter @ecommerce/mfe-admin build` xanh
-- [ ] Commit: `feat(log,admin): audit log viewer — admin endpoint + gateway route + mfe-admin page`
+- [x] AdminEventsIT: 3 docs (2A 1B occurredAt tăng dần) → filter eventType=A → total 2 sort desc; from/to chính xác biên; page=2 → rỗng; anonymous 401; customer token 403; admin 200
+- [x] `mvn -pl services/log-service test` xanh; `pnpm --filter @ecommerce/mfe-admin build` xanh
+- [x] Commit: `feat(log,admin): audit log viewer — admin endpoint + gateway route + mfe-admin page`
 
 ### Task 7: recently-viewed-localstorage
 
@@ -155,8 +155,8 @@ Key:
 Key:
 - `recently_viewed` localStorage JSON array `{slug, name, price, comparePrice, discountPercent, image, at}` max 12, unshift + dedupe theo slug, `try/catch` parse. Tracker: `useEffect` 1 lần khi mount với product snapshot (image = product.image?.url ?? ""). Home: đọc client-side, grid card mini (ảnh/gradient, name 2 dòng, giá + gạch), link `/{locale}/p/{slug}`; rỗng → render null. COPY vi/en inline: "Đã xem gần đây" / "Recently viewed". data-testid `recently-viewed`.
 
-- [ ] `pnpm --filter storefront-web build` xanh
-- [ ] Commit: `feat(storefront): recently viewed — PDP tracker + home section (localStorage max 12)`
+- [x] `pnpm --filter storefront-web build` xanh
+- [x] Commit: `feat(storefront): recently viewed — PDP tracker + home section (localStorage max 12)`
 
 ### Task 8: related-products-es-morelikethis
 
@@ -172,9 +172,9 @@ Key:
 - EsEngine.related: 1 request: GET doc theo slug trước (`products/_doc/<id>` qua slug query hoặc slug từ PG trước — PG lookup slug → id + name/category), rồi `_search` body: `more_like_this {fields:["name.vi","name.en","description.vi","description.en"], like:[{doc trả về}], min_term_freq:1, min_doc_freq:1, max_query_terms:12}`, `filter: [{term:{status:"PUBLISHED"}}], must_not:[{term:{_id: selfId}}]`, size clamp 1..8. ES fail → `degrade` sang PgFtsEngine.related (pattern degrade sẵn). min_doc_freq=1 vì seed chỉ 24 products.
 - Endpoint trả `ProductCardPageDto` (items, page=1, size, total) — hydrate qua PG pattern sẵn. Slug không tồn tại/unpublished → page rỗng 200 (PDP ẩn).
 
-- [ ] RelatedTest: 2 products cùng category mô tả tương đồng → related(1) chứa 2, không chứa self; slug lạ → 200 rỗng; ES container down chưa test (degrade path unit-level PgFts)
-- [ ] `mvn -pl services/catalog-service test` xanh; `pnpm --filter storefront-web build` xanh
-- [ ] Commit: `feat(catalog,storefront): related products — ES more_like_this + PDP section (runtime endpoint, ADR)`
+- [x] RelatedTest: 2 products cùng category mô tả tương đồng → related(1) chứa 2, không chứa self; slug lạ → 200 rỗng; ES container down chưa test (degrade path unit-level PgFts)
+- [x] `mvn -pl services/catalog-service test` xanh; `pnpm --filter storefront-web build` xanh
+- [x] Commit: `feat(catalog,storefront): related products — ES more_like_this + PDP section (runtime endpoint, ADR)`
 
 ### Task 9: ga4-gtm-env-integration
 
@@ -187,9 +187,9 @@ Key:
 
 Key: không ID → KHÔNG load script gì (both apps); `window.dataLayer`/`window.gtag` guard mọi chỗ; purchase chỉ fire 1 lần (useRef/flag trên orderId).
 
-- [ ] `pnpm --filter storefront-web --filter @ecommerce/shell --filter @ecommerce/mfe-checkout build` xanh
-- [ ] Smoke: đặt NEXT_PUBLIC_GA_ID=G-TEST123 dev → view-source có `gtag.js?id=G-TEST123`; không đặt → không có script; confirmation CONFIRMED → console `dataLayer` push event purchase
-- [ ] Commit: `feat(analytics): GA4 env-gated — pageview storefront+shell, purchase trên confirmation`
+- [x] `pnpm --filter storefront-web --filter @ecommerce/shell --filter @ecommerce/mfe-checkout build` xanh
+- [x] Smoke: đặt NEXT_PUBLIC_GA_ID=G-TEST123 dev → view-source có `gtag.js?id=G-TEST123`; không đặt → không có script; confirmation CONFIRMED → console `dataLayer` push event purchase
+- [x] Commit: `feat(analytics): GA4 env-gated — pageview storefront+shell, purchase trên confirmation`
 
 ### Task 10: admin-export-csv
 
@@ -205,9 +205,9 @@ Key:
 - Cột orders: `order_id,created_at,status,payment_method,subtotal,discount,shipping_fee,total,currency,coupon_code,items_count` (email userId? email nằm trong Order? OrderDto không có email — dùng userId; đủ demo). Cột products: `id,slug,name_vi,brand,price,compare_price,discount_percent,status,rating_avg,created_at`. UTF-8 **BOM** `﻿` đầu stream (Excel VN). Batch 500 dòng/loop tránh load all vào memory. Filename `orders-<yyyyMMdd>.csv` / `products-<yyyyMMdd>.csv`.
 - FE: `downloadCsv(path)` → `authStore.fetch(path)` → blob → `URL.createObjectURL` → a.click() → revoke.
 
-- [ ] IT: seed ≥2 orders → ADMIN GET export → 200 text/csv, header đúng 11 cột, ≥2 dòng, BOM đầu; customer 403; anonymous 401. Catalog tương tự
-- [ ] `mvn -pl services/ordering-service,services/catalog-service test` xanh; `pnpm --filter @ecommerce/mfe-admin build` xanh
-- [ ] Commit: `feat(ordering,catalog,admin): CSV export — stream endpoints + export buttons`
+- [x] IT: seed ≥2 orders → ADMIN GET export → 200 text/csv, header đúng 11 cột, ≥2 dòng, BOM đầu; customer 403; anonymous 401. Catalog tương tự
+- [x] `mvn -pl services/ordering-service,services/catalog-service test` xanh; `pnpm --filter @ecommerce/mfe-admin build` xanh
+- [x] Commit: `feat(ordering,catalog,admin): CSV export — stream endpoints + export buttons`
 
 ### Task 11: newsletter-subscribe-welcome
 
@@ -227,10 +227,10 @@ Key:
 - Footer island: email input + nút "Đăng ký nhận tin" → POST → success msg "Đã đăng ký! Kiểm tra email chào mừng." / dup → "Email này đã được đăng ký từ trước." (204 cả 2 → FE phân biệt bằng gọi trước POST nào cũng 204 → hiện msg generic thành công + check dup bằng cách... ĐƠN GIẢN: backend trả 200 new / 204 dup? Giữ contract-free đơn giản: trả `{status:"subscribed"|"already"}` 200 — FE hiện đúng 2 msg. ADR ghi shape.) data-testid `newsletter-email`/`newsletter-submit`.
 - NewsletterPage admin: table email + created_at + pagination — pattern AuditPage (task 6).
 
-- [ ] NewsletterIT: subscribe mới → 200 {status:"subscribed"} + row + outbox event; dup → 200 {status:"already"} + KHÔNG row thứ 2 + KHÔNG event thêm; email invalid → 400; admin list 200 ADMIN / 403 customer; anonymous POST OK (public)
-- [ ] NewsletterConsumerTest: envelope → Mailpit welcome mail; idempotent dup
-- [ ] `mvn -pl services/identity-service,services/notification-service test` xanh; storefront + mfe-admin build xanh
-- [ ] Commit: `feat(identity,storefront,admin): newsletter — subscribe API, welcome email, footer form, admin list`
+- [x] NewsletterIT: subscribe mới → 200 {status:"subscribed"} + row + outbox event; dup → 200 {status:"already"} + KHÔNG row thứ 2 + KHÔNG event thêm; email invalid → 400; admin list 200 ADMIN / 403 customer; anonymous POST OK (public)
+- [x] NewsletterConsumerTest: envelope → Mailpit welcome mail; idempotent dup
+- [x] `mvn -pl services/identity-service,services/notification-service test` xanh; storefront + mfe-admin build xanh
+- [x] Commit: `feat(identity,storefront,admin): newsletter — subscribe API, welcome email, footer form, admin list`
 
 ### Task 12: e2e-regression-essentials
 
@@ -245,8 +245,8 @@ Key (helpers/env có sẵn: STOREFRONT/SHELL/GATEWAY/MAILPIT_API, registerNewUse
 - related-products: mở PDP seed → section `related` có ≥1 `.product-card` (selector theo ProductCardView class thật); về home → `[data-testid="recently-viewed"]` chứa sản phẩm vừa xem.
 - Chạy: `cp -n .env.example .env` (nếu thiếu) → `make dev` (đợi healthy) → `make seed` → `make e2e` — toàn bộ suite (golden-path + admin-crud + review + saga-fail + rbac + platform-asserts + 4 mới) phải xanh.
 
-- [ ] 4 spec mới pass; suite cũ regression pass (golden-path đặc biệt)
-- [ ] Commit: `test(e2e): SF-13 essentials specs — reset password, COD, upload, related`
+- [x] 4 spec mới pass; suite cũ regression pass (golden-path đặc biệt)
+- [x] Commit: `test(e2e): SF-13 essentials specs — reset password, COD, upload, related`
 
 ### Task 13: docs-adr-scope-freeze
 
@@ -254,7 +254,7 @@ Key (helpers/env có sẵn: STOREFRONT/SHELL/GATEWAY/MAILPIT_API, registerNewUse
 - Create: `docs/adr/0005-sf13-essentials-decisions.md` — 5 decisions: (1) reset/newsletter/abandoned email = event-driven (không REST nội bộ), 3 event mới ngoài freeze 13 — schema ghi đây, log `#` tự audit; (2) COD: order.paid lúc DELIVERED (đọc "COD→PAID lúc giao"), PENDING→CONFIRMED path mới duy nhất, stock window CONFIRMED→DELIVERED > TTL30' chấp nhận (demo); (3) related/newsletter/cod-capture endpoints runtime-additive ngoài freeze (precedent audit-log admin endpoint); (4) cart publish direct RabbitTemplate — cart không outbox (D8), flag at-most-once; (5) raw reset token trong event — Mailpit dev sink, token single-use 30'.
 - Modify: `README.md` mục demo (nếu có bảng feature — thêm SF-13 dòng; kiểm tra trước, chỉ append)
 
-- [ ] Commit: `docs(adr): SF-13 decisions — event choice, COD reading, runtime-additive endpoints, scope freeze`
+- [x] Commit: `docs(adr): SF-13 decisions — event choice, COD reading, runtime-additive endpoints, scope freeze`
 
 ---
 
@@ -264,7 +264,7 @@ Key (helpers/env có sẵn: STOREFRONT/SHELL/GATEWAY/MAILPIT_API, registerNewUse
 
 ## Verify cuối (Phase 5 checklist)
 
-- [ ] 9 dòng ACCEPTANCE pack verify từng dòng (IT + E2E + browser Rule 0)
-- [ ] `~/.claude/bin/story-verify sf-13-essentials-polish` sạch (ORCA_BIN=/usr/local/bin/orca)
-- [ ] Merge → `story/fi310-ecommerce-platform` + audit comment merge-hash
-- [ ] FI-323 → Done
+- [x] 9 dòng ACCEPTANCE pack verify từng dòng (IT + E2E + browser Rule 0)
+- [x] `~/.claude/bin/story-verify sf-13-essentials-polish` sạch (ORCA_BIN=/usr/local/bin/orca)
+- [x] Merge → `story/fi310-ecommerce-platform` + audit comment merge-hash
+- [x] FI-323 → Done

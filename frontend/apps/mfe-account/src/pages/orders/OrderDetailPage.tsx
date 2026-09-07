@@ -1,13 +1,32 @@
-// pages/orders/OrderDetailPage.tsx — chi tiết đơn (SF-9 file-slice):
+// pages/orders/OrderDetailPage.tsx — chi tiết đơn (SF-9 file-slice; SF-14 append):
 // items + địa chỉ + timeline trạng thái + Hủy đơn (PENDING, confirm dialog)
-// + Tải hóa đơn PDF (CONFIRMED+ — D18).
+// + Tải hóa đơn PDF (CONFIRMED+ — D18)
+// + Tracking vận đơn (SF-14 D22: GHN/flat) + Tạo yêu cầu trả hàng RMA.
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Badge, Button, Card, Modal } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
 import { appNavigate, authReady } from '../../bootstrap';
 import { StatusBadge, formatDateTime, formatVnd } from './OrdersPage';
-import { cancelMyOrder, downloadInvoicePdf, fetchMyOrder, type Order } from './ordersApi';
+import {
+  cancelMyOrder,
+  createRma,
+  downloadInvoicePdf,
+  fetchMyOrder,
+  fetchMyRmas,
+  fetchOrderTracking,
+  type Order,
+  type Rma,
+  type TrackingResponse
+} from './ordersApi';
+
+const RMA_STATUS_LABEL: Record<string, string> = {
+  REQUESTED: 'Chờ xử lý',
+  APPROVED: 'Đã duyệt',
+  RECEIVED: 'Đã nhận hàng',
+  REFUNDED: 'Đã hoàn tiền',
+  REJECTED: 'Bị từ chối'
+};
 
 export default function OrderDetailPage({ id }: { id: string }): ReactElement {
   const [order, setOrder] = useState<Order | null>(null);
@@ -15,6 +34,14 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  // SF-14: tracking + RMA
+  const [tracking, setTracking] = useState<TrackingResponse | null>(null);
+  const [rmas, setRmas] = useState<Rma[]>([]);
+  const [rmaModal, setRmaModal] = useState(false);
+  const [rmaQty, setRmaQty] = useState<Record<string, number>>({});
+  const [rmaReason, setRmaReason] = useState('');
+  const [rmaError, setRmaError] = useState<string | null>(null);
+  const [rmaSubmitting, setRmaSubmitting] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -25,7 +52,17 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
         return;
       }
       fetchMyOrder(id)
-        .then((o) => alive && setOrder(o))
+        .then((o) => {
+          if (!alive) return;
+          setOrder(o);
+          // SF-14: tracking khi đơn đang/đã giao
+          if ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.trackingCode) {
+            fetchOrderTracking(o.id).then((tr) => alive && setTracking(tr)).catch(() => undefined);
+          }
+          fetchMyRmas()
+            .then((page) => alive && setRmas(page.items.filter((r) => r.orderId === o.id)))
+            .catch(() => undefined);
+        })
         .catch((err: unknown) => {
           if (!alive) return;
           const status = (err as { status?: number }).status;
@@ -61,6 +98,42 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
     });
   };
 
+  // ── SF-14: tạo RMA ────────────────────────────────────────────────────────
+  const openRmaModal = (): void => {
+    if (!order) return;
+    setRmaQty(Object.fromEntries(order.items.map((item) => [item.id, 0])));
+    setRmaReason('');
+    setRmaError(null);
+    setRmaModal(true);
+  };
+
+  const submitRma = (): void => {
+    if (!order) return;
+    const lines = Object.entries(rmaQty)
+      .filter(([, qty]) => qty > 0)
+      .map(([lineId, qty]) => ({ lineId, qty }));
+    if (lines.length === 0) {
+      setRmaError('Chọn ít nhất 1 sản phẩm muốn trả');
+      return;
+    }
+    if (!rmaReason.trim()) {
+      setRmaError('Nhập lý do trả hàng');
+      return;
+    }
+    setRmaSubmitting(true);
+    setRmaError(null);
+    createRma(order.id, lines, rmaReason.trim())
+      .then((rma) => {
+        setRmas((prev) => [rma, ...prev]);
+        setRmaModal(false);
+        setBanner('Đã gửi yêu cầu trả hàng — chờ quản trị viên duyệt. Xem tiến trình bên dưới.');
+      })
+      .catch((err: unknown) => {
+        setRmaError(err instanceof Error ? err.message : 'Không tạo được yêu cầu trả hàng');
+      })
+      .finally(() => setRmaSubmitting(false));
+  };
+
   if (error) {
     return (
       <Card>
@@ -81,6 +154,8 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
   }
 
   const invoiceAvailable = ['CONFIRMED', 'SHIPPED', 'DELIVERED'].includes(order.status);
+  const hasActiveRma = rmas.some((r) => r.status !== 'REFUNDED' && r.status !== 'REJECTED');
+  const rmaStatusLabel = (status: string): string => RMA_STATUS_LABEL[status] ?? status;
 
   return (
     <div data-testid="order-detail">
@@ -111,6 +186,11 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
               {invoiceAvailable && (
                 <Button onClick={onDownloadInvoice}>Tải hóa đơn PDF</Button>
               )}
+              {order.status === 'DELIVERED' && !hasActiveRma && (
+                <Button variant="secondary" data-testid="rma-create" onClick={openRmaModal}>
+                  Trả hàng / hoàn tiền
+                </Button>
+              )}
               {order.status === 'PENDING' && (
                 <Button variant="danger" onClick={() => setConfirmCancel(true)}>Hủy đơn</Button>
               )}
@@ -140,6 +220,9 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
                 Giảm giá{order.couponCode ? ` (${order.couponCode})` : ''}: −{formatVnd(order.discount)}
               </span>
             )}
+            {!!order.pointsDiscount && order.pointsDiscount > 0 && (
+              <span data-testid="points-discount">Điểm thưởng: −{formatVnd(order.pointsDiscount)}</span>
+            )}
             <span>Phí vận chuyển: {formatVnd(order.shippingFee)}</span>
             <span style={{ fontWeight: 700, fontSize: 16 }}>
               Tổng cộng: <span style={{ color: 'var(--c-primary, #F53D2D)' }}>{formatVnd(order.total)}</span>
@@ -156,6 +239,71 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
               .join(', ')}
           </div>
         </Card>
+
+        <Card>
+          <h2 style={{ marginTop: 0, fontSize: 16 }}>Vận chuyển</h2>
+          {tracking ? (
+            <div data-testid="tracking-block">
+              <div>
+                Mã vận đơn: <strong>{tracking.trackingCode}</strong> · Đơn vị:{' '}
+                {tracking.carrier === 'flat' ? 'Giao hàng tiêu chuẩn' : tracking.carrier} · Trạng
+                thái: {tracking.status === 'delivered' ? 'Đã giao' : tracking.status === 'in_transit' ? 'Đang vận chuyển' : 'Đang chuẩn bị'}
+              </div>
+              {tracking.events && tracking.events.length > 0 && (
+                <ol style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gap: 4 }}>
+                  {tracking.events.map((event, index) => (
+                    <li key={`${event.at}-${index}`} style={{ fontSize: 'var(--text-sm, 13px)' }}>
+                      {event.at && <Badge variant="neutral">{event.at}</Badge>} {event.description}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          ) : (
+            <div style={{ color: 'var(--c-text-secondary, #666)' }}>
+              {order.trackingCode
+                ? `Mã vận đơn: ${order.trackingCode}`
+                : 'Chưa có mã vận đơn — hiển thị sau khi shop đóng gói.'}
+            </div>
+          )}
+        </Card>
+
+        {rmas.length > 0 && (
+          <Card>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>Yêu cầu trả hàng</h2>
+            <div style={{ display: 'grid', gap: 10 }} data-testid="rma-list">
+              {rmas.map((rma) => (
+                <div
+                  key={rma.id}
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    borderTop: '1px solid var(--c-border, #EEE)',
+                    paddingTop: 8
+                  }}
+                >
+                  <Badge
+                    variant={
+                      rma.status === 'REFUNDED'
+                        ? 'success'
+                        : rma.status === 'REJECTED'
+                          ? 'danger'
+                          : 'warning'
+                    }
+                  >
+                    {rmaStatusLabel(rma.status)}
+                  </Badge>
+                  <span style={{ fontSize: 'var(--text-sm, 13px)' }}>
+                    {rma.lines.reduce((sum, line) => sum + line.qty, 0)} món · “{rma.reason}”
+                    {rma.refundAmount ? ` · hoàn ${formatVnd(rma.refundAmount)}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card>
           <h2 style={{ marginTop: 0, fontSize: 16 }}>Tiến trình đơn hàng</h2>
@@ -187,6 +335,61 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
           Đơn #{order.id.slice(0, 8).toUpperCase()} chưa được thanh toán. Hủy xong tồn kho sẽ được nhả lại
           và bạn không thể hoàn tác.
         </p>
+      </Modal>
+
+      {/* SF-14 (D22): tạo yêu cầu trả hàng — chọn món + số lượng + lý do */}
+      <Modal
+        open={rmaModal}
+        onClose={() => setRmaModal(false)}
+        title="Tạo yêu cầu trả hàng"
+        footer={
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setRmaModal(false)}>Đóng</Button>
+            <Button variant="primary" disabled={rmaSubmitting} data-testid="rma-submit" onClick={submitRma}>
+              {rmaSubmitting ? 'Đang gửi…' : 'Gửi yêu cầu'}
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div>
+            {order.items.map((item) => (
+              <div
+                key={item.id}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', justifyContent: 'space-between' }}
+              >
+                <span>
+                  {item.name} <span style={{ color: 'var(--c-text-secondary, #666)' }}>×{item.qty}</span>
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={item.qty}
+                  value={rmaQty[item.id] ?? 0}
+                  aria-label={`Số lượng trả ${item.name}`}
+                  style={{ width: 64, padding: '4px 6px' }}
+                  onChange={(e) =>
+                    setRmaQty((prev) => ({
+                      ...prev,
+                      [item.id]: Math.max(0, Math.min(item.qty, Number(e.target.value) || 0))
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <textarea
+            placeholder="Lý do trả hàng (sai mẫu, lỗi sản phẩm…) — trong 7 ngày kể từ khi nhận hàng"
+            value={rmaReason}
+            rows={3}
+            aria-label="Lý do trả hàng"
+            style={{ width: '100%', padding: 8, boxSizing: 'border-box' }}
+            onChange={(e) => setRmaReason(e.target.value)}
+          />
+          {rmaError && (
+            <p role="alert" style={{ margin: 0, color: 'var(--c-danger, #d63a2f)' }}>{rmaError}</p>
+          )}
+        </div>
       </Modal>
     </div>
   );

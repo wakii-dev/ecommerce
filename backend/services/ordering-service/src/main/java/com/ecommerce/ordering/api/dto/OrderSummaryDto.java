@@ -32,7 +32,8 @@ public record OrderSummaryDto(
         return new OrderSummaryDto(
             o.getId(), o.getUserId(), o.getStatus(),
             o.getItems().stream().mapToInt(i -> i.getQty()).sum(),
-            o.getSubtotal(), o.getDiscount(), o.getShippingFee(), null,
+            o.getSubtotal(), o.getDiscount(), o.getShippingFee(),
+            o.getPointsDiscount() > 0 ? o.getPointsDiscount() : null,
             o.getTotal(), o.getCurrency(), o.getCouponCode(),
             o.getPaymentMethod(), o.getShippingMethod(), o.getTrackingCode(),
             o.getCreatedAt(), o.getUpdatedAt()

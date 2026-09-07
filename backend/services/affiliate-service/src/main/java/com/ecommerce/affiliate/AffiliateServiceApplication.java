@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.ecommerce.affiliate.config.AffiliateProperties;
+import com.ecommerce.affiliate.loyalty.LoyaltyProperties;
 
 /**
  * affiliate-service — affiliate module D20 (SF-12): registry + ref code +
@@ -25,8 +26,10 @@ import com.ecommerce.affiliate.config.AffiliateProperties;
  * </ul>
  */
 @SpringBootApplication(scanBasePackages = "com.ecommerce")
-@EntityScan({"com.ecommerce.affiliate.domain", "com.ecommerce.common.outbox"})
-@EnableConfigurationProperties(AffiliateProperties.class)
+@EntityScan({"com.ecommerce.affiliate.domain",
+    "com.ecommerce.affiliate.loyalty.domain", // SF-14 (FI-324): loyalty slice D22
+    "com.ecommerce.common.outbox"})
+@EnableConfigurationProperties({AffiliateProperties.class, LoyaltyProperties.class}) // SF-14: loyalty D22
 @EnableScheduling
 public class AffiliateServiceApplication {
 

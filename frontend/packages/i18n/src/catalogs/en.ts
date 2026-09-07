@@ -42,7 +42,10 @@ export const en = {
       coupons: 'Coupons',
       reviews: 'Reviews',
       orders: 'Orders',
-      affiliates: 'Affiliates'
+      affiliates: 'Affiliates',
+      // SF-14 (FI-324) append
+      rma: 'Returns',
+      loyalty: 'Loyalty'
     },
     topbar: {
       viewStorefront: 'View storefront',
@@ -95,7 +98,11 @@ export const en = {
       SHIPPED: 'Shipped',
       DELIVERED: 'Delivered',
       CANCELLED: 'Cancelled',
-      FAILED: 'Failed'
+      FAILED: 'Failed',
+      // SF-14 (FI-324) — RMA lifecycle append
+      REQUESTED: 'Requested',
+      RECEIVED: 'Received',
+      REFUNDED: 'Refunded'
     },
     products: {
       title: 'Products',
@@ -212,6 +219,39 @@ export const en = {
       rateEditHint: 'Click to change rate (applies to future orders)',
       rateInvalid: 'Rate must be within (0, 50]',
       empty: 'No affiliate profiles yet'
+    },
+    // ── SF-14 (FI-324) — RMA + loyalty append ───────────────────────────────
+    rma: {
+      title: 'Return requests',
+      colId: 'RMA ID',
+      colOrder: 'Order',
+      colReason: 'Reason',
+      colItems: 'Items returned',
+      approve: 'Approve',
+      approveDone: 'Return request approved',
+      reject: 'Reject',
+      rejectDone: 'Request rejected',
+      markReceived: 'Mark received',
+      markReceivedDone: 'Return received',
+      refund: 'Refund',
+      refundDone: 'Refunded',
+      empty: 'No return requests'
+    },
+    loyalty: {
+      title: 'Loyalty points',
+      lookupTitle: 'Customer lookup',
+      lookupPh: 'Enter user id (uuid)',
+      lookup: 'Look up',
+      balance: 'Current points',
+      totalEarned: 'Total earned',
+      ledger: 'Points ledger',
+      adjustTitle: 'Manual adjust',
+      adjustPoints: 'Points (+/-)',
+      adjustNote: 'Note',
+      adjust: 'Apply',
+      adjustDone: 'Points adjusted',
+      empty: 'Enter a user id to look up',
+      notFound: 'No data — check the user id'
     },
     reviews: {
       title: 'Review moderation',

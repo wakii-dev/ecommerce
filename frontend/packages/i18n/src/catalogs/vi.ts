@@ -43,7 +43,10 @@ export const vi = {
       coupons: 'Mã giảm giá',
       reviews: 'Đánh giá',
       orders: 'Đơn hàng',
-      affiliates: 'Affiliate'
+      affiliates: 'Affiliate',
+      // SF-14 (FI-324) append
+      rma: 'Trả hàng',
+      loyalty: 'Điểm thưởng'
     },
     topbar: {
       viewStorefront: 'Xem cửa hàng',
@@ -96,7 +99,11 @@ export const vi = {
       SHIPPED: 'Đang giao',
       DELIVERED: 'Đã giao',
       CANCELLED: 'Đã hủy',
-      FAILED: 'Thất bại'
+      FAILED: 'Thất bại',
+      // SF-14 (FI-324) — RMA lifecycle append
+      REQUESTED: 'Chờ xử lý',
+      RECEIVED: 'Đã nhận hàng',
+      REFUNDED: 'Đã hoàn tiền'
     },
     products: {
       title: 'Sản phẩm',
@@ -213,6 +220,39 @@ export const vi = {
       rateEditHint: 'Click để đổi rate (áp cho đơn sau)',
       rateInvalid: 'Rate phải trong khoảng (0, 50]',
       empty: 'Chưa có hồ sơ affiliate nào'
+    },
+    // ── SF-14 (FI-324) — RMA + loyalty append ───────────────────────────────
+    rma: {
+      title: 'Yêu cầu trả hàng',
+      colId: 'Mã RMA',
+      colOrder: 'Đơn hàng',
+      colReason: 'Lý do',
+      colItems: 'Sản phẩm trả',
+      approve: 'Duyệt',
+      approveDone: 'Đã duyệt yêu cầu trả hàng',
+      reject: 'Từ chối',
+      rejectDone: 'Đã từ chối yêu cầu',
+      markReceived: 'Nhận hàng',
+      markReceivedDone: 'Đã xác nhận nhận hàng trả',
+      refund: 'Hoàn tiền',
+      refundDone: 'Đã hoàn tiền',
+      empty: 'Không có yêu cầu trả hàng nào'
+    },
+    loyalty: {
+      title: 'Điểm thưởng',
+      lookupTitle: 'Tra cứu khách hàng',
+      lookupPh: 'Nhập user id (uuid)',
+      lookup: 'Tra cứu',
+      balance: 'Điểm hiện có',
+      totalEarned: 'Tổng đã nhận',
+      ledger: 'Sổ điểm',
+      adjustTitle: 'Chỉnh điểm thủ công',
+      adjustPoints: 'Số điểm (+/-)',
+      adjustNote: 'Ghi chú',
+      adjust: 'Áp dụng',
+      adjustDone: 'Đã điều chỉnh điểm',
+      empty: 'Nhập user id để tra cứu',
+      notFound: 'Không có dữ liệu — kiểm tra user id'
     },
     reviews: {
       title: 'Kiểm duyệt đánh giá',

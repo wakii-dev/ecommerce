@@ -7,23 +7,24 @@ import { appNavigate } from '../bootstrap';
 import { useCart } from '../lib/useCart';
 import { removeCartItem } from '../lib/cartApi';
 import {
-  PaymentUnavailableError,
-  confirmOrderMock,
+  ApiErrorClient,
   createOrder,
   validateCoupon,
   type Address,
   type CreatedOrder,
   type Order
-} from '../lib/orderingStub';
+} from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
 import { readAffiliateRef } from '../lib/affiliateRef';
 import '../page.css';
 
 /**
- * Checkout 3 bước (SF-6): 1 Địa chỉ → 2 Vận chuyển (flat fee env) → 3 Thanh
- * toán + review (coupon stub WELCOME10 −10%, Stripe PaymentElement confirm
- * THẬT khi có clientSecret; mock panel + cảnh báo khi không key/payment
- * degraded). Yêu cầu đăng nhập (POST /orders là bearerAuth — guest thấy gate).
+ * Checkout 3 bước (SF-6 UI giữ nguyên; SF-10 wire live): 1 Địa chỉ →
+ * 2 Vận chuyển (flat fee env) → 3 Thanh toán + review (coupon validate-coupon
+ * THẬT, POST /orders saga thật → clientSecret → Stripe PaymentElement confirm
+ * THẬT). Yêu cầu đăng nhập (POST /orders là bearerAuth — guest thấy gate).
+ * 502 từ saga (payment/catalog/inventory hỏng — đơn đã FAILED + release) →
+ * hiện lý do server, cho thử lại.
  */
 
 const SHIPPING_FEE = Number(import.meta.env.VITE_SHIPPING_FLAT_FEE ?? 25000);
@@ -70,11 +71,15 @@ export default function CheckoutPage(): ReactElement {
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
 
   const [orderPhase, setOrderPhase] = useState<'idle' | 'creating' | 'awaiting-card' | 'confirming'>('idle');
   const [created, setCreated] = useState<CreatedOrder | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
-  const [mockPanel, setMockPanel] = useState(false);
+  // SF-10: panel thay mock — đơn ĐÃ tạo (clientSecret thật) nhưng không mount
+  // được PaymentElement (thiếu publishable key) → hướng dẫn my-orders, KHÔNG
+  // còn nút "demo" giả CONFIRMED.
+  const [payUnavailable, setPayUnavailable] = useState(false);
   const [elementReady, setElementReady] = useState(false);
 
   const payRef = useRef<HTMLDivElement | null>(null);
@@ -91,14 +96,23 @@ export default function CheckoutPage(): ReactElement {
     mountedRef.current = null;
   }, []);
 
-  const applyCoupon = (): void => {
-    const result = validateCoupon(couponCode, subtotal);
-    if (result.valid) {
-      setCouponDiscount(result.discount);
-      setCouponError(null);
-    } else {
+  const applyCoupon = async (): Promise<void> => {
+    if (!couponCode.trim() || couponChecking) return;
+    setCouponChecking(true);
+    try {
+      const result = await validateCoupon(couponCode, subtotal);
+      if (result.valid) {
+        setCouponDiscount(result.discount);
+        setCouponError(null);
+      } else {
+        setCouponDiscount(null);
+        setCouponError(result.message ?? 'Mã không hợp lệ');
+      }
+    } catch (err) {
       setCouponDiscount(null);
-      setCouponError(result.message ?? 'Mã không hợp lệ');
+      setCouponError(err instanceof Error ? err.message : 'Không kiểm tra được mã');
+    } finally {
+      setCouponChecking(false);
     }
   };
 
@@ -115,9 +129,10 @@ export default function CheckoutPage(): ReactElement {
   }, [availableItems]);
 
   const finalize = useCallback(async (order: Order): Promise<void> => {
-    const confirmed = confirmOrderMock(order); // mock webhook PENDING→PAID→CONFIRMED
+    // SF-10: đơn PENDING thật từ server — trạng thái CONFIRMED do webhook
+    // Stripe → PAID → CONFIRMED; confirmation page sẽ poll /me/orders/{id}.
     try {
-      window.sessionStorage.setItem('ecommerce.last_order', JSON.stringify(confirmed));
+      window.sessionStorage.setItem('ecommerce.last_order', JSON.stringify(order));
     } catch {
       // storage full — confirmation page sẽ hiện empty state
     }
@@ -143,29 +158,24 @@ export default function CheckoutPage(): ReactElement {
         })),
         address,
         shippingMethod: SHIPPING_METHOD,
-        shippingFee: SHIPPING_FEE,
         ...(couponDiscount !== null && couponCode.trim()
           ? { couponCode: couponCode.trim() }
           : {}),
         // SF-12: attribution affiliate từ cookie aff_ref (nullable — order.confirmed)
-        ...(readAffiliateRef() ? { affiliateCode: readAffiliateRef() as string } : {}),
-        userId: authStore.getUser()?.id ?? 'guest'
+        ...(readAffiliateRef() ? { affiliateCode: readAffiliateRef() as string } : {})
       });
       setCreated(result);
-      if (result.clientSecret) {
-        setOrderPhase('awaiting-card'); // mount PaymentElement cho card thật
-      } else {
-        setMockPanel(true);
-        setOrderPhase('awaiting-card');
-      }
+      // sync discount re-price server (authority §6.1.1) vào summary
+      if (result.order.discount > 0) setCouponDiscount(result.order.discount);
+      setOrderPhase('awaiting-card'); // mount PaymentElement cho card thật
     } catch (err) {
-      if (err instanceof PaymentUnavailableError) {
-        setMockPanel(true);
-        setOrderPhase('awaiting-card');
+      if (err instanceof ApiErrorClient && err.errors.length > 0) {
+        const first = err.errors[0];
+        setPayError([first?.message, first?.field ? `(${first.field})` : null].filter(Boolean).join(' ') || err.detail || 'Không tạo được đơn hàng');
       } else {
         setPayError(err instanceof Error ? err.message : 'Không tạo được đơn hàng');
-        setOrderPhase('idle');
       }
+      setOrderPhase('idle'); // saga đã hủy đơn + release — thử lại được
     }
   };
 
@@ -183,7 +193,9 @@ export default function CheckoutPage(): ReactElement {
       if (mounted) {
         setElementReady(true);
       } else {
-        setMockPanel(true); // không publishable key → mock panel
+        // clientSecret thật nhưng không mount được (thiếu publishable key) —
+        // đơn vẫn tồn tại: hướng dẫn my-orders, không có nút demo
+        setPayUnavailable(true);
       }
     });
     return () => {
@@ -366,8 +378,8 @@ export default function CheckoutPage(): ReactElement {
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                     />
-                    <Button variant="secondary" onClick={applyCoupon}>
-                      Áp dụng
+                    <Button variant="secondary" disabled={couponChecking} onClick={() => void applyCoupon()}>
+                      {couponChecking ? 'Đang kiểm tra…' : 'Áp dụng'}
                     </Button>
                   </div>
                   {couponError ? (
@@ -379,11 +391,21 @@ export default function CheckoutPage(): ReactElement {
               )}
 
               <h2 style={{ margin: 0, fontSize: 18 }}>Thanh toán</h2>
-              {mockPanel ? (
+              {payUnavailable ? (
                 <div className="pay-warning" role="status">
-                  ⚠ Chưa cấu hình thanh toán — đơn DEMO, không trừ tiền thật. Đặt{' '}
-                  <code>VITE_STRIPE_PUBLISHABLE_KEY</code> + <code>STRIPE_SECRET_KEY</code> để
-                  thanh toán bằng thẻ thử.
+                  ⚠ Đơn <strong data-testid="pending-order-id">{created?.order.id}</strong> đã tạo nhưng chưa
+                  mount được form thẻ (thiếu <code>VITE_STRIPE_PUBLISHABLE_KEY</code>). Vào{' '}
+                  <a
+                    href="/account/orders"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      appNavigate('/account/orders');
+                    }}
+                    style={{ color: 'var(--c-primary, #F53D2D)' }}
+                  >
+                    Đơn hàng của tôi
+                  </a>{' '}
+                  để thanh toán — đơn chưa trả sẽ tự hủy sau 30 phút.
                 </div>
               ) : (
                 <div ref={payRef} className="pay-panel" />
@@ -398,15 +420,7 @@ export default function CheckoutPage(): ReactElement {
                 <Button variant="primary" onClick={() => void placeOrder()}>
                   Kiểm tra &amp; tạo đơn — {formatPrice(total)}
                 </Button>
-              ) : mockPanel ? (
-                <Button
-                  variant="primary"
-                  disabled={orderPhase === 'confirming'}
-                  onClick={() => created && void finalize(created.order)}
-                >
-                  Đặt hàng (demo)
-                </Button>
-              ) : (
+              ) : payUnavailable ? null : (
                 <Button
                   variant="primary"
                   disabled={orderPhase !== 'awaiting-card' || !elementReady}

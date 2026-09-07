@@ -61,7 +61,7 @@ export function canCancel(status: OrderStatusValue): boolean {
 
 function transition(order: StubOrder, next: OrderStatusValue, description: string): StubOrder {
   if (order.status === next) return order; // idempotent retry
-  const event: StubOrderEvent = { at: new Date().toISOString(), description };
+  const event: StubOrderEvent = { at: new Date().toISOString(), description, status: next };
   const updated: StubOrder = {
     ...order,
     status: next,
@@ -240,7 +240,7 @@ const ORDERS: StubOrder[] = [
       district: 'Quận 1',
       city: 'TP. Hồ Chí Minh'
     },
-    timeline: [{ at: at('2026-09-01', '20:15'), description: 'Đơn đã được đặt' }],
+    timeline: [{ at: at('2026-09-01', '20:15'), description: 'Đơn đã được đặt', status: 'PENDING' }],
     createdAt: at('2026-09-01', '20:15'),
     updatedAt: at('2026-09-01', '20:15')
   },
@@ -265,8 +265,8 @@ const ORDERS: StubOrder[] = [
       city: 'TP. Hồ Chí Minh'
     },
     timeline: [
-      { at: at('2026-09-02', '08:10'), description: 'Đơn đã được đặt' },
-      { at: at('2026-09-02', '08:12'), description: 'Thanh toán thành công (Stripe)' }
+      { at: at('2026-09-02', '08:10'), description: 'Đơn đã được đặt', status: 'PENDING' },
+      { at: at('2026-09-02', '08:12'), description: 'Thanh toán thành công (Stripe)', status: 'PAID' }
     ],
     createdAt: at('2026-09-02', '08:10'),
     updatedAt: at('2026-09-02', '08:12')
@@ -295,9 +295,9 @@ const ORDERS: StubOrder[] = [
       city: 'Hà Nội'
     },
     timeline: [
-      { at: at('2026-09-03', '10:00'), description: 'Đơn đã được đặt' },
-      { at: at('2026-09-03', '10:02'), description: 'Thanh toán thành công (Stripe)' },
-      { at: at('2026-09-03', '10:05'), description: 'Đơn đã được xác nhận' }
+      { at: at('2026-09-03', '10:00'), description: 'Đơn đã được đặt', status: 'PENDING' },
+      { at: at('2026-09-03', '10:02'), description: 'Thanh toán thành công (Stripe)', status: 'PAID' },
+      { at: at('2026-09-03', '10:05'), description: 'Đơn đã được xác nhận', status: 'CONFIRMED' }
     ],
     createdAt: at('2026-09-03', '10:00'),
     updatedAt: at('2026-09-03', '10:05')
@@ -323,9 +323,9 @@ const ORDERS: StubOrder[] = [
       city: 'TP. Hồ Chí Minh'
     },
     timeline: [
-      { at: at('2026-09-04', '09:00'), description: 'Đơn đã được đặt' },
-      { at: at('2026-09-04', '09:03'), description: 'Đơn đã được xác nhận (COD)' },
-      { at: at('2026-09-04', '16:40'), description: 'Đã giao cho đơn vị vận chuyển' }
+      { at: at('2026-09-04', '09:00'), description: 'Đơn đã được đặt', status: 'PENDING' },
+      { at: at('2026-09-04', '09:03'), description: 'Đơn đã được xác nhận (COD)', status: 'CONFIRMED' },
+      { at: at('2026-09-04', '16:40'), description: 'Đã giao cho đơn vị vận chuyển', status: 'PENDING' }
     ],
     createdAt: at('2026-09-04', '09:00'),
     updatedAt: at('2026-09-04', '16:40')
@@ -351,11 +351,11 @@ const ORDERS: StubOrder[] = [
       city: 'Hà Nội'
     },
     timeline: [
-      { at: at('2026-09-05', '07:30'), description: 'Đơn đã được đặt' },
-      { at: at('2026-09-05', '07:33'), description: 'Thanh toán thành công (Stripe)' },
-      { at: at('2026-09-05', '07:35'), description: 'Đơn đã được xác nhận' },
-      { at: at('2026-09-05', '13:00'), description: 'Đã giao cho đơn vị vận chuyển' },
-      { at: at('2026-09-05', '19:45'), description: 'Giao hàng thành công' }
+      { at: at('2026-09-05', '07:30'), description: 'Đơn đã được đặt', status: 'PENDING' },
+      { at: at('2026-09-05', '07:33'), description: 'Thanh toán thành công (Stripe)', status: 'PAID' },
+      { at: at('2026-09-05', '07:35'), description: 'Đơn đã được xác nhận', status: 'CONFIRMED' },
+      { at: at('2026-09-05', '13:00'), description: 'Đã giao cho đơn vị vận chuyển', status: 'PENDING' },
+      { at: at('2026-09-05', '19:45'), description: 'Giao hàng thành công', status: 'DELIVERED' }
     ],
     createdAt: at('2026-09-05', '07:30'),
     updatedAt: at('2026-09-05', '19:45')
@@ -380,9 +380,9 @@ const ORDERS: StubOrder[] = [
       city: 'TP. Hồ Chí Minh'
     },
     timeline: [
-      { at: at('2026-09-06', '06:00'), description: 'Đơn đã được đặt' },
-      { at: at('2026-09-06', '06:01'), description: 'Thanh toán thành công (Stripe)' },
-      { at: at('2026-09-06', '06:20'), description: 'Đơn đã bị hủy (admin)' }
+      { at: at('2026-09-06', '06:00'), description: 'Đơn đã được đặt', status: 'PENDING' },
+      { at: at('2026-09-06', '06:01'), description: 'Thanh toán thành công (Stripe)', status: 'PAID' },
+      { at: at('2026-09-06', '06:20'), description: 'Đơn đã bị hủy (admin)', status: 'PENDING' }
     ],
     createdAt: at('2026-09-06', '06:00'),
     updatedAt: at('2026-09-06', '06:20')

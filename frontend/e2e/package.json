@@ -1,0 +1,13 @@
+{
+  "name": "@ecommerce/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright E2E (SF-10, FI-320) — golden path + admin CRUD + review flow + saga fail + RBAC + platform asserts. Chạy với dev stack sống (make dev) + .env.",
+  "scripts": {
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

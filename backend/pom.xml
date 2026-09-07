@@ -54,6 +54,9 @@
     <module>services/partner-api</module>
     <!-- SF-12 (FI-322) -->
     <module>services/affiliate-service</module>
+    <!-- SF-10 (FI-320) -->
+    <module>services/notification-service</module>
+    <module>services/log-service</module>
   </modules>
 
   <dependencyManagement>

@@ -1,0 +1,37 @@
+# frontend-web (SF-10, profile full) — build shell + 4 remotes → nginx static.
+# Build context = REPO ROOT (như backend services — compose: context: .,
+# dockerfile: frontend/Dockerfile.web). REMOTE_*_URL RELATIVE (/remotes/<name>)
+# — mọi thứ same-origin sau gateway :8080 (D16 route split).
+#
+#   docker build -f frontend/Dockerfile.web .
+
+FROM node:20-alpine AS build
+WORKDIR /workspace
+RUN corepack enable
+COPY frontend/pnpm-workspace.yaml frontend/pnpm-lock.yaml frontend/package.json frontend/turbo.json ./
+COPY frontend/packages ./packages
+COPY frontend/apps ./apps
+WORKDIR /workspace
+RUN pnpm install --frozen-lockfile=false --prefer-offline
+
+# Remotes: build + --base=/remotes/<name>/ (asset prefix khớp nginx alias)
+RUN pnpm --filter @ecommerce/skeleton-remote exec vite build --base=/remotes/skeleton/
+RUN pnpm --filter @ecommerce/mfe-account exec vite build --base=/remotes/account/
+RUN pnpm --filter @ecommerce/mfe-checkout exec vite build --base=/remotes/checkout/
+RUN pnpm --filter @ecommerce/mfe-admin exec vite build --base=/remotes/admin/
+
+# Shell host: REMOTE_*_URL bake RELATIVE — remoteEntry load same-origin qua gateway
+RUN REMOTE_ACCOUNT_URL=/remotes/account \
+    REMOTE_CHECKOUT_URL=/remotes/checkout \
+    REMOTE_ADMIN_URL=/remotes/admin \
+    REMOTE_SKELETON_URL=/remotes/skeleton \
+    pnpm --filter @ecommerce/shell exec vite build
+
+FROM nginx:1.27-alpine
+COPY infra/nginx/frontend-web.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /workspace/apps/shell/dist /usr/share/nginx/html/shell
+COPY --from=build /workspace/apps/mfe-account/dist /usr/share/nginx/html/account
+COPY --from=build /workspace/apps/mfe-checkout/dist /usr/share/nginx/html/checkout
+COPY --from=build /workspace/apps/mfe-admin/dist /usr/share/nginx/html/admin
+COPY --from=build /workspace/apps/_skeleton-remote/dist /usr/share/nginx/html/skeleton
+EXPOSE 80

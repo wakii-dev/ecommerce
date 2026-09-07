@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# notification-service (SF-10) — PORT 8087 (port table template).
+# db_notification (đã có trong infra/db/init + NEEDS ensure trên volume cũ —
+# `make dev` preflight / seed script CREATE DATABASE idempotent).
+# SMTP = Mailpit (dev sink — MAIL_HOST/MAIL_PORT từ .env).
+# KHÔNG publish events → outbox.relay.enabled=false (outbox table vẫn có: V1).
+# ─────────────────────────────────────────────────────────────────────────────
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_notification}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+notify:
+  mail:
+    from: ${NOTIFY_MAIL_FROM:Ecommerce Demo <no-reply@demo.vn>}
+    my-orders-url: ${NOTIFY_MY_ORDERS_URL:http://localhost:5173/account/orders}
+  identity:
+    base-url: ${NOTIFY_IDENTITY_BASE_URL:http://localhost:8081}
+    timeout-ms: ${NOTIFY_IDENTITY_TIMEOUT_MS:5000}
+  # Service-account ADMIN lấy PDF hóa đơn từ ordering admin endpoint
+  # (pattern partner-api GAP-1 interim — REQUIREMENT-GAP FI-310). Account được
+  # register-once tự healing; ROLE ADMIN do seed script gán (SQL user_roles).
+  service-account:
+    email: ${NOTIFY_SERVICE_ACCOUNT_EMAIL:notification-svc@ecommerce.local}
+    password: ${NOTIFY_SERVICE_ACCOUNT_PASSWORD:NotifySvc#2026}
+    full-name: Notification Service (email cảm ơn)
+  ordering:
+    base-url: ${ORDERING_BASE_URL:http://localhost:8085}
+    timeout-ms: ${NOTIFY_ORDERING_TIMEOUT_MS:10000}
+
+# KHÔNG publish — chỉ consume
+outbox:
+  relay:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

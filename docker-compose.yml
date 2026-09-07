@@ -311,6 +311,210 @@ services:
     networks:
       - ecommerce-net
 
+  # ═══ SF-10 (2026-09-07, FI-320): profile full — TOÀN BỘ containerized ═══
+
+  # identity-service :8081 — JWT RS256 keys mount từ ./infra/keys (`make keys`)
+  identity-service:
+    build:
+      context: .
+      dockerfile: backend/services/identity-service/Dockerfile
+    container_name: ecommerce-identity-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_identity
+      JWT_PRIVATE_KEY_PATH: /keys/jwt-private.pem
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+    volumes:
+      - ./infra/keys:/keys:ro
+    expose:
+      - "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # inventory-service :8084
+  inventory-service:
+    build:
+      context: .
+      dockerfile: backend/services/inventory-service/Dockerfile
+    container_name: ecommerce-inventory-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_inventory
+      RABBITMQ_HOST: rabbitmq
+    expose:
+      - "8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # payment-service :8086 — Stripe test keys từ .env (rỗng → degraded 503)
+  payment-service:
+    build:
+      context: .
+      dockerfile: backend/services/payment-service/Dockerfile
+    container_name: ecommerce-payment-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_payment
+      RABBITMQ_HOST: rabbitmq
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    expose:
+      - "8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # notification-service :8087 (D18) — Mailpit SMTP; service-account ADMIN
+  # lấy PDF hóa đơn từ ordering (seed script gán role)
+  notification-service:
+    build:
+      context: .
+      dockerfile: backend/services/notification-service/Dockerfile
+    container_name: ecommerce-notification-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_notification
+      RABBITMQ_HOST: rabbitmq
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      NOTIFY_IDENTITY_BASE_URL: http://identity-service:8081
+      ORDERING_BASE_URL: http://ordering-service:8085
+      NOTIFY_SERVICE_ACCOUNT_EMAIL: ${NOTIFY_SERVICE_ACCOUNT_EMAIL:-notification-svc@ecommerce.local}
+      NOTIFY_SERVICE_ACCOUNT_PASSWORD: ${NOTIFY_SERVICE_ACCOUNT_PASSWORD:-NotifySvc#2026}
+      NOTIFY_MY_ORDERS_URL: ${NOTIFY_MY_ORDERS_URL:-http://localhost:8080/account/orders}
+    expose:
+      - "8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # log-service :8088 (D14) — Mongo event_log fan-in (queue bind '#')
+  log-service:
+    build:
+      context: .
+      dockerfile: backend/services/log-service/Dockerfile
+    container_name: ecommerce-log-service
+    profiles:
+      - full
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: db_log
+      RABBITMQ_HOST: rabbitmq
+    expose:
+      - "8088"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # affiliate + partner cần JWKS qua identity — đã có ở block SF-12/SF-11.
+
+  # gateway :8080 (full) — routes dịch qua service name (env-uri SF-10 T4)
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/gateway/Dockerfile
+    container_name: ecommerce-gateway
+    profiles:
+      - full
+    environment:
+      IDENTITY_URI: http://identity-service:8081
+      IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      CATALOG_URI: http://catalog-service:8082
+      CART_URI: http://cart-service:8083
+      INVENTORY_URI: http://inventory-service:8084
+      ORDERING_URI: http://ordering-service:8085
+      PAYMENT_URI: http://payment-service:8086
+      NOTIFICATION_URI: http://notification-service:8087
+      PARTNER_API_URI: http://partner-api:8091
+      AFFILIATE_URI: http://affiliate-service:8092
+      STOREFRONT_WEB_URI: http://storefront-web:3000
+      SHELL_WEB_ORIGIN: http://frontend-web:80
+      SPRING_PROFILES_ACTIVE: full
+    ports:
+      - "8080:8080"   # public entry duy nhất của stack full
+    depends_on:
+      identity-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      ordering-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      log-service:
+        condition: service_started
+      partner-api:
+        condition: service_started
+      affiliate-service:
+        condition: service_started
+    # storefront-web/frontend-web KHÔNG depends_on gateway (cycle — code-review
+    # P0): gateway route lazily, FE containers up sau cũng không sao.
+    networks:
+      - ecommerce-net
+
+  # storefront-web :3000 (full) — Next standalone container riêng (pack item 3);
+  # SSR fetch gateway nội bộ; host chỉ truy cập qua gateway :8080 (D16).
+  storefront-web:
+    build:
+      context: .
+      dockerfile: frontend/apps/storefront-web/Dockerfile
+    container_name: ecommerce-storefront-web
+    profiles:
+      - full
+    environment:
+      GATEWAY_URL: http://gateway:8080
+      SITE_URL: ${SITE_URL:-http://localhost:8080}
+      NEXT_PUBLIC_SHELL_URL: ${NEXT_PUBLIC_SHELL_URL:-http://localhost:8080}
+    expose:
+      - "3000"
+    networks:
+      - ecommerce-net
+
+  # frontend-web (full) — nginx static: shell dist + 4 remotes (D16 shell origin)
+  frontend-web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.web
+    container_name: ecommerce-frontend-web
+    profiles:
+      - full
+    expose:
+      - "80"
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:

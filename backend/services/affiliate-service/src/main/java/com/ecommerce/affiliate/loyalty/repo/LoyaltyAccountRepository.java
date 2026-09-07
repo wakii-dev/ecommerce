@@ -16,8 +16,8 @@ public interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, 
     /** Lazy upsert account — earn/adjust lần đầu tạo row balance 0 (idempotent). */
     @Modifying
     @Query(value = """
-        INSERT INTO loyalty_accounts (id, user_id, balance, total_earned, updated_at)
-        VALUES (gen_random_uuid(), :userId, 0, 0, now())
+        INSERT INTO loyalty_accounts (user_id, balance, total_earned, updated_at)
+        VALUES (:userId, 0, 0, now())
         ON CONFLICT (user_id) DO NOTHING
         """, nativeQuery = true)
     void upsertAccount(@Param("userId") UUID userId);
@@ -47,4 +47,18 @@ public interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, 
         WHERE user_id = :userId AND balance >= :points
         """, nativeQuery = true)
     int redeemIfEnough(@Param("userId") UUID userId, @Param("points") long points);
+
+    /**
+     * Thu hồi điểm earn khi đơn cancel SAU khi đã CONFIRMED — clamp tại 0:
+     * user có thể đã tiêu điểm đó vào đơn khác (không đuổi theo nợ điểm).
+     * total_earned vẫn trừ đủ (thống kê phản ánh đúng đơn hủy).
+     */
+    @Modifying
+    @Query(value = """
+        UPDATE loyalty_accounts
+        SET balance = GREATEST(0, balance - :points), total_earned = total_earned - :points,
+            updated_at = now()
+        WHERE user_id = :userId
+        """, nativeQuery = true)
+    int revokeEarn(@Param("userId") UUID userId, @Param("points") long points);
 }

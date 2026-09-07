@@ -1,15 +1,13 @@
 package com.ecommerce.affiliate.loyalty;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Config slice loyalty (SF-14) — tách khỏi {@code AffiliateProperties} của
- * SF-12 (file-slice, không đụng file người khác). {@code @Component} +
- * {@code @ConfigurationProperties} để không phải sửa {@code @EnableConfigurationProperties}
- * trên app class chung.
+ * SF-12 (file-slice, không đụng file người khác). Đăng ký qua
+ * {@code @EnableConfigurationProperties} trên app class (record constructor
+ * binding — cách duy nhất đúng cho record + properties).
  */
-@Component
 @ConfigurationProperties(prefix = "affiliate.loyalty")
 public record LoyaltyProperties(
     /** % điểm earn trên total đơn (1 = 1%) — env LOYALTY_EARN_RATE. */

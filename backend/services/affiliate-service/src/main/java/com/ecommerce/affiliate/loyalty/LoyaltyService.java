@@ -121,7 +121,8 @@ public class LoyaltyService {
         ledger.findByOrderIdAndType(orderId, LoyaltyLedgerType.EARN).ifPresent(entry -> {
             long revoke = entry.getPoints();
             ledger.delete(entry);
-            accounts.applyDelta(entry.getUserId(), -revoke, -revoke);
+            // Clamp 0 — điểm có thể đã bị tiêu vào đơn khác (repo revokeEarn)
+            accounts.revokeEarn(entry.getUserId(), revoke);
             log.info("Loyalty thu hồi {} điểm earn (order {}) của user {}",
                 revoke, orderId, entry.getUserId());
         });

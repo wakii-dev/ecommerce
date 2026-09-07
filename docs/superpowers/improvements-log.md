@@ -17,3 +17,14 @@
 - orca CLI chưa có `linear comment remove/delete` — comment rác (do shell fallback pipe hỏng) không xóa được, phải can thiệp web UI. Suggested: thêm subcommand remove.
 - `orca linear comment add --json | jq` trong zsh eval dễ break → comment stub "logged" đăng lên nhờ fallback; recommended pattern: luôn heredoc đơn lẻ, không pipe qua jq trên cùng lệnh.
 - story-verify B2 chỉ quét `[ ]` trong plan file — plan nên chuẩn hóa checkbox để gate đọc được (plan SF-12 viết heading `## Task N` phải tick tay ở phần Verify).
+
+## 2026-09-07 — SF-13 (FI-323)
+- `mvn install` trên module spring-boot cài jar REPACKAGED (BOOT-INF) vào ~/.m2 → module khác (ordering SagaTest) compile vỡ "package does not exist". Fix: `mvn clean install -Dspring-boot.repackage.skip=true` hoặc luôn chạy test qua reactor `-am`. (Suggested: thêm script `scripts/install-plain-jars.sh` hoặc conventions note.)
+- SagaTest (ordering) resolve payment/inventory từ ~/.m2 KHÔNG phải reactor khi `-pl` đơn → jar stale = hành vi giả (COD capture 404). Suggested: dev-stack/e2e docs ghi "chạy make dev-js thay mvn -pl đơn".
+- Surefire mặc định KHÔNG chạy `*IT` (đã có note SF-1 nhưng vẫn dính ở UploadIT/PasswordResetIT — cost 2 lần rerun). Suggested: skill/workflow checklist "đặt tên test *Test ngay từ đầu".
+- Mailpit list API (`/api/v1/messages`) KHÔNG có body — assert nội dung mail phải fetch `/api/v1/message/{ID}` (số ít). Suggested: helper `mailpitBody(mailId)` trong e2e/IT harness chung.
+- Flyway numbering collide giữa SF song song trên volume PG chung (SF-15 V11 oauth vs SF-13 V11 reset). Fix vùng: renumber V13/V14 + `ignore-migration-patterns: "*:missing"`. Suggested: coordinator cấp per-SF migration range (vd SF-13→V13-14, SF-14→V15-19, SF-15→V20+) khi launch T6.
+- `make dev` multi-session: dev-stop session khác xoá `.run/` + kill ports giữa chừng; CATALOG_API_TOKEN mint TTL 15' làm order create 502 sau 15' uptime. Workaround SF-13: `JWT_ACCESS_TTL_SECONDS=3600` vào .env. Suggested: dev-stack mint lại token định kỳ hoặc internal-token endpoint (đã là GAP-1/3 interim).
+- seed stocks dùng `ON CONFLICT DO NOTHING` → không repair stock bị drain sau nhiều run e2e → saga-fail fail "available 0". Workaround: `UPDATE stocks SET quantity=50`. Suggested: seed đổi thành `DO UPDATE SET quantity = 50` (hoặc flag `--repair`).
+- StreamingResponseBody + @Transactional: async thread khác request → session chết giữa stream; OutputStreamWriter phải flush tay (Spring chỉ đóng raw stream). Pattern đúng đã trong OrdersCsvExporter/ProductsCsvExporter — copy nếu cần exporter khác.
+- Orca CLI: `orca screenshot` fail "tab may not be visible" khi window mất focus — retry sau sleep thường được; không có cơ chế focus window từ CLI.

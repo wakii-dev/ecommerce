@@ -21,6 +21,8 @@ ecom:
         - /api/identity/.well-known/**
         # SF-13 (FI-323) A1: password forgot/reset public theo contract identity.yaml
         - /api/identity/password/**
+        # SF-13 (FI-323) A8: newsletter subscribe public (guest OK)
+        - /api/identity/newsletter
         - /api/catalog/**                    # guest browse — public từ SF-4
         # SF-9 (FI-319): public theo contract (không security trên operation này)
         - /api/ordering/coupons/public       # coupon center — guest xem

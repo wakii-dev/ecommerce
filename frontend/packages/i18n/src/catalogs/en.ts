@@ -43,7 +43,15 @@ export const en = {
       reviews: 'Reviews',
       orders: 'Orders',
       audit: 'Audit log',
+      newsletter: 'Newsletter',
       affiliates: 'Affiliates'
+    },
+    newsletter: {
+      title: 'Newsletter — subscribers',
+      email: 'Email',
+      subscribedAt: 'Subscribed at',
+      subscribers: 'subscribers',
+      empty: 'No subscribers yet'
     },
     audit: {
       title: 'Audit log',

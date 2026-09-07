@@ -44,7 +44,15 @@ export const vi = {
       reviews: 'Đánh giá',
       orders: 'Đơn hàng',
       affiliates: 'Affiliate',
-      audit: 'Nhật ký hệ thống'
+      audit: 'Nhật ký hệ thống',
+      newsletter: 'Newsletter'
+    },
+    newsletter: {
+      title: 'Newsletter — người nhận tin',
+      email: 'Email',
+      subscribedAt: 'Đăng ký lúc',
+      subscribers: 'subscriber',
+      empty: 'Chưa có ai đăng ký'
     },
     audit: {
       title: 'Nhật ký hệ thống',

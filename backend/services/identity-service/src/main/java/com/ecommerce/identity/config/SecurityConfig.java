@@ -48,6 +48,8 @@ public class SecurityConfig {
                     "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                     // SF-13 (FI-323) A1: forgot/reset public theo contract identity.yaml
                     "/password/**",
+                    // SF-13 (FI-323) A8: newsletter subscribe public (guest OK)
+                    "/newsletter",
                     "/.well-known/jwks.json",
                     "/actuator/health/**", "/actuator/info",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

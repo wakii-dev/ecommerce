@@ -36,9 +36,16 @@ public class OrderingExceptionHandler {
         return problem(body);
     }
 
-    @ExceptionHandler({IdempotencyConflictException.class, InvalidStateTransitionException.class})
+    @ExceptionHandler({IdempotencyConflictException.class, InvalidStateTransitionException.class,
+        RmaWindowException.class})
     public ResponseEntity<Map<String, Object>> conflict(RuntimeException e) {
         return problem(baseBody(HttpStatus.CONFLICT.value(), "Conflict", e.getMessage()));
+    }
+
+    /** 400 — lines RMA không khớp đơn (lineId lạ / qty vượt line). */
+    @ExceptionHandler(InvalidRmaLinesException.class)
+    public ResponseEntity<Map<String, Object>> badRmaLines(InvalidRmaLinesException e) {
+        return problem(baseBody(HttpStatus.BAD_REQUEST.value(), "Bad Request", e.getMessage()));
     }
 
     /** 422 — coupon sai/hết, product/variant không còn (§6.1.2), COD/điểm chưa hỗ trợ. */

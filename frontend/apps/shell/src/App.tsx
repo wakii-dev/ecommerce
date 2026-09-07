@@ -16,6 +16,8 @@ const RemotePage = lazy(() => import('./pages/RemotePage'));
 // Trang auth/profile của mfe-account (SF-3) — cũng LAZY, cùng lý do: shell
 // vẫn boot khi remote down; ErrorBoundary thay trang bằng hướng dẫn chạy remote.
 const AccountLoginPage = lazy(() => import('account/LoginPage'));
+const AccountForgotPasswordPage = lazy(() => import('account/ForgotPasswordPage'));
+const AccountResetPasswordPage = lazy(() => import('account/ResetPasswordPage'));
 const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
 const AccountPage = lazy(() => import('account/AccountPage'));
 // SF-9 (FI-319) — my-orders slice mfe-account (pages/orders/*) — LAZY như các page trên.
@@ -174,6 +176,22 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <AccountRegisterPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/forgot-password') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountForgotPasswordPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/reset-password') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountResetPasswordPage />
         </Suspense>
       </ErrorBoundary>
     );

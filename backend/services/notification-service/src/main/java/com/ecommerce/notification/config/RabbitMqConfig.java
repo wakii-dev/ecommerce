@@ -35,6 +35,7 @@ public class RabbitMqConfig {
 
     public static final String QUEUE_ORDERS = "notification.orders";
     public static final String QUEUE_REVIEWS = "notification.reviews";
+    public static final String QUEUE_PASSWORD_RESET = "notification.password_reset";
 
     @Bean
     Queue notificationOrders() {
@@ -44,6 +45,19 @@ public class RabbitMqConfig {
     @Bean
     Queue notificationReviews() {
         return QueueBuilder.durable(QUEUE_REVIEWS).build();
+    }
+
+    @Bean
+    Queue notificationPasswordReset() {
+        return QueueBuilder.durable(QUEUE_PASSWORD_RESET).build();
+    }
+
+    @Bean
+    Binding passwordResetRequestedBinding(Queue notificationPasswordReset, TopicExchange outboxEventsExchange) {
+        // SF-13 (FI-323) A1 — event mới ngoài freeze 13 (ADR 0005): identity outbox
+        // user.password_reset_requested {email, token, expiresAt} → mail link reset.
+        return BindingBuilder.bind(notificationPasswordReset).to(outboxEventsExchange)
+            .with("user.password_reset_requested");
     }
 
     @Bean

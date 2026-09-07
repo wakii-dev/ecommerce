@@ -45,6 +45,16 @@ declare module 'account/RegisterPage' {
   export default RegisterPage;
 }
 
+declare module 'account/ForgotPasswordPage' {
+  const ForgotPasswordPage: import('react').ComponentType;
+  export default ForgotPasswordPage;
+}
+
+declare module 'account/ResetPasswordPage' {
+  const ResetPasswordPage: import('react').ComponentType;
+  export default ResetPasswordPage;
+}
+
 declare module 'account/AccountPage' {
   const AccountPage: import('react').ComponentType;
   export default AccountPage;

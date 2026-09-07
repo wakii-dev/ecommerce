@@ -94,7 +94,7 @@ spring:
       # full (nginx serve dist). Không filter — nginx/vite serve paths gốc.
         - id: shell-web                                   # SF-10 · shell :5173 / nginx
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
-          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]
+          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]
       #
       # SF-13 (2026-09-07): ảnh sản phẩm MinIO (A3) — /media/products/<file>
       # public (không cần public-paths: ngoài /api/** thì anyExchange permitAll);

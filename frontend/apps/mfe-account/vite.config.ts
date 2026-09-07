@@ -10,6 +10,8 @@ const mfeConfig = defineMfeConfig({
     './bootstrap': './src/bootstrap.tsx',
     './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
+    './ForgotPasswordPage': './src/pages/ForgotPasswordPage.tsx',
+    './ResetPasswordPage': './src/pages/ResetPasswordPage.tsx',
     './RegisterPage': './src/pages/RegisterPage.tsx',
     './AccountPage': './src/pages/AccountPage.tsx',
     // SF-9 (FI-319) — my-orders slice (pages/orders/*)

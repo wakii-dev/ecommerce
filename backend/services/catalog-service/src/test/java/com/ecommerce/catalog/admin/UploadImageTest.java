@@ -30,7 +30,7 @@ import com.ecommerce.catalog.AbstractIntegrationTest;
  * 201 {@code {url}} dạng {@code /media/products/<uuid>.<ext>}, object
  * đọc public được (bucket policy anonymous download), guard 401/403.
  */
-class UploadIT extends AbstractIntegrationTest {
+class UploadImageTest extends AbstractIntegrationTest {
 
     static final GenericContainer<?> MINIO = new GenericContainer<>("minio/minio:RELEASE.2024-09-13T20-26-02Z")
         .withCommand("server /data")

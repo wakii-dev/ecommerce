@@ -85,6 +85,12 @@ public class RefreshTokenService {
             .orElse(false);
     }
 
+    /** Revoke MỌI refresh token của user (SF-13 A1 — password reset xong đăng xuất mọi phiên). */
+    @Transactional
+    public int revokeAllForUser(java.util.UUID userId) {
+        return repository.revokeAllForUser(userId, Instant.now());
+    }
+
     public Duration ttl() {
         return Duration.ofDays(props.ttlDays());
     }

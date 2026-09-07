@@ -43,6 +43,8 @@ notify:
   mail:
     from: ${NOTIFY_MAIL_FROM:Ecommerce Demo <no-reply@demo.vn>}
     my-orders-url: ${NOTIFY_MY_ORDERS_URL:http://localhost:5173/account/orders}
+    # SF-13 (FI-323) A1 — link trang reset password (shell origin)
+    reset-password-url: ${NOTIFY_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
   identity:
     base-url: ${NOTIFY_IDENTITY_BASE_URL:http://localhost:8081}
     timeout-ms: ${NOTIFY_IDENTITY_TIMEOUT_MS:5000}

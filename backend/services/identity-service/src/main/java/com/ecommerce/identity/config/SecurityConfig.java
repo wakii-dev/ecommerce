@@ -46,6 +46,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
+                    // SF-13 (FI-323) A1: forgot/reset public theo contract identity.yaml
+                    "/password/**",
                     "/.well-known/jwks.json",
                     "/actuator/health/**", "/actuator/info",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

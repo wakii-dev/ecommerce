@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import RecentlyViewedTracker from '../../../../components/pdp/RecentlyViewedTracker';
 import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
 import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
@@ -192,6 +193,17 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+
+      {/* SF-13 A6a: ghi "đã xem gần đây" (localStorage, max 12) */}
+      <RecentlyViewedTracker
+        slug={product.slug}
+        slugEn={product.slugEn}
+        name={product.name}
+        price={product.price}
+        comparePrice={product.comparePrice ?? null}
+        discountPercent={percent}
+        image={product.image?.url ?? ''}
       />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">

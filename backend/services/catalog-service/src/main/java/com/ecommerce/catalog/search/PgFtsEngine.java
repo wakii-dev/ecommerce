@@ -177,6 +177,35 @@ public class PgFtsEngine implements SearchEngine {
 
     // ── no-op (PG: search_vec GENERATED sống theo row) ──────────────────────
 
+    /** SF-13 A6b — fallback related: cùng category mới nhất (không MLT). */
+    @Override
+    public com.ecommerce.catalog.web.dto.ProductCardPageDto related(String slug, String locale, int size) {
+        int limit = Math.max(1, Math.min(size, 8));
+        ProductEntity product = productRepository.findBySlugViOrSlugEn(slug, slug).orElse(null);
+        if (product == null || !"PUBLISHED".equals(String.valueOf(product.getStatus()))) {
+            return new com.ecommerce.catalog.web.dto.ProductCardPageDto(List.of(), 1, limit, 0);
+        }
+        List<UUID> ids = jdbc.query(
+            "SELECT id FROM products WHERE category_id = :cat AND status = 'PUBLISHED' "
+                + "AND deleted_at IS NULL AND id <> :self ORDER BY created_at DESC LIMIT :lim",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("cat", product.getCategoryId())
+                .addValue("self", product.getId())
+                .addValue("lim", limit),
+            (rs, i) -> UUID.fromString(rs.getString("id")));
+        // hydrate mượn EsEngine path? PgFts tự hydrate: dùng productRepository + images
+        Map<UUID, ProductEntity> byId = productRepository.findAllById(ids).stream()
+            .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+        Map<UUID, List<ProductImageEntity>> imagesById = imageRepository.findByProductIdInOrderByPositionAsc(ids)
+            .stream().collect(Collectors.groupingBy(ProductImageEntity::getProductId));
+        List<com.ecommerce.catalog.web.dto.ProductCardDto> cards = ids.stream()
+            .map(byId::get).filter(java.util.Objects::nonNull)
+            .map(p -> com.ecommerce.catalog.service.CatalogQueryService.toCard(
+                p, imagesById.getOrDefault(p.getId(), List.of()), locale))
+            .toList();
+        return new com.ecommerce.catalog.web.dto.ProductCardPageDto(cards, 1, limit, cards.size());
+    }
+
     @Override
     public void index(ProductEntity product) {
         log.debug("[pg-fts] index({}) no-op — search_vec GENERATED tự động", product.getId());

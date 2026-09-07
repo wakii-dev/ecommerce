@@ -73,6 +73,14 @@ spring:
         - id: partner-api                                # SF-11 · port 8091
           uri: ${PARTNER_API_URI:http://localhost:8091}
           predicates: [ "Path=/open-api/**" ]
+        # SF-14 (2026-09-07): internal loyalty redeem — x-internal-only trong
+        # affiliate.yaml ("không route qua gateway công khai"). Route chặn đặt
+        # TRƯỚC block affiliate (first-match-wins) → mọi call public ăn 404;
+        # ordering gọi thẳng :8092 kèm X-Internal-Token (SF-14 D8).
+        - id: affiliate-internal-blocked                  # SF-14 · block route
+          uri: ${AFFILIATE_URI:http://localhost:8092}
+          predicates: [ "Path=/api/affiliate/internal/**" ]
+          filters: [ "SetStatus=404" ]
         # SF-12 (2026-09-07): affiliate-service :8092 (D20) — controllers map
         # FULL /api/affiliate/** (precedent catalog/cart) → KHÔNG StripPrefix.
         - id: affiliate                                   # SF-12 · port 8092

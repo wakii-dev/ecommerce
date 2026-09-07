@@ -25,6 +25,8 @@ export type AdminPageKey =
   | 'categories'
   | 'coupons'
   | 'affiliates' // SF-12 (FI-322) append
+  | 'rma' // SF-14 (FI-324) append
+  | 'loyalty' // SF-14 (FI-324) append
   | 'reviews'
   | 'orders'
   | 'order-detail'
@@ -47,6 +49,8 @@ export function resolveAdminRoute(pathname: string): AdminRoute {
   if (rest === '/categories') return { page: 'categories' };
   if (rest === '/coupons') return { page: 'coupons' };
   if (rest === '/affiliates') return { page: 'affiliates' }; // SF-12 append
+  if (rest === '/rma') return { page: 'rma' }; // SF-14 append
+  if (rest === '/loyalty') return { page: 'loyalty' }; // SF-14 append
   if (rest === '/reviews') return { page: 'reviews' };
   if (rest === '/orders') return { page: 'orders' };
   const orderDetail = rest.match(/^\/orders\/([^/]+)$/);
@@ -63,7 +67,10 @@ export const ADMIN_NAV: ReadonlyArray<{ to: string; key: string }> = [
   { to: '/admin/reviews', key: 'admin.nav.reviews' },
   { to: '/admin/orders', key: 'admin.nav.orders' },
   // SF-12 (FI-322) append — affiliates manage (D20)
-  { to: '/admin/affiliates', key: 'admin.nav.affiliates' }
+  { to: '/admin/affiliates', key: 'admin.nav.affiliates' },
+  // SF-14 (FI-324) append — RMA queue + loyalty adjust (D22)
+  { to: '/admin/rma', key: 'admin.nav.rma' },
+  { to: '/admin/loyalty', key: 'admin.nav.loyalty' }
 ] as const;
 
 /** Nav item nào active cho pathname (prefix match; /admin/products/x vẫn active Products). */
@@ -79,7 +86,9 @@ export function activeNavIndex(pathname: string): number {
     reviews: 4,
     orders: 5,
     'order-detail': 5,
-    affiliates: 6 // SF-12 append
+    affiliates: 6, // SF-12 append
+    rma: 7, // SF-14 append
+    loyalty: 8 // SF-14 append
   };
   return idxByPage[route.page] ?? 0;
 }

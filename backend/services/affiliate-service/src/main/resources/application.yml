@@ -41,6 +41,12 @@ affiliate:
   # Cookie attribution (pack: 30 ngày, httpOnly, path=/)
   cookie-name: aff_ref
   cookie-max-age-seconds: ${AFFILIATE_COOKIE_MAX_AGE:2592000}
+  # SF-14 (FI-324): loyalty điểm — file-slice loyalty/ (D22). 1 điểm = 100đ
+  # (point-vnd); earn-rate % trên total (1 = 1% → total/10000 điểm).
+  loyalty:
+    earn-rate: ${LOYALTY_EARN_RATE:1}
+    point-vnd: 100
+    internal-token: ${AFFILIATE_INTERNAL_TOKEN:dev-internal-token}
 
 management:
   endpoints:

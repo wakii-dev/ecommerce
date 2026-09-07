@@ -8,6 +8,7 @@ import { ShellNav } from './header/Header';
 import { HeaderSlots } from './header/HeaderSlots';
 import { navigate } from './router';
 import ThemeToggle from './ThemeToggle';
+import { injectLiveChat } from './livechat';
 
 // Chip kiểm chứng React singleton (Task 14): shell gắn bản React CỦA MÌNH lên
 // window TRƯỚC khi module nào của remote được nạp (import động chạy sau
@@ -24,6 +25,9 @@ import ThemeToggle from './ThemeToggle';
 HeaderSlots.register('left', 'shell-nav', ShellNav);
 // Toggle dark mode (SF-15) — slot 'right' cạnh auth widget/cart badge.
 HeaderSlots.register('right', 'theme-toggle', ThemeToggle);
+
+// Live chat widget (SF-15) — env VITE_LIVECHAT_LICENSE_ID; thiếu → không load.
+injectLiveChat();
 
 // mfe-account (SF-3) — eager bootstrap: remote tự đăng ký auth widget vào slot
 // 'right' + khôi phục phiên (refresh-on-boot). KHÔNG chặn render nếu remote

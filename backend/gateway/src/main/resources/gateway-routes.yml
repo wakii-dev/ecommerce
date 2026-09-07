@@ -6,8 +6,13 @@
 # Un-comment block service khi service đó ra đời (SF-3+), không đổi id format.
 #
 # Convention: id = <service> · uri = http://localhost:<port> (dev, host JVM)
-#             predicate Path=/api/<service>/** + StripPrefix=1
+#             predicate Path=/api/<service>/** + StripPrefix theo service
 #             (service nhận path còn lại sau /api/<service>)
+#
+# SF-10 (2026-09-07): MỌI uri parameterize bằng env `<SVC>_URI` (dev default
+# giữ nguyên http://localhost:<port>) — profile `full` (compose) set service
+# name (vd IDENTITY_URI=http://identity-service:8081) không cần đổi file.
+# Thêm route split D16 shell pages + notification block.
 # ═══════════════════════════════════════════════════════════════════════════
 
 spring:
@@ -26,7 +31,7 @@ spring:
       # StripPrefix=2 (không phải 1 như placeholder): AuthController map
       # @RequestMapping("/auth") — /api/identity/auth/login → /auth/login.
         - id: identity                                    # SF-3 · port 8081
-          uri: http://localhost:8081
+          uri: ${IDENTITY_URI:http://localhost:8081}
           predicates: [ "Path=/api/identity/**" ]
           filters: [ "StripPrefix=2" ]
       # SF-4 (2026-09-06) un-comment block catalog — DECISION: KHÔNG StripPrefix.
@@ -35,30 +40,30 @@ spring:
       # map @RequestMapping("/api/template") (giữ FULL prefix) — controllers
       # catalog-service map /api/catalog/** nên forward nguyên path.
         - id: catalog                                      # SF-4 · port 8082
-          uri: http://localhost:8082
+          uri: ${CATALOG_URI:http://localhost:8082}
           predicates: [ "Path=/api/catalog/**" ]
         # SF-4 (2026-09-06): storefront-web Next.js SSR (D16 route split) — public pages qua Next :3000; shell vẫn cho app pages cần auth (SF-6/7 mount sau). Không filter — Next serve paths gốc.
         - id: storefront-web                               # SF-4 · port 3000
-          uri: http://localhost:3000
+          uri: ${STOREFRONT_WEB_URI:http://localhost:3000}
           predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en,/en/**,/_next/**" ]
       # SF-6 (2026-09-06) un-comment block cart — KHÔNG StripPrefix (SF-4
       # precedent): cart-service controllers map FULL /api/cart/** khớp contract.
         - id: cart                                          # SF-6 · port 8083
-          uri: http://localhost:8083
+          uri: ${CART_URI:http://localhost:8083}
           predicates: [ "Path=/api/cart/**" ]
         - id: inventory                                  # SF-5 · port 8084
-          uri: http://localhost:8084
+          uri: ${INVENTORY_URI:http://localhost:8084}
           predicates: [ "Path=/api/inventory/**" ]
           filters: [ "StripPrefix=1" ]
         # SF-9 (2026-09-06): URL contract là /api/ordering/** (ordering.yaml) nhưng
         # controllers ở :8085 map path GỌC (/orders, /me/orders, /admin/…) — KHÔNG có
         # class-level /ordering prefix → strip CẢ "api/ordering" (StripPrefix=2).
         - id: ordering                                    # SF-9 · port 8085
-          uri: http://localhost:8085
+          uri: ${ORDERING_URI:http://localhost:8085}
           predicates: [ "Path=/api/ordering/**" ]
           filters: [ "StripPrefix=2" ]
         - id: payment                                    # SF-5 · port 8086
-          uri: http://localhost:8086
+          uri: ${PAYMENT_URI:http://localhost:8086}
           predicates: [ "Path=/api/payment/**" ]
           filters: [ "StripPrefix=1" ]
       # SF-11 (2026-09-07): partner Open API — namespace RIÊNG /open-api/** KHÔNG
@@ -66,17 +71,30 @@ spring:
       # gateway-auth.yml public-paths). KHÔNG StripPrefix — controllers map full
       # /open-api/v1/** (như catalog precedent).
         - id: partner-api                                # SF-11 · port 8091
-          uri: http://localhost:8091
+          uri: ${PARTNER_API_URI:http://localhost:8091}
           predicates: [ "Path=/open-api/**" ]
         # SF-12 (2026-09-07): affiliate-service :8092 (D20) — controllers map
         # FULL /api/affiliate/** (precedent catalog/cart) → KHÔNG StripPrefix.
         - id: affiliate                                   # SF-12 · port 8092
-          uri: http://localhost:8092
+          uri: ${AFFILIATE_URI:http://localhost:8092}
           predicates: [ "Path=/api/affiliate/**" ]
-      # - id: notification                               # SF-10 · port 8087
-      #   uri: http://localhost:8087
-      #   predicates: [ "Path=/api/notification/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      # SF-10 (2026-09-07): notification-service :8087 (D18) — KHÔNG StripPrefix
+      # (precedent catalog/cart); không có REST business (event consumer) — route
+      # phục vụ health qua gateway (/api/notification/actuator/health, public-path
+      # /api/*/actuator/**).
+        - id: notification                                # SF-10 · port 8087
+          uri: ${NOTIFICATION_URI:http://localhost:8087}
+          predicates: [ "Path=/api/notification/**" ]
+      # ── SF-10 (2026-09-07): route split D16 — shell app pages qua gateway.
+      # Shell (Vite) giữ origin :5173 dev / nginx `frontend-web` profile full
+      # (SHELL_WEB_ORIGIN). SPA pages: cart/checkout/account/admin/confirmation
+      # + login/register (auth pages của mfe-account mount trong shell).
+      # LƯU Ý dev: asset Vite dev (/@vite/*, /src/*) KHÔNG route qua gateway —
+      # dev vào shell trực tiếp :5173; route split này chạy ĐẦY ĐỦ ở profile
+      # full (nginx serve dist). Không filter — nginx/vite serve paths gốc.
+        - id: shell-web                                   # SF-10 · shell :5173 / nginx
+          uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
+          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/remotes/**" ]
       #
       # Health: gateway expose actuator của chính nó tại /actuator/health
       # (không route riêng — service health đi qua route /api/<svc>/actuator/health

@@ -35,3 +35,10 @@
 - Mailpit list API (`/api/v1/search`) không trả HTML body — assert nội dung mail phải fetch `/api/v1/message/{id}`; `replaceAll` greedy bắt nhầm field cuối (MessageID) — dùng `Matcher.find()` first-match.
 - `dev-stack.sh start_jvm` skip-if-UP khiến sửa .env không có hiệu lực khi chỉ restart 1 service — cần `make dev-stop` từng service hoặc docs "sửa env = restart full".
 - Gateway `IDENTITY_JWKS_URI` default :8080 tự tham chiếu — với gateway chạy port khác (env SERVER_PORT) JWKS trỏ nhầm gateway khác → 401 JWT âm thầm. Suggested: default rỗng → gateway tự compose từ server.port.
+
+## 2026-09-08 — FI-368 (SF-2 frontend-polish-theme)
+
+- [P6] `orca linear comment add` flag là `--id <ISSUE>` KHÔNG phải `--issue` (invalid_argument listed flags: body/body-file/current/id/...). Tốn 1 probe; script/handbook orca-cli nên ghi đúng flag. — suggested: update orca-cli skill examples.
+- [P6] `orca screenshot` (CDP Page.captureScreenshot) timeout khi Orca browser window không visible/focus; không có lệnh focus/unminimize qua CLI. Workaround đã dùng: Playwright (devDep có sẵn) — nhưng skill nên ghi sẵn fallback path này cho môi trường headless. — suggested: bổ sung mục "screenshot fallback" vào orca-superpowers-workflow F7.
+- [P6] Story pack ghi "Bug register SF-1: coordinator relay — kiểm tra task message định kỳ" nhưng orchestration inbox chỉ có message story cũ; relay thực tế phải tự poll Linear FI-366 comments + đọc file register trên worktree SF-1. — suggested: story-launch nên tạo run-scoped message channel hoặc ghi rõ kênh nào.
+- [P6] `pnpm exec vite --port N --strictPort` chết im lặng khi background qua pipe `| head` (output rỗng, exit không log rõ) — mất 1 vòng debug ports 5178-5180. — suggested: story-workflow dev-server recipes nên chạy không-pipe + log file.

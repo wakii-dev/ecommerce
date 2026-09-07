@@ -233,3 +233,41 @@
   margin: 4px 0 0;
   line-height: 1.55;
 }
+
+/* ── SF-15 (FI-325) — oauth buttons + status banner ─────────────────────── */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 12px;
+  color: var(--c-text-muted, #757575);
+  font-size: 12px;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--c-border, #eeeeee);
+}
+
+.oauth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.oauth-btn-label {
+  font-weight: 600;
+}
+
+.auth-banner {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint-primary-bg, #fdeeee);
+  color: var(--tint-primary-text, #cb1b00);
+  font-size: 14px;
+  margin-bottom: 12px;
+}

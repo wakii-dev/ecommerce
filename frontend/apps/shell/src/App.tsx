@@ -18,6 +18,8 @@ const RemotePage = lazy(() => import('./pages/RemotePage'));
 const AccountLoginPage = lazy(() => import('account/LoginPage'));
 const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
 const AccountPage = lazy(() => import('account/AccountPage'));
+// SF-15 (FI-325): oauth callback (302 từ identity về shell origin).
+const AccountOAuthCallbackPage = lazy(() => import('account/OAuthCallbackPage'));
 // SF-9 (FI-319) — my-orders slice mfe-account (pages/orders/*) — LAZY như các page trên.
 const AccountOrdersPage = lazy(() => import('account/OrdersPage'));
 const AccountOrderDetailPage = lazy(() => import('account/OrderDetailPage'));
@@ -161,6 +163,15 @@ export default function App(): ReactElement {
     );
   } else if (path === '/ui-kit') {
     page = <UiKitDemoPage />;
+  } else if (path === '/login/oauth/callback') {
+    // SF-15: identity 302 về đây kèm ?code một-lần — route TRƯỚC /login.
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountOAuthCallbackPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
   } else if (path === '/login') {
     page = (
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>

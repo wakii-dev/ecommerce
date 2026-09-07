@@ -88,7 +88,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginSuccess> login(@Valid @RequestBody LoginRequest request) {
         UserEntity user = userRepository.findByEmail(request.email().trim().toLowerCase())
-            .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
+            // SF-15: hash NULL = OAuth-only user — không bao giờ khớp password
+            // (matches(raw, null) sẽ NPE — guard tường minh, 401 thống nhất).
+            .filter(u -> u.getPasswordHash() != null
+                && passwordEncoder.matches(request.password(), u.getPasswordHash()))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng"));
         String accessToken = tokenService.issue(user);
         String raw = refreshTokenService.issue(user);

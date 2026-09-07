@@ -18,8 +18,10 @@ test('§5.8 Mongo event_log có documents cho domain events của demo', async (
   await expect
     .poll(async () => mongoEventLogCount(), { timeout: 30_000, intervals: [3_000] })
     .toBeGreaterThan(0);
-  // tối thiểu product.changed (catalog seed/reindex) + user.created (đăng ký e2e)
-  expect(await mongoEventLogCount('product.changed')).toBeGreaterThan(0);
+  // user.created phát ở register (golden-path chạy TRƯỚC platform-asserts —
+  // alphabetical file order). product.changed chỉ khi admin CRUD — assert ở
+  // admin-crud spec (storefront thấy = product.changed đã qua ES).
+  expect(await mongoEventLogCount('user.created')).toBeGreaterThan(0);
 });
 
 test('§5.9 ES products index count > 0 + search endpoint trả kết quả', async () => {

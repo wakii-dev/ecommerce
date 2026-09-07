@@ -6,6 +6,8 @@ import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -37,19 +39,20 @@ public class EventLogDocument {
 
     private String correlationId;
 
-    private Object payload;
+    /** bson Document — converter native (ObjectNode không có no-ctor → read vỡ). */
+    private org.bson.Document payload;
 
     private Instant receivedAt;
 
     public static EventLogDocument of(UUID eventId, String eventType, String routingKey,
-                                      Instant occurredAt, String correlationId, Object payload) {
+                                      Instant occurredAt, String correlationId, JsonNode payload) {
         var doc = new EventLogDocument();
         doc.eventId = eventId;
         doc.eventType = eventType;
         doc.routingKey = routingKey;
         doc.occurredAt = occurredAt;
         doc.correlationId = correlationId;
-        doc.payload = payload;
+        doc.payload = org.bson.Document.parse(payload.toString());
         doc.receivedAt = Instant.now();
         return doc;
     }
@@ -78,7 +81,7 @@ public class EventLogDocument {
         return correlationId;
     }
 
-    public Object getPayload() {
+    public org.bson.Document getPayload() {
         return payload;
     }
 

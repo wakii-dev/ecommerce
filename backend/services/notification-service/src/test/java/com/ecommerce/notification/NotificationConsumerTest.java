@@ -49,7 +49,7 @@ class NotificationConsumerTest extends AbstractIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
             Integer sent = jdbc.queryForObject(
-                "SELECT count(*) FROM send_log WHERE event_id = ? AND status = 'SENT'",
+                "SELECT count(*) FROM send_log WHERE event_id = ?::uuid AND status = 'SENT'",
                 Integer.class, eventId.toString());
             assertThat(sent).isEqualTo(1);
         });
@@ -73,12 +73,12 @@ class NotificationConsumerTest extends AbstractIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
             Integer sent = jdbc.queryForObject(
-                "SELECT count(*) FROM send_log WHERE event_id = ? AND status = 'SENT'",
+                "SELECT count(*) FROM send_log WHERE event_id = ?::uuid AND status = 'SENT'",
                 Integer.class, eventId.toString());
             assertThat(sent).isEqualTo(1);
         });
         Long rows = jdbc.queryForObject(
-            "SELECT count(*) FROM send_log WHERE event_id = ?", Long.class, eventId.toString());
+            "SELECT count(*) FROM send_log WHERE event_id = ?::uuid", Long.class, eventId.toString());
         assertThat(rows).isEqualTo(1); // marker chặn cả send_log trùng
     }
 
@@ -101,7 +101,7 @@ class NotificationConsumerTest extends AbstractIntegrationTest {
 
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
             Integer skipped = jdbc.queryForObject(
-                "SELECT count(*) FROM send_log WHERE event_id IN (?, ?) AND status = 'SKIPPED_NO_EMAIL'",
+                "SELECT count(*) FROM send_log WHERE event_id IN (?::uuid, ?::uuid) AND status = 'SKIPPED_NO_EMAIL'",
                 Integer.class, cancelEvent.toString(), reviewEvent.toString());
             assertThat(skipped).isEqualTo(2);
         });

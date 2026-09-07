@@ -31,10 +31,11 @@ test.describe('Admin tạo product → storefront thấy (§5.3)', () => {
 
   test('admin tạo product PUBLISHED (API) → storefront PLP + PDP + search thấy', async ({ page }) => {
     // ProductWrite contract: nameI18n/descriptionI18n + categoryId REQUIRED
-    const cats = (await (await fetch(`${GATEWAY}/api/catalog/categories`)).json()) as {
-      items?: { id: string }[];
-    };
-    const categoryId = cats.items?.[0]?.id;
+    const catsRaw = (await (await fetch(`${GATEWAY}/api/catalog/categories`)).json()) as
+      | { items?: { id: string }[] }
+      | { id: string }[];
+    const catList = Array.isArray(catsRaw) ? catsRaw : (catsRaw.items ?? []);
+    const categoryId = catList[0]?.id;
     expect(categoryId, 'có category để gắn product').toBeDefined();
     const create = await fetch(`${GATEWAY}/api/catalog/admin/products`, {
       method: 'POST',

@@ -20,6 +20,20 @@ const COUPON = 'WELCOME10';
 
 let user: Session;
 
+/** Chọn variant hợp lệ trên PDP: quét chip size (màu giữ swatch đầu) đến khi
+ *  nút THÊM VÀO GIỎ bật — tổ hợp đầu không phải variant thật (3 variant/6
+ *  combo — live-verify r3). */
+async function selectFirstVariant(page: import('@playwright/test').Page): Promise<void> {
+  const swatch = page.locator('.pdp-swatch').first();
+  if (await swatch.count()) await swatch.click();
+  const chips = page.locator('.pdp-chips button');
+  const n = await chips.count();
+  for (let i = 0; i < n; i++) {
+    await chips.nth(i).click();
+    const add = page.getByRole('button', { name: 'THÊM VÀO GIỎ' });
+    if (await add.isEnabled()) return;
+  }
+}
 test.describe.configure({ mode: 'serial' });
 
 async function availability(token: string, variantId: string): Promise<number> {
@@ -58,6 +72,7 @@ test('payment fail → FAILED + stock released + coupon reusable', async ({ page
   const href = (await link.getAttribute('href')) ?? '';
   await link.click();
   await expect(page).toHaveURL(/\/p\//);
+  const pdpUrl = page.url();
 
   // variantId từ ProductDetail API (public) — field `slug` trên list item
   // (slugVi là tên field admin — live-verify round 1)
@@ -76,7 +91,9 @@ test('payment fail → FAILED + stock released + coupon reusable', async ({ page
   await page.getByLabel('Mật khẩu').fill(user.password);
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
-  await page.goBack(); // về PDP
+  // về PDP bằng URL trực tiếp (goBack không restore tab/state — live-verify r2)
+  await page.goto(pdpUrl);
+  await selectFirstVariant(page);
   await page.getByRole('button', { name: 'THÊM VÀO GIỎ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm' })).toBeVisible({ timeout: 15_000 });
 

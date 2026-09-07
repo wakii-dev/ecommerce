@@ -106,6 +106,18 @@ export async function mailpitAttachmentNames(id: string): Promise<string[]> {
   return (body.Attachments ?? []).map((a) => a.Filename);
 }
 
+// ── Postgres helper (cleanup state spec — pattern mongoEventLogCount) ──────
+
+export async function pgExec(db: string, sql: string): Promise<string> {
+  const { execSync } = await import('node:child_process');
+  const path = require('node:path') as typeof import('node:path');
+  const repoRoot = path.resolve(__dirname, '../../..');
+  return execSync(
+    `docker compose exec -T postgres psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`,
+    { encoding: 'utf8', cwd: repoRoot }
+  ).trim();
+}
+
 // ── Mongo event_log (§5.8) — qua mongosh trong container ───────────────────
 
 export async function mongoEventLogCount(eventType?: string): Promise<number> {

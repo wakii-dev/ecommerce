@@ -9,6 +9,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 RUN_DIR=".run"; LOG_DIR="$RUN_DIR/logs"; mkdir -p "$LOG_DIR"
+# dev-stop/shutdown có thể xoá .run — tạo lại trước mọi ghi PID/log
+mkdir -p "$RUN_DIR"
 
 # ── env: đọc .env (compose tự đọc; host JVM cần export) ──────────────────────
 # .env có giá trị chứa dấu cách (INVOICE_SELLER_NAME tiếng Việt) — KHÔNG

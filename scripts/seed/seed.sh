@@ -109,8 +109,10 @@ else
   NAME2=$(psql_cat_fs "SELECT name->>'vi' FROM products WHERE id='$PID2';")
   ADDR='{"fullName":"Nguyen Van Demo","phone":"0901234567","line1":"12 Nguyen Hue","ward":"Ben Nghe","district":"Quan 1","city":"TP. Hồ Chí Minh"}'
   NOW1=$(date -u +%Y-%m-%dT%H:%M:%SZ); NOW2=$(date -u -v-2d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '2 days ago' +%Y-%m-%dT%H:%M:%SZ)
-  TL='[{"status":"PENDING","at":"$N"},{"status":"PAID","at":"$N"},{"status":"CONFIRMED","at":"$N"}]'
-  TL1=${TL//'\$N'/$NOW1}; TL2=${TL//'\$N'/$NOW2}
+  # timeline ISO tường minh (pattern-replace \$N không match — literal $N
+  # lọt vào jsonb → Hibernate timeline deserialize vỡ admin orders — live-verify r5)
+  TL1=$(printf '[{"status":"PENDING","at":"%s"},{"status":"PAID","at":"%s"},{"status":"CONFIRMED","at":"%s"}]' "$NOW1" "$NOW1" "$NOW1")
+  TL2=$(printf '[{"status":"PENDING","at":"%s"},{"status":"PAID","at":"%s"},{"status":"CONFIRMED","at":"%s"}]' "$NOW2" "$NOW2" "$NOW2")
   O1=$(uuidgen); O2=$(uuidgen)
   SUB1=$((PRICE1 * 1)); TOT1=$((SUB1 + 25000 - SUB1 / 10))
   SUB2=$((PRICE2 * 2)); TOT2=$((SUB2 + 25000))
@@ -144,6 +146,17 @@ else
   log "orders CONFIRMED OK: 2 đơn (invoice #$INV1 #$INV2 — $MAU_SO $KY_HIEU/$YEAR)"
 fi
 
+# verified-purchase eligibility cho REVIEW product (Tai nghe — review-flow
+# E2E viết review trên này; eligibility theo order product sẽ thiếu khi đơn
+# seed là áo thun — live-verify r5). ĐẶT NGOÀI guard orders — idempotent.
+TAI_NGHE_PID=$($PSQL_CAT "SELECT id FROM products WHERE name->>'vi' ILIKE 'Tai nghe%' LIMIT 1;" | tr -d ' ')
+if [ -n "$TAI_NGHE_PID" ] && [ -n "${USER_ID:-}" ]; then
+  REF_ORDER=$($PSQL_ORD "SELECT id FROM orders WHERE user_id='$USER_ID' LIMIT 1;" | tr -d ' ')
+  $PSQL_CAT "INSERT INTO review_eligibility (user_id,product_id,order_id) VALUES ('$USER_ID','$TAI_NGHE_PID','$REF_ORDER')
+    ON CONFLICT (user_id,product_id) DO NOTHING;" >/dev/null
+  log "review eligibility OK (tai nghe — user@demo.vn)"
+fi
+
 # ── 5. 1 review APPROVED (verified) — idempotent theo unique (user,product) ──
 REVIEW_EXISTS=$($PSQL_CAT "SELECT count(*) FROM reviews WHERE status='APPROVED' AND verified=TRUE;" | tr -d ' ')
 if [ "${REVIEW_EXISTS:-0}" -eq 0 ]; then
@@ -159,6 +172,24 @@ if [ "${REVIEW_EXISTS:-0}" -eq 0 ]; then
 else
   log "review APPROVED đã có — skip"
 fi
+
+# ── 5b. Inventory stock cho MỌI variant (SF-5 không có seed runner — volume
+# mới/purgeable reset để stocks rỗng → mọi POST /orders fail 409 insufficient).
+# quantity 50/variant — đủ demo golden path + saga fail. Đọc variant từ
+# db_catalog (cross-DB không JOIN được — fetch qua bash, insert từng row,
+# ON CONFLICT idempotent).
+docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_catalog -tAc \
+  "SELECT id::text || '|' || COALESCE(product_id::text,'') || '|' || COALESCE(name_i18n->>'vi','') FROM product_variants;" > /tmp/seed-variants.$$ || true
+while IFS='|' read -r VIDX PIDX NAMEX; do
+  [ -n "$VIDX" ] || continue
+  docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_inventory -tAc \
+    "INSERT INTO stocks (variant_id, quantity, threshold_low, product_id, product_name)
+     VALUES ('$VIDX', 50, 10, NULLIF('$PIDX',''), NULLIF('$NAMEX',''))
+     ON CONFLICT (variant_id) DO NOTHING;" >/dev/null < /dev/null
+done < /tmp/seed-variants.$$
+rm -f /tmp/seed-variants.$$
+STOCK_COUNT=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_inventory -tAc "SELECT count(*) FROM stocks;" | tr -d ' ')
+log "inventory stocks OK ($STOCK_COUNT variant × 50)"
 
 # ── 6. Partner Open API demo key (deterministic — E2E §5.13) ────────────────
 # Raw key cố định (chỉ dùng dev/test): pk_ + 32 hex. DB giữ SHA-256 hash +

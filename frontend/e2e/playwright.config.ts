@@ -19,11 +19,14 @@ export default defineConfig({
   fullyParallel: false, // golden path chia sẻ state seed + Mailpit — chạy serial
   workers: 1,
   retries: 1,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [['list']],
   use: {
     actionTimeout: 15_000,
     navigationTimeout: 20_000,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure'
+    // disk máy dev chật — trace/screenshot OFF (bật tay khi debug:
+    // `playwright test --trace on`)
+    trace: 'off',
+    screenshot: 'off',
+    video: 'off'
   }
 });

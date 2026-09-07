@@ -28,3 +28,10 @@
 - seed stocks dùng `ON CONFLICT DO NOTHING` → không repair stock bị drain sau nhiều run e2e → saga-fail fail "available 0". Workaround: `UPDATE stocks SET quantity=50`. Suggested: seed đổi thành `DO UPDATE SET quantity = 50` (hoặc flag `--repair`).
 - StreamingResponseBody + @Transactional: async thread khác request → session chết giữa stream; OutputStreamWriter phải flush tay (Spring chỉ đóng raw stream). Pattern đúng đã trong OrdersCsvExporter/ProductsCsvExporter — copy nếu cần exporter khác.
 - Orca CLI: `orca screenshot` fail "tab may not be visible" khi window mất focus — retry sau sleep thường được; không có cơ chế focus window từ CLI.
+
+## 2026-09-07 — SF-15 (FI-325)
+- `next build` chạy nền cùng lúc `next dev` (cùng `.next`) phá dev server — cần guard trong dev-stack hoặc docs: prod-build verify chỉ chạy sau `make dev-stop` FE. Suggested: task-runner script chặn 2 lệnh cùng chạy.
+- WireMock static `stubFor` không `configureFor` thì bắn :8080 (gateway) — 404 im lặng, test vẫn "chạy". Suggested: base IT harness gọi configureFor sẵn sau khi start WireMockServer.
+- Mailpit list API (`/api/v1/search`) không trả HTML body — assert nội dung mail phải fetch `/api/v1/message/{id}`; `replaceAll` greedy bắt nhầm field cuối (MessageID) — dùng `Matcher.find()` first-match.
+- `dev-stack.sh start_jvm` skip-if-UP khiến sửa .env không có hiệu lực khi chỉ restart 1 service — cần `make dev-stop` từng service hoặc docs "sửa env = restart full".
+- Gateway `IDENTITY_JWKS_URI` default :8080 tự tham chiếu — với gateway chạy port khác (env SERVER_PORT) JWKS trỏ nhầm gateway khác → 401 JWT âm thầm. Suggested: default rỗng → gateway tự compose từ server.port.

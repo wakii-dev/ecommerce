@@ -43,6 +43,12 @@ public class SecurityConfig {
                     "/api/catalog/products/**",
                     "/api/catalog/categories/**",
                     "/api/catalog/search/**").permitAll()
+                // SF-15 (FI-325): đăng ký "nhắn tôi khi có hàng" — public theo
+                // contract; internal stock-alert paths do X-Internal-Token tự giữ
+                // (auth là token trong service — KHÔNG permitAll mù quáng vì
+                // /api/catalog/** public ở gateway).
+                .requestMatchers(HttpMethod.POST, "/api/catalog/products/*/stock-alert").permitAll()
+                .requestMatchers("/api/catalog/internal/**").permitAll()
                 .requestMatchers(
                     "/actuator/**",
                     "/v3/api-docs/**",

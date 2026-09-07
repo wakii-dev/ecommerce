@@ -175,3 +175,48 @@
   --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.12);
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
+
+/* ── Dark theme (SF-15, FI-325) — block ADDITIVE cuối file, cùng specificity
+ * với pattern admin (source-order thắng). Giữ nguyên TÊN biến (API nội bộ),
+ * chỉ đè VALUE: nền tối, chữ sáng, tint/pill chỉnh tương phản cho dark.
+ * Toggle ở shell + storefront-web gắn data-theme='dark' trên <html>. */
+[data-theme='dark'] {
+  --c-primary: #F53D2D;
+  --c-primary-hover: #FF6B54;
+  --c-bg: #121212;
+  --c-surface: #1E1E1E;
+  --c-text: #F5F5F5;
+  --c-text-muted: #9E9E9E;
+  --c-border: #2C2C2C;
+  --c-danger: #FF5A5A;
+  --c-warning: #FE9C08;
+  --c-success: #2FD5BE;
+  --c-focus: #FF6B54;
+  --c-accent: #FFD839;
+
+  --tint-primary-bg: #3A1B17;
+  --tint-primary-text: #FF8A73;
+  --tint-primary-border: #5C2A22;
+  --tint-success-bg: #11302B;
+  --tint-success-text: #4CD0BC;
+  --tint-success-border: #1F5148;
+  --tint-new-bg: #33270E;
+  --tint-new-text: #F2C14E;
+  --tint-new-border: #57431A;
+  --wash-price-bg: #2A1512;
+  --wash-hover: #262626;
+  --star-track: #3D3D3D;
+
+  --pill-pending-bg: #33270E;
+  --pill-pending-text: #F2C14E;
+  --pill-paid-bg: #12253D;
+  --pill-paid-text: #6FB2FF;
+  --pill-confirmed-bg: #0F2E29;
+  --pill-confirmed-text: #3FCBB6;
+  --pill-shipped-bg: #1D1D3A;
+  --pill-shipped-text: #9C9CF0;
+  --pill-delivered-bg: #10291A;
+  --pill-delivered-text: #52C97E;
+  --pill-cancelled-bg: #331417;
+  --pill-cancelled-text: #FF7A85;
+}

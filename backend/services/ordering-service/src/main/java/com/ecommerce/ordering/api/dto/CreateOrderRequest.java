@@ -12,7 +12,8 @@ import java.util.UUID;
 
 /**
  * POST /orders body — khớp contract CreateOrderRequest. paymentMethod mặc định
- * stripe; COD (D21) + usePoints (D22) saga chặn 400 rõ ràng (chưa thuộc scope SF-9).
+ * stripe; COD (D21) saga chặn 422 rõ ràng (scope SF-13); usePoints (D22) —
+ * loyalty burn SF-14 đã wire (cap theo subtotal - coupon, redeem affiliate).
  */
 public record CreateOrderRequest(
     @NotEmpty @Size(max = 50) @Valid List<Item> items,

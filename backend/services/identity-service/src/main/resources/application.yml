@@ -44,6 +44,31 @@ identity:
   seed:
     admin-email: ${ADMIN_EMAIL:}        # rỗng = skip seed (dev có thể export từ .env)
     admin-password: ${ADMIN_PASSWORD:}
+  # SF-15 (FI-325) — OAuth Google/Facebook. Không key → provider tắt (well-known
+  # false, authorize 400, FE ẩn nút). Endpoint URI override được cho WireMock IT.
+  oauth:
+    public-base-url: ${IDENTITY_OAUTH_PUBLIC_BASE_URL:http://localhost:8080}
+    fe-redirect-base-url: ${IDENTITY_OAUTH_FE_REDIRECT_BASE:http://localhost:5173}
+    google:
+      client-id: ${OAUTH_GOOGLE_CLIENT_ID:}
+      secret: ${OAUTH_GOOGLE_CLIENT_SECRET:}
+      authorize-uri: ${OAUTH_GOOGLE_AUTHORIZE_URI:https://accounts.google.com/o/oauth2/v2/auth}
+      token-uri: ${OAUTH_GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
+      user-info-uri: ${OAUTH_GOOGLE_USERINFO_URI:https://openidconnect.googleapis.com/v1/userinfo}
+      scope: "openid email profile"
+    facebook:
+      client-id: ${OAUTH_FACEBOOK_CLIENT_ID:}
+      secret: ${OAUTH_FACEBOOK_CLIENT_SECRET:}
+      authorize-uri: ${OAUTH_FACEBOOK_AUTHORIZE_URI:https://www.facebook.com/v19.0/dialog/oauth}
+      token-uri: ${OAUTH_FACEBOOK_TOKEN_URI:https://graph.facebook.com/v19.0/oauth/access_token}
+      user-info-uri: ${OAUTH_FACEBOOK_USERINFO_URI:https://graph.facebook.com/v19.0/me?fields=id,name,email}
+      scope: "email,public_profile"
+  # SF-15 — 2FA TOTP: key AES-GCM Base64 32B (thiếu → dev fallback + WARN,
+  # prod fail-fast). challenge TTL 5', 10 backup codes mỗi user.
+  twofa:
+    encryption-key: ${IDENTITY_2FA_KEY:}
+    challenge-ttl-seconds: 300
+    backup-code-count: 10
 
 management:
   endpoints:

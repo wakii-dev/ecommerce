@@ -54,6 +54,13 @@ public class Order {
     @Column(name = "shipping_fee", nullable = false)
     private long shippingFee;
 
+    /**
+     * D22 loyalty burn — số tiền (VND) giảm từ điểm thưởng. 0 với đơn cũ
+     * (V12 default 0); total đã trừ cả coupon discount lẫn pointsDiscount.
+     */
+    @Column(name = "points_discount", nullable = false)
+    private long pointsDiscount = 0;
+
     @Column(nullable = false)
     private long total;
 
@@ -215,6 +222,17 @@ public class Order {
 
     public long getShippingFee() {
         return shippingFee;
+    }
+
+    public long getPointsDiscount() {
+        return pointsDiscount;
+    }
+
+    /** D22 — set 1 lần lúc saga tính lại tổng sau redeem điểm (không setter tự do). */
+    public void applyPointsDiscount(long pointsDiscount, long newTotal) {
+        this.pointsDiscount = pointsDiscount;
+        this.total = newTotal;
+        this.updatedAt = Instant.now();
     }
 
     public long getTotal() {

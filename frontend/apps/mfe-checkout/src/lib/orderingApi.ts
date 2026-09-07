@@ -85,6 +85,24 @@ export interface ValidateCouponResponse {
   message?: string;
 }
 
+// ── SF-14 (FI-324, D22): shipping methods + loyalty points ─────────────────
+
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  fee: number;
+  etaDays: number;
+}
+
+export interface LoyaltyAccount {
+  userId: string;
+  balance: number;
+  totalEarned: number;
+}
+
+/** 1 điểm = 100đ — MIRROR affiliate.loyalty.point-vnd (spec D3). */
+export const POINT_VND = 100;
+
 export interface CreateOrderInput {
   items: OrderLine[]; // CHỈ item khả dụng — caller lọc trước
   address: Address;
@@ -94,6 +112,8 @@ export interface CreateOrderInput {
   couponCode?: string;
   /** SF-12 — cookie aff_ref nếu đơn qua link affiliate. */
   affiliateCode?: string;
+  /** SF-14 (D22) — số điểm muốn dùng (server cap theo subtotal - coupon). */
+  usePoints?: number;
 }
 
 export interface CreatedOrder {
@@ -147,8 +167,39 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
     shippingMethod: input.shippingMethod,
     address: input.address,
     ...(input.couponCode?.trim() ? { couponCode: input.couponCode.trim().toUpperCase() } : {}),
-    ...(input.affiliateCode ? { affiliateCode: input.affiliateCode } : {})
+    ...(input.affiliateCode ? { affiliateCode: input.affiliateCode } : {}),
+    ...(input.usePoints && input.usePoints > 0 ? { usePoints: input.usePoints } : {})
   })) as CreatedOrder;
+}
+
+/**
+ * GET /shipping/methods?province&district — SF-14: methods GHN phí thật khi
+ * có token + district là mã GHN, không thì flat-fee (degraded cùng shape).
+ */
+export async function fetchShippingMethods(
+  province?: string,
+  district?: string
+): Promise<ShippingMethod[]> {
+  return (await client().listShippingMethods({
+    ...(province ? { province } : {}),
+    ...(district ? { district } : {})
+  })) as ShippingMethod[];
+}
+
+/**
+ * GET /api/affiliate/me/loyalty — endpoint ADDITIVE của affiliate-service
+ * (precedent suspend/reactivate SF-12): gọi qua fetch thủ công với
+ * authStore.fetch (401 tự refresh), KHÔNG sửa packages/contracts.
+ * Lỗi (affiliate chết…) → null — checkout vẫn chạy không điểm (degraded).
+ */
+export async function fetchLoyaltyBalance(): Promise<LoyaltyAccount | null> {
+  try {
+    const res = await authStore.fetch('/api/affiliate/me/loyalty');
+    if (!res.ok) return null;
+    return (await res.json()) as LoyaltyAccount;
+  } catch {
+    return null;
+  }
 }
 
 /** POST /orders/validate-coupon (public, không reserve) — realtime FE.

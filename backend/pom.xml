@@ -28,6 +28,9 @@
     <springdoc.version>2.6.0</springdoc.version>
     <testcontainers.version>1.21.3</testcontainers.version>
     <stripe-java.version>24.16.0</stripe-java.version>
+    <!-- SF-15 (FI-325): TOTP RFC 6238 + mock OAuth provider cho identity IT -->
+    <java-otp.version>0.4.0</java-otp.version>
+    <wiremock.version>3.9.1</wiremock.version>
 
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
     <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>

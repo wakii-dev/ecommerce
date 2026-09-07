@@ -38,6 +38,8 @@ public class RabbitMqConfig {
     public static final String QUEUE_PASSWORD_RESET = "notification.password_reset";
     public static final String QUEUE_CARTS = "notification.carts";
     public static final String QUEUE_NEWSLETTER = "notification.newsletter";
+    // SF-14 (FI-324, D22): RMA — email mỗi bước duyệt/nhận/hoàn/từ chối
+    public static final String QUEUE_RMA = "notification.rma";
 
     @Bean
     Queue notificationOrders() {
@@ -62,6 +64,11 @@ public class RabbitMqConfig {
     @Bean
     Queue notificationNewsletter() {
         return QueueBuilder.durable(QUEUE_NEWSLETTER).build();
+    }
+
+    @Bean
+    Queue notificationRma() {
+        return QueueBuilder.durable(QUEUE_RMA).build();
     }
 
     @Bean
@@ -98,6 +105,27 @@ public class RabbitMqConfig {
     @Bean
     Binding reviewModeratedBinding(Queue notificationReviews, TopicExchange outboxEventsExchange) {
         return BindingBuilder.bind(notificationReviews).to(outboxEventsExchange).with("review.moderated");
+    }
+
+    // ── SF-14 (FI-324): RMA lifecycle emails (payload FAT có email từ ordering) ──
+    @Bean
+    Binding rmaApprovedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.approved");
+    }
+
+    @Bean
+    Binding rmaRejectedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.rejected");
+    }
+
+    @Bean
+    Binding rmaReceivedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.received");
+    }
+
+    @Bean
+    Binding rmaRefundedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.refunded");
     }
 
     @Bean

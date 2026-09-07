@@ -7,12 +7,14 @@ import com.ecommerce.ordering.api.dto.CreateOrderResponse;
 import com.ecommerce.ordering.api.dto.PageDtos.OrderSummaryPageDto;
 import com.ecommerce.ordering.api.dto.OrderDto;
 import com.ecommerce.ordering.api.dto.OrderSummaryDto;
+import com.ecommerce.ordering.api.dto.TrackingDtos.TrackingResponseDto;
 import com.ecommerce.ordering.domain.Order;
 import com.ecommerce.ordering.domain.OrderStatus;
 import com.ecommerce.ordering.repo.OrderRepository;
 import com.ecommerce.ordering.saga.CheckoutSaga;
 import com.ecommerce.ordering.service.CouponService;
 import com.ecommerce.ordering.service.OrderLifecycleService;
+import com.ecommerce.ordering.service.ShippingMethodsService;
 import com.ecommerce.ordering.service.invoice.InvoiceProvider;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -50,14 +52,17 @@ public class OrderController {
     private final OrderLifecycleService lifecycle;
     private final CouponService couponService;
     private final InvoiceProvider invoiceProvider;
+    private final ShippingMethodsService shipping;
 
     public OrderController(CheckoutSaga saga, OrderRepository orders, OrderLifecycleService lifecycle,
-                           CouponService couponService, InvoiceProvider invoiceProvider) {
+                           CouponService couponService, InvoiceProvider invoiceProvider,
+                           ShippingMethodsService shipping) {
         this.saga = saga;
         this.orders = orders;
         this.lifecycle = lifecycle;
         this.couponService = couponService;
         this.invoiceProvider = invoiceProvider;
+        this.shipping = shipping;
     }
 
     /**
@@ -127,5 +132,17 @@ public class OrderController {
             .contentType(MediaType.APPLICATION_PDF)
             .header("Content-Disposition", "inline; filename=\"invoice-" + order.getInvoiceNumber() + ".pdf\"")
             .body(pdf);
+    }
+
+    /**
+     * GET /me/orders/{id}/tracking — D22: GHN detail khi đơn ship qua GHN,
+     * flat fallback (carrier "flat") — shape contract TrackingResponse.
+     * Chủ đơn only (repo theo user).
+     */
+    @GetMapping("/me/orders/{id}/tracking")
+    public TrackingResponseDto myOrderTracking(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        Order order = orders.findByIdAndUserId(id, UUID.fromString(jwt.getSubject()))
+            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
+        return shipping.trackingFor(order);
     }
 }

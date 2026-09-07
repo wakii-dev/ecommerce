@@ -6,9 +6,11 @@ import com.ecommerce.ordering.api.dto.StatsDtos.OrdersSummaryDto;
 import com.ecommerce.ordering.api.dto.StatsDtos.RevenueByDayDto;
 import com.ecommerce.ordering.api.dto.StatsDtos.TopProductDto;
 import com.ecommerce.ordering.domain.Order;
+import com.ecommerce.ordering.domain.OrderItem;
 import com.ecommerce.ordering.domain.OrderStatus;
 import com.ecommerce.ordering.repo.OrderRepository;
 import com.ecommerce.ordering.service.OrderLifecycleService;
+import com.ecommerce.ordering.service.ShippingMethodsService;
 import com.ecommerce.ordering.service.invoice.InvoiceProvider;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
@@ -49,14 +51,17 @@ public class AdminOrderController {
     private final OrderLifecycleService lifecycle;
     private final InvoiceProvider invoiceProvider;
     private final com.ecommerce.ordering.service.OrdersCsvExporter csvExporter;
+    private final ShippingMethodsService shipping;
 
     public AdminOrderController(OrderRepository orders, OrderLifecycleService lifecycle,
                                 InvoiceProvider invoiceProvider,
-                                com.ecommerce.ordering.service.OrdersCsvExporter csvExporter) {
+                                com.ecommerce.ordering.service.OrdersCsvExporter csvExporter,
+                                ShippingMethodsService shipping) {
         this.orders = orders;
         this.lifecycle = lifecycle;
         this.invoiceProvider = invoiceProvider;
         this.csvExporter = csvExporter;
+        this.shipping = shipping;
     }
 
     /** GET /admin/orders/export.csv — stream toàn bộ đơn (SF-13 A7b, runtime
@@ -110,7 +115,11 @@ public class AdminOrderController {
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
     }
 
-    /** POST /admin/orders/{id}/ship — CONFIRMED → SHIPPED (§3.6); tracking tự cấp nếu thiếu. */
+    /**
+     * POST /admin/orders/{id}/ship — CONFIRMED → SHIPPED (§3.6). SF-14: đơn
+     * method {@code ghn:*} → mở vận đơn GHN (trackingCode = order_code);
+     * GHN lỗi/tắt → fallback TRK- như cũ (degraded, ship không chết).
+     */
     @PostMapping("/orders/{id}/ship")
     public OrderDto ship(@PathVariable UUID id) {
         Order o = orders.findById(id).orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
@@ -119,7 +128,10 @@ public class AdminOrderController {
         }
         o.transitionTo(OrderStatus.SHIPPED);
         if (o.getTrackingCode() == null) {
-            o.markShipped("TRK-" + o.getId().toString().substring(0, 8).toUpperCase(Locale.ROOT));
+            String ghnCode = shipping.createGhnTracking(o,
+                o.getItems().stream().mapToInt(OrderItem::getQty).sum());
+            o.markShipped(ghnCode != null ? ghnCode
+                : "TRK-" + o.getId().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         }
         return OrderDto.from(orders.save(o));
     }

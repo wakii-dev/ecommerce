@@ -410,7 +410,8 @@ public class OrderLifecycleService {
             item.put("name", i.getName());
         });
         payload.put("subtotal", o.getSubtotal());
-        payload.put("discount", o.getDiscount());
+        // D22: schema ghi discount = "Tổng giảm giá VND (coupon + điểm)"
+        payload.put("discount", o.getDiscount() + o.getPointsDiscount());
         payload.put("shippingFee", o.getShippingFee());
         payload.put("total", o.getTotal());
         payload.put("currency", o.getCurrency());

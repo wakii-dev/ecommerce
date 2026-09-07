@@ -39,13 +39,22 @@ spring:
       # ("service nhận path còn lại sau /api/<service>") và template PingController
       # map @RequestMapping("/api/template") (giữ FULL prefix) — controllers
       # catalog-service map /api/catalog/** nên forward nguyên path.
+      # SF-15 (2026-09-07): internal stock-alert (PII email) KHÔNG public qua
+      # gateway — block route đặt TRƯỚC block catalog (first-match-wins), pattern
+      # affiliate-internal-blocked của SF-14. Service gọi trực tiếp :8082 kèm
+      # X-Internal-Token.
+        - id: catalog-internal-blocked                     # SF-15 · block route
+          uri: ${CATALOG_URI:http://localhost:8082}
+          predicates: [ "Path=/api/catalog/internal/**" ]
+          filters: [ "SetStatus=404" ]
         - id: catalog                                      # SF-4 · port 8082
           uri: ${CATALOG_URI:http://localhost:8082}
           predicates: [ "Path=/api/catalog/**" ]
         # SF-4 (2026-09-06): storefront-web Next.js SSR (D16 route split) — public pages qua Next :3000; shell vẫn cho app pages cần auth (SF-6/7 mount sau). Không filter — Next serve paths gốc.
+        # SF-15 (2026-09-07): + PWA assets (manifest.webmanifest/sw.js/icons/apple-touch-icon) — additive paths.
         - id: storefront-web                               # SF-4 · port 3000
           uri: ${STOREFRONT_WEB_URI:http://localhost:3000}
-          predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en,/en/**,/_next/**" ]
+          predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/sitemap.xml,/robots.txt,/en,/en/**,/_next/**,/manifest.webmanifest,/sw.js,/icons/**,/apple-touch-icon.png" ]
       # SF-6 (2026-09-06) un-comment block cart — KHÔNG StripPrefix (SF-4
       # precedent): cart-service controllers map FULL /api/cart/** khớp contract.
         - id: cart                                          # SF-6 · port 8083
@@ -73,6 +82,14 @@ spring:
         - id: partner-api                                # SF-11 · port 8091
           uri: ${PARTNER_API_URI:http://localhost:8091}
           predicates: [ "Path=/open-api/**" ]
+        # SF-14 (2026-09-07): internal loyalty redeem — x-internal-only trong
+        # affiliate.yaml ("không route qua gateway công khai"). Route chặn đặt
+        # TRƯỚC block affiliate (first-match-wins) → mọi call public ăn 404;
+        # ordering gọi thẳng :8092 kèm X-Internal-Token (SF-14 D8).
+        - id: affiliate-internal-blocked                  # SF-14 · block route
+          uri: ${AFFILIATE_URI:http://localhost:8092}
+          predicates: [ "Path=/api/affiliate/internal/**" ]
+          filters: [ "SetStatus=404" ]
         # SF-12 (2026-09-07): affiliate-service :8092 (D20) — controllers map
         # FULL /api/affiliate/** (precedent catalog/cart) → KHÔNG StripPrefix.
         - id: affiliate                                   # SF-12 · port 8092

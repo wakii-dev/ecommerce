@@ -149,3 +149,14 @@ declare module 'admin/AdminApp' {
   const AdminApp: import('react').ComponentType;
   export default AdminApp;
 }
+
+// ── mfe-account SF-15 append (FI-325) — oauth callback + 2FA pages.
+declare module 'account/OAuthCallbackPage' {
+  const OAuthCallbackPage: import('react').ComponentType;
+  export default OAuthCallbackPage;
+}
+
+declare module 'account/TwoFactorPage' {
+  const TwoFactorPage: import('react').ComponentType;
+  export default TwoFactorPage;
+}

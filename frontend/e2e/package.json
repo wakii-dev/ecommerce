@@ -4,7 +4,7 @@
   "private": true,
   "description": "Playwright E2E (SF-10, FI-320) — golden path + admin CRUD + review flow + saga fail + RBAC + platform asserts. Chạy với dev stack sống (make dev) + .env.",
   "scripts": {
-    "test": "playwright test"
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

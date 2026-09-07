@@ -82,4 +82,4 @@ seed: ## (SF-10) Deterministic seed — admin/user demo, WELCOME10/GIAM50K, orde
 	@bash scripts/seed/seed.sh
 
 e2e: ## (SF-10) Playwright E2E — CẦN dev stack đang chạy (make dev) + .env
-	cd frontend && pnpm --filter @ecommerce/e2e test
+	cd frontend && pnpm --filter @ecommerce/e2e exec playwright test

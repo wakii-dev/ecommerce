@@ -56,4 +56,11 @@ ecom:
         # :8086, không qua gateway) — chặn customer qua gateway (review G1 P0)
         - /api/payment/cod/**
         - /api/log/admin/**                  # SF-13 A5 — audit viewer, 2 lớp RBAC
+        # FI-366 SF-1 (T10 — audit E7): RBAC inventory hở — customer JWT ăn 200 data
+        # tồn kho (gateway không guard + service không security). Catalog admin prefix
+        # thêm gateway-layer (E7c defense-in-depth — layer-2 catalog @PreAuthorize đã
+        # có; lưu ý /api/catalog/** public-path đăng ký SAU admin từ đây — xem
+        # GatewaySecurityConfig admin-first ordering).
+        - /api/inventory/admin/**            # SF-1 — 2 lớp (gateway + inventory SecurityConfig)
+        - /api/catalog/admin/**              # E7c — 2 lớp (gateway + catalog SecurityConfig có sẵn)
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

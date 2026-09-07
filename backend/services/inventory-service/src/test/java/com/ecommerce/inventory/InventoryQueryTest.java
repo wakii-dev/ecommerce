@@ -3,6 +3,10 @@ package com.ecommerce.inventory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -16,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * IT availability + low-stock (plan T3 — spec §4.3/§4.4): jsonb reserved SUM
  * đúng (snake keys), reservation hết hạn KHÔNG tính, low-stock lọc + threshold
  * param override + product fields nullable.
+ *
+ * <p>FI-366 SF-1 T10: low-stock giờ admin-guarded — helper gắn Bearer
+ * {@code mintToken("ADMIN")}; thêm test guard 401/403 (customer JWT → 403).</p>
  */
 class InventoryQueryTest extends AbstractIntegrationTest {
 
@@ -34,9 +41,16 @@ class InventoryQueryTest extends AbstractIntegrationTest {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> lowStock(Integer threshold) {
+        return (List<Map<String, Object>>) lowStockWithRole(threshold, "ADMIN").getBody();
+    }
+
+    /** Guard test dùng — role tuỳ ý để assert 401/403/200. */
+    private ResponseEntity<List> lowStockWithRole(Integer threshold, String role) {
         String url = threshold != null ? "/inventory/admin/low-stock?threshold=" + threshold
             : "/inventory/admin/low-stock";
-        return rest.getForEntity(url, List.class).getBody();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(mintToken(role));
+        return rest.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), List.class);
     }
 
     @Test
@@ -126,5 +140,29 @@ class InventoryQueryTest extends AbstractIntegrationTest {
             .extracting(r -> r.get("variantId")).doesNotContain(v);
         assertThat(lowStock(20)).as("threshold param override → nằm trong danh sách")
             .extracting(r -> r.get("variantId")).contains(v);
+    }
+
+    // ── Guard tests (FI-366 SF-1 T10 — audit E7: RBAC inventory hở) ─────────
+
+    @Test
+    void lowStockWithoutTokenIs401() {
+        ResponseEntity<List> res = rest.getForEntity("/inventory/admin/low-stock", List.class);
+        assertThat(res.getStatusCode().value()).as("không token → 401 fail-closed").isEqualTo(401);
+    }
+
+    @Test
+    void lowStockWithCustomerTokenIs403() {
+        // ACCEPTANCE 5 (pack): customer JWT gọi /api/inventory/admin/low-stock → 403
+        ResponseEntity<List> res = lowStockWithRole(null, "CUSTOMER");
+        assertThat(res.getStatusCode().value()).as("CUSTOMER thiếu ROLE_ADMIN → 403").isEqualTo(403);
+    }
+
+    @Test
+    void availabilityStillPublicWithoutToken() {
+        // guest PDP gọi availability — permitAll giữ nguyên sau khi thêm guard
+        String v = "var-t3-" + SEQ.incrementAndGet();
+        jdbc.update("INSERT INTO stocks (variant_id, quantity) VALUES (?, 40)", v);
+        ResponseEntity<List> res = rest.getForEntity("/inventory/availability?variantIds=" + v, List.class);
+        assertThat(res.getStatusCode().value()).as("availability public (PDP guest)").isEqualTo(200);
     }
 }

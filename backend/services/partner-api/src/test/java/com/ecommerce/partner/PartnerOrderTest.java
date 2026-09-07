@@ -63,7 +63,7 @@ class PartnerOrderTest extends AbstractPartnerApiTest {
     private PartnerEntity partner;
 
     @BeforeEach
-    void setupStubsAndKey() {
+    void setupStubsAndKey() throws Exception {
         WIRE.resetAll();
         // identity login (token được cache trong app context — stub lại để test
         // đầu tiên và các test khác vẫn có)
@@ -71,6 +71,13 @@ class PartnerOrderTest extends AbstractPartnerApiTest {
             .willReturn(okJson(
                 "{\"accessToken\":\"svc-token\",\"tokenType\":\"Bearer\",\"expiresIn\":900,"
                     + "\"user\":{\"id\":\"" + UUID.randomUUID() + "\",\"email\":\"svc@x\",\"fullName\":\"svc\"}}")));
+
+        // FI-366 SF-1 (run-batch BUG-05): cache token là AtomicReference TRONG app
+        // context chia sẻ giữa các test — test self-heal trước đó để lại 'tok-new'
+        // (TTL 900s > time toàn class) → test sau assert Bearer svc-token fail
+        // (run-batch 08-09 fail deterministic cả batch lẫn solo). Expire cache
+        // MỖI test → login fresh → luôn svc-token, thứ tự test không quan trọng.
+        expireServiceAccountToken();
 
         partner = new PartnerEntity();
         partner.setName("ORD-IT-" + System.nanoTime());

@@ -380,4 +380,39 @@ class AdminCatalogTest extends AbstractIntegrationTest {
             throw new IllegalStateException(e);
         }
     }
+
+    // ── SF-13 (FI-323) A7b: export CSV ─────────────────────────────────────
+
+    @Test
+    void exportCsv_bomHeaderRows_guard() {
+        String token = mintToken("ADMIN");
+        ProductWriteDto write = writeDto("Loa CSV", "CSV Speaker", "mô tả", "desc",
+            "loa-csv", "csv-speaker", 900_000, null, child.getId());
+        assertThat(call(HttpMethod.POST, "/api/catalog/admin/products", token, write)
+            .getStatusCode().value()).isEqualTo(201);
+
+        ResponseEntity<byte[]> admin = callBytes(HttpMethod.GET, "/api/catalog/admin/products/export.csv",
+            mintToken("ADMIN"));
+        assertThat(admin.getStatusCode().value()).isEqualTo(200);
+        byte[] body = admin.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body[0]).isEqualTo((byte) 0xEF); // BOM (critic P2 — Excel VN)
+        assertThat(body[1]).isEqualTo((byte) 0xBB);
+        assertThat(body[2]).isEqualTo((byte) 0xBF);
+        String text = new String(body, java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(text).contains("id,slug,name_vi,brand,price,compare_price,discount_percent,"
+            + "status,rating_avg,created_at");
+        assertThat(text).contains("loa-csv");
+
+        // customer → 403
+        ResponseEntity<JsonNode> customer = call(HttpMethod.GET,
+            "/api/catalog/admin/products/export.csv", mintToken("CUSTOMER"), null);
+        assertThat(customer.getStatusCode().value()).isEqualTo(403);
+    }
+
+    private ResponseEntity<byte[]> callBytes(HttpMethod method, String path, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return http.exchange(path, method, new HttpEntity<>(headers), byte[].class);
+    }
 }

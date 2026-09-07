@@ -9,10 +9,15 @@ import { removeCartItem } from '../lib/cartApi';
 import {
   ApiErrorClient,
   createOrder,
+  fetchLoyaltyBalance,
+  fetchShippingMethods,
   validateCoupon,
+  POINT_VND,
   type Address,
   type CreatedOrder,
-  type Order
+  type Order,
+  type PaymentMethod
+  type ShippingMethod
 } from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
 import { readAffiliateRef } from '../lib/affiliateRef';
@@ -27,8 +32,7 @@ import '../page.css';
  * hiện lý do server, cho thử lại.
  */
 
-const SHIPPING_FEE = Number(import.meta.env.VITE_SHIPPING_FLAT_FEE ?? 25000);
-const SHIPPING_METHOD = 'standard';
+const SHIPPING_FEE = Number(import.meta.env.VITE_SHIPPING_FLAT_FEE ?? 25000); // fallback env
 const PHONE_RE = /^(0|\+84)[\s.-]?(\d[\s.-]?){8,10}$/;
 
 function useAuthState(): boolean {
@@ -73,7 +77,16 @@ export default function CheckoutPage(): ReactElement {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponChecking, setCouponChecking] = useState(false);
 
+  // SF-14 (D22): chọn phương thức vận chuyển (GHN/flat) + dùng điểm thưởng
+  const [methods, setMethods] = useState<ShippingMethod[]>([]);
+  const [methodsLoading, setMethodsLoading] = useState(false);
+  const [methodId, setMethodId] = useState('standard');
+  const [pointsBalance, setPointsBalance] = useState<number | null>(null);
+  const [usePoints, setUsePoints] = useState(0);
+
   const [orderPhase, setOrderPhase] = useState<'idle' | 'creating' | 'awaiting-card' | 'confirming'>('idle');
+  // SF-13 (D21): stripe | cod — COD bỏ Stripe.js, đơn CONFIRMED ngay sau reserve
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
   const [created, setCreated] = useState<CreatedOrder | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   // SF-10: panel thay mock — đơn ĐÃ tạo (clientSecret thật) nhưng không mount
@@ -88,7 +101,49 @@ export default function CheckoutPage(): ReactElement {
   const availableItems = (cart?.items ?? []).filter((item) => !item.unavailable);
   const subtotal = cart?.subtotal ?? 0;
   const discount = couponDiscount ?? 0;
-  const total = Math.max(0, subtotal - discount) + SHIPPING_FEE;
+  // SF-14: phí theo method chọn (fetch động; chưa load → flat env fallback)
+  const selectedFee = methods.find((m) => m.id === methodId)?.fee ?? SHIPPING_FEE;
+  // Điểm dùng cap ≤ (subtotal - coupon)/POINT_VND — không giảm âm phần hàng
+  const maxPoints = Math.min(
+    pointsBalance ?? 0,
+    Math.floor(Math.max(0, subtotal - discount) / POINT_VND)
+  );
+  const effectivePoints = Math.min(usePoints, maxPoints);
+  const pointsDiscountValue = effectivePoints * POINT_VND;
+  const total = Math.max(0, subtotal - discount - pointsDiscountValue) + selectedFee;
+
+  // Balance điểm (authed) — affiliate chết → null, checkout vẫn chạy (degraded)
+  useEffect(() => {
+    if (!authed) return;
+    let alive = true;
+    fetchLoyaltyBalance().then((account) => {
+      if (alive && account) setPointsBalance(account.balance);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [authed]);
+
+  // Methods khi vào bước 2 — địa chỉ quyết định phí GHN (province/district)
+  useEffect(() => {
+    if (step !== 2) return;
+    let alive = true;
+    setMethodsLoading(true);
+    fetchShippingMethods(address.city, address.district)
+      .then((list) => {
+        if (!alive) return;
+        setMethods(list);
+        if (list.length > 0 && !list.some((m) => m.id === methodId)) {
+          setMethodId(list[0]?.id ?? 'standard');
+        }
+      })
+      .catch(() => alive && setMethods([]))
+      .finally(() => alive && setMethodsLoading(false));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, address.city, address.district]);
 
   // Cleanup PaymentElement khi rời trang
   useEffect(() => () => {
@@ -157,16 +212,25 @@ export default function CheckoutPage(): ReactElement {
           lineTotal: item.lineTotal
         })),
         address,
-        shippingMethod: SHIPPING_METHOD,
+        shippingMethod: methodId,
+        paymentMethod,
         ...(couponDiscount !== null && couponCode.trim()
           ? { couponCode: couponCode.trim() }
           : {}),
+        // SF-14 (D22): dùng điểm — server cap lại theo subtotal - coupon (D4)
+        ...(effectivePoints > 0 ? { usePoints: effectivePoints } : {}),
         // SF-12: attribution affiliate từ cookie aff_ref (nullable — order.confirmed)
         ...(readAffiliateRef() ? { affiliateCode: readAffiliateRef() as string } : {})
       });
       setCreated(result);
       // sync discount re-price server (authority §6.1.1) vào summary
       if (result.order.discount > 0) setCouponDiscount(result.order.discount);
+      // COD (SF-13): clientSecret null — đơn đã CONFIRMED sau reserve →
+      // finalize NGAY, không qua bước thẻ
+      if (paymentMethod === 'cod' || result.clientSecret == null) {
+        await finalize(result.order);
+        return;
+      }
       setOrderPhase('awaiting-card'); // mount PaymentElement cho card thật
     } catch (err) {
       if (err instanceof ApiErrorClient && err.errors.length > 0) {
@@ -319,24 +383,53 @@ export default function CheckoutPage(): ReactElement {
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>Phương thức vận chuyển</h2>
-              <label
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 12,
-                  border: '1px solid var(--c-primary, #F53D2D)',
-                  borderRadius: 4
-                }}
-              >
-                <span>
-                  <strong>Giao tiêu chuẩn</strong>
-                  <div className="summary-note">3 – 5 ngày làm việc (demo flat-fee)</div>
-                </span>
-                <strong style={{ color: 'var(--c-primary, #F53D2D)' }}>
-                  {formatPrice(SHIPPING_FEE)}
-                </strong>
-              </label>
+              {methodsLoading ? (
+                <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>Đang tải phí vận chuyển…</p>
+              ) : methods.length === 0 ? (
+                <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>
+                  Không tải được phí vận chuyển — thử quay lại bước địa chỉ.
+                </p>
+              ) : (
+                methods.map((method) => (
+                  <label
+                    key={method.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: 12,
+                      cursor: 'pointer',
+                      border:
+                        methodId === method.id
+                          ? '1px solid var(--c-primary, #F53D2D)'
+                          : '1px solid var(--c-border, #EEE)',
+                      borderRadius: 4
+                    }}
+                  >
+                    <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        name="shippingMethod"
+                        value={method.id}
+                        checked={methodId === method.id}
+                        onChange={() => setMethodId(method.id)}
+                        aria-label={method.name}
+                      />
+                      <span>
+                        <strong>{method.name}</strong>
+                        <div className="summary-note">
+                          Dự kiến {method.etaDays} ngày
+                          {method.id.startsWith('ghn:') ? ' — phí GHN theo địa chỉ' : ' (flat-fee)'}
+                        </div>
+                      </span>
+                    </span>
+                    <strong style={{ color: 'var(--c-primary, #F53D2D)' }}>
+                      {formatPrice(method.fee)}
+                    </strong>
+                  </label>
+                ))
+              )}
               <div className="checkout-actions">
                 <Button variant="secondary" onClick={() => setStep(1)}>
                   ← Quay lại địa chỉ
@@ -390,7 +483,78 @@ export default function CheckoutPage(): ReactElement {
                 </>
               )}
 
+              <h2 style={{ margin: 0, fontSize: 18 }}>Điểm thưởng</h2>
+              {pointsBalance !== null && pointsBalance > 0 ? (
+                maxPoints > 0 ? (
+                  <div className="coupon-box" data-testid="points-box">
+                    <Input
+                      label={`Dùng điểm (có ${pointsBalance.toLocaleString('vi-VN')} điểm · tối đa ${maxPoints.toLocaleString('vi-VN')} ≈ ${formatPrice(maxPoints * POINT_VND)})`}
+                      name="usePoints"
+                      type="number"
+                      min={0}
+                      max={maxPoints}
+                      value={String(usePoints || '')}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const value = Number(e.target.value) || 0;
+                        setUsePoints(Math.max(0, Math.min(maxPoints, Math.trunc(value))));
+                      }}
+                    />
+                    {effectivePoints > 0 && (
+                      <div className="coupon-applied">
+                        <span>
+                          Dùng <strong>{effectivePoints.toLocaleString('vi-VN')}</strong> điểm — giảm{' '}
+                          {formatPrice(pointsDiscountValue)}
+                        </span>
+                        <button type="button" className="cart-line-remove" onClick={() => setUsePoints(0)}>
+                          Gỡ
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="summary-note" style={{ margin: 0 }}>
+                    Đơn hiện tại chưa dùng được điểm (giá trị hàng sau giảm giá phải ≥ {formatPrice(POINT_VND)}).
+                  </p>
+                )
+              ) : (
+                <p className="summary-note" style={{ margin: 0 }}>
+                  Bạn có {pointsBalance === 0 ? '0 điểm' : 'chưa có điểm'} — mua hàng CONFIRMED sẽ nhận 1% điểm.
+                </p>
+              )}
+
               <h2 style={{ margin: 0, fontSize: 18 }}>Thanh toán</h2>
+              <div className="pay-methods" role="radiogroup" aria-label="Phương thức thanh toán">
+                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="radio"
+                    name="payment-method"
+                    value="stripe"
+                    checked={paymentMethod === 'stripe'}
+                    disabled={orderPhase !== 'idle'}
+                    onChange={() => setPaymentMethod('stripe')}
+                    data-testid="payment-method-stripe"
+                  />
+                  <span>Thẻ quốc tế (Stripe)</span>
+                </label>
+                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="radio"
+                    name="payment-method"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    disabled={orderPhase !== 'idle'}
+                    onChange={() => setPaymentMethod('cod')}
+                    data-testid="payment-method-cod"
+                  />
+                  <span>COD — Thanh toán khi nhận hàng</span>
+                </label>
+              </div>
+              {paymentMethod === 'cod' ? (
+                <div className="cod-note" role="note" data-testid="cod-note">
+                  Kiểm tra hàng và thanh toán tiền mặt khi nhận — đơn được xác nhận ngay.
+                </div>
+              ) : null}
               {payUnavailable ? (
                 <div className="pay-warning" role="status">
                   ⚠ Đơn <strong data-testid="pending-order-id">{created?.order.id}</strong> đã tạo nhưng chưa
@@ -417,10 +581,16 @@ export default function CheckoutPage(): ReactElement {
               ) : null}
 
               {orderPhase === 'idle' ? (
-                <Button variant="primary" onClick={() => void placeOrder()}>
-                  Kiểm tra &amp; tạo đơn — {formatPrice(total)}
+                <Button
+                  variant="primary"
+                  onClick={() => void placeOrder()}
+                  data-testid="place-order-btn"
+                >
+                  {paymentMethod === 'cod'
+                    ? `Đặt hàng COD — ${formatPrice(total)}`
+                    : `Kiểm tra & tạo đơn — ${formatPrice(total)}`}
                 </Button>
-              ) : payUnavailable ? null : (
+              ) : payUnavailable || paymentMethod === 'cod' ? null : (
                 <Button
                   variant="primary"
                   disabled={orderPhase !== 'awaiting-card' || !elementReady}
@@ -459,9 +629,15 @@ export default function CheckoutPage(): ReactElement {
               <span className="summary-value">−{formatPrice(discount)}</span>
             </div>
           )}
+          {pointsDiscountValue > 0 && (
+            <div className="summary-row summary-row--discount" data-testid="summary-points">
+              <span>Điểm thưởng ({effectivePoints.toLocaleString('vi-VN')})</span>
+              <span className="summary-value">−{formatPrice(pointsDiscountValue)}</span>
+            </div>
+          )}
           <div className="summary-row">
             <span>Phí vận chuyển</span>
-            <span>{formatPrice(SHIPPING_FEE)}</span>
+            <span>{formatPrice(selectedFee)}</span>
           </div>
           <hr className="summary-divider" />
           <div className="summary-row summary-row--total">

@@ -1,11 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
-import { login } from '../api';
+import { login, oauthProviders } from '../api';
 import { appNavigate } from '../bootstrap';
 import '../page.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Nút social ẩn/hiện theo identity env (well-known) — không key → không nút. */
+function OAuthButtons(): ReactElement | null {
+  const [providers, setProviders] = useState<{ google: boolean; facebook: boolean } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    oauthProviders().then((p) => {
+      if (alive) setProviders(p);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!providers || (!providers.google && !providers.facebook)) return null;
+  const go = (provider: 'google' | 'facebook'): void => {
+    // Relative qua proxy/gateway — authorize 302 sang provider consent.
+    window.location.assign(`/api/identity/oauth/${provider}/authorize`);
+  };
+  return (
+    <>
+      <div className="oauth-divider" role="separator" aria-label="hoặc">
+        <span>hoặc</span>
+      </div>
+      <div className="oauth-buttons">
+        {providers.google ? (
+          <Button type="button" variant="secondary" fullWidth onClick={() => go('google')}>
+            <span className="oauth-btn-label">Đăng nhập với Google</span>
+          </Button>
+        ) : null}
+        {providers.facebook ? (
+          <Button type="button" variant="secondary" fullWidth onClick={() => go('facebook')}>
+            <span className="oauth-btn-label">Đăng nhập với Facebook</span>
+          </Button>
+        ) : null}
+      </div>
+    </>
+  );
+}
 
 export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState('');
@@ -26,7 +66,15 @@ export default function LoginPage(): ReactElement {
 
     setLoading(true);
     login({ email, password })
-      .then(() => appNavigate('/account'))
+      .then((result) => {
+        if (result.kind === 'ok') {
+          appNavigate('/account');
+          return;
+        }
+        // SF-15: 2FA bật — giữ challenge (single-use) cho trang nhập mã.
+        sessionStorage.setItem('ecommerce.2fa.challenge', result.challengeToken);
+        appNavigate('/login/2fa');
+      })
       .catch((err: unknown) => {
         // Duck-type thay vì instanceof — @ecommerce/contracts không phải shared
         // singleton qua MF boundary, class của thrower khác class của remote.
@@ -48,6 +96,7 @@ export default function LoginPage(): ReactElement {
             {banner}
           </div>
         ) : null}
+        <OAuthButtons />
         <form onSubmit={onSubmit} noValidate>
           <Input
             label="Email"

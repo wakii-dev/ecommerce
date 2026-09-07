@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import AddToCart from './AddToCart';
+import StockAlertInput from './StockAlertInput';
 import VariantSelector from './VariantSelector';
 import { discountPercent, type ProductDetail } from '../../lib/catalog-api';
 import { formatVnd, type Locale } from '../../lib/format';
@@ -58,6 +59,9 @@ export default function PdpBuyBox({ product, locale }: { product: ProductDetail;
         slug={product.slug}
         locale={locale}
       />
+
+      {/* SF-15: hết hàng → form "Nhắn tôi khi có hàng" (ẩn khi còn/unknown). */}
+      <StockAlertInput variantId={variantId} slug={product.slug} locale={locale} />
     </div>
   );
 }

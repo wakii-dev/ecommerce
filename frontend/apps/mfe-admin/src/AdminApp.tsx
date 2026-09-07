@@ -15,16 +15,20 @@ import {
   type AdminGuardState,
   type AdminRoute
 } from './lib/guard';
+import AuditPage from './pages/AuditPage';
+import NewsletterPage from './pages/NewsletterPage';
 import AffiliatesPage from './pages/AffiliatesPage';
 import CategoriesPage from './pages/CategoriesPage';
 import CouponsPage from './pages/CouponsPage';
 import DashboardPage from './pages/DashboardPage';
 import ForbiddenPage from './pages/ForbiddenPage';
+import LoyaltyPage from './pages/LoyaltyPage'; // SF-14 (FI-324) append
 import OrderDetailPage from './pages/OrderDetailPage';
 import OrdersPage from './pages/OrdersPage';
 import ProductFormPage from './pages/ProductFormPage';
 import ProductsListPage from './pages/ProductsListPage';
 import ReviewsPage from './pages/ReviewsPage';
+import RmaPage from './pages/RmaPage'; // SF-14 (FI-324) append
 
 const STOREFRONT_URL: string =
   (import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? 'http://localhost:3000';
@@ -53,6 +57,14 @@ function renderPage(route: AdminRoute, t: (key: string) => string): ReactElement
       return <CouponsPage />;
     case 'affiliates': // SF-12 (FI-322) append
       return <AffiliatesPage />;
+    case 'audit': // SF-13 (FI-323) append
+      return <AuditPage />;
+    case 'newsletter': // SF-13 A8 append
+      return <NewsletterPage />;
+    case 'rma': // SF-14 (FI-324) append
+      return <RmaPage />;
+    case 'loyalty': // SF-14 (FI-324) append
+      return <LoyaltyPage />;
     case 'reviews':
       return <ReviewsPage />;
     case 'orders':

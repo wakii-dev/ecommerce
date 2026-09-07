@@ -30,6 +30,12 @@ cart:
   inventory-base-url: ${INVENTORY_BASE_URL:http://localhost:8084}
   ttl-days: ${CART_TTL_DAYS:30}
   cookie-name: cart_token
+  # SF-13 (FI-323) A4 — abandoned cart email: giỏ user ngưng ≥ idle → 1 mail/24h
+  abandoned:
+    enabled: ${CART_ABANDONED_ENABLED:true}
+    idle-minutes: ${CART_ABANDONED_IDLE_MINUTES:120}
+    sweep-interval-ms: ${CART_ABANDONED_SWEEP_INTERVAL_MS:60000}
+    flag-ttl-hours: ${CART_ABANDONED_FLAG_TTL_HOURS:24}
 
 management:
   endpoints:

@@ -8,6 +8,7 @@ import ErrorBoundary from './ErrorBoundary';
 import Home from './pages/Home';
 import UiKitDemoPage from './pages/UiKitDemoPage';
 import { usePath } from './router';
+import { gaPageview } from './ga';
 
 // Remote page nạp LAZY — shell vẫn boot được khi remote down (import động chỉ
 // chạy khi vào /skeleton); RemotePage mới là nơi import module federation.
@@ -16,8 +17,14 @@ const RemotePage = lazy(() => import('./pages/RemotePage'));
 // Trang auth/profile của mfe-account (SF-3) — cũng LAZY, cùng lý do: shell
 // vẫn boot khi remote down; ErrorBoundary thay trang bằng hướng dẫn chạy remote.
 const AccountLoginPage = lazy(() => import('account/LoginPage'));
+const AccountForgotPasswordPage = lazy(() => import('account/ForgotPasswordPage'));
+const AccountResetPasswordPage = lazy(() => import('account/ResetPasswordPage'));
 const AccountRegisterPage = lazy(() => import('account/RegisterPage'));
 const AccountPage = lazy(() => import('account/AccountPage'));
+// SF-15 (FI-325): oauth callback (302 từ identity về shell origin).
+const AccountOAuthCallbackPage = lazy(() => import('account/OAuthCallbackPage'));
+// SF-15: trang nhập mã sau login challenge (2FA).
+const AccountTwoFactorPage = lazy(() => import('account/TwoFactorPage'));
 // SF-9 (FI-319) — my-orders slice mfe-account (pages/orders/*) — LAZY như các page trên.
 const AccountOrdersPage = lazy(() => import('account/OrdersPage'));
 const AccountOrderDetailPage = lazy(() => import('account/OrderDetailPage'));
@@ -126,6 +133,10 @@ function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
 export default function App(): ReactElement {
   const { t } = useT();
   const path = usePath();
+  // SF-13 A7a: pageview GA4 mỗi navigation (guard trong ga — không ID thì no-op)
+  useEffect(() => {
+    gaPageview(path);
+  }, [path]);
   // Bump khi remote register/unregister widget vào header slot → Header
   // re-render đọc lại HeaderSlots.list (registry không có subscription —
   // tối giản cho harness).
@@ -161,6 +172,24 @@ export default function App(): ReactElement {
     );
   } else if (path === '/ui-kit') {
     page = <UiKitDemoPage />;
+  } else if (path === '/login/oauth/callback') {
+    // SF-15: identity 302 về đây kèm ?code một-lần — route TRƯỚC /login.
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountOAuthCallbackPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/login/2fa') {
+    // SF-15: nhập mã TOTP/backup sau khi password đúng (challenge trong session).
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountTwoFactorPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
   } else if (path === '/login') {
     page = (
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
@@ -174,6 +203,22 @@ export default function App(): ReactElement {
       <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
         <Suspense fallback={<p>{t('common.loading')}</p>}>
           <AccountRegisterPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/forgot-password') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountForgotPasswordPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  } else if (path === '/reset-password') {
+    page = (
+      <ErrorBoundary fallback={(error) => <AccountErrorFallback error={error} />}>
+        <Suspense fallback={<p>{t('common.loading')}</p>}>
+          <AccountResetPasswordPage />
         </Suspense>
       </ErrorBoundary>
     );

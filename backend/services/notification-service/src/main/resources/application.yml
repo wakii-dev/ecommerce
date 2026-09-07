@@ -43,6 +43,11 @@ notify:
   mail:
     from: ${NOTIFY_MAIL_FROM:Ecommerce Demo <no-reply@demo.vn>}
     my-orders-url: ${NOTIFY_MY_ORDERS_URL:http://localhost:5173/account/orders}
+    # SF-13 (FI-323) A1 — link trang reset password (shell origin)
+    reset-password-url: ${NOTIFY_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
+    # SF-13 A4/A8 — link giỏ + coupon center trong mail (shell origin)
+    cart-url: ${NOTIFY_CART_URL:http://localhost:5173/cart}
+    coupon-center-url: ${NOTIFY_COUPON_CENTER_URL:http://localhost:3000/coupons}
   identity:
     base-url: ${NOTIFY_IDENTITY_BASE_URL:http://localhost:8081}
     timeout-ms: ${NOTIFY_IDENTITY_TIMEOUT_MS:5000}
@@ -56,6 +61,17 @@ notify:
   ordering:
     base-url: ${ORDERING_BASE_URL:http://localhost:8085}
     timeout-ms: ${NOTIFY_ORDERING_TIMEOUT_MS:10000}
+  # SF-15 (FI-325) — restock email: poll catalog internal (trực tiếp :8082) +
+  # claim atomic. enabled=false chỉ trong IT tắt nền.
+  stock-alert:
+    enabled: ${NOTIFY_STOCK_ALERT_ENABLED:true}
+    interval-ms: ${NOTIFY_STOCK_ALERT_INTERVAL_MS:60000}
+    initial-delay-ms: ${NOTIFY_STOCK_ALERT_INITIAL_DELAY_MS:5000}
+    storefront-url: ${NOTIFY_STOCK_ALERT_STOREFRONT_URL:http://localhost:3000}
+    catalog:
+      base-url: ${NOTIFY_STOCK_ALERT_CATALOG_BASE_URL:http://localhost:8082}
+      internal-token: ${CATALOG_INTERNAL_TOKEN:dev-internal-token}
+      timeout-ms: 3000
 
 # KHÔNG publish — chỉ consume
 outbox:

@@ -6,9 +6,11 @@ import com.ecommerce.ordering.api.dto.StatsDtos.OrdersSummaryDto;
 import com.ecommerce.ordering.api.dto.StatsDtos.RevenueByDayDto;
 import com.ecommerce.ordering.api.dto.StatsDtos.TopProductDto;
 import com.ecommerce.ordering.domain.Order;
+import com.ecommerce.ordering.domain.OrderItem;
 import com.ecommerce.ordering.domain.OrderStatus;
 import com.ecommerce.ordering.repo.OrderRepository;
 import com.ecommerce.ordering.service.OrderLifecycleService;
+import com.ecommerce.ordering.service.ShippingMethodsService;
 import com.ecommerce.ordering.service.invoice.InvoiceProvider;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
@@ -48,12 +50,35 @@ public class AdminOrderController {
     private final OrderRepository orders;
     private final OrderLifecycleService lifecycle;
     private final InvoiceProvider invoiceProvider;
+    private final com.ecommerce.ordering.service.OrdersCsvExporter csvExporter;
+    private final ShippingMethodsService shipping;
 
     public AdminOrderController(OrderRepository orders, OrderLifecycleService lifecycle,
-                                InvoiceProvider invoiceProvider) {
+                                InvoiceProvider invoiceProvider,
+                                com.ecommerce.ordering.service.OrdersCsvExporter csvExporter,
+                                ShippingMethodsService shipping) {
         this.orders = orders;
         this.lifecycle = lifecycle;
         this.invoiceProvider = invoiceProvider;
+        this.csvExporter = csvExporter;
+        this.shipping = shipping;
+    }
+
+    /** GET /admin/orders/export.csv — stream toàn bộ đơn (SF-13 A7b, runtime
+     * endpoint ngoài freeze — ADR 0005). BOM UTF-8 đầu stream cho Excel VN. */
+    @GetMapping(value = "/orders/export.csv", produces = "text/csv")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> exportCsv() {
+        String filename = "orders-" + java.time.LocalDate.now() + ".csv";
+        org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody body = out -> {
+            out.write(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}); // UTF-8 BOM
+            var writer = new java.io.OutputStreamWriter(out, java.nio.charset.StandardCharsets.UTF_8);
+            csvExporter.write(writer);
+            writer.flush(); // Spring chỉ đóng raw stream — KHÔNG flush writer tự động
+        };
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+            .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+            .body(body);
     }
 
     /** GET /admin/orders — filter status + q (id/email/tên trong address), paginate. */
@@ -90,7 +115,11 @@ public class AdminOrderController {
             .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
     }
 
-    /** POST /admin/orders/{id}/ship — CONFIRMED → SHIPPED (§3.6); tracking tự cấp nếu thiếu. */
+    /**
+     * POST /admin/orders/{id}/ship — CONFIRMED → SHIPPED (§3.6). SF-14: đơn
+     * method {@code ghn:*} → mở vận đơn GHN (trackingCode = order_code);
+     * GHN lỗi/tắt → fallback TRK- như cũ (degraded, ship không chết).
+     */
     @PostMapping("/orders/{id}/ship")
     public OrderDto ship(@PathVariable UUID id) {
         Order o = orders.findById(id).orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
@@ -99,15 +128,22 @@ public class AdminOrderController {
         }
         o.transitionTo(OrderStatus.SHIPPED);
         if (o.getTrackingCode() == null) {
-            o.markShipped("TRK-" + o.getId().toString().substring(0, 8).toUpperCase(Locale.ROOT));
+            String ghnCode = shipping.createGhnTracking(o,
+                o.getItems().stream().mapToInt(OrderItem::getQty).sum());
+            o.markShipped(ghnCode != null ? ghnCode
+                : "TRK-" + o.getId().toString().substring(0, 8).toUpperCase(Locale.ROOT));
         }
         return OrderDto.from(orders.save(o));
     }
 
-    /** POST /admin/orders/{id}/deliver — SHIPPED → DELIVERED (§3.6). */
+    /** POST /admin/orders/{id}/deliver — SHIPPED → DELIVERED (§3.6). COD (SF-13):
+     * capture tiền mặt + outbox order.paid LÚC GIAO (lifecycle.deliverCod). */
     @PostMapping("/orders/{id}/deliver")
     public OrderDto deliver(@PathVariable UUID id) {
         Order o = orders.findById(id).orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
+        if ("cod".equalsIgnoreCase(o.getPaymentMethod())) {
+            return OrderDto.from(lifecycle.deliverCod(id));
+        }
         if (o.getStatus() != OrderStatus.SHIPPED) {
             throw new InvalidStateTransitionException("Chỉ đơn SHIPPED deliver được — đơn đang " + o.getStatus());
         }

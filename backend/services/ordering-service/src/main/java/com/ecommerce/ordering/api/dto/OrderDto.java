@@ -36,7 +36,8 @@ public record OrderDto(
         return new OrderDto(
             o.getId(), o.getUserId(), o.getStatus(),
             o.getItems().stream().map(OrderLineDto::from).toList(),
-            o.getSubtotal(), o.getDiscount(), o.getShippingFee(), null,
+            o.getSubtotal(), o.getDiscount(), o.getShippingFee(),
+            o.getPointsDiscount() > 0 ? o.getPointsDiscount() : null,
             o.getTotal(), o.getCurrency(), o.getCouponCode(), o.getAffiliateCode(),
             o.getPaymentMethod(), o.getShippingMethod(), o.getTrackingCode(),
             new AddressDto(o.getAddress().fullName(), o.getAddress().phone(), o.getAddress().line1(),

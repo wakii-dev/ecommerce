@@ -118,6 +118,78 @@ public class OrderLifecycleService {
     }
 
     /**
+     * SF-13 COD (A2): sau reserve → CONFIRMED LUÔN (state machine path mới
+     * PENDING→CONFIRMED — pack). 1 tx: transition + finalize coupon + outbox
+     * order.confirmed fat payload (giống Stripe path nhưng KHÔNG qua PAID —
+     * tiền thật thu lúc giao qua capture). Guard PENDING: replay idempotent.
+     *
+     * @return order đã CONFIRMED (saga trả DTO + clientSecret null)
+     */
+    public Order confirmCodOrder(UUID orderId, String correlationId) {
+        return tx.execute(status -> {
+            Order o = orders.findById(orderId).orElseThrow();
+            if (o.getStatus() != OrderStatus.PENDING) {
+                log.info("confirmCodOrder cho order {} đang {} — no-op (idempotent)", orderId, o.getStatus());
+                return o;
+            }
+            o.transitionTo(OrderStatus.CONFIRMED);
+            orders.save(o);
+            if (o.getCouponCode() != null) {
+                couponService.finalizeForOrder(o.getId());
+            }
+            outbox.write("order.confirmed", buildConfirmedPayload(o), correlationId);
+            log.info("Order {} CONFIRMED (COD, sau reserve) — order.confirmed fat payload published", orderId);
+            return o;
+        });
+    }
+
+    /**
+     * SF-13 COD deliver (A2): admin bấm giao hàng — "COD→PAID lúc giao"
+     * (ordering.yaml transition table). Thứ tự (spec-critic P1): capture
+     * payment NGOÀI tx TRƯỚC transition — capture fail → 502, đơn còn SHIPPED,
+     * admin deliver lại được (capture idempotent key deterministic); capture OK
+     * → tx transition SHIPPED→DELIVERED + outbox order.paid → inventory commit
+     * lúc giao (order.paid.schema.json: COD KHÔNG phát event này lúc checkout).
+     * Trạng thái đơn kết thúc vẫn DELIVERED — KHÔNG transition →PAID.
+     */
+    public Order deliverCod(UUID orderId) {
+        Order pre = orders.findById(orderId)
+            .orElseThrow(() -> new InvalidStateTransitionException("Không tìm thấy đơn"));
+        if (pre.getStatus() != OrderStatus.SHIPPED) {
+            throw new InvalidStateTransitionException(
+                "Chỉ đơn SHIPPED deliver được — đơn đang " + pre.getStatus());
+        }
+        if ("cod".equalsIgnoreCase(pre.getPaymentMethod())) {
+            try {
+                payment.captureCod(pre.getId(), pre.getTotal(),
+                    UUID.nameUUIDFromBytes(("cod-capture:" + pre.getId())
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            } catch (org.springframework.web.client.RestClientException e) {
+                throw new PaymentUnavailableException(
+                    "COD capture thất bại cho đơn " + orderId + ": " + e.getMessage());
+            }
+        }
+        return tx.execute(status -> {
+            Order o = orders.findById(orderId).orElseThrow();
+            if (o.getStatus() != OrderStatus.SHIPPED) {
+                throw new InvalidStateTransitionException(
+                    "Chỉ đơn SHIPPED deliver được — đơn đang " + o.getStatus());
+            }
+            o.transitionTo(OrderStatus.DELIVERED);
+            orders.save(o);
+            if ("cod".equalsIgnoreCase(o.getPaymentMethod())) {
+                ObjectNode payload = objectMapper.createObjectNode()
+                    .put("orderId", orderId.toString())
+                    .put("paymentIntentId", "cod:" + orderId)
+                    .put("paidAt", java.time.Instant.now().toString());
+                outbox.write("order.paid", payload, "admin:deliver:" + orderId);
+                log.info("Order {} DELIVERED (COD) — capture + order.paid: inventory commit lúc giao", orderId);
+            }
+            return o;
+        });
+    }
+
+    /**
      * inventory.committed → PAID→CONFIRMED + finalize coupon + outbox
      * order.confirmed FAT PAYLOAD (§6.1.5 — đủ cho MỌI consumer không call-back).
      */
@@ -338,7 +410,8 @@ public class OrderLifecycleService {
             item.put("name", i.getName());
         });
         payload.put("subtotal", o.getSubtotal());
-        payload.put("discount", o.getDiscount());
+        // D22: schema ghi discount = "Tổng giảm giá VND (coupon + điểm)"
+        payload.put("discount", o.getDiscount() + o.getPointsDiscount());
         payload.put("shippingFee", o.getShippingFee());
         payload.put("total", o.getTotal());
         payload.put("currency", o.getCurrency());

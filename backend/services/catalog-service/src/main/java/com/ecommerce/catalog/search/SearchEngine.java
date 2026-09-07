@@ -20,6 +20,13 @@ public interface SearchEngine {
     /** Search-as-you-type: ≤5 products + ≤5 categories {slug, name}. */
     SuggestResponseDto suggest(String q, String locale);
 
+    /**
+     * SF-13 (FI-323) A6b — sản phẩm tương tự cho PDP (runtime endpoint, ADR
+     * 0005: NGOÀI catalog.yaml freeze). ES more_like_this; PgFts fallback =
+     * cùng category mới nhất. Slug không tồn tại → page RỖNG (200 — PDP ẩn).
+     */
+    ProductCardPageDto related(String slug, String locale, int size);
+
     /** Đẩy 1 product lên index (EsEngine) — gọi sau admin write. */
     void index(ProductEntity product);
 

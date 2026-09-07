@@ -4,6 +4,8 @@ import com.ecommerce.common.outbox.OutboxWriter;
 import com.ecommerce.identity.config.RefreshProperties;
 import com.ecommerce.identity.token.RefreshTokenService;
 import com.ecommerce.identity.token.TokenService;
+import com.ecommerce.identity.twofa.TwoFactorDtos.Challenge;
+import com.ecommerce.identity.twofa.TwoFactorService;
 import com.ecommerce.identity.user.Role;
 import com.ecommerce.identity.user.UserEntity;
 import com.ecommerce.identity.user.UserRepository;
@@ -41,11 +43,12 @@ public class AuthController {
     private final RefreshProperties refreshProperties;
     private final OutboxWriter outboxWriter;
     private final ObjectMapper objectMapper;
+    private final TwoFactorService twoFactorService;
 
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder,
                           TokenService tokenService, RefreshTokenService refreshTokenService,
                           RefreshProperties refreshProperties, OutboxWriter outboxWriter,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper, TwoFactorService twoFactorService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
@@ -53,6 +56,7 @@ public class AuthController {
         this.refreshProperties = refreshProperties;
         this.outboxWriter = outboxWriter;
         this.objectMapper = objectMapper;
+        this.twoFactorService = twoFactorService;
     }
 
     /** Đăng ký — 201 UserSummary (auto-login do FE gọi login sau). user.created qua outbox cùng tx. */
@@ -86,10 +90,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginSuccess> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest request) {
         UserEntity user = userRepository.findByEmail(request.email().trim().toLowerCase())
-            .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
+            // SF-15: hash NULL = OAuth-only user — không bao giờ khớp password
+            // (matches(raw, null) sẽ NPE — guard tường minh, 401 thống nhất).
+            .filter(u -> u.getPasswordHash() != null
+                && passwordEncoder.matches(request.password(), u.getPasswordHash()))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng"));
+        // SF-15: 2FA bật → challenge thay vì token (contract oneOf LoginResponse).
+        if (twoFactorService.isEnabled(user.getId())) {
+            return ResponseEntity.ok(new Challenge(true, twoFactorService.issueChallenge(user)));
+        }
         String accessToken = tokenService.issue(user);
         String raw = refreshTokenService.issue(user);
         return ResponseEntity.ok()

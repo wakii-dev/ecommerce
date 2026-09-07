@@ -35,6 +35,11 @@ public class RabbitMqConfig {
 
     public static final String QUEUE_ORDERS = "notification.orders";
     public static final String QUEUE_REVIEWS = "notification.reviews";
+    public static final String QUEUE_PASSWORD_RESET = "notification.password_reset";
+    public static final String QUEUE_CARTS = "notification.carts";
+    public static final String QUEUE_NEWSLETTER = "notification.newsletter";
+    // SF-14 (FI-324, D22): RMA — email mỗi bước duyệt/nhận/hoàn/từ chối
+    public static final String QUEUE_RMA = "notification.rma";
 
     @Bean
     Queue notificationOrders() {
@@ -44,6 +49,47 @@ public class RabbitMqConfig {
     @Bean
     Queue notificationReviews() {
         return QueueBuilder.durable(QUEUE_REVIEWS).build();
+    }
+
+    @Bean
+    Queue notificationPasswordReset() {
+        return QueueBuilder.durable(QUEUE_PASSWORD_RESET).build();
+    }
+
+    @Bean
+    Queue notificationCarts() {
+        return QueueBuilder.durable(QUEUE_CARTS).build();
+    }
+
+    @Bean
+    Queue notificationNewsletter() {
+        return QueueBuilder.durable(QUEUE_NEWSLETTER).build();
+    }
+
+    @Bean
+    Queue notificationRma() {
+        return QueueBuilder.durable(QUEUE_RMA).build();
+    }
+
+    @Bean
+    Binding passwordResetRequestedBinding(Queue notificationPasswordReset, TopicExchange outboxEventsExchange) {
+        // SF-13 (FI-323) A1 — event mới ngoài freeze 13 (ADR 0005): identity outbox
+        // user.password_reset_requested {email, token, expiresAt} → mail link reset.
+        return BindingBuilder.bind(notificationPasswordReset).to(outboxEventsExchange)
+            .with("user.password_reset_requested");
+    }
+
+    @Bean
+    Binding cartAbandonedBinding(Queue notificationCarts, TopicExchange outboxEventsExchange) {
+        // SF-13 A4 — cart.abandoned (cart publish trực tiếp, không outbox — ADR 0005)
+        return BindingBuilder.bind(notificationCarts).to(outboxEventsExchange).with("cart.abandoned");
+    }
+
+    @Bean
+    Binding newsletterSubscribedBinding(Queue notificationNewsletter, TopicExchange outboxEventsExchange) {
+        // SF-13 A8 — user.newsletter_subscribed → welcome email (task 11)
+        return BindingBuilder.bind(notificationNewsletter).to(outboxEventsExchange)
+            .with("user.newsletter_subscribed");
     }
 
     @Bean
@@ -59,6 +105,27 @@ public class RabbitMqConfig {
     @Bean
     Binding reviewModeratedBinding(Queue notificationReviews, TopicExchange outboxEventsExchange) {
         return BindingBuilder.bind(notificationReviews).to(outboxEventsExchange).with("review.moderated");
+    }
+
+    // ── SF-14 (FI-324): RMA lifecycle emails (payload FAT có email từ ordering) ──
+    @Bean
+    Binding rmaApprovedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.approved");
+    }
+
+    @Bean
+    Binding rmaRejectedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.rejected");
+    }
+
+    @Bean
+    Binding rmaReceivedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.received");
+    }
+
+    @Bean
+    Binding rmaRefundedBinding(Queue notificationRma, TopicExchange outboxEventsExchange) {
+        return BindingBuilder.bind(notificationRma).to(outboxEventsExchange).with("rma.refunded");
     }
 
     @Bean

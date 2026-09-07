@@ -22,4 +22,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
     @Modifying
     @Query("update RefreshTokenEntity t set t.revokedAt = :now where t.tokenHash = :hash and t.revokedAt is null")
     int revokeIfActive(@Param("hash") String hash, @Param("now") Instant now);
+
+    /** Revoke mọi refresh token của user (SF-13 A1 — password reset). */
+    @Modifying
+    @Query("update RefreshTokenEntity t set t.revokedAt = :now where t.user.id = :userId and t.revokedAt is null")
+    int revokeAllForUser(@Param("userId") UUID userId, @Param("now") Instant now);
 }

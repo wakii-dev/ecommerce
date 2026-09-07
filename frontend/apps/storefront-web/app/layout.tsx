@@ -1,6 +1,10 @@
+import type { Metadata, Viewport } from 'next';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
+
+import GaPageview from '../components/GaPageview';
+import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';
 
 import './app.css';
 
@@ -21,11 +25,48 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: 'swap',
 });
 
+/** PWA metadata (SF-15) — manifest qua app/manifest.ts; child generateMetadata
+ * ([locale]/layout) merge đè title/description, giữ manifest/icons. */
+export const metadata: Metadata = {
+  applicationName: 'ShopVN',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'ShopVN', statusBarStyle: 'default' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#F53D2D',
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const locale = headers().get('x-app-locale');
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || '';
   return (
-    <html lang={locale === 'en' ? 'en' : 'vi'} className={beVietnamPro.className}>
-      <body>{children}</body>
+    // suppressHydrationWarning: boot script đổi data-theme TRƯỚC hydrate
+    // (server render không biết theme client) — chỉ suppress đúng attribute này.
+    <html
+      lang={locale === 'en' ? 'en' : 'vi'}
+      className={beVietnamPro.className}
+      suppressHydrationWarning
+    >
+      <body>
+        {/* Anti-FOUC (SF-15): set data-theme trước paint đầu — pattern next-themes. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {children}
+        {/* SF-13 A7a: GA4 chỉ load khi có NEXT_PUBLIC_GA_ID; pageview theo
+            navigation qua GaPageview (App Router không reload). */}
+        {gaId ? (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`
+              }}
+            />
+            <GaPageview />
+          </>
+        ) : null}
+      </body>
     </html>
   );
 }

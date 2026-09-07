@@ -19,6 +19,7 @@ import org.elasticsearch.client.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import com.ecommerce.catalog.domain.ProductEntity;
 import com.ecommerce.catalog.domain.ProductImageEntity;
@@ -118,6 +119,80 @@ public class EsEngine implements SearchEngine {
         } catch (Exception e) {
             return degrade("suggest", e, () -> fallback.suggest(q, locale));
         }
+    }
+
+    /** SF-13 A6b — related: MLT trên name/description + fill cùng category. */
+    @Override
+    public ProductCardPageDto related(String slug, String locale, int size) {
+        try {
+            ProductCardPageDto result = esRelated(slug, locale, size);
+            markHealthyAgain();
+            return result;
+        } catch (Exception e) {
+            return degrade("related", e, () -> fallback.related(slug, locale, size));
+        }
+    }
+
+    private ProductCardPageDto esRelated(String slug, String locale, int size) throws IOException {
+        int limit = Math.max(1, Math.min(size, 8));
+        // (1) resolve product từ PG (authority) — slug vi HOẶC en; draft → rỗng
+        ProductEntity product = products.findBySlugViOrSlugEn(slug, slug).orElse(null);
+        if (product == null || product.getStatus() != com.ecommerce.catalog.domain.ProductStatus.PUBLISHED) {
+            return new ProductCardPageDto(List.of(), 1, limit, 0);
+        }
+        // (2) more_like_this với like-text từ PG (không cần fetch _source ES) —
+        // min_term_freq=1 (tên sản phẩm ít trùng từ — critic P1), min_doc_freq=1
+        // (seed chỉ 24 docs); filter PUBLISHED + exclude self.
+        String vi = product.getName().vi() + " " + (product.getDescription() == null ? "" : nvl(product.getDescription().vi()));
+        String en = product.getName().en() + " " + (product.getDescription() == null ? "" : nvl(product.getDescription().en()));
+        ObjectNode body = mapper.createObjectNode();
+        body.put("size", limit);
+        ObjectNode bool = body.putObject("query").putObject("bool");
+        ObjectNode mlt = bool.putObject("must").putObject("more_like_this");
+        mlt.putArray("fields").add("name.vi").add("name.en").add("description.vi").add("description.en");
+        mlt.putArray("like").add(vi).add(en);
+        mlt.put("min_term_freq", 1);
+        mlt.put("min_doc_freq", 1);
+        mlt.put("max_query_terms", 12);
+        bool.putArray("filter").addObject().putObject("term").put("status", "PUBLISHED");
+        bool.putArray("must_not").addObject().putObject("term").put("_id", product.getId().toString());
+        JsonNode resp = execute("POST", "/" + EsIndexConfig.INDEX + "/_search", body);
+        List<UUID> ids = new java.util.ArrayList<>(idsFromHits(hits(resp)));
+        // (3) fill cùng category tới limit (seed nhỏ — MLT chỉ gợi ý)
+        if (ids.size() < limit) {
+            ids = fillSameCategory(product, new java.util.LinkedHashSet<>(ids), limit);
+        }
+        List<ProductCardDto> cards = hydrateCards(ids, locale);
+        return new ProductCardPageDto(cards, 1, limit, cards.size());
+    }
+
+    /** PG fill: cùng category, published, khác self + đã có, mới nhất trước. */
+    private List<UUID> fillSameCategory(ProductEntity product, java.util.Set<UUID> exclude, int limit) {
+        List<UUID> out = new java.util.ArrayList<>(exclude);
+        if (product.getCategoryId() == null) {
+            return out;
+        }
+        List<UUID> fill = jdbc.query(
+            "SELECT id FROM products WHERE category_id = :cat AND status = 'PUBLISHED' "
+                + "AND deleted_at IS NULL AND id <> :self ORDER BY created_at DESC LIMIT :lim",
+            new MapSqlParameterSource()
+                .addValue("cat", product.getCategoryId())
+                .addValue("self", product.getId())
+                .addValue("lim", limit),
+            (rs, i) -> UUID.fromString(rs.getString("id")));
+        for (UUID id : fill) {
+            if (out.size() >= limit) {
+                break;
+            }
+            if (!exclude.contains(id)) {
+                out.add(id);
+            }
+        }
+        return out;
+    }
+
+    private static String nvl(String s) {
+        return s == null ? "" : s;
     }
 
     private ProductCardPageDto esSearch(SearchQuery query) throws IOException {

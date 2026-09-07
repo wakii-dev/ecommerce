@@ -77,7 +77,13 @@ public class RmaService {
                 "Chỉ đơn DELIVERED mới tạo yêu cầu trả hàng được — đơn đang " + order.getStatus());
         }
         Instant deliveredAt = lastDeliveredAt(order);
-        if (deliveredAt != null && Instant.now().isAfter(deliveredAt.plus(Duration.ofDays(windowDays)))) {
+        if (deliveredAt == null) {
+            // review P2: đơn DELIVERED nhưng timeline thiếu entry (degenerate data)
+            // → không tính được cửa sổ → chặn defensively, không mở lối bỏ qua
+            throw new RmaWindowException(
+                "Đơn không có mốc giao hàng — không thể tạo yêu cầu trả/đổi");
+        }
+        if (Instant.now().isAfter(deliveredAt.plus(Duration.ofDays(windowDays)))) {
             throw new RmaWindowException(
                 "Đã quá " + windowDays + " ngày kể từ khi giao hàng — hết hạn tạo yêu cầu trả/đổi");
         }

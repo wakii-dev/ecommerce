@@ -78,7 +78,11 @@ public class GhnClient {
             {"service_id":%d,"to_district_id":%d,"weight":%d,
              "from_district_id":%s}
             """.formatted(serviceId, toDistrictId, weightGrams, fromDistrictIdLiteral()));
-        return data.path("total").asLong(0);
+        // review P2: 200 thiếu total → throw (fallback flat) thay vì phí 0đ
+        if (!data.hasNonNull("total")) {
+            throw new IllegalStateException("GHN fee response thiếu total");
+        }
+        return data.path("total").asLong();
     }
 
     public record Created(String orderCode) {
@@ -96,7 +100,7 @@ public class GhnClient {
              "note":"Ecommerce demo",
              "required_note":"KHONGCHOXEMHANG",
              "to_name":"%s","to_phone":"%s","to_address":"%s"}
-            """.formatted(serviceId, toDistrictId, toWardCode == null ? "" : toWardCode.replace("\"", ""),
+            """.formatted(serviceId, toDistrictId, toWardCode == null ? "" : escape(toWardCode),
             weightGrams, clientOrderCode, fromDistrictIdLiteral(),
             escape(receiverName), escape(receiverPhone), escape(address)));
         return new Created(data.path("order_code").asText());

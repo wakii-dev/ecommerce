@@ -173,7 +173,7 @@ public abstract class AbstractSagaTest {
     private static void applyMigrations() {
         apply("db_ordering", List.of("/db/migration/V1__init.sql",
             "/db/migration/V10__orders_domain.sql", "/db/migration/V11__seed_coupons.sql",
-            "/db/migration/V12__rma.sql"));
+            "/db/migration/V12__rma.sql", "/db/migration/V13__rma_refund_unique.sql"));
         apply("db_inventory", List.of("/db/migration/V1__init.sql",
             "/db/migration/V10__inventory_domain.sql"));
         apply("db_payment", List.of("/db/migration/V1__init.sql",

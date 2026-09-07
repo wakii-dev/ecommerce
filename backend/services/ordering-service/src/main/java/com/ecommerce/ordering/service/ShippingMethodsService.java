@@ -82,7 +82,14 @@ public class ShippingMethodsService {
                 throw new InvalidShippingMethodException(
                     "Phương thức GHN cần địa chỉ district mã GHN hợp lệ: " + methodId);
             }
-            long serviceId = Long.parseLong(methodId.substring(4));
+            long serviceId;
+            try {
+                serviceId = Long.parseLong(methodId.substring(4));
+            } catch (NumberFormatException e) {
+                // review P1: client gửi "ghn:abc" → 400 rõ, không 500 catch-all
+                throw new InvalidShippingMethodException(
+                    "Phương thức vận chuyển không hợp lệ: " + methodId);
+            }
             try {
                 long fee = ghn.fee(serviceId, districtId,
                     Math.max(1, totalQty) * WEIGHT_PER_ITEM_GRAMS);

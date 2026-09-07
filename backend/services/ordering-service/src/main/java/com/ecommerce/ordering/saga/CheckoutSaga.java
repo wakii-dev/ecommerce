@@ -172,6 +172,14 @@ public class CheckoutSaga {
             }
             discount = coupon.discountFor(subtotal);
         }
+        // D4 (review P1): validate ĐIỂM TRƯỚC Tx A — hàng thấp hơn 100đ/sau coupon
+        // mà vẫn muốn dùng điểm → 422 ngay, KHÔNG để lại order PENDING mồ côi
+        // (throw sau Tx A phải kèm failOrder, ở đây chưa tạo gì nên throw sạch).
+        if (request.usePoints() != null && request.usePoints() > 0
+            && (subtotal - discount) / POINT_VND <= 0) {
+            throw new PointsInvalidException(
+                "Đơn hàng không đủ giá trị để dùng điểm (tối thiểu " + POINT_VND + "đ sau giảm giá)");
+        }
         long total = subtotal - discount + shipping.fee();
         // Snapshot final cho lambda (coupon/discount gán trong block validate ở trên)
         final Coupon couponFinal = coupon;
@@ -225,6 +233,8 @@ public class CheckoutSaga {
             long effective = Math.min(request.usePoints(),
                 Math.max(0, (subtotal - discountFinal) / POINT_VND));
             if (effective <= 0) {
+                // Defense-in-depth (đã chặn trước Tx A) — nếu lọt đây PHẢI compensation
+                failOrder(order.getId(), "loyalty_invalid", "RESERVE", correlationId);
                 throw new PointsInvalidException("Đơn hàng không đủ giá trị để dùng điểm");
             }
             try {

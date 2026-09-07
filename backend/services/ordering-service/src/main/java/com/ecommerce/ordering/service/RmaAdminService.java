@@ -97,15 +97,28 @@ public class RmaAdminService {
             refundViaStripe(order, rma.getId());
         }
 
-        Rma saved = tx.execute(status -> {
-            Rma fresh = rmas.findById(rma.getId()).orElseThrow();
-            requireTransition(fresh.getStatus(), RmaStatus.REFUNDED);
-            fresh.transitionTo(RmaStatus.REFUNDED);
-            fresh.markRefunded(stripe ? amount : 0);
-            rmas.save(fresh);
-            rmaService.writeTransitionEvent(fresh, order, RmaStatus.REFUNDED, amount, "admin:" + fresh.getId());
-            return fresh;
-        });
+        Rma saved;
+        try {
+            saved = tx.execute(status -> {
+                Rma fresh = rmas.findById(rma.getId()).orElseThrow();
+                requireTransition(fresh.getStatus(), RmaStatus.REFUNDED);
+                // Re-check guard TRONG tx (review P1 — TOCTOU: check trước tx không đủ)
+                if (rmas.existsByOrderIdAndStatus(order.getId(), RmaStatus.REFUNDED)) {
+                    throw new InvalidStateTransitionException(
+                        "Đơn này đã hoàn tiền qua một yêu cầu trả hàng khác — không hoàn lần 2");
+                }
+                fresh.transitionTo(RmaStatus.REFUNDED);
+                // COD offline cũng ghi full amount (review P2 — đồng bộ event/email/FE)
+                fresh.markRefunded(amount);
+                rmas.save(fresh);
+                rmaService.writeTransitionEvent(fresh, order, RmaStatus.REFUNDED, amount, "admin:" + fresh.getId());
+                return fresh;
+            });
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // uq_rma_refunded_per_order (V13): 2 refund race cùng đơn — DB là authority
+            throw new InvalidStateTransitionException(
+                "Đơn này đã hoàn tiền qua một yêu cầu trả hàng khác — không hoàn lần 2");
+        }
         log.info("RMA {} REFUNDED {}đ (order={}, mode={})",
             rma.getId(), amount, order.getId(), stripe ? "stripe" : "offline-cod");
         return RmaDto.from(saved);

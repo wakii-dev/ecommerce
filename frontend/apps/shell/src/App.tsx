@@ -8,6 +8,7 @@ import ErrorBoundary from './ErrorBoundary';
 import Home from './pages/Home';
 import UiKitDemoPage from './pages/UiKitDemoPage';
 import { usePath } from './router';
+import { gaPageview } from './ga';
 
 // Remote page nạp LAZY — shell vẫn boot được khi remote down (import động chỉ
 // chạy khi vào /skeleton); RemotePage mới là nơi import module federation.
@@ -128,6 +129,10 @@ function CheckoutErrorFallback({ error }: { error: Error }): ReactElement {
 export default function App(): ReactElement {
   const { t } = useT();
   const path = usePath();
+  // SF-13 A7a: pageview GA4 mỗi navigation (guard trong ga — không ID thì no-op)
+  useEffect(() => {
+    gaPageview(path);
+  }, [path]);
   // Bump khi remote register/unregister widget vào header slot → Header
   // re-render đọc lại HeaderSlots.list (registry không có subscription —
   // tối giản cho harness).

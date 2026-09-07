@@ -86,6 +86,28 @@ function useOrderPolling(orderId: string | null): {
 export default function ConfirmationPage(): ReactElement {
   const [snapshot] = useState<Order | null>(readLastOrder);
   const { live, pollError } = useOrderPolling(snapshot?.id ?? null);
+  // SF-13 A7a: purchase GA4 — fire ĐÚNG 1 LẦN/order khi tới terminal OK
+  // (stripe: CONFIRMED sau vài giây poll; COD: CONFIRMED ngay từ create).
+  const purchaseFired = useRef<string | null>(null);
+  const confirmedOk = live != null && TERMINAL_OK.includes(live.status);
+
+  useEffect(() => {
+    if (!live || !confirmedOk || purchaseFired.current === live.id) return;
+    purchaseFired.current = live.id;
+    const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+    gtag?.('event', 'purchase', {
+      transaction_id: live.id,
+      value: live.total,
+      currency: live.currency ?? 'VND',
+      coupon: live.couponCode ?? undefined,
+      items: live.items.map((line) => ({
+        item_id: line.productId,
+        item_name: line.name ?? 'Sản phẩm',
+        quantity: line.qty,
+        price: line.unitPrice
+      }))
+    });
+  }, [live, confirmedOk]);
 
   if (!snapshot) {
     return (
@@ -103,7 +125,6 @@ export default function ConfirmationPage(): ReactElement {
   }
 
   const order = live ?? snapshot;
-  const confirmedOk = TERMINAL_OK.includes(order.status);
   const terminalBad = TERMINAL_BAD.includes(order.status);
 
   return (

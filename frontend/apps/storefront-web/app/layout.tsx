@@ -2,6 +2,8 @@ import { Be_Vietnam_Pro } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 
+import GaPageview from '../components/GaPageview';
+
 import './app.css';
 
 /**
@@ -23,9 +25,25 @@ const beVietnamPro = Be_Vietnam_Pro({
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const locale = headers().get('x-app-locale');
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || '';
   return (
     <html lang={locale === 'en' ? 'en' : 'vi'} className={beVietnamPro.className}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* SF-13 A7a: GA4 chỉ load khi có NEXT_PUBLIC_GA_ID; pageview theo
+            navigation qua GaPageview (App Router không reload). */}
+        {gaId ? (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`
+              }}
+            />
+            <GaPageview />
+          </>
+        ) : null}
+      </body>
     </html>
   );
 }

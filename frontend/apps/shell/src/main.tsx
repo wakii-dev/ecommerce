@@ -7,6 +7,7 @@ import App from './App';
 import { ShellNav } from './header/Header';
 import { HeaderSlots } from './header/HeaderSlots';
 import { navigate } from './router';
+import { initGa } from './ga';
 
 // Chip kiểm chứng React singleton (Task 14): shell gắn bản React CỦA MÌNH lên
 // window TRƯỚC khi module nào của remote được nạp (import động chạy sau
@@ -45,6 +46,9 @@ import('checkout/bootstrap')
 import('admin/bootstrap')
   .then((m) => m.initAdminShell({ HeaderSlots, navigate }))
   .catch((error) => console.warn('[shell] mfe-admin chưa chạy — khu /admin tạm 404:', error.message));
+
+// SF-13 A7a: GA4 — VITE_GA_ID có mới nạp script (env-gated)
+initGa();
 
 void initI18n().then(() => {
   createRoot(document.getElementById('root')!).render(<App />);

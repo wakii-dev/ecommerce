@@ -95,7 +95,19 @@ pattern). Route `/api/log/**` KHÔNG StripPrefix (controller giữ full path).
 - **Newsletter dup**: 200 `{status:"already"}` — FE hiện thông báo riêng;
   race đồng thời → 409 (unique email), FE map về thông báo already.
 
-## 7. Scope freeze
+## 7. Flyway numbering va chạm liên SF + ignore-missing
+
+Volume PG CHUNG giữa các worktree T6: SF-15 đã apply `V11__oauth_twofa` vào
+db_identity trước SF-13. SF-13 renumber migration mình → **V13
+(password_reset_tokens) / V14 (newsletter_subscriptions)** (V12 chừa cho SF-15
+tiếp). Jar sau rename phải `mvn clean package` (target/classes giữ file cũ →
+checksum mismatch giả). Kèm `spring.flyway.ignore-migration-patterns: "*:missing"`
+trong identity application.yml — bỏ qua applied migration không có trên
+classpath mình. **Đánh đổi (review final F2)**: config global+vĩnh viễn làm
+mất khả năng phát hiện schema-drift do xoá migration — giới hạn lại theo
+profile hoặc bỏ sau khi SF-15 merge vào story branch.
+
+## 8. Scope freeze
 
 Batch A (D21) đóng. SF-13 KHÔNG nhận scope mới; batch B (RMA/GHN/loyalty/
 social/2FA/stock-alert/PWA/dark/chat) thuộc SF-14/15. Sau SF-13, identity/

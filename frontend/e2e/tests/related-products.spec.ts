@@ -18,22 +18,16 @@ test('PDP hiện Sản phẩm tương tự; home hiện Đã xem gần đây', a
   await expect(page).toHaveURL(/\/p\//);
   const pdpUrl = page.url();
 
-  // PDP: related ≥1 card + DEBUG storage
-  page.on('console', (m) => {
-    if (m.type() === 'error') console.log('PDP_CONSOLE_ERR', m.text().slice(0, 200));
-  });
-  page.on('pageerror', (e) => console.log('PDP_PAGEERROR', String(e).slice(0, 300)));
-  await page.waitForTimeout(2500);
-  console.log('LV_AFTER_PDP=', await page.evaluate(() => localStorage.getItem('recently_viewed')));
-  console.log('LV_KEY_OTHER=', await page.evaluate(() => Object.keys(localStorage).join(',')));
+  // PDP: related ≥1 card — đợi tracker ghi localStorage (hydration async)
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('recently_viewed')), { timeout: 10_000 })
+    .not.toBeNull();
   const related = page.getByTestId('related-products');
   await expect(related).toBeVisible({ timeout: 15_000 });
   await expect(related.locator('a')).not.toHaveCount(0);
 
   // home: recently viewed chứa sản phẩm vừa xem
   await page.goto(`${STOREFRONT}/vi`);
-  await page.waitForTimeout(1500);
-  console.log('LV_AT_HOME=', await page.evaluate(() => localStorage.getItem('recently_viewed')));
   const recent = page.getByTestId('recently-viewed');
   await expect(recent).toBeVisible({ timeout: 10_000 });
   await expect(recent.locator('a').first()).toBeVisible();

@@ -51,7 +51,7 @@
   height: 80px;
   object-fit: cover;
   border-radius: var(--radius-sm, 2px);
-  background: var(--c-surface-alt, #fafafa);
+  background: var(--wash-hover);
   flex: none;
 }
 
@@ -141,7 +141,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--radius-sm, 2px);
-  background: var(--c-danger-bg, #FDEBEC);
+  background: var(--pill-cancelled-bg);
   color: var(--c-danger, #C0151F);
   font-size: 12px;
   font-weight: 600;
@@ -174,7 +174,7 @@
 }
 
 .summary-row--discount .summary-value {
-  color: #26aa99;
+  color: var(--c-success);
 }
 
 .summary-divider {
@@ -211,8 +211,8 @@
 }
 
 .stepper-item--done {
-  border-bottom-color: #26aa99;
-  color: #26aa99;
+  border-bottom-color: var(--c-success);
+  color: var(--c-success);
   cursor: pointer;
 }
 
@@ -223,7 +223,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--c-surface-alt, #fafafa);
+  background: var(--wash-hover);
   font-size: 12px;
   font-weight: 700;
 }
@@ -234,8 +234,8 @@
 }
 
 .stepper-item--done .stepper-num {
-  background: #26aa99;
-  color: #fff;
+  background: var(--c-success);
+  color: var(--c-on-accent);
 }
 
 .checkout-grid {
@@ -268,8 +268,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #eef9f4;
-  border: 1px dashed #26aa99;
+  /* tint-success (FI-368 P1 fix: #eef9f4 literal => dark unreadable) */
+  background: var(--tint-success-bg);
+  border: 1px dashed var(--c-success);
   border-radius: var(--radius-sm, 2px);
   font-size: 14px;
 }
@@ -297,7 +298,7 @@
 
 .pay-error {
   padding: 12px;
-  background: var(--c-danger-bg, #FDEBEC);
+  background: var(--pill-cancelled-bg);
   border: 1px solid var(--c-danger, #C0151F);
   border-radius: var(--radius-sm, 2px);
   color: var(--c-danger, #C0151F);
@@ -319,8 +320,8 @@
   width: 56px;
   height: 56px;
   border-radius: 999px;
-  background: #26aa99;
-  color: #fff;
+  background: var(--c-success);
+  color: var(--c-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -331,8 +332,9 @@
   display: inline-block;
   padding: 4px 12px;
   border-radius: 999px;
-  background: #eef9f4;
-  color: #26aa99;
+  /* tint-success (FI-368 P1 fix) */
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
   font-weight: 600;
   font-size: 13px;
 }

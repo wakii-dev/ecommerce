@@ -8,7 +8,7 @@ import HeroCarousel from '../../components/home/HeroCarousel';
 import RecentlyViewed from '../../components/RecentlyViewed';
 import { EmptyState } from '../../components/ui-kit';
 import { catalogApi, CatalogUnavailableError, type Category, type ProductCard } from '../../lib/catalog-api';
-import { resolveLocale } from '../../lib/format';
+import { localePath, resolveLocale } from '../../lib/format';
 import { rootCategories, splitFlashAndFeatured } from '../../lib/home-composition';
 import { homeMetadata } from '../../lib/seo';
 
@@ -81,10 +81,17 @@ export default async function HomePage({ params }: { params: { locale: string } 
               <span className="section-bar" aria-hidden="true" />
               <h2 className="section-title">{locale === 'en' ? 'Picked for today' : 'Gợi ý hôm nay'}</h2>
             </div>
-            {/* '#' placeholder — PLP toàn sàn chưa có (Task 12 mới có /c/{slug}). */}
-            <a className="featured-more" href="#">
-              {locale === 'en' ? 'See more' : 'Xem thêm'}
-            </a>
+            {/* E7d: dead link '#' → PLP danh mục gốc đầu theo sort=discount (đúng
+                ngôn ngữ "gợi ý giảm giá"). Route toàn sàn chưa có — khi có thì
+                trỏ đó thay thế. */}
+            {categories.length > 0 ? (
+              <a
+                className="featured-more"
+                href={localePath(`/c/${categories[0]?.slug}?sort=discount`, locale)}
+              >
+                {locale === 'en' ? 'See more' : 'Xem thêm'}
+              </a>
+            ) : null}
           </div>
           <div className="featured-grid">
             {featured.map((product) => (

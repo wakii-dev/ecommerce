@@ -23,6 +23,8 @@
   --grad-buy: linear-gradient(90deg, #F53D2D, #FF7A45);
   /* Footer link #bbb (direction §2.2.5 — ngoài bảng tokens) */
   --footer-link: #bbb;
+  /* §2.2.5 footer nền #212121 literal — KHÔNG theo --c-text (dark sẽ đảo trắng) */
+  --footer-bg: #212121;
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────── */
@@ -90,7 +92,7 @@ img {
 .logo-word {
   font-size: 26px;
   font-weight: 800;
-  color: var(--c-primary);
+  color: var(--c-link);
   letter-spacing: -0.5px;
   display: inline-flex;
   align-items: baseline;
@@ -176,8 +178,8 @@ img {
 
 .search-item:hover,
 .search-item.is-active {
-  background: #fafafa;
-  color: var(--c-primary);
+  background: var(--wash-hover);
+  color: var(--c-link);
 }
 
 .search-item-name {
@@ -197,7 +199,8 @@ img {
 
 .search-item-hot {
   background: var(--c-danger);
-  color: var(--c-surface);
+  /* trắng ở light; dark qua --hot-tag-text (trên #FF5A5A cần chữ tối) */
+  color: var(--hot-tag-text, #ffffff);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -225,7 +228,7 @@ img {
 .search-btn {
   border: 0;
   background: var(--c-primary);
-  color: var(--c-surface);
+  color: #ffffff;
   padding: 0 22px;
   font-weight: 700;
   cursor: pointer;
@@ -264,7 +267,7 @@ img {
 }
 
 .header-action:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 /* Locale switcher (Task 10) — ghost: 13px/600, muted → primary hover,
@@ -280,7 +283,7 @@ img {
 }
 
 .locale-switch:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 /* Hàng 2 — mini-nav nền primary */
@@ -293,7 +296,8 @@ img {
 }
 
 .mini-nav a {
-  color: var(--c-surface);
+  /* trắng trên primary §2.1 — literal (dark --c-surface là #1E1E1E) */
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   padding: 8px 14px;
@@ -328,7 +332,7 @@ img {
 /* ── Footer (direction §2.2.5 — nền #212121, 4 cột gap 32px) ───────────── */
 
 .site-footer {
-  background: var(--c-text);
+  background: var(--footer-bg);
   color: var(--footer-link);
   margin-top: var(--space-7);
 }
@@ -342,7 +346,8 @@ img {
 }
 
 .site-footer h4 {
-  color: var(--c-surface);
+  /* trắng trên footer #212121 — literal cả 2 theme */
+  color: #ffffff;
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -417,7 +422,8 @@ img {
   align-items: flex-start;
   gap: var(--space-3);
   padding: 0 8%;
-  color: var(--c-surface);
+  /* chữ trắng trên gradient vivid (§2.2.1) — literal, không theo --c-surface (dark đảo) */
+  color: #ffffff;
 }
 
 .hero-kicker {
@@ -444,7 +450,7 @@ img {
   padding: 12px 32px;
   border-radius: var(--radius-md);
   background: var(--c-accent);
-  color: var(--c-text);
+  color: var(--c-on-accent);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
@@ -455,7 +461,7 @@ img {
   top: 28px;
   right: 8%;
   background: var(--c-surface);
-  color: var(--c-primary);
+  color: var(--c-link);
   font-size: 14px;
   font-weight: 800;
   padding: 8px 14px;
@@ -473,7 +479,7 @@ img {
   border: 0;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.92);
-  color: var(--c-text);
+  color: #212121;
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -540,7 +546,8 @@ img {
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--c-text);
+  /* chữ tối trên gradient vàng — --c-text trắng trong dark sẽ 1.35:1 */
+  color: var(--c-on-accent);
 }
 
 .countdown {
@@ -555,7 +562,8 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--c-text);
+  /* §3 hộp #212121 literal — chữ --c-accent 8.9:1 cả 2 theme */
+  background: #212121;
   color: var(--c-accent);
   border-radius: var(--radius-sm);
   font-size: 18px;
@@ -565,7 +573,7 @@ img {
 
 .countdown-sep {
   font-weight: 800;
-  color: var(--c-text);
+  color: var(--c-on-accent);
 }
 
 .flash-row {
@@ -700,7 +708,7 @@ img {
 }
 
 .featured-more {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -757,7 +765,7 @@ img {
   top: 8px;
   left: 8px;
   background: var(--c-primary);
-  color: var(--c-surface);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   padding: 2px 7px;
@@ -817,7 +825,7 @@ img {
 }
 
 .p-card:hover .p-name {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .p-price-row {
@@ -888,7 +896,7 @@ img {
 }
 
 .plp-breadcrumb a:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-breadcrumb-current {
@@ -977,14 +985,14 @@ img {
 
 .plp-tree-root:hover,
 .plp-tree-child:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-tree-root.is-active,
 .plp-tree-child.is-active {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 700;
-  border-left-color: var(--c-primary);
+  border-left-color: var(--c-link);
 }
 
 /* Link-khoảng-giá/rating mô phỏng checkbox 15×15 (single-select, toggle-off = bỏ param) */
@@ -999,7 +1007,7 @@ img {
 }
 
 .plp-check:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-check-box {
@@ -1016,16 +1024,16 @@ img {
   line-height: 1;
   color: var(--c-surface);
   /* accent-color primary §2.4 — áp cho hộp checked (mô phỏng input) */
-  accent-color: var(--c-primary);
+  accent-color: var(--c-link);
 }
 
 .plp-check.is-checked .plp-check-box {
   background: var(--c-primary);
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
 }
 
 .plp-check.is-checked {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 600;
 }
 
@@ -1060,7 +1068,7 @@ img {
   border: 1px solid var(--c-primary);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
-  color: var(--c-primary);
+  color: var(--c-link);
   padding: 7px 12px;
   font-size: 13px;
   font-weight: 700;
@@ -1081,7 +1089,7 @@ img {
   text-align: center;
   font-size: 13px;
   font-weight: 700;
-  color: var(--c-primary);
+  color: var(--c-link);
   background: var(--c-surface);
   text-decoration: none;
 }
@@ -1126,8 +1134,8 @@ img {
 }
 
 .plp-sort select:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 /* Grid kết quả 3 cột gap 16px, dùng chung .p-card (§2.4) */
@@ -1175,14 +1183,14 @@ img {
 }
 
 .plp-page-btn:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 .plp-page-btn.is-active {
   background: var(--c-primary);
-  border-color: var(--c-primary);
-  color: var(--c-surface);
+  border-color: var(--c-link);
+  color: #ffffff;
   cursor: default;
 }
 
@@ -1288,7 +1296,7 @@ img {
 }
 
 .pdp-thumb--active {
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
 }
 
 /* Info: h1 23px/700/1.35 + meta (đã bán + sao) */
@@ -1400,7 +1408,7 @@ img {
 }
 
 .pdp-swatch--active {
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
   box-shadow: 0 0 0 3px var(--tint-primary-bg);
 }
 
@@ -1454,7 +1462,7 @@ img {
 }
 
 .pdp-stepper-btn:hover:not(:disabled) {
-  background: #fafafa;
+  background: var(--wash-hover);
 }
 
 .pdp-stepper-btn:disabled {
@@ -1513,7 +1521,7 @@ img {
 .pdp-cta--secondary {
   background: var(--c-surface);
   border: 2px solid var(--c-primary);
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .pdp-cta--secondary:hover:not(:disabled) {
@@ -1603,7 +1611,7 @@ img {
 }
 
 .pdp-tab-bar a:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .pdp-panel {
@@ -1620,8 +1628,8 @@ img {
 }
 
 .pdp-tab-bar a[href='#tab-desc'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-tabs:has(#tab-info:target) a[href='#tab-desc'],
@@ -1631,13 +1639,13 @@ img {
 }
 
 .pdp-tabs:has(#tab-info:target) a[href='#tab-info'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-tabs:has(#tab-reviews:target) a[href='#tab-reviews'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-desc {
@@ -1665,7 +1673,7 @@ img {
 
 .pdp-spec th {
   width: 220px;
-  background: #fafafa;
+  background: var(--wash-hover);
   color: var(--c-text-muted);
   font-weight: 600;
 }
@@ -1680,7 +1688,7 @@ img {
   margin: 0;
   font-size: 64px;
   font-weight: 800;
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .not-found-title {
@@ -1695,7 +1703,7 @@ img {
 }
 
 .not-found-home {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 700;
   text-decoration: none;
 }
@@ -1732,8 +1740,8 @@ img {
 }
 
 .search-keyword-chip:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 /* ── Coupon center (Task 14 — mock-gate đến SF-9) ────────────────────────── */
@@ -1786,7 +1794,7 @@ img {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 1.5px;
-  color: var(--c-primary);
+  color: var(--c-link);
   border: 1px dashed var(--c-primary);
   border-radius: var(--radius-sm);
   padding: 6px 12px;
@@ -1812,7 +1820,7 @@ img {
 .coupon-copy {
   border: 0;
   background: var(--c-primary);
-  color: var(--c-surface);
+  color: #ffffff;
   font-weight: 700;
   font-size: 13px;
   padding: 7px 16px;
@@ -2304,5 +2312,11 @@ img {
 
 /* ── SF-15 (FI-325) — dark mode: biến phụ của app (tokens ui-kit đè riêng) ── */
 [data-theme='dark'] {
-  --footer-link: #8a8a8a;
+  --footer-link: #a0a0a0; /* AA 4.5:1 trên --footer-bg #212121 */
+  --footer-bg: #212121;
+  /* review P1: tag "ĐANG HOT" trắng trên danger-dark #FF5A5A chỉ 3.05:1 */
+  --hot-tag-text: #212121;
+}
+[data-theme='storefront'] {
+  --hot-tag-text: #ffffff;
 }

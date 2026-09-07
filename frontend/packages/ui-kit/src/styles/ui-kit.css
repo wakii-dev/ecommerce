@@ -65,14 +65,16 @@
   border-color: var(--c-border);
 }
 
+/* §3 secondary outline: hover nền primary-tint (#FDEEEE / dark tint) */
 .uk-btn--secondary:hover:not(:disabled) {
   border-color: var(--c-primary);
-  color: var(--c-primary);
+  color: var(--c-link);
+  background: var(--tint-primary-bg);
 }
 
 .uk-btn--ghost {
   background: transparent;
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .uk-btn--ghost:hover:not(:disabled) {
@@ -86,6 +88,18 @@
 
 .uk-btn--danger:hover:not(:disabled) {
   filter: brightness(0.9);
+}
+
+/* §3 nút hủy admin: outline tint theo ngôn ngữ pill CANCELLED
+   (nền --pill-cancelled-bg, chữ --pill-cancelled-text) — hợp cả dark */
+.uk-btn--danger-soft {
+  background: var(--pill-cancelled-bg);
+  border: 1px solid var(--pill-cancelled-text);
+  color: var(--pill-cancelled-text);
+}
+
+.uk-btn--danger-soft:hover:not(:disabled) {
+  filter: brightness(0.96);
 }
 
 .uk-btn:disabled {
@@ -453,8 +467,8 @@
 }
 
 .uk-tab--active {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom: 3px solid var(--c-primary);
 }
 
 .uk-tab:disabled {
@@ -489,11 +503,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--c-text-muted);
-  background: var(--c-bg);
+  background: var(--wash-hover); /* §2.6 thead #FAFAFA (dark: #262626) */
 }
 
 .uk-table tbody tr:hover td {
-  background: var(--c-bg);
+  background: var(--wash-hover);
 }
 
 .uk-table__empty {
@@ -590,7 +604,7 @@
   padding: 0;
   font-size: var(--text-lg);
   line-height: 1;
-  color: var(--c-border);
+  color: var(--star-track); /* §1.6 track #D8D8D8 (trước dùng --c-border) */
   cursor: default;
 }
 
@@ -603,7 +617,7 @@ button.uk-star {
 }
 
 .uk-star--half {
-  color: var(--c-border);
+  color: var(--star-track);
 }
 
 /* nửa sao: sao đầy clip 50% đè lên sao rỗng */
@@ -639,7 +653,7 @@ button.uk-star {
   flex-wrap: wrap;
   gap: var(--space-2);
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: 800; /* §3 Giá: luôn --c-danger 800 */
   color: var(--c-danger);
 }
 
@@ -782,4 +796,13 @@ button.uk-star {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
+ * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
+ * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */
+[data-theme='dark'] .uk-badge--warning,
+[data-theme='dark'] .uk-badge--success,
+[data-theme='dark'] .uk-badge--danger {
+  color: var(--c-on-accent);
 }

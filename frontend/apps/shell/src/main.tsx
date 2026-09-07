@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { I18nextProvider } from 'react-i18next';
 import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
@@ -58,6 +59,15 @@ import('admin/bootstrap')
 // SF-13 A7a: GA4 — VITE_GA_ID có mới nạp script (env-gated)
 initGa();
 
-void initI18n().then(() => {
-  createRoot(document.getElementById('root')!).render(<App />);
+// BUG-04 (register SF-1 relay → SF-2 T7): workspace resolve NHIỀU instance
+// i18next (pnpm store) — useT/react-i18next của shell đọc instance MẶC ĐỊNH
+// của nó, không phải instance initI18n() đã nạp resources => header/Home
+// render raw key "nav.home". Bind CHẮC qua I18nextProvider (cùng pattern
+// AdminApp.tsx đã dùng).
+void initI18n().then((i18n) => {
+  createRoot(document.getElementById('root')!).render(
+    <I18nextProvider i18n={i18n}>
+      <App />
+    </I18nextProvider>
+  );
 });

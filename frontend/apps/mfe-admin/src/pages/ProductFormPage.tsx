@@ -348,11 +348,13 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
               </div>
               <div className='admin-form-field'>
                 <label htmlFor='p-compare'>{t('admin.products.comparePrice')}</label>
+                {/* aria-invalid qua guard finite FI-368 T8 ("1e999" → chặn) */}
                 <Input
                   id='p-compare'
                   type='number'
                   min={0}
                   value={form.comparePrice}
+                  aria-invalid={hasError('comparePrice')}
                   onChange={(e) => patch({ comparePrice: e.target.value })}
                 />
                 {Number(form.comparePrice) > 0 &&

@@ -69,11 +69,14 @@ export default function Header({ locale }: { locale: Locale }) {
           </a>
         </div>
       </div>
+      {/* Dead link '#' → PLP flagship (khớp convention hero CTA /c/dien-tu).
+          Sort mới/rating proxy Hàng mới/Bán chạy (API chưa có sort bestseller);
+          route danh mục riêng + toàn sàn chưa có — khi có thì thay. */}
       <nav className="mini-nav" aria-label="Danh mục nhanh">
         <div className="container mini-nav-inner">
-          <a href="#">{t.categories}</a>
-          <a className="accent" href="#">{t.newArrivals}</a>
-          <a className="accent" href="#">{t.bestSellers}</a>
+          <a href={localePath('/c/dien-tu', locale)}>{t.categories}</a>
+          <a className="accent" href={localePath('/c/dien-tu?sort=newest', locale)}>{t.newArrivals}</a>
+          <a className="accent" href={localePath('/c/dien-tu?sort=rating', locale)}>{t.bestSellers}</a>
         </div>
       </nav>
     </header>

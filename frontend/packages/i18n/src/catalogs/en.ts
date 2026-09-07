@@ -100,7 +100,9 @@ export const en = {
       deleted: 'Deleted',
       error: 'Something went wrong',
       image: 'Image',
-      date: 'Date'
+      date: 'Date',
+      from: 'From date',
+      to: 'To date'
     },
     guard: {
       checking: 'Checking permissions...',
@@ -320,7 +322,9 @@ export const en = {
       couponCode: 'Coupon',
       affiliateCode: 'Affiliate code',
       empty: 'No orders yet',
-      phone: 'Phone'
+      phone: 'Phone',
+      subtotal: 'Subtotal',
+      shipping: 'Shipping'
     },
     dashboard: {
       title: 'Dashboard',

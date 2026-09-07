@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+// FI-368 T11: page.css trước đây chỉ import ở main.tsx (standalone) — dưới
+// shell remote chỉ load module expose => admin nhúng MẤT TOÀN BỘ layout/pill
+// (walkthrough 5 màn đầu tiên phát hiện). Vite dedupe nên standalone vẫn 1 lần.
+import './page.css';
 import type { ReactElement, MouseEvent as ReactMouseEvent } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18next from 'i18next';

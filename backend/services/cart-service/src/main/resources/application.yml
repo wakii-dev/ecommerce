@@ -2,8 +2,9 @@
 # cart-service (SF-6) — PORT TABLE (đổi khi fork):
 #   gateway 8080 · identity 8081 · catalog 8082 · cart 8083 · inventory 8084
 #   ordering 8085 · payment 8086 · notification 8087 · template 8099
-# KHÔNG DATASOURCE (D8: cart = Redis thuần) · KHÔNG RabbitMQ (SF-6 không
-# publish/consume events — consumer order.confirmed là SF-10).
+# KHÔNG DATASOURCE (D8: cart = Redis thuần).
+# SF-10: CÓ RabbitMQ consumer (order.confirmed → clear cart user) — KHÔNG
+# publish (không outbox; exchange do cart tự declare, xem RabbitMqConfig).
 # ─────────────────────────────────────────────────────────────────────────────
 server:
   port: 8083
@@ -17,6 +18,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 # Service khác — enrichment (pack: GET product theo slug hint) + stock check
 cart:

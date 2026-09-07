@@ -18,10 +18,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * <p>Lý do không scan "com.ecommerce": common-lib còn có
  * {@code common.outbox.OutboxRelay} (@Component, deps = OutboxMessageRepository
- * + RabbitTemplate) — cart-service KHÔNG có JPA/Rabbit trên classpath (SF-6
- * không publish/consume events), scan đủ sẽ chết context vì thiếu bean. Khi
- * SF-10 thêm consumer {@code order.confirmed} (clear cart) → thêm
- * spring-boot-starter-amqp + common.outbox vào scan + repo outbox lúc ĐÓ.</p>
+ * + RabbitTemplate) — cart-service KHÔNG có JPA (không DB — D8) nên KHÔNG BAO
+ * GIỜ scan common.outbox (thiếu repo sẽ chết context). SF-10 thêm consumer
+ * {@code order.confirmed} (clear cart): chỉ thêm spring-boot-starter-amqp +
+ * consumer/config riêng (RabbitMqConfig) — KHÔNG scan common.outbox, KHÔNG
+ * IdempotentConsumer (DEL Redis tự idempotent, không có processed_messages);
+ * exchange bean cart tự declare vì CommonLibAutoConfiguration backs off khi
+ * thiếu JpaRepository trên classpath (xem RabbitMqConfig javadoc).</p>
  */
 @SpringBootApplication(scanBasePackages = {"com.ecommerce.cart", "com.ecommerce.common.web"})
 public class CartServiceApplication {

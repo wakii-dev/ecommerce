@@ -39,7 +39,12 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
     // relay/listener không tồn tại ở cart (không amqp) — đặt thôi cho nhất quán
-    "outbox.relay.enabled=false"
+    "outbox.relay.enabled=false",
+    // SF-10: starter-amqp có trên classpath (consumer order.confirmed) — IT
+    // API/store KHÔNG có broker → tắt listener + health, consumer test riêng
+    // (CartOrderConsumerTest) bật lại qua @DynamicPropertySource
+    "spring.rabbitmq.listener.simple.auto-startup=false",
+    "management.health.rabbit.enabled=false"
 })
 public abstract class AbstractCartIntegrationTest {
 

@@ -255,7 +255,12 @@ public abstract class AbstractSagaTest {
             "--spring.rabbitmq.port=" + RABBIT.getAmqpPort(),
             "--spring.flyway.enabled=false",
             "--inventory.reservation.sweep-interval-ms=3600000",
-            "--outbox.relay.poll-interval-ms=500"
+            "--outbox.relay.poll-interval-ms=500",
+            // FI-366 SF-1 T10: inventory giờ CÓ security guard — decoder phải
+            // validate JWT bằng CÙNG JWKS test (WireMock) với ordering, không
+            // thì bearer token trong request ăn 401 invalid_token cả trên
+            // route permitAll (SagaTest availability() gửi customer JWT).
+            "--SECURITY_JWKS_URI=" + EXTERNAL.baseUrl() + "/.well-known/jwks.json"
         );
         inventoryPort = ((WebServerApplicationContext) inventoryCtx).getWebServer().getPort();
 

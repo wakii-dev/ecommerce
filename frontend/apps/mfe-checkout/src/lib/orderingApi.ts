@@ -89,6 +89,8 @@ export interface CreateOrderInput {
   items: OrderLine[]; // CHỈ item khả dụng — caller lọc trước
   address: Address;
   shippingMethod: string;
+  /** SF-13 (D21) — 'stripe' | 'cod' (default stripe); COD → clientSecret null. */
+  paymentMethod?: PaymentMethod;
   couponCode?: string;
   /** SF-12 — cookie aff_ref nếu đơn qua link affiliate. */
   affiliateCode?: string;
@@ -141,7 +143,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
       variantId: line.variantId,
       qty: line.qty
     })),
-    paymentMethod: 'stripe',
+    paymentMethod: input.paymentMethod ?? 'stripe',
     shippingMethod: input.shippingMethod,
     address: input.address,
     ...(input.couponCode?.trim() ? { couponCode: input.couponCode.trim().toUpperCase() } : {}),

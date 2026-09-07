@@ -12,7 +12,8 @@ import {
   validateCoupon,
   type Address,
   type CreatedOrder,
-  type Order
+  type Order,
+  type PaymentMethod
 } from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
 import { readAffiliateRef } from '../lib/affiliateRef';
@@ -74,6 +75,8 @@ export default function CheckoutPage(): ReactElement {
   const [couponChecking, setCouponChecking] = useState(false);
 
   const [orderPhase, setOrderPhase] = useState<'idle' | 'creating' | 'awaiting-card' | 'confirming'>('idle');
+  // SF-13 (D21): stripe | cod — COD bỏ Stripe.js, đơn CONFIRMED ngay sau reserve
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
   const [created, setCreated] = useState<CreatedOrder | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   // SF-10: panel thay mock — đơn ĐÃ tạo (clientSecret thật) nhưng không mount
@@ -158,6 +161,7 @@ export default function CheckoutPage(): ReactElement {
         })),
         address,
         shippingMethod: SHIPPING_METHOD,
+        paymentMethod,
         ...(couponDiscount !== null && couponCode.trim()
           ? { couponCode: couponCode.trim() }
           : {}),
@@ -167,6 +171,12 @@ export default function CheckoutPage(): ReactElement {
       setCreated(result);
       // sync discount re-price server (authority §6.1.1) vào summary
       if (result.order.discount > 0) setCouponDiscount(result.order.discount);
+      // COD (SF-13): clientSecret null — đơn đã CONFIRMED sau reserve →
+      // finalize NGAY, không qua bước thẻ
+      if (paymentMethod === 'cod' || result.clientSecret == null) {
+        await finalize(result.order);
+        return;
+      }
       setOrderPhase('awaiting-card'); // mount PaymentElement cho card thật
     } catch (err) {
       if (err instanceof ApiErrorClient && err.errors.length > 0) {
@@ -391,6 +401,35 @@ export default function CheckoutPage(): ReactElement {
               )}
 
               <h2 style={{ margin: 0, fontSize: 18 }}>Thanh toán</h2>
+              <div className="pay-methods" role="radiogroup" aria-label="Phương thức thanh toán">
+                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="radio"
+                    name="payment-method"
+                    value="stripe"
+                    checked={paymentMethod === 'stripe'}
+                    onChange={() => setPaymentMethod('stripe')}
+                    data-testid="payment-method-stripe"
+                  />
+                  <span>Thẻ quốc tế (Stripe)</span>
+                </label>
+                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="radio"
+                    name="payment-method"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    onChange={() => setPaymentMethod('cod')}
+                    data-testid="payment-method-cod"
+                  />
+                  <span>COD — Thanh toán khi nhận hàng</span>
+                </label>
+              </div>
+              {paymentMethod === 'cod' ? (
+                <div className="cod-note" role="note" data-testid="cod-note">
+                  Kiểm tra hàng và thanh toán tiền mặt khi nhận — đơn được xác nhận ngay.
+                </div>
+              ) : null}
               {payUnavailable ? (
                 <div className="pay-warning" role="status">
                   ⚠ Đơn <strong data-testid="pending-order-id">{created?.order.id}</strong> đã tạo nhưng chưa
@@ -417,10 +456,16 @@ export default function CheckoutPage(): ReactElement {
               ) : null}
 
               {orderPhase === 'idle' ? (
-                <Button variant="primary" onClick={() => void placeOrder()}>
-                  Kiểm tra &amp; tạo đơn — {formatPrice(total)}
+                <Button
+                  variant="primary"
+                  onClick={() => void placeOrder()}
+                  data-testid="place-order-btn"
+                >
+                  {paymentMethod === 'cod'
+                    ? `Đặt hàng COD — ${formatPrice(total)}`
+                    : `Kiểm tra & tạo đơn — ${formatPrice(total)}`}
                 </Button>
-              ) : payUnavailable ? null : (
+              ) : payUnavailable || paymentMethod === 'cod' ? null : (
                 <Button
                   variant="primary"
                   disabled={orderPhase !== 'awaiting-card' || !elementReady}

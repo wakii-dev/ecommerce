@@ -49,7 +49,8 @@ public class OrderingExceptionHandler {
     }
 
     /** 422 — coupon sai/hết, product/variant không còn (§6.1.2), COD/điểm chưa hỗ trợ. */
-    @ExceptionHandler({CouponInvalidException.class, UnsupportedFeatureException.class})
+    @ExceptionHandler({CouponInvalidException.class, UnsupportedFeatureException.class,
+        PointsInvalidException.class})
     public ResponseEntity<Map<String, Object>> unprocessable(CouponInvalidException e) {
         return problem(baseBody(HttpStatus.UNPROCESSABLE_ENTITY.value(), "Unprocessable", e.getMessage()));
     }

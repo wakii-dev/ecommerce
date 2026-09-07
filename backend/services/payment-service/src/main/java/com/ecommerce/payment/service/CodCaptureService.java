@@ -49,7 +49,15 @@ public class CodCaptureService {
         // lifecycle nội bộ lên SUCCEEDED ngay (tiền mặt đã thu tận tay).
         intent.markCreated(new AdapterIntent(CodPaymentAdapter.codIntentId(orderId), null, "succeeded"));
         intent.markStatus(PaymentIntentStatus.SUCCEEDED);
-        intents.save(intent);
+        try {
+            intents.saveAndFlush(intent);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // RACE 2 capture song song (khác key) — unique stripe_intent_id thắng
+            // chèn trước; replay row của nó (convention PaymentIntentService)
+            PaymentIntent winner = intents.findByStripeIntentId(CodPaymentAdapter.codIntentId(orderId))
+                .orElseThrow(() -> e);
+            return new Captured(winner.getStripeIntentId(), winner.getStatus().name().toLowerCase(), true);
+        }
         return new Captured(intent.getStripeIntentId(), "succeeded", false);
     }
 

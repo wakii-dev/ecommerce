@@ -174,6 +174,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
       ELASTICSEARCH_URI: http://elasticsearch:9200
+      CATALOG_MINIO_ENABLED: "true"       # SF-13 A3 — upload MinIO (review G1)
+      CATALOG_MINIO_ENDPOINT: http://minio:9000
     expose:
       - "8082"   # internal — gateway (full profile) gọi qua service name
     depends_on:
@@ -455,6 +457,7 @@ services:
       AFFILIATE_URI: http://affiliate-service:8092
       STOREFRONT_WEB_URI: http://storefront-web:3000
       SHELL_WEB_ORIGIN: http://frontend-web:80
+      MINIO_URI: http://minio:9000        # SF-13 A3 — route /media/** (review G1)
       SPRING_PROFILES_ACTIVE: full
     ports:
       - "8080:8080"   # public entry duy nhất của stack full

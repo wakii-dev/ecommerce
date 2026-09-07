@@ -44,4 +44,7 @@ ecom:
         - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
         - /api/ordering/admin/**             # SF-9 — 2 lớp (gateway + @PreAuthorize ordering)
         - /api/affiliate/admin/**            # SF-12 — 2 lớp (gateway + @PreAuthorize affiliate)
+        # SF-13 (FI-323) A2: COD capture chỉ ordering nội bộ gọi (HTTP thẳng
+        # :8086, không qua gateway) — chặn customer qua gateway (review G1 P0)
+        - /api/payment/cod/**
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

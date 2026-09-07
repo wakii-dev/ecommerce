@@ -65,6 +65,7 @@ class PasswordResetTest extends AbstractIntegrationTest {
     void forgotUnknownEmail_van202_vaKhongTaoToken() {
         String known = uniqueEmail();
         register(known, "password123");
+        String unknown = "khong-ton-tai-" + System.nanoTime() + "@test.local";
         Map<?, ?> knownBody = client().post().uri("/password/forgot")
             .header("Content-Type", "application/json")
             .bodyValue("{\"email\":\"%s\"}".formatted(known))
@@ -72,10 +73,20 @@ class PasswordResetTest extends AbstractIntegrationTest {
             .expectBody(Map.class).returnResult().getResponseBody();
         Map<?, ?> unknownBody = client().post().uri("/password/forgot")
             .header("Content-Type", "application/json")
-            .bodyValue("{\"email\":\"khong-ton-tai-" + System.nanoTime() + "@test.local\"}")
+            .bodyValue("{\"email\":\"%s\"}".formatted(unknown))
             .exchange().expectStatus().isEqualTo(202)
             .expectBody(Map.class).returnResult().getResponseBody();
         assertThat(unknownBody).isEqualTo(knownBody); // anti-enumeration: body giống hệt
+
+        // review G1 P2: unknown email KHÔNG sinh token row + KHÔNG outbox event
+        Integer unknownTokens = jdbc.queryForObject(
+            "SELECT count(*) FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id "
+                + "WHERE u.email = ?", Integer.class, unknown);
+        assertThat(unknownTokens).isEqualTo(0);
+        Integer unknownEvents = jdbc.queryForObject(
+            "SELECT count(*) FROM outbox WHERE event_type = 'user.password_reset_requested' "
+                + "AND payload->'payload'->>'email' = ?", Integer.class, unknown);
+        assertThat(unknownEvents).isEqualTo(0);
     }
 
     @Test

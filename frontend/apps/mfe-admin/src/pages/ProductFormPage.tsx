@@ -116,7 +116,8 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
     }
   });
 
-  const onSubmit = (status: 'DRAFT' | 'PUBLISHED'): void => {    // Status truyền trực tiếp (không qua state) — tránh stale closure khi bấm
+  // Status truyền trực tiếp (không qua state) — tránh stale closure khi bấm
+  const onSubmit = (status: 'DRAFT' | 'PUBLISHED'): void => {
     // Publish/Draft ngay trong 1 tick.
     const result = buildProductWrite({ ...form, status });
     setErrors(result.errors);

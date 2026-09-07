@@ -3,6 +3,8 @@ package com.ecommerce.catalog.web;
 import java.net.URI;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,11 +16,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ecommerce.catalog.admin.AdminCatalogService;
+import com.ecommerce.catalog.storage.ProductStorage;
 import com.ecommerce.catalog.web.dto.ProductAdminItemPageDto;
 import com.ecommerce.catalog.web.dto.ProductAdminViewDto;
 import com.ecommerce.catalog.web.dto.ProductWriteDto;
+import com.ecommerce.catalog.web.dto.UploadResponseDto;
 
 /**
  * Admin product CRUD (Task 8b) — path FULL {@code /api/catalog/admin/products}
@@ -31,9 +36,11 @@ import com.ecommerce.catalog.web.dto.ProductWriteDto;
 public class AdminProductController {
 
     private final AdminCatalogService admin;
+    private final ProductStorage storage;
 
-    public AdminProductController(AdminCatalogService admin) {
+    public AdminProductController(AdminCatalogService admin, ProductStorage storage) {
         this.admin = admin;
+        this.storage = storage;
     }
 
     /** GET /admin/products — q + status (DRAFT/PUBLISHED) + page 1-based + size. */
@@ -74,5 +81,14 @@ public class AdminProductController {
             @RequestHeader(value = "X-Request-Id", required = false) String requestId) {
         admin.deleteProduct(id, requestId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /admin/uploads — upload ảnh MinIO (SF-13 A3, contract catalog.yaml):
+     * multipart field {@code image}, 201 {@code {url}} — URL public /media/**.
+     */
+    @PostMapping(value = "/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UploadResponseDto> upload(@RequestParam("image") MultipartFile image) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResponseDto(storage.upload(image)));
     }
 }

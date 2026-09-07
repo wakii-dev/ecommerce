@@ -96,6 +96,14 @@ spring:
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
           predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]
       #
+      # SF-13 (2026-09-07): ảnh sản phẩm MinIO (A3) — /media/products/<file>
+      # public (không cần public-paths: ngoài /api/** thì anyExchange permitAll);
+      # RewritePath /media/<seg> → /<seg> = <bucket>/<object> path-style MinIO.
+        - id: media                                        # SF-13 · MinIO :9000
+          uri: ${MINIO_URI:http://localhost:9000}
+          predicates: [ "Path=/media/**" ]
+          filters: [ 'RewritePath=/media/(?<segment>.*), /$\{segment}' ]
+      #
       # Health: gateway expose actuator của chính nó tại /actuator/health
       # (không route riêng — service health đi qua route /api/<svc>/actuator/health
       # hoặc check trực tiếp port service khi debug).

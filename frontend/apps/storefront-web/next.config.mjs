@@ -9,11 +9,16 @@ const nextConfig = {
   async rewrites() {
     // Client components gọi relative `/api/...` — proxy qua gateway, tránh
     // cross-origin :3000→:8080 (Conventions #10). Server components vẫn fetch
-    // trực tiếp GATEWAY_URL (lib/catalog-api.ts).
+    // trực tiếp GATEWAY_URL (lib/catalog-api.ts). SF-13: ảnh upload MinIO
+    // `/media/**` cũng relative từ URL API → proxy cùng gateway (route /media).
     return [
       {
         source: '/api/:path*',
         destination: `${process.env.GATEWAY_URL || 'http://localhost:8080'}/api/:path*`,
+      },
+      {
+        source: '/media/:path*',
+        destination: `${process.env.GATEWAY_URL || 'http://localhost:8080'}/media/:path*`,
       },
     ];
   },

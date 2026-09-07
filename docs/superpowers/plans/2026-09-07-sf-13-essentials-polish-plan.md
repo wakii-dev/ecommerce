@@ -10,7 +10,9 @@
 
 **Linear Issue:** FI-323 · Spec: `docs/superpowers/specs/2026-09-07-sf-13-essentials-polish-design.md` · Merge target: `story/fi310-ecommerce-platform`
 
-**Baseline:** SagaTest.declinedPayment failure flaky预exist (đang re-run serial xác nhận) — KHÔNG fix trừ khi task 3 chạm.
+**Baseline:** SagaTest.declinedPayment failure flaky exist — re-run serial: 26/26 XANH. Test ordering luôn serial.
+
+**Plan-critic + spec-critic đã chốt (2026-09-07):** (1) CodPaymentAdapter KHÔNG đăng ký bean PaymentProviderAdapter (payment inject 1 adapter duy nhất — bean thứ 2 = NoUniqueBean); (2) deliver COD capture TRƯỚC transition (retry-able); (3) admin newsletter tách controller `/admin/newsletter`; (4) MinIO object key `<uuid>.<ext>` trong bucket `products`; (5) MLT min_term_freq=1 + fill same-category; (6) log-service cần thêm pom security+oauth2; (7) COD cancel skip refund; (8) pnpm filters: `storefront-web`, `@ecommerce/shell` (đúng tên package.json); (9) CSV IT assert BOM 3 byte. Chi tiết trong spec §1-2 (đã update).
 
 ---
 
@@ -34,10 +36,11 @@ Key decisions:
   - `minio`: image `minio/minio:RELEASE.2024-09-13T20-26-02Z`, command `server /data --console-address ":9001"`, ports `9000:9000`/`9001:9001`, env `MINIO_ROOT_USER/PASSWORD: minioadmin`, healthcheck `curl -f http://localhost:9000/minio/health/live`.
   - `minio-init`: image `minio/mc:RELEASE.2024-08-26T15-33-06Z`, depends_on minio `service_healthy`, entrypoint sh: `mc alias set local http://minio:9000 minioadmin minioadmin && mc mb -p local/products && mc anonymous set download local/products`, `restart: "no"`.
 
-- [ ] UploadIT: png 1×1 → 200 + url match `/media/products/[0-9a-f-]+\.png` + object tồn tại (MinioClient statObject); `.gif` → 400; >5MB fake → 400; customer token → 403; anonymous → 401
-- [ ] `mvn -pl services/catalog-service test` xanh (IT mới + cũ không vỡ)
-- [ ] `docker compose up -d minio minio-init` → `curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/minio/health/live` = 200; upload thật 1 file qua curl (admin token mint script) → GET url trả 200
-- [ ] Commit: `feat(catalog): minio image upload — compose + admin endpoint + gateway media route`
+- [ ] UploadIT: png 1×1 → 201 + url match `/media/products/[0-9a-f-]{36}\.png` + GET thẳng MinIO trả 200 (policy anonymous); `.gif` → 400; >5MB → 400; customer → 403; anonymous → 401 — **KẾT QUẢ: 5/5 PASS (đã chạy)**
+- [ ] FE: nút "Tải ảnh lên" trong `ProductFormPage.tsx` images tab → `uploadAdminImage` (contracts client) → set row.url + preview (plan-critic P0: FE half của upload phải có chủ)
+- [ ] `mvn -pl services/catalog-service test` xanh (80/80 — IT mới + cũ không vỡ)
+- [ ] `docker compose up -d minio minio-init` → health 200; upload thật qua gateway bằng admin login (không có mint script — login admin@demo.vn lấy token) → GET url 200
+- [ ] Commit: `feat(catalog): minio image upload — compose + admin endpoint + gateway media + admin form button`
 
 ### Task 2: identity-password-reset-flow-email
 
@@ -76,11 +79,12 @@ Key shapes:
 - Tests: `payment/CodPaymentAdapterTest.java`, `ordering/SagaTest.java` thêm `codCheckout_confirmedWithoutStripe_fatPayloadValidates` + `codDeliver_capturesPayment_emitsOrderPaid`
 
 Key shapes:
-- `CodPaymentAdapter.createIntent` → `new AdapterIntent("cod:" + command.orderId(), null, "REQUIRES_CONFIRMATION")`; void/refund → record success no-op; verifyWebhook → `UnsupportedOperationException`.
+- `CodPaymentAdapter.createIntent` → `new AdapterIntent("cod:" + command.orderId(), null, "REQUIRES_CONFIRMATION")`; void/refund → record success no-op; verifyWebhook → `UnsupportedOperationException`. **KHÔNG @Component/@Bean** — payment inject MỘT adapter duy nhất (stripe/unconfigured); class thuần test instantiate trực tiếp.
 - Capture endpoint `POST /payment/cod/captures` body `{orderId, amountVnd, idempotencyKey}` (new DTO) → `CodCaptureService` (tx): tìm intent `providerIntentId=cod:<orderId>` — chưa có → insert `PaymentIntent(orderId, amountVnd, "VND", idemKey, payloadHash)` + `markStatus(SUCCEEDED)` + stripe_status "succeeded"; có → idempotent replay 201. **KHÔNG** publish payment.succeeded.
 - Saga cod: sau reserve OK (step 6) → `confirmCodOrder` trong tx riêng → response `(dto, null)`. `confirmCodOrder` guard `status==PENDING` else idempotent no-op return.
-- deliver COD: transition SHIPPED→DELIVERED trước (giữ nguyên), rồi ngoài tx: `paymentClient.captureCod(o.getId(), o.getTotal(), "cod-capture:" + o.getId())` → success → outbox `order.paid` `{orderId, paymentIntentId:"cod:<id>", paidAt}` correlationId "admin:deliver". Capture fail → log error, KHÔNG emit (retry bằng deliver lại? deliver guard SHIPPED sẽ 409 → operator dùng endpoint capture thủ công? ĐỦ: log + ADR; demo không hit).
-- Test COD happy: không stub Stripe intent; createOrder(cod) → poll status CONFIRMED, clientSecret null, outbox order.confirmed validate schema, coupon usage finalized; deliver → WireMock EXTERNAL đếm POST capture + outbox có order.paid row.
+- deliver COD (spec-critic P1): **capture TRƯỚC transition** — `paymentClient.captureCod(...)` OK → tx transition SHIPPED→DELIVERED + outbox `order.paid` `{orderId, paymentIntentId:"cod:<id>", paidAt}`. Capture fail → 502 problem+json, order còn SHIPPED → deliver lại được (capture idempotent). Stripe path giữ nguyên transition-first.
+- `cancelByAdmin`/`refundSafely`: skip refund khi paymentMethod=cod (chưa thu tiền; tránh refund(null) lỗi requeue) — spec-critic P1.
+- Test COD happy: không stub Stripe intent; createOrder(cod) → poll status CONFIRMED, clientSecret null, outbox order.confirmed validate schema, coupon finalized. Deliver test (plan-critic P1 — ordering→payment là HTTP thật giữa 2 context thật, KHÔNG phải WireMock): assert payment DB đúng 1 intent `cod:<orderId>` SUCCEEDED (deliver 2 lần vẫn 1) + ordering outbox có order.paid row. Cancel test: cancel CONFIRMED COD → không refund call, status CANCELLED.
 
 - [ ] `mvn -pl services/payment-service,services/ordering-service test` xanh (COD mới + stripe cũ không vỡ)
 - [ ] Commit: `feat(ordering,payment): COD — adapter no-op, saga skip intent, PENDING→CONFIRMED, capture lúc giao`
@@ -122,6 +126,7 @@ Key:
 ### Task 6: audit-log-viewer-admin-mongo
 
 **Files:**
+- Modify: `backend/services/log-service/pom.xml` (**thêm `spring-boot-starter-security` + `spring-boot-starter-oauth2-resource-server`** — plan-critic P0: hiện KHÔNG có, config sẽ không compile; security-starter không config = lock mọi endpoint → config cùng commit)
 - Create: `backend/services/log-service/.../config/SecurityConfig.java`, `config/JwtDecoderConfig.java` (copy catalog pattern, JWKS URI env `SECURITY_JWKS_URI` fallback PEM `JWT_PUBLIC_KEY_PATH` ancestor-walk), `web/AdminEventController.java`, `web/dto/EventLogPageDto.java`, `web/dto/EventLogItemDto.java`
 - Modify: `backend/gateway/src/main/resources/gateway-routes.yml` (route `log` `/api/log/**` → `${LOG_URI:http://localhost:8088}` không StripPrefix), `routes/gateway-auth.yml` (admin-prefixes `/api/log/admin/**`)
 - Modify: `frontend/apps/mfe-admin/src/lib/guard.ts` (AdminPageKey + resolveAdminRoute `/admin/audit` + ADMIN_NAV), `src/AdminApp.tsx` (render AuditPage)
@@ -150,7 +155,7 @@ Key:
 Key:
 - `recently_viewed` localStorage JSON array `{slug, name, price, comparePrice, discountPercent, image, at}` max 12, unshift + dedupe theo slug, `try/catch` parse. Tracker: `useEffect` 1 lần khi mount với product snapshot (image = product.image?.url ?? ""). Home: đọc client-side, grid card mini (ảnh/gradient, name 2 dòng, giá + gạch), link `/{locale}/p/{slug}`; rỗng → render null. COPY vi/en inline: "Đã xem gần đây" / "Recently viewed". data-testid `recently-viewed`.
 
-- [ ] `pnpm --filter @ecommerce/storefront-web build` xanh
+- [ ] `pnpm --filter storefront-web build` xanh
 - [ ] Commit: `feat(storefront): recently viewed — PDP tracker + home section (localStorage max 12)`
 
 ### Task 8: related-products-es-morelikethis
@@ -168,7 +173,7 @@ Key:
 - Endpoint trả `ProductCardPageDto` (items, page=1, size, total) — hydrate qua PG pattern sẵn. Slug không tồn tại/unpublished → page rỗng 200 (PDP ẩn).
 
 - [ ] RelatedTest: 2 products cùng category mô tả tương đồng → related(1) chứa 2, không chứa self; slug lạ → 200 rỗng; ES container down chưa test (degrade path unit-level PgFts)
-- [ ] `mvn -pl services/catalog-service test` xanh; `pnpm --filter @ecommerce/storefront-web build` xanh
+- [ ] `mvn -pl services/catalog-service test` xanh; `pnpm --filter storefront-web build` xanh
 - [ ] Commit: `feat(catalog,storefront): related products — ES more_like_this + PDP section (runtime endpoint, ADR)`
 
 ### Task 9: ga4-gtm-env-integration
@@ -182,7 +187,7 @@ Key:
 
 Key: không ID → KHÔNG load script gì (both apps); `window.dataLayer`/`window.gtag` guard mọi chỗ; purchase chỉ fire 1 lần (useRef/flag trên orderId).
 
-- [ ] `pnpm --filter @ecommerce/storefront-web --filter shell --filter @ecommerce/mfe-checkout build` xanh
+- [ ] `pnpm --filter storefront-web --filter @ecommerce/shell --filter @ecommerce/mfe-checkout build` xanh
 - [ ] Smoke: đặt NEXT_PUBLIC_GA_ID=G-TEST123 dev → view-source có `gtag.js?id=G-TEST123`; không đặt → không có script; confirmation CONFIRMED → console `dataLayer` push event purchase
 - [ ] Commit: `feat(analytics): GA4 env-gated — pageview storefront+shell, purchase trên confirmation`
 

@@ -18,7 +18,9 @@ export default defineConfig({
   server: {
     port: 5177,
     proxy: {
-      '/api': { target: process.env.GATEWAY_URL ?? 'http://localhost:8080', changeOrigin: true }
+      '/api': { target: process.env.GATEWAY_URL ?? 'http://localhost:8080', changeOrigin: true },
+      // SF-13 A3: preview ảnh upload MinIO (/media/products/...) qua gateway
+      '/media': { target: process.env.GATEWAY_URL ?? 'http://localhost:8080', changeOrigin: true }
     }
   }
 });

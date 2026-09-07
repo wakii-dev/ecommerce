@@ -59,6 +59,12 @@ identity:
       token-uri: ${OAUTH_FACEBOOK_TOKEN_URI:https://graph.facebook.com/v19.0/oauth/access_token}
       user-info-uri: ${OAUTH_FACEBOOK_USERINFO_URI:https://graph.facebook.com/v19.0/me?fields=id,name,email}
       scope: "email,public_profile"
+  # SF-15 — 2FA TOTP: key AES-GCM Base64 32B (thiếu → dev fallback + WARN,
+  # prod fail-fast). challenge TTL 5', 10 backup codes mỗi user.
+  twofa:
+    encryption-key: ${IDENTITY_2FA_KEY:}
+    challenge-ttl-seconds: 300
+    backup-code-count: 10
 
 management:
   endpoints:

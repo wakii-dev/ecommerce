@@ -2,6 +2,7 @@ package com.ecommerce.identity.user;
 
 import com.ecommerce.identity.auth.MeResponse;
 import com.ecommerce.identity.auth.UpdateMeRequest;
+import com.ecommerce.identity.twofa.TwoFactorRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,15 +21,17 @@ import java.util.UUID;
 public class MeController {
 
     private final UserRepository userRepository;
+    private final TwoFactorRepository twoFactorRepository;
 
-    public MeController(UserRepository userRepository) {
+    public MeController(UserRepository userRepository, TwoFactorRepository twoFactorRepository) {
         this.userRepository = userRepository;
+        this.twoFactorRepository = twoFactorRepository;
     }
 
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal Jwt jwt) {
         return userRepository.findById(UUID.fromString(jwt.getSubject()))
-            .map(MeController::toMe)
+            .map(this::toMe)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
@@ -42,8 +45,10 @@ public class MeController {
         return toMe(userRepository.save(user));
     }
 
-    static MeResponse toMe(UserEntity user) {
+    /** SF-15: twoFactorEnabled đọc từ bảng (trước đây hardcoded false chờ SF-15). */
+    private MeResponse toMe(UserEntity user) {
         return new MeResponse(user.getId(), user.getEmail(), user.getFullName(), user.getPhone(),
-            List.of(user.getRole().name()), false);
+            List.of(user.getRole().name()),
+            twoFactorRepository.existsByUserIdAndEnabledTrue(user.getId()));
     }
 }

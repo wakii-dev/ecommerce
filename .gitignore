@@ -34,4 +34,13 @@ Thumbs.db
 # --- Logs / tmp ---
 *.log
 tmp/
+
+# --- Python (invoice-service, SF-9) ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Module Federation dev artifacts (@module-federation/vite)
 .mf/
+infra/keys/

@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
+import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
+import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
 import { EmptyState, StarRating } from '../../../../components/ui-kit';
 import {
   catalogApi,
@@ -27,6 +30,8 @@ import { siteUrl } from '../../../../lib/site';
 
 interface PdpPageProps {
   params: { locale: string; slug: string };
+  /** SF-8: `?reviewPage=N` — pagination reviews section (server-rendered links). */
+  searchParams?: { reviewPage?: string };
 }
 
 const COPY = {
@@ -121,10 +126,11 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
   };
 }
 
-export default async function ProductPage({ params }: PdpPageProps) {
+export default async function ProductPage({ params, searchParams }: PdpPageProps) {
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
   const copy = COPY[locale];
+  const reviewPage = Math.max(1, Number.parseInt(searchParams?.reviewPage ?? '1', 10) || 1);
 
   let product: ProductDetail | null = null;
   let tree: Category[] = [];
@@ -217,6 +223,8 @@ export default async function ProductPage({ params }: PdpPageProps) {
             <span className="pdp-meta-sold">
               {copy.sold} {product.ratingCount}
             </span>
+            {/* SF-8: wishlist heart — guest → /account (đăng nhập shell) */}
+            <WishlistHeart productId={product.id} locale={locale} variant="pdp" />
           </div>
 
           <PdpBuyBox product={product} locale={locale} />
@@ -276,7 +284,10 @@ export default async function ProductPage({ params }: PdpPageProps) {
         </section>
 
         <section id="tab-reviews" className="pdp-panel">
-          <p className="pdp-desc">{copy.reviewsSoon}</p>
+          {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay "Sắp ra mắt" SF-4 */}
+          <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
+          {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
+          <MyPendingReviewPanel productId={product.id} locale={locale} />
         </section>
       </div>
     </div>

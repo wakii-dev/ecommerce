@@ -48,6 +48,12 @@
     <module>services/payment-service</module>
     <!-- SF-6 (FI-316) -->
     <module>services/cart-service</module>
+    <!-- SF-9 (FI-319) -->
+    <module>services/ordering-service</module>
+    <!-- SF-11 (FI-321) -->
+    <module>services/partner-api</module>
+    <!-- SF-12 (FI-322) -->
+    <module>services/affiliate-service</module>
   </modules>
 
   <dependencyManagement>

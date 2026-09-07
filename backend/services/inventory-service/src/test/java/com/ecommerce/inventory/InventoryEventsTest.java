@@ -89,7 +89,8 @@ class InventoryEventsTest extends AbstractIntegrationTest {
         payload.put("paymentIntentId", "pi_test");
         payload.put("paidAt", Instant.now().toString());
         EventEnvelope envelope = new EventEnvelope(
-            UUID.fromString(eventId), eventType, Instant.now(), "corr-" + orderId, payload);
+            UUID.fromString(eventId), eventType, Instant.now(), "corr-" + orderId,
+            "inventory-service", EventEnvelope.CURRENT_SCHEMA_VERSION, payload);
         byte[] body = objectMapper.writeValueAsBytes(envelope);
         MessageProperties props = new MessageProperties();
         props.setContentType(MessageProperties.CONTENT_TYPE_JSON);

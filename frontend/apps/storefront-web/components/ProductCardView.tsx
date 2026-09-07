@@ -1,3 +1,5 @@
+import WishlistHeart from './wishlist/WishlistHeart';
+
 import { categoryGradient, discountPercent, type ProductCard } from '../lib/catalog-api';
 import { formatVnd, localePath, type Locale } from '../lib/format';
 import { StarRating } from './ui-kit';
@@ -74,6 +76,8 @@ export default function ProductCardView({ product, locale, gradientKey }: Produc
   return (
     <a className="p-card" href={href}>
       <span className="p-thumb" style={{ background: gradient }}>
+        {/* SF-8: wishlist heart overlay — client island, click không điều hướng */}
+        <WishlistHeart productId={product.id} locale={locale} variant="card" />
         {product.image.url ? (
           // eslint-disable-next-line @next/next/no-img-element -- placeholder seed /media/**, <Image> khi ảnh thật (SF-4 protocol)
           <img src={product.image.url} alt={product.image.alt ?? product.name} loading="lazy" />

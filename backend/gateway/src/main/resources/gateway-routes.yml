@@ -21,10 +21,14 @@ spring:
           uri: forward:///internal/smoke
           predicates: [ "Path=/api/smoke" ]
       # ── Placeholder blocks (SF sau un-comment + append) ──────────────────
-      # - id: identity                                   # SF-3 · port 8081
-      #   uri: http://localhost:8081
-      #   predicates: [ "Path=/api/identity/**" ]
-      #   filters: [ "StripPrefix=1" ]
+      # SF-7 (2026-09-06) un-comment block identity (FI-310 GAP: SF-3 ra đời
+      # nhưng block còn comment trên story branch — login qua gateway 404).
+      # StripPrefix=2 (không phải 1 như placeholder): AuthController map
+      # @RequestMapping("/auth") — /api/identity/auth/login → /auth/login.
+        - id: identity                                    # SF-3 · port 8081
+          uri: http://localhost:8081
+          predicates: [ "Path=/api/identity/**" ]
+          filters: [ "StripPrefix=2" ]
       # SF-4 (2026-09-06) un-comment block catalog — DECISION: KHÔNG StripPrefix.
       # Placeholder cũ ghi StripPrefix=1 nhưng mâu thuẫn chính comment conventions
       # ("service nhận path còn lại sau /api/<service>") và template PingController
@@ -46,14 +50,29 @@ spring:
           uri: http://localhost:8084
           predicates: [ "Path=/api/inventory/**" ]
           filters: [ "StripPrefix=1" ]
-      # - id: ordering                                   # SF-9 · port 8085
-      #   uri: http://localhost:8085
-      #   predicates: [ "Path=/api/ordering/**" ]
-      #   filters: [ "StripPrefix=1" ]
+        # SF-9 (2026-09-06): URL contract là /api/ordering/** (ordering.yaml) nhưng
+        # controllers ở :8085 map path GỌC (/orders, /me/orders, /admin/…) — KHÔNG có
+        # class-level /ordering prefix → strip CẢ "api/ordering" (StripPrefix=2).
+        - id: ordering                                    # SF-9 · port 8085
+          uri: http://localhost:8085
+          predicates: [ "Path=/api/ordering/**" ]
+          filters: [ "StripPrefix=2" ]
         - id: payment                                    # SF-5 · port 8086
           uri: http://localhost:8086
           predicates: [ "Path=/api/payment/**" ]
           filters: [ "StripPrefix=1" ]
+      # SF-11 (2026-09-07): partner Open API — namespace RIÊNG /open-api/** KHÔNG
+      # qua auth JWT của gateway (auth là X-API-Key trong partner-api :8091, xem
+      # gateway-auth.yml public-paths). KHÔNG StripPrefix — controllers map full
+      # /open-api/v1/** (như catalog precedent).
+        - id: partner-api                                # SF-11 · port 8091
+          uri: http://localhost:8091
+          predicates: [ "Path=/open-api/**" ]
+        # SF-12 (2026-09-07): affiliate-service :8092 (D20) — controllers map
+        # FULL /api/affiliate/** (precedent catalog/cart) → KHÔNG StripPrefix.
+        - id: affiliate                                   # SF-12 · port 8092
+          uri: http://localhost:8092
+          predicates: [ "Path=/api/affiliate/**" ]
       # - id: notification                               # SF-10 · port 8087
       #   uri: http://localhost:8087
       #   predicates: [ "Path=/api/notification/**" ]

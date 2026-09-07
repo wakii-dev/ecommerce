@@ -50,6 +50,39 @@ declare module 'account/AccountPage' {
   export default AccountPage;
 }
 
+// ── mfe-account my-orders (SF-9, FI-319) — pages/orders/* slice — additive ──
+declare module 'account/OrdersPage' {
+  const OrdersPage: import('react').ComponentType;
+  export default OrdersPage;
+}
+
+declare module 'account/OrderDetailPage' {
+  const OrderDetailPage: import('react').ComponentType<{ id: string }>;
+  export default OrderDetailPage;
+}
+
+declare module 'account/OrdersNavLink' {
+  const OrdersNavLink: import('react').ComponentType;
+  export default OrdersNavLink;
+}
+
+// ── mfe-account SF-8 append — wishlist + my-reviews pages.
+declare module 'account/WishlistPage' {
+  const WishlistPage: import('react').ComponentType;
+  export default WishlistPage;
+}
+
+declare module 'account/MyReviewsPage' {
+  const MyReviewsPage: import('react').ComponentType;
+  export default MyReviewsPage;
+}
+
+// ── mfe-account SF-12 append (FI-322) — affiliate dashboard page.
+declare module 'account/AffiliatePage' {
+  const AffiliatePage: import('react').ComponentType;
+  export default AffiliatePage;
+}
+
 // ── mfe-checkout (SF-6, apps/mfe-checkout) — cart/checkout/confirmation remote.
 // bootstrap nhận ShellContext (cùng shape account/bootstrap) lúc initCheckoutShell.
 declare module 'checkout/bootstrap' {
@@ -84,4 +117,25 @@ declare module 'checkout/CheckoutPage' {
 declare module 'checkout/ConfirmationPage' {
   const ConfirmationPage: import('react').ComponentType;
   export default ConfirmationPage;
+}
+
+// ── mfe-admin (SF-7, apps/mfe-admin) — khu quản trị. bootstrap nhận
+// ShellContext do shell truyền lúc initAdminShell (main.tsx); remote KHÔNG
+// import code host — shape này là hợp đồng 1 chiều.
+declare module 'admin/bootstrap' {
+  export type SlotKey = 'left' | 'center' | 'right';
+  export interface ShellContext {
+    HeaderSlots: {
+      register(slot: SlotKey, id: string, component: import('react').ComponentType): void;
+      unregister(slot: SlotKey, id: string): void;
+    };
+    navigate: (to: string) => void;
+    onRegistryChange?: () => void;
+  }
+  export function initAdminShell(ctx: ShellContext): void;
+}
+
+declare module 'admin/AdminApp' {
+  const AdminApp: import('react').ComponentType;
+  export default AdminApp;
 }

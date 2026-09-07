@@ -1,0 +1,87 @@
+# partner-api (SF-11) — fork từ template-service (SF-1).
+# Port 8091 · DB riêng db_partner (D8) · RabbitMQ consume order.* (exchange ecommerce.events).
+server:
+  port: 8091
+
+spring:
+  application:
+    name: partner-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    # Host port 5433 — compose map 5433:5432 (máy dev có postgres khác giữ 5432)
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_partner}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  # Auth là X-API-Key (ApiKeyAuthFilter) — user mặc định starter-security tắt
+  # qua noop UserDetailsService trong SecurityConfig.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+# Docs portal (§3.5 spec): CẢ HAI path dưới namespace /open-api/v1 — route
+# gateway chỉ có /open-api/** nên springdoc mặc định (/swagger-ui.html,
+# /v3/api-docs) sẽ không đi qua gateway được.
+springdoc:
+  api-docs:
+    path: /open-api/v1/api-docs
+  swagger-ui:
+    path: /open-api/v1/docs
+    disable-swagger-default-url: true
+
+# Service không publish outbox event (chỉ consume order.*) — tắt relay poller.
+outbox:
+  relay:
+    enabled: false
+
+# ── Partner config: URLs service nội bộ (gọi TRỰC TIẾP, như ordering.pricing) ──
+partner:
+  identity:
+    base-url: ${PARTNER_IDENTITY_BASE_URL:http://localhost:8081}
+    timeout-ms: ${PARTNER_IDENTITY_TIMEOUT_MS:5000}
+  # Service-account tạo đơn thay partner (GAP-1 interim — REQUIREMENT-GAP FI-310):
+  # register-once + login, token cache; khi ordering có internal endpoint thì
+  # đổi OrderingClient config, code giữ nguyên.
+  service-account:
+    email: ${PARTNER_SERVICE_ACCOUNT_EMAIL:partner-svc@ecommerce.local}
+    password: ${PARTNER_SERVICE_ACCOUNT_PASSWORD:PartnerSvc#2026}
+    full-name: ${PARTNER_SERVICE_ACCOUNT_NAME:Partner Orders (service account)}
+  ordering:
+    base-url: ${PARTNER_ORDERING_BASE_URL:http://localhost:8085}
+    timeout-ms: ${PARTNER_ORDERING_TIMEOUT_MS:8000}
+  catalog:
+    base-url: ${PARTNER_CATALOG_BASE_URL:http://localhost:8082}
+    # GAP-3 interim: admin-by-id cần JWT ADMIN (rỗng → UUID detail trả 502 + nhắn
+    # "dùng slug"); giống CATALOG_API_TOKEN của ordering (REQUIREMENT-GAP FI-310).
+    admin-token: ${CATALOG_API_TOKEN:}
+    timeout-ms: ${PARTNER_CATALOG_TIMEOUT_MS:5000}
+  webhook:
+    retry-base-ms: ${PARTNER_WEBHOOK_RETRY_BASE_MS:5000}
+    max-attempts: ${PARTNER_WEBHOOK_MAX_ATTEMPTS:3}
+    scheduler-interval-ms: ${PARTNER_WEBHOOK_SCHEDULER_INTERVAL_MS:5000}
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] [req=%X{requestId:-}] %logger{36} - %msg%n"

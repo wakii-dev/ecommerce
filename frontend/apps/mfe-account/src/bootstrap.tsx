@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import { authStore, configureAuth } from '@ecommerce/auth';
 import AuthWidget from './AuthWidget';
+import OrdersNavLink from './pages/orders/OrdersNavLink';
+import AffiliateNavLink from './pages/affiliate/AffiliateNavLink';
 
 export type SlotKey = 'left' | 'center' | 'right';
 
@@ -36,6 +38,10 @@ export function initAccountShell(ctx: ShellContext): void {
     loginPath: '/login'
   });
   ctx.HeaderSlots.register('right', 'account-auth', AuthWidget);
+  // SF-9 (FI-319): link "Đơn hàng" — slot registry additive (widget từ pages/orders slice)
+  ctx.HeaderSlots.register('right', 'orders-nav', OrdersNavLink);
+  // SF-12 (FI-322): link "Affiliate" — slot registry additive (pages/affiliate slice)
+  ctx.HeaderSlots.register('right', 'affiliate-nav', AffiliateNavLink);
   ctx.onRegistryChange?.();
   void authStore.refresh().then((ok) => readyResolve?.(ok));
 }

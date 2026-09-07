@@ -188,6 +188,35 @@ services:
     networks:
       - ecommerce-net
 
+  # SF-9 (2026-09-06): ordering-service (port 8085, db_ordering) — KHÔNG chạy dev
+  # (infra-only; service host qua `make dev svc=ordering`). Profile full (SF-10).
+  ordering-service:
+    build:
+      context: .
+      dockerfile: backend/services/ordering-service/Dockerfile
+    container_name: ecommerce-ordering-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_ordering
+      RABBITMQ_HOST: rabbitmq
+      IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      CATALOG_BASE_URL: http://catalog-service:8082
+      INVENTORY_BASE_URL: http://inventory-service:8084
+      PAYMENT_BASE_URL: http://payment-service:8086
+      INVOICE_SERVICE_URL: http://invoice-service:8090
+    expose:
+      - "8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      invoice-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
   # SF-6 (2026-09-06): cart-service (port 8083, KHÔNG DB — Redis thuần D8).
   # Dev: host JVM `make dev svc=cart`. Profile full (SF-10) build image.
   cart-service:
@@ -206,6 +235,78 @@ services:
       - "8083"   # internal — gateway (full profile) gọi qua service name
     depends_on:
       redis:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # SF-9 (2026-09-06): invoice-service (D18) — 🐍 Python FastAPI + ReportLab,
+  # stateless PDF renderer :8090 INTERNAL ONLY (KHÔNG route qua gateway).
+  # Đây là service Python ĐẦU TIÊN chạy dev được (`make dev svc=invoice-service`).
+  invoice-service:
+    build:
+      context: ./services/invoice-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-invoice-service
+    environment:
+      INVOICE_FONT_PATH: /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+    ports:
+      - "8090:8090"   # host map — ordering host-JVM gọi http://localhost:8090 ở dev
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8090/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # SF-11 (2026-09-07): partner-api (port 8091, db_partner) — Open API đối tác
+  # (X-API-Key + rate-limit + /open-api/v1 + webhook HMAC). KHÔNG chạy dev
+  # (infra-only; host JVM qua `make dev svc=partner-api`). Profile full (SF-10).
+  partner-api:
+    build:
+      context: .
+      dockerfile: backend/services/partner-api/Dockerfile
+    container_name: ecommerce-partner-api
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_partner
+      RABBITMQ_HOST: rabbitmq
+      PARTNER_IDENTITY_BASE_URL: http://identity-service:8081
+      PARTNER_ORDERING_BASE_URL: http://ordering-service:8085
+      PARTNER_CATALOG_BASE_URL: http://catalog-service:8082
+    expose:
+      - "8091"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  # SF-12 (2026-09-07): affiliate-service (D20, port 8092, db_affiliate) —
+  # KHÔNG chạy dev (infra-only; host JVM qua `make dev svc=affiliate`).
+  # Profile full (SF-10): consume order.confirmed → ledger hoa hồng.
+  affiliate-service:
+    build:
+      context: .
+      dockerfile: backend/services/affiliate-service/Dockerfile
+    container_name: ecommerce-affiliate-service
+    profiles:
+      - full
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_affiliate
+      RABBITMQ_HOST: rabbitmq
+      SECURITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      AFFILIATE_DEFAULT_RATE: ${AFFILIATE_DEFAULT_RATE:-5}
+    expose:
+      - "8092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - ecommerce-net

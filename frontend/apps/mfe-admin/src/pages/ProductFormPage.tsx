@@ -36,6 +36,7 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
   // Slug auto-gen chỉ chạy khi user CHƯA sửa slug tay (mỗi ngôn ngữ 1 flag).
   const slugViTouched = useRef(false);
   const slugEnTouched = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const detailQuery = useQuery({
     queryKey: ['admin-product', id],
@@ -92,8 +93,31 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
     }
   });
 
+  // SF-13 A3: upload ảnh MinIO → URL /media/products/<uuid> gắn vào list (chắp thêm).
+  const uploadImage = useMutation({
+    mutationFn: async (file: File) => {
+      // Runtime client nhận Blob → FormData field `image` (contracts/client.ts
+      // isBlob); generated OpArgs type multipart = {body?: unknown} nên cast
+      // signature qua boundary — runtime VẪN flat arg (multipart đúng contract).
+      const res = await (
+        catalogApi() as unknown as {
+          uploadAdminImage: (args: { image: File }) => Promise<{ url: string }>;
+        }
+      ).uploadAdminImage({ image: file });
+      return res.url;
+    },
+    onSuccess: (url) => {
+      setForm((f) => ({ ...f, images: [...f.images, { url, alt: '' }] }));
+      toast.toast(t('admin.products.imageUploaded'), { variant: 'success' });
+    },
+    onError: (error) => {
+      const detail = error instanceof ApiErrorClient && error.detail ? ` — ${error.detail}` : '';
+      toast.toast(`${t('admin.common.error')}${detail}`, { variant: 'danger' });
+    }
+  });
+
+  // Status truyền trực tiếp (không qua state) — tránh stale closure khi bấm
   const onSubmit = (status: 'DRAFT' | 'PUBLISHED'): void => {
-    // Status truyền trực tiếp (không qua state) — tránh stale closure khi bấm
     // Publish/Draft ngay trong 1 tick.
     const result = buildProductWrite({ ...form, status });
     setErrors(result.errors);
@@ -527,12 +551,33 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
                   </Button>
                 </div>
               ))}
-              <Button
-                variant='secondary'
-                onClick={() => patch({ images: [...form.images, { url: '', alt: '' }] })}
-              >
-                + {t('admin.products.addImage')}
-              </Button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button
+                  variant='secondary'
+                  onClick={() => patch({ images: [...form.images, { url: '', alt: '' }] })}
+                >
+                  + {t('admin.products.addImage')}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  accept='image/jpeg,image/png,image/webp'
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadImage.mutate(file);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  variant='secondary'
+                  disabled={uploadImage.isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid='upload-image'
+                >
+                  {uploadImage.isPending ? t('admin.products.uploadingImage') : t('admin.products.uploadImage')}
+                </Button>
+              </div>
             </div>
           )}
         </div>

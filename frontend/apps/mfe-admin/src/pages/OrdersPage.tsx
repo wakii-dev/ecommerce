@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Card, Input, Select, Skeleton, Table } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
+import { downloadAdminFile } from '../lib/download';
 import { orderingApi } from '../lib/api';
 import { dayKeyOf, formatDateTime, formatVnd } from '../lib/format';
 import type { OrderStatusValue, StubOrder } from '../lib/types';
@@ -139,6 +140,15 @@ export default function OrdersPage(): ReactElement {
     <div>
       <div className='admin-page-head'>
         <h1>{t('admin.orders.title')}</h1>
+        <div className='admin-page-head__actions'>
+          <Button
+            variant='secondary'
+            onClick={() => void downloadAdminFile('/api/ordering/admin/orders/export.csv', 'orders.csv')}
+            data-testid='orders-export-csv'
+          >
+            {t('admin.orders.exportCsv')}
+          </Button>
+        </div>
       </div>
 
       <div className='admin-filters'>

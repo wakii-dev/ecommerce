@@ -55,6 +55,22 @@ ordering:
   payment:
     base-url: ${PAYMENT_BASE_URL:http://localhost:8086}
     timeout-ms: ${PAYMENT_TIMEOUT_MS:8000}
+  ghn:
+    # SF-14 (D22): GHN vận chuyển — token rỗng → fallback flat-fee (degraded)
+    api-url: ${GHN_API_URL:https://dev-online-gateway.ghn.vn}
+    token: ${GHN_TOKEN:}
+    shop-id: ${GHN_SHOP_ID:}
+    # District gửi hàng (demo: Quận 1 TP.HCM = 1454 theo GHN dev)
+    from-district-id: ${GHN_FROM_DISTRICT_ID:1454}
+    timeout-ms: ${GHN_TIMEOUT_MS:5000}
+  rma:
+    # SF-14 (D22): cửa sổ tạo yêu cầu trả hàng kể từ DELIVERED
+    window-days: ${RMA_WINDOW_DAYS:7}
+  loyalty:
+    # SF-14 (D22): affiliate-service lo điểm — redeem service-to-service
+    base-url: ${AFFILIATE_BASE_URL:http://localhost:8092}
+    internal-token: ${AFFILIATE_INTERNAL_TOKEN:dev-internal-token}
+    timeout-ms: ${AFFILIATE_TIMEOUT_MS:5000}
   invoice:
     # D18 — invoice-service gọi TRỰC TIẾP (:8090), KHÔNG qua gateway.
     base-url: ${INVOICE_SERVICE_URL:http://localhost:8090}

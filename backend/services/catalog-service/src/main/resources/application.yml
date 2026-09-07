@@ -36,6 +36,22 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  servlet:
+    multipart:
+      # SF-13 A3: upload ảnh ≤5MB — limit servlet mở rộng hơn business limit
+      # (storage tự validate 5MB → 400 problem+json, không ném trước controller)
+      max-file-size: 6MB
+      max-request-size: 7MB
+
+# SF-13 (FI-323) A3 — MinIO upload ảnh sản phẩm (compose service `minio`).
+# enabled=false → không nối MinIO lúc boot (IT mặc định; UploadIT bật true).
+catalog:
+  minio:
+    enabled: ${CATALOG_MINIO_ENABLED:false}
+    endpoint: ${CATALOG_MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ROOT_USER:minioadmin}
+    secret-key: ${MINIO_ROOT_PASSWORD:minioadmin}
+    bucket: products
 
 # Search engine chọn lúc startup (D15): ES reachable → EsEngine (chính);
 # uri rỗng (ELASTICSEARCH_URI="") hoặc ping fail → PgFtsEngine fallback (WARN degraded).
@@ -67,6 +83,14 @@ outbox:
     max-attempts: 5
     batch-size: 100
     enabled: true
+
+# SF-15 (FI-325) — stock alert: inventory service trực tiếp + internal token
+# (service-to-service với notification — KHÔNG route public qua gateway).
+inventory:
+  base-url: ${INVENTORY_BASE_URL:http://localhost:8084}
+
+catalog:
+  internal-token: ${CATALOG_INTERNAL_TOKEN:dev-internal-token}
 
 logging:
   pattern:

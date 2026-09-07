@@ -26,10 +26,13 @@ public class ProductController {
 
     private final CatalogQueryService catalog;
     private final LocaleResolver localeResolver;
+    private final com.ecommerce.catalog.search.SearchEngine searchEngine;
 
-    public ProductController(CatalogQueryService catalog, LocaleResolver localeResolver) {
+    public ProductController(CatalogQueryService catalog, LocaleResolver localeResolver,
+            com.ecommerce.catalog.search.SearchEngine searchEngine) {
         this.catalog = catalog;
         this.localeResolver = localeResolver;
+        this.searchEngine = searchEngine;
     }
 
     /**
@@ -62,5 +65,20 @@ public class ProductController {
             @RequestParam(required = false) String locale,
             HttpServletRequest request) {
         return catalog.getProduct(slug, localeResolver.resolve(request, locale));
+    }
+
+    /**
+     * SF-13 (FI-323) A6b — GET /api/catalog/products/{slug}/related: "Sản phẩm
+     * tương tự" (ES more_like_this + fill cùng category). Runtime endpoint NGOÀI
+     * catalog.yaml freeze (ADR 0005 — precedent audit-log exception). Slug lạ →
+     * page rỗng 200 (PDP ẩn section).
+     */
+    @GetMapping("/products/{slug}/related")
+    public ProductCardPageDto related(
+            @PathVariable String slug,
+            @RequestParam(required = false, defaultValue = "8") int size,
+            @RequestParam(required = false) String locale,
+            HttpServletRequest request) {
+        return searchEngine.related(slug, localeResolver.resolve(request, locale), size);
     }
 }

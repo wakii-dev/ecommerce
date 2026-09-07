@@ -117,6 +117,20 @@ class PgFtsEngineTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void related_fallbackCungCategory_loaiSelfVaDraft() {
+        // SF-13 A6b (review G3 P1): PgFts fallback — cùng category (iphone),
+        // KHÔNG self, KHÔNG category khác (áo), KHÔNG draft
+        var related = searchEngine.related("dien-thoai-xiaomi-redmi-13c", "vi", 8);
+        assertThat(related.items()).extracting(c -> c.slug())
+            .contains("dien-thoai-iphone-15-pro-max")
+            .doesNotContain("dien-thoai-xiaomi-redmi-13c")
+            .doesNotContain("ao-thun-nam-cotton")
+            .doesNotContain("dien-thoai-nhap");
+        // slug lạ → rỗng 200
+        assertThat(searchEngine.related("slug-khong-ton-tai", "vi", 8).total()).isEqualTo(0);
+    }
+
+    @Test
     void draftVaProductCategoryKhacKhongTra() {
         assertThat(slugs(searchEngine.search(query("dien thoai", "vi", null, "newest"))))
             .doesNotContain("dien-thoai-nhap", "ao-thun-nam-cotton");

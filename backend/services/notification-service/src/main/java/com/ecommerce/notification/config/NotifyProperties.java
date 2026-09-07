@@ -16,7 +16,7 @@ public record NotifyProperties(
     Ordering ordering
 ) {
 
-    public record Mail(String from, String myOrdersUrl) {
+    public record Mail(String from, String myOrdersUrl, String resetPasswordUrl, String cartUrl, String couponCenterUrl) {
     }
 
     public record Identity(String baseUrl, long timeoutMs) {

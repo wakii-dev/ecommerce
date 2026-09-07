@@ -41,6 +41,8 @@ export interface Order {
   subtotal: number;
   discount: number;
   shippingFee: number;
+  /** SF-14 (D22) — số tiền giảm từ điểm thưởng (contract Order.pointsDiscount). */
+  pointsDiscount?: number | null;
   total: number;
   currency: 'VND';
   couponCode?: string | null;
@@ -99,6 +101,50 @@ export async function fetchMyOrder(id: string): Promise<Order> {
 /** Hủy đơn PENDING → đơn CANCELLED. */
 export async function cancelMyOrder(id: string): Promise<Order> {
   return (await client().cancelMyOrder({ id })) as Order;
+}
+
+// ── SF-14 (FI-324, D22): tracking + RMA ────────────────────────────────────
+
+export interface TrackingEvent {
+  at: string;
+  description: string;
+}
+
+export interface TrackingResponse {
+  trackingCode: string;
+  carrier: string;
+  status: string;
+  events?: TrackingEvent[];
+}
+
+export interface RmaLine {
+  lineId: string;
+  qty: number;
+}
+
+export interface Rma {
+  id: string;
+  orderId: string;
+  status: 'REQUESTED' | 'APPROVED' | 'RECEIVED' | 'REFUNDED' | 'REJECTED';
+  lines: RmaLine[];
+  reason: string;
+  refundAmount?: number | null;
+  createdAt: string;
+}
+
+/** GET /me/orders/{id}/tracking — GHN detail hoặc flat fallback (D22). */
+export async function fetchOrderTracking(id: string): Promise<TrackingResponse> {
+  return (await client().getMyOrderTracking({ id })) as TrackingResponse;
+}
+
+/** POST /me/rma — 202 REQUESTED; lỗi 409/400 → ApiErrorClient cho UI hiện lý do. */
+export async function createRma(orderId: string, lines: RmaLine[], reason: string): Promise<Rma> {
+  return (await client().createRma({ orderId, lines, reason })) as Rma;
+}
+
+/** GET /me/rma — danh sách RMA của tôi (lọc theo đơn ở caller). */
+export async function fetchMyRmas(page = 1, size = 20): Promise<{ items: Rma[]; total: number }> {
+  return (await client().listMyRmas({ page, size })) as { items: Rma[]; total: number };
 }
 
 /**

@@ -5,6 +5,7 @@ import com.ecommerce.ordering.api.CouponInvalidException;
 import com.ecommerce.ordering.api.ExternalUnavailableException;
 import com.ecommerce.ordering.api.IdempotencyConflictException;
 import com.ecommerce.ordering.api.InsufficientStockException;
+import com.ecommerce.ordering.api.PointsInvalidException;
 import com.ecommerce.ordering.api.UnsupportedFeatureException;
 import com.ecommerce.ordering.api.dto.CreateOrderRequest;
 import com.ecommerce.ordering.api.dto.CreateOrderResponse;
@@ -21,6 +22,7 @@ import com.ecommerce.ordering.repo.OrderRepository;
 import com.ecommerce.ordering.repo.SagaStateRepository;
 import com.ecommerce.ordering.saga.PricingAuthority.PricedItem;
 import com.ecommerce.ordering.service.CouponService;
+import com.ecommerce.ordering.service.ShippingMethodsService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -66,6 +68,13 @@ public class CheckoutSaga {
 
     private static final Logger log = LoggerFactory.getLogger(CheckoutSaga.class);
 
+    /**
+     * 1 điểm quy đổi 100đ — MIRROR {@code affiliate.loyalty.point-vnd}
+     * (quyết định spec D3/D4: ordering cap effectivePoints trước khi redeem
+     * để không đốt điểm vượt số tiền được giảm).
+     */
+    static final long POINT_VND = 100;
+
     private final OrderRepository orders;
     private final CouponRepository coupons;
     private final SagaStateRepository sagaStates;
@@ -73,6 +82,9 @@ public class CheckoutSaga {
     private final PricingAuthority pricing;
     private final InventoryClient inventory;
     private final PaymentClient payment;
+    private final com.ecommerce.ordering.service.OrderLifecycleService lifecycle;
+    private final LoyaltyClient loyalty;
+    private final ShippingMethodsService shippingMethods;
     private final OutboxWriter outbox;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate tx;
@@ -85,6 +97,9 @@ public class CheckoutSaga {
         PricingAuthority pricing,
         InventoryClient inventory,
         PaymentClient payment,
+        com.ecommerce.ordering.service.OrderLifecycleService lifecycle,
+        LoyaltyClient loyalty,
+        ShippingMethodsService shippingMethods,
         OutboxWriter outbox,
         ObjectMapper objectMapper,
         TransactionTemplate tx
@@ -96,6 +111,9 @@ public class CheckoutSaga {
         this.pricing = pricing;
         this.inventory = inventory;
         this.payment = payment;
+        this.lifecycle = lifecycle;
+        this.loyalty = loyalty;
+        this.shippingMethods = shippingMethods;
         this.outbox = outbox;
         this.objectMapper = objectMapper;
         this.tx = tx;
@@ -104,15 +122,15 @@ public class CheckoutSaga {
     public CreateOrderResponse createOrder(UUID userId, String email, CreateOrderRequest request,
                                            String idempotencyKey, String correlationId) {
         // (0) Validate những gì bean-validation không che được
-        ShippingMethods.Method shipping = ShippingMethods.byId(request.shippingMethod());
-        if ("cod".equalsIgnoreCase(request.paymentMethod())) {
-            // COD (D21) là scope SF-13 — chặn rõ ràng, không âm thầm xử khác
-            throw new UnsupportedFeatureException("Thanh toán COD chưa khả dụng — vui lòng chọn Stripe");
-        }
-        if (request.usePoints() != null && request.usePoints() > 0) {
-            // Điểm thưởng (D22) — scope SF-14
-            throw new UnsupportedFeatureException("Điểm thưởng chưa khả dụng");
-        }
+        // SF-14: fee authority lúc đặt — GHN method tính phí theo địa chỉ thật
+        // (degraded → flat giữ nguyên shape). totalQty để tính weight GHN.
+        int totalQty = request.items().stream().mapToInt(CreateOrderRequest.Item::qty).sum();
+        ShippingMethodsService.Method shipping = shippingMethods.resolve(
+            request.shippingMethod(), request.address().city(), request.address().district(), totalQty);
+        // COD (SF-13 A2/D21): bỏ guard chặn — saga SKIP bước payment intent,
+        // sau reserve → CONFIRMED luôn (state machine path PENDING→CONFIRMED).
+        boolean cod = "cod".equalsIgnoreCase(request.paymentMethod() == null ? "stripe" : request.paymentMethod());
+        // D22 (SF-14): usePoints xử lý sau Tx A (redeem cần orderId, bước 5b)
 
         // (1) Replay Idempotency-Key (contract: trùng key + khác payload → 409)
         String payloadHash = sha256(request);
@@ -156,6 +174,14 @@ public class CheckoutSaga {
             }
             discount = coupon.discountFor(subtotal);
         }
+        // D4 (review P1): validate ĐIỂM TRƯỚC Tx A — hàng thấp hơn 100đ/sau coupon
+        // mà vẫn muốn dùng điểm → 422 ngay, KHÔNG để lại order PENDING mồ côi
+        // (throw sau Tx A phải kèm failOrder, ở đây chưa tạo gì nên throw sạch).
+        if (request.usePoints() != null && request.usePoints() > 0
+            && (subtotal - discount) / POINT_VND <= 0) {
+            throw new PointsInvalidException(
+                "Đơn hàng không đủ giá trị để dùng điểm (tối thiểu " + POINT_VND + "đ sau giảm giá)");
+        }
         long total = subtotal - discount + shipping.fee();
         // Snapshot final cho lambda (coupon/discount gán trong block validate ở trên)
         final Coupon couponFinal = coupon;
@@ -198,6 +224,42 @@ public class CheckoutSaga {
             }
         }
 
+        // (5b) D22 — redeem điểm loyalty (REST ngoài tx, cần orderId từ Tx A;
+        // affiliate lo nguyên tử + ledger UNIQUE order). fail → compensation:
+        // order.failed → loyalty consumer hoàn điểm (quyết định spec D5).
+        // effectivePoints cap ≤ (subtotal - coupon)/POINT_VND — không đốt điểm
+        // vượt số tiền được giảm (quyết định spec D4).
+        long pointsDiscount = 0;
+        long finalTotal = total;
+        if (request.usePoints() != null && request.usePoints() > 0) {
+            long effective = Math.min(request.usePoints(),
+                Math.max(0, (subtotal - discountFinal) / POINT_VND));
+            if (effective <= 0) {
+                // Defense-in-depth (đã chặn trước Tx A) — nếu lọt đây PHẢI compensation
+                failOrder(order.getId(), "loyalty_invalid", "RESERVE", correlationId);
+                throw new PointsInvalidException("Đơn hàng không đủ giá trị để dùng điểm");
+            }
+            try {
+                pointsDiscount = loyalty.redeem(userId, effective, order.getId().toString()).discount();
+            } catch (PointsInvalidException e) {
+                failOrder(order.getId(), "loyalty_redeem_failed", "RESERVE", correlationId);
+                throw e;
+            } catch (Exception e) {
+                log.error("Redeem điểm fail cho order {} — compensation", order.getId(), e);
+                failOrder(order.getId(), "loyalty_unavailable", "OTHER", correlationId);
+                throw new ExternalUnavailableException("Điểm thưởng tạm bận — đơn đã hủy, thử lại sau");
+            }
+            if (pointsDiscount > 0) {
+                finalTotal = subtotal - discountFinal - pointsDiscount + shipping.fee();
+                final long appliedDiscount = pointsDiscount;
+                final long appliedTotal = finalTotal;
+                tx.executeWithoutResult(status -> orders.findById(order.getId())
+                    .ifPresent(o -> o.applyPointsDiscount(appliedDiscount, appliedTotal)));
+            }
+            log.info("Order {} dùng {} điểm → giảm {}đ (total {})", order.getId(), effective,
+                pointsDiscount, finalTotal);
+        }
+
         // (6) REST reserve inventory all-or-nothing (NGOÀI tx); fail → compensation
         List<InventoryClient.ReserveItem> reserveItems = priced.stream()
             .map(p -> new InventoryClient.ReserveItem(p.variantId(),
@@ -215,10 +277,21 @@ public class CheckoutSaga {
             throw new ExternalUnavailableException("Hệ thống kho tạm bận — đơn đã hủy, thử lại sau");
         }
 
-        // (7) REST create payment intent (NGOÀI tx; Idempotency-Key truyền tiếp)
+        // (7-COD) sau reserve → CONFIRMED LUÔN (1 tx: transition + finalize coupon
+        // + outbox order.confirmed fat payload) — KHÔNG gọi payment, KHÔNG chờ
+        // webhook; tiền thu lúc giao qua capture (deliver, lifecycle.deliverCod).
+        if (cod) {
+            Order confirmed = lifecycle.confirmCodOrder(order.getId(), correlationId);
+            advanceSaga(order.getId(), SagaStep.DONE, correlationId);
+            log.info("Order {} COD — CONFIRMED sau reserve, bỏ bước intent (SF-13)", order.getId());
+            return new CreateOrderResponse(OrderMapper.toDto(confirmed), null);
+        }
+
+        // (7) REST create payment intent (NGOÀI tx; Idempotency-Key truyền tiếp) —
+        // amount = finalTotal (đã trừ pointsDiscount, D22)
         PaymentClient.IntentCreated intent;
         try {
-            intent = payment.createIntent(order.getId(), total, idempotencyKey);
+            intent = payment.createIntent(order.getId(), finalTotal, idempotencyKey);
         } catch (Exception e) {
             // order.failed → inventory release reservation; coupon release tại đây
             log.error("Create payment intent fail cho order {} — compensation", order.getId(), e);

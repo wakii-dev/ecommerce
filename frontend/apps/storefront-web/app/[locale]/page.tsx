@@ -5,6 +5,7 @@ import ProductCardView from '../../components/ProductCardView';
 import CategoryTiles from '../../components/home/CategoryTiles';
 import FlashDealSection from '../../components/home/FlashDealSection';
 import HeroCarousel from '../../components/home/HeroCarousel';
+import RecentlyViewed from '../../components/RecentlyViewed';
 import { EmptyState } from '../../components/ui-kit';
 import { catalogApi, CatalogUnavailableError, type Category, type ProductCard } from '../../lib/catalog-api';
 import { resolveLocale } from '../../lib/format';
@@ -92,6 +93,9 @@ export default async function HomePage({ params }: { params: { locale: string } 
           </div>
         </section>
       ) : null}
+
+      {/* SF-13 A6a: "Đã xem gần đây" — client island đọc localStorage; ẩn khi trống */}
+      <RecentlyViewed locale={locale} />
     </div>
   );
 }

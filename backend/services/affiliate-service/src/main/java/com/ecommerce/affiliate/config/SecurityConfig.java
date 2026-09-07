@@ -34,6 +34,10 @@ public class SecurityConfig {
                 // Public theo contract (không security trên operation này):
                 .requestMatchers(
                     "/api/affiliate/track/click",
+                    // SF-14 (FI-324): internal loyalty redeem — contract security:[]
+                    // (ordering service-to-service, auth X-Internal-Token trong
+                    // controller; gateway BLOCK route này khỏi public — D8)
+                    "/api/affiliate/internal/**",
                     "/actuator/health/**", "/actuator/info",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // Admin — 2 lớp: gateway admin-prefix + @PreAuthorize ở controller

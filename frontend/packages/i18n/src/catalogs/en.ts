@@ -42,7 +42,33 @@ export const en = {
       coupons: 'Coupons',
       reviews: 'Reviews',
       orders: 'Orders',
-      affiliates: 'Affiliates'
+      audit: 'Audit log',
+      newsletter: 'Newsletter',
+      affiliates: 'Affiliates',
+      // SF-14 (FI-324) append
+      rma: 'Returns',
+      loyalty: 'Loyalty'
+    },
+    newsletter: {
+      title: 'Newsletter — subscribers',
+      email: 'Email',
+      subscribedAt: 'Subscribed at',
+      subscribers: 'subscribers',
+      empty: 'No subscribers yet'
+    },
+    audit: {
+      title: 'Audit log',
+      eventType: 'Event type',
+      from: 'From',
+      to: 'To',
+      apply: 'Filter',
+      time: 'Time',
+      eventTypeCol: 'Event',
+      correlation: 'Correlation ID',
+      payload: 'Payload',
+      events: 'events',
+      empty: 'No events found',
+      emptyDesc: 'No events match the filter — try clearing filters and applying again.'
     },
     topbar: {
       viewStorefront: 'View storefront',
@@ -95,7 +121,11 @@ export const en = {
       SHIPPED: 'Shipped',
       DELIVERED: 'Delivered',
       CANCELLED: 'Cancelled',
-      FAILED: 'Failed'
+      FAILED: 'Failed',
+      // SF-14 (FI-324) — RMA lifecycle append
+      REQUESTED: 'Requested',
+      RECEIVED: 'Received',
+      REFUNDED: 'Refunded'
     },
     products: {
       title: 'Products',
@@ -136,7 +166,11 @@ export const en = {
       images: 'Product images',
       imageUrl: 'Image URL',
       imageAlt: 'Alt text',
+      exportCsv: 'Export CSV',
       addImage: 'Add image',
+      uploadImage: 'Upload image',
+      uploadingImage: 'Uploading…',
+      imageUploaded: 'Image uploaded',
       moveUp: 'Up',
       moveDown: 'Down',
       publish: 'Publish',
@@ -213,6 +247,39 @@ export const en = {
       rateInvalid: 'Rate must be within (0, 50]',
       empty: 'No affiliate profiles yet'
     },
+    // ── SF-14 (FI-324) — RMA + loyalty append ───────────────────────────────
+    rma: {
+      title: 'Return requests',
+      colId: 'RMA ID',
+      colOrder: 'Order',
+      colReason: 'Reason',
+      colItems: 'Items returned',
+      approve: 'Approve',
+      approveDone: 'Return request approved',
+      reject: 'Reject',
+      rejectDone: 'Request rejected',
+      markReceived: 'Mark received',
+      markReceivedDone: 'Return received',
+      refund: 'Refund',
+      refundDone: 'Refunded',
+      empty: 'No return requests'
+    },
+    loyalty: {
+      title: 'Loyalty points',
+      lookupTitle: 'Customer lookup',
+      lookupPh: 'Enter user id (uuid)',
+      lookup: 'Look up',
+      balance: 'Current points',
+      totalEarned: 'Total earned',
+      ledger: 'Points ledger',
+      adjustTitle: 'Manual adjust',
+      adjustPoints: 'Points (+/-)',
+      adjustNote: 'Note',
+      adjust: 'Apply',
+      adjustDone: 'Points adjusted',
+      empty: 'Enter a user id to look up',
+      notFound: 'No data — check the user id'
+    },
     reviews: {
       title: 'Review moderation',
       product: 'Product',
@@ -228,6 +295,7 @@ export const en = {
     },
     orders: {
       title: 'Orders',
+      exportCsv: 'Export CSV',
       order: 'Order',
       customer: 'Customer',
       items: 'Items',

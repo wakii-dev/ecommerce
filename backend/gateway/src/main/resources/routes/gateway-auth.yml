@@ -19,6 +19,16 @@ ecom:
         - /api/identity/auth/refresh
         - /api/identity/auth/logout          # contract: cookie-only, không bearerAuth
         - /api/identity/.well-known/**
+        # SF-13 (FI-323) A1: password forgot/reset public theo contract identity.yaml
+        - /api/identity/password/**
+        # SF-13 (FI-323) A8: newsletter subscribe public (guest OK)
+        - /api/identity/newsletter
+        # SF-15 (FI-325): oauth browser flow — authorize/callback/exchange + discovery
+        - /api/identity/oauth/**
+        # SF-15: verify challenge 2FA bằng challengeToken (không JWT)
+        - /api/identity/2fa/verify
+        # SF-15: guest đọc availability PDP (badge AddToCart + form stock-alert)
+        - /api/inventory/availability
         - /api/catalog/**                    # guest browse — public từ SF-4
         # SF-9 (FI-319): public theo contract (không security trên operation này)
         - /api/ordering/coupons/public       # coupon center — guest xem
@@ -42,4 +52,8 @@ ecom:
         - /api/identity/admin/**             # endpoint admin THẬT — D7 2 lớp (gateway + @PreAuthorize)
         - /api/ordering/admin/**             # SF-9 — 2 lớp (gateway + @PreAuthorize ordering)
         - /api/affiliate/admin/**            # SF-12 — 2 lớp (gateway + @PreAuthorize affiliate)
+        # SF-13 (FI-323) A2: COD capture chỉ ordering nội bộ gọi (HTTP thẳng
+        # :8086, không qua gateway) — chặn customer qua gateway (review G1 P0)
+        - /api/payment/cod/**
+        - /api/log/admin/**                  # SF-13 A5 — audit viewer, 2 lớp RBAC
         # Convention SF sau: thêm prefix admin của service mình (vd /api/ordering/admin/**)

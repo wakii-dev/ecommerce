@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import ProductCardView from '../../../../components/ProductCardView';
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import RecentlyViewedTracker from '../../../../components/pdp/RecentlyViewedTracker';
 import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
 import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
@@ -14,6 +16,7 @@ import {
   categoryGradient,
   discountPercent,
   type Category,
+  type ProductCardPage,
   type ProductDetail,
 } from '../../../../lib/catalog-api';
 import { localePath, resolveLocale } from '../../../../lib/format';
@@ -25,7 +28,8 @@ import { siteUrl } from '../../../../lib/site';
  * PDP SSR (plan Task 13) — metadata/JSON-LD/OG server-rendered + gallery/
  * variant/buy-box client (vẫn SSR HTML lần đầu). Distinguish 404 (ApiError
  * status) vs catalog down qua `.status` của CatalogUnavailableError (lib doc).
- * Related: skip — relatedCount 0, API SF-4 không có related list.
+ * Related (SF-13 A6b): SSR fetch `/related` (ES MLT — ADR 0005) → section
+ * ProductCardView sau reviews; rỗng/fail → ẩn.
  */
 
 interface PdpPageProps {
@@ -49,6 +53,7 @@ const COPY = {
     infoSku: 'Mã sản phẩm',
     infoCat: 'Danh mục',
     infoRating: 'Đánh giá',
+    related: 'Sản phẩm tương tự',
     unavailable: 'Sản phẩm tạm thời không khả dụng',
     unavailableDesc: 'Hệ thống đang bận — vui lòng thử lại sau ít phút.',
   },
@@ -66,6 +71,7 @@ const COPY = {
     infoSku: 'SKU',
     infoCat: 'Category',
     infoRating: 'Rating',
+    related: 'Similar products',
     unavailable: 'Product temporarily unavailable',
     unavailableDesc: 'The system is busy — please try again in a few minutes.',
   },
@@ -134,6 +140,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
 
   let product: ProductDetail | null = null;
   let tree: Category[] = [];
+  let related: ProductCardPage | null = null;
   let catalogDown = false;
 
   try {
@@ -141,6 +148,8 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     const [detail, categories] = await Promise.all([api.getProduct(params.slug), api.getCategories()]);
     product = detail;
     tree = categories;
+    // SF-13 A6b: "Sản phẩm tương tự" — best-effort, fail → ẩn section (không vỡ PDP)
+    related = await api.related(params.slug, 8).catch(() => null);
   } catch (error) {
     if (!(error instanceof CatalogUnavailableError)) throw error;
     // 404 thật sự (không tìm thấy slug) → trang 404; còn lại = catalog down.
@@ -192,6 +201,17 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+
+      {/* SF-13 A6a: ghi "đã xem gần đây" (localStorage, max 12) */}
+      <RecentlyViewedTracker
+        slug={product.slug}
+        slugEn={product.slugEn}
+        name={product.name}
+        price={product.price}
+        comparePrice={product.comparePrice ?? null}
+        discountPercent={percent}
+        image={product.image?.url ?? ''}
       />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">
@@ -289,6 +309,22 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
           {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
           <MyPendingReviewPanel productId={product.id} locale={locale} />
         </section>
+
+        {related && related.items.length > 0 ? (
+          <section className="featured" aria-label={copy.related} data-testid="related-products">
+            <div className="featured-head">
+              <div className="featured-head-left">
+                <span className="section-bar" aria-hidden="true" />
+                <h2 className="section-title">{copy.related}</h2>
+              </div>
+            </div>
+            <div className="featured-grid">
+              {related.items.map((item) => (
+                <ProductCardView key={item.id} product={item} locale={locale} />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </div>
   );

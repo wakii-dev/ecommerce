@@ -10,8 +10,13 @@ const mfeConfig = defineMfeConfig({
     './bootstrap': './src/bootstrap.tsx',
     './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
+    './ForgotPasswordPage': './src/pages/ForgotPasswordPage.tsx',
+    './ResetPasswordPage': './src/pages/ResetPasswordPage.tsx',
     './RegisterPage': './src/pages/RegisterPage.tsx',
     './AccountPage': './src/pages/AccountPage.tsx',
+    // SF-15 (FI-325) — oauth callback + 2FA slice
+    './OAuthCallbackPage': './src/pages/OAuthCallbackPage.tsx',
+    './TwoFactorPage': './src/pages/TwoFactorPage.tsx',
     // SF-9 (FI-319) — my-orders slice (pages/orders/*)
     './OrdersPage': './src/pages/orders/OrdersPage.tsx',
     './OrderDetailPage': './src/pages/orders/OrderDetailPage.tsx',

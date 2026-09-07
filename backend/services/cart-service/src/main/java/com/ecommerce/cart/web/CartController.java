@@ -85,8 +85,15 @@ public class CartController {
         String sub = currentUserSub();
         if (sub != null) {
             CartRef ref = cart.loadOrCreateUser(sub);
-            store.save(ref.key(), ref.doc()); // ensure user key tồn tại
-            return cart.toResponse(cart.enrichAll(ref.doc()), null);
+            // A4: stamp email lần ĐẦU thiếu thôi — không rewrite/TTL-refresh
+            // mỗi GET (review G2 P2: write amplification + giỏ bất tử)
+            CartDocument doc = ref.doc();
+            String email = currentUserEmail();
+            if (email != null && doc.email() == null) {
+                doc = doc.withEmail(email);
+                store.save(ref.key(), doc);
+            }
+            return cart.toResponse(cart.enrichAll(doc), null);
         }
         CartRef guest = cart.loadGuest(cookieToken)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -125,7 +132,7 @@ public class CartController {
 
         CartService.AddOutcome outcome = cart.addLine(ref.doc(), request.productId(),
             request.variantId(), qty, Boolean.TRUE.equals(request.allowOos()), slug);
-        store.save(ref.key(), outcome.doc());
+        store.save(ref.key(), stamped(outcome.doc()));
 
         ResponseEntity.BodyBuilder builder = ResponseEntity.ok();
         if (setGuestCookie) {
@@ -147,7 +154,7 @@ public class CartController {
         CartRef ref = resolveExisting(cookieToken);
         UUID lineId = parseLineId(itemId);
         CartDocument updated = cart.patchQty(ref.doc(), lineId, request.qty());
-        store.save(ref.key(), updated);
+        store.save(ref.key(), stamped(updated));
         return cart.toResponse(updated, ref.guestToken());
     }
 
@@ -159,7 +166,7 @@ public class CartController {
         CartRef ref = resolveExisting(cookieToken);
         UUID lineId = parseLineId(itemId);
         CartDocument updated = cart.removeLine(ref.doc(), lineId);
-        store.save(ref.key(), updated);
+        store.save(ref.key(), stamped(updated));
         return cart.toResponse(updated, ref.guestToken());
     }
 
@@ -187,7 +194,7 @@ public class CartController {
                 "guest_cart_not_found — token sai hoặc giỏ đã hết hạn"));
 
         CartRef userRef = cart.loadOrCreateUser(sub);
-        CartDocument merged = cart.merge(userRef.doc(), guestDoc);
+        CartDocument merged = stamped(cart.merge(userRef.doc(), guestDoc));
         store.save(userRef.key(), merged);
         store.delete(guestKey); // sau merge guest hết hiệu lực (contract)
         return ResponseEntity.ok()
@@ -223,5 +230,20 @@ public class CartController {
             return jwtAuth.getToken().getSubject();
         }
         return null;
+    }
+
+    /** Email từ JWT claim (SF-13 A4 — abandoned cart); null khi anonymous/không claim. */
+    private String currentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwtAuth) {
+            return jwtAuth.getToken().getClaimAsString("email");
+        }
+        return null;
+    }
+
+    /** Gắn email JWT vào doc (user mutation — sweeper abandoned cần); guest giữ nguyên. */
+    private CartDocument stamped(CartDocument doc) {
+        String email = currentUserEmail();
+        return email == null ? doc : doc.withEmail(email);
     }
 }

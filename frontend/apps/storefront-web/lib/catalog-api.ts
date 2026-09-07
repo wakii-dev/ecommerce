@@ -55,6 +55,8 @@ export interface CatalogApi {
   getCategories(): Promise<CategoryTree>;
   search(q: string, params?: SearchParams): Promise<ProductCardPage>;
   suggest(q: string): Promise<SuggestResponse>;
+  /** SF-13 A6b — "Sản phẩm tương tự" (runtime endpoint ngoài freeze — ADR). */
+  related(slug: string, size?: number): Promise<ProductCardPage>;
 }
 
 async function guard<T>(call: () => Promise<T>): Promise<T> {
@@ -74,6 +76,19 @@ export function catalogApi(locale: Locale): CatalogApi {
     getCategories: () => guard(() => client.getCategories({ locale })),
     search: (q, params = {}) => guard(() => client.searchProducts({ q, locale, ...params })),
     suggest: (q) => guard(() => client.suggestProducts({ q, locale })),
+    related: (slug, size = 8) =>
+      guard(async () => {
+        // Endpoint không có trong contracts client (runtime additive) — fetch
+        // trực tiếp qua cachedFetch (revalidate 60s + Accept-Language)
+        const res = await cachedFetch(locale)(
+          `${GATEWAY_URL}/api/catalog/products/${encodeURIComponent(slug)}/related?size=${size}`,
+          { headers: { Accept: 'application/json' } }
+        );
+        if (!res.ok) {
+          throw Object.assign(new Error(`related ${res.status}`), { status: res.status });
+        }
+        return (await res.json()) as ProductCardPage;
+      }),
   };
 }
 

@@ -9,12 +9,15 @@ import java.util.Set;
  *
  * <pre>
  * PENDING → PAID (system webhook) → CONFIRMED (system commit) → SHIPPED (admin) → DELIVERED (admin)
+ * PENDING → CONFIRMED (SF-13 COD — sau reserve, không qua Stripe; PAID thật lúc giao qua capture)
  * PENDING → CANCELLED (admin / user / TTL 30' system)
  * PAID | CONFIRMED → CANCELLED (admin — kèm refund)
  * PENDING → FAILED (system: reserve fail / declined)
  * </pre>
  *
- * Admin KHÔNG có endpoint confirm — CONFIRMED chỉ tới từ PAID, tự động.
+ * Admin KHÔNG có endpoint confirm — CONFIRMED tới từ PAID (Stripe) hoặc
+ * PENDING (COD, D21). Trạng thái đơn COD kết thúc = DELIVERED — "PAID lúc
+ * giao" là nghĩa vụ thanh toán (order.paid + capture), KHÔNG phải transition.
  */
 public enum OrderStatus {
 
@@ -28,7 +31,7 @@ public enum OrderStatus {
 
     /** Transition hợp lệ: from → set đích. Mọi path khác → 409 (guard service). */
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED = Map.of(
-        PENDING, Set.of(PAID, CANCELLED, FAILED),
+        PENDING, Set.of(PAID, CONFIRMED, CANCELLED, FAILED),
         PAID, Set.of(CONFIRMED, CANCELLED),
         CONFIRMED, Set.of(SHIPPED, CANCELLED),
         SHIPPED, Set.of(DELIVERED),

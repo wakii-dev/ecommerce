@@ -7,6 +7,8 @@ import '@ecommerce/ui-kit/tokens.css';
 
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
+import LiveChat from '../../components/LiveChat';
+import PwaRegister from '../../components/PwaRegister';
 import { resolveLocale } from '../../lib/format';
 import { buildAlternates } from '../../lib/seo';
 import { siteUrl } from '../../lib/site';
@@ -48,6 +50,8 @@ export default function LocaleLayout({
       <Header locale={locale} />
       <main>{children}</main>
       <Footer locale={locale} />
+      <PwaRegister />
+      <LiveChat />
     </>
   );
 }

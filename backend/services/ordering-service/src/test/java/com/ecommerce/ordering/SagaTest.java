@@ -444,4 +444,127 @@ class SagaTest extends AbstractSagaTest {
         // Status giữ terminal (refund + log, KHÔNG đổi state — pin §3.3)
         assertThat(scalar("SELECT status FROM orders WHERE id = ?", orderId)).isEqualTo("CANCELLED");
     }
+
+    // ── SF-13 (FI-323) A2: COD ─────────────────────────────────────────────
+
+    /** Body JSON POST /orders với paymentMethod=cod. */
+    private String codBody(String couponCode, String variantA, int qtyA) {
+        return """
+            {"items":[{"productId":"%s","variantId":"%s","qty":%d}],"couponCode":%s,"paymentMethod":"cod",
+             "shippingMethod":"standard",
+             "address":{"fullName":"Nguyễn Văn Test","phone":"0901234567","line1":"45 Lê Lợi",
+               "ward":"Bến Nghé","district":"Quận 1","city":"TP. Hồ Chí Minh"}}
+            """.formatted(PRODUCT_A, variantA, qtyA,
+            couponCode == null ? "null" : "\"" + couponCode + "\"");
+    }
+
+    private ResponseEntity<String> adminPost(String path) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminJwt());
+        return rest.exchange(path, HttpMethod.POST, new HttpEntity<>(headers), String.class);
+    }
+
+    private String paymentScalar(String sql) {
+        try (java.sql.Connection conn = java.sql.DriverManager.getConnection(
+                jdbcUrl("db_payment"), "postgres", "postgres");
+             java.sql.Statement st = conn.createStatement();
+             java.sql.ResultSet rs = st.executeQuery(sql)) {
+            rs.next();
+            return rs.getString(1);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** COD checkout: bỏ bước intent → CONFIRMED sau reserve, clientSecret null. */
+    @Test
+    void codCheckout_confirmedWithoutStripe_fatPayloadValidates() throws Exception {
+        seedCoupon("COD10", "PERCENT", 10, 5);
+        String token = customerJwt("cod@ecommerce.local");
+        ResponseEntity<String> created = httpPost("/orders", token,
+            UUID.randomUUID().toString(), codBody("COD10", VARIANT_A, 2));
+        assertThat(created.getStatusCode().value()).isEqualTo(201);
+        JsonNode order = om.readTree(created.getBody()).path("order");
+        assertThat(order.path("paymentMethod").asText()).isEqualTo("cod");
+        assertThat(om.readTree(created.getBody()).path("clientSecret").isNull()).isTrue();
+        String orderId = order.path("id").asText();
+
+        // CONFIRMED sau reserve — KHÔNG Stripe, KHÔNG webhook
+        untilAsserted(() -> assertThat(
+            scalar("SELECT status FROM orders WHERE id = ?", orderId)).isEqualTo("CONFIRMED"));
+        assertThat(scalar("SELECT step FROM saga_state WHERE order_id = ?", orderId)).isEqualTo("DONE");
+        assertThat(scalar("SELECT stripe_intent_id FROM orders WHERE id = ?", orderId)).isNull();
+        assertThat(scalar("SELECT status FROM coupon_reservations WHERE order_id = ?", orderId))
+            .isEqualTo("FINALIZED");
+
+        // order.confirmed fat payload validate schema frozen
+        String envelopeText = scalar("SELECT payload::text FROM outbox WHERE event_type = "
+            + "'order.confirmed' ORDER BY created_at DESC LIMIT 1");
+        JsonNode envelope = om.readTree(envelopeText);
+        Set<ValidationMessage> errors = validateAgainstFrozenSchema("order.confirmed.schema.json", envelope);
+        assertThat(errors).as("COD order.confirmed schema: %s", errors).isEmpty();
+        // 1 variant: 2×150.000 = 300k − COD10 10% (30k) + ship 20k = 290k
+        assertThat(envelope.path("payload").path("total").asLong()).isEqualTo(290_000);
+
+        // Contract order.paid.schema.json: COD KHÔNG phát order.paid lúc checkout
+        // (param STRING thường — payload->> là text, uuidArgs ép UUID sẽ vỡ grammar)
+        Integer paidRows = jdbc.queryForObject("SELECT count(*) FROM outbox WHERE event_type = 'order.paid' "
+            + "AND payload->>'orderId' = ?", Integer.class, orderId);
+        assertThat(paidRows).isEqualTo(0);
+    }
+
+    /** COD deliver: capture TRƯỚC transition + order.paid lúc giao → inventory commit. */
+    @Test
+    void codDeliver_capturesPayment_emitsOrderPaid_inventoryCommits() throws Exception {
+        String token = customerJwt("cod-deliver@ecommerce.local");
+        ResponseEntity<String> created = httpPost("/orders", token,
+            UUID.randomUUID().toString(), codBody(null, VARIANT_A, 1));
+        assertThat(created.getStatusCode().value()).isEqualTo(201);
+        String orderId = om.readTree(created.getBody()).path("order").path("id").asText();
+        untilAsserted(() -> assertThat(
+            scalar("SELECT status FROM orders WHERE id = ?", orderId)).isEqualTo("CONFIRMED"));
+
+        assertThat(adminPost("/admin/orders/" + orderId + "/ship").getStatusCode().value()).isEqualTo(200);
+        ResponseEntity<String> delivered = adminPost("/admin/orders/" + orderId + "/deliver");
+        assertThat(delivered.getStatusCode().value())
+            .as("deliver body: %s", delivered.getBody())
+            .isEqualTo(200);
+        assertThat(om.readTree(delivered.getBody()).path("status").asText()).isEqualTo("DELIVERED");
+
+        // payment THẬT: đúng 1 intent cod:<orderId> SUCCEEDED (HTTP thật giữa 2 context)
+        String piStatus = paymentScalar("SELECT status FROM payment_intents "
+            + "WHERE stripe_intent_id = 'cod:" + orderId + "'");
+        assertThat(piStatus).isEqualTo("SUCCEEDED");
+
+        // deliver LẠI → 409 (guard SHIPPED) — KHÔNG capture thêm
+        assertThat(adminPost("/admin/orders/" + orderId + "/deliver").getStatusCode().value()).isEqualTo(409);
+        Integer piRows = Integer.valueOf(paymentScalar("SELECT count(*) FROM payment_intents "
+            + "WHERE stripe_intent_id = 'cod:" + orderId + "'"));
+        assertThat(piRows).isEqualTo(1);
+
+        // order.paid lúc giao → inventory commit (reservation chuyển COMMITTED)
+        untilAsserted(() -> assertThat(
+            inventoryScalar("SELECT status FROM reservations WHERE order_id = '" + orderId
+                + "' ORDER BY created_at DESC LIMIT 1")).isEqualTo("COMMITTED"));
+    }
+
+    /** COD cancel trước giao: chưa thu tiền → KHÔNG refund, CANCELLED bình thường. */
+    @Test
+    void codCancelByAdmin_khongRefund_orderCancelled() throws Exception {
+        String token = customerJwt("cod-cancel@ecommerce.local");
+        ResponseEntity<String> created = httpPost("/orders", token,
+            UUID.randomUUID().toString(), codBody(null, VARIANT_A, 1));
+        String orderId = om.readTree(created.getBody()).path("order").path("id").asText();
+        untilAsserted(() -> assertThat(
+            scalar("SELECT status FROM orders WHERE id = ?", orderId)).isEqualTo("CONFIRMED"));
+
+        ResponseEntity<String> cancelled = adminPost("/admin/orders/" + orderId + "/cancel");
+        assertThat(cancelled.getStatusCode().value()).isEqualTo(200);
+        assertThat(om.readTree(cancelled.getBody()).path("status").asText()).isEqualTo("CANCELLED");
+
+        // KHÔNG có intent nào cho đơn COD → không có gì để refund (guard null)
+        Integer piRows = Integer.valueOf(paymentScalar("SELECT count(*) FROM payment_intents "
+            + "WHERE order_id = '" + orderId + "'"));
+        assertThat(piRows).isEqualTo(0);
+    }
 }

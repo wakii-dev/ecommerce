@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPairGenerator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -59,6 +60,27 @@ class EventLogConsumerTest {
         registry.add("spring.rabbitmq.username", RABBIT::getAdminUsername);
         registry.add("spring.rabbitmq.password", RABBIT::getAdminPassword);
         registry.add("management.health.rabbit.enabled", () -> "false");
+        // SF-13 A5: app giờ có SecurityConfig/JwtDecoderConfig — IT không test
+        // JWT nhưng context cần decoder → PEM tự sinh (worktree không có
+        // infra/keys — gitignored)
+        registry.add("JWT_PUBLIC_KEY_PATH", () -> writeItKeys());
+    }
+
+    private static String writeItKeys() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            java.nio.file.Path keyDir = java.nio.file.Path.of("target", "it-keys");
+            java.nio.file.Files.createDirectories(keyDir);
+            String base64 = java.util.Base64.getMimeEncoder(64, "\n".getBytes())
+                .encodeToString(generator.generateKeyPair().getPublic().getEncoded());
+            java.nio.file.Path pem = keyDir.resolve("jwt-public-consumer.pem");
+            java.nio.file.Files.writeString(pem,
+                "-----BEGIN PUBLIC KEY-----\n" + base64 + "\n-----END PUBLIC KEY-----\n");
+            return pem.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Autowired

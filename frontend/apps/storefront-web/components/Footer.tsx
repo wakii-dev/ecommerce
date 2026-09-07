@@ -1,4 +1,5 @@
 import type { Locale } from '../lib/format';
+import NewsletterForm from './NewsletterForm';
 
 /** 4 cột nội dung static (plan Task 10: static OK) — tiêu đề cột bilingual. */
 const COLUMNS: Record<Locale, ReadonlyArray<{ title: string; links: ReadonlyArray<string> }>> = {
@@ -16,7 +17,10 @@ const COLUMNS: Record<Locale, ReadonlyArray<{ title: string; links: ReadonlyArra
   ],
 };
 
-/** Footer §2.2.5: nền #212121 (var --c-text), 4 cột gap 32px, link #bbb hover accent. */
+/**
+ * Footer §2.2.5: nền #212121 (var --c-text), 4 cột gap 32px, link #bbb hover
+ * accent. SF-13 A8: cột newsletter (client island — subscribe form) bên phải.
+ */
 export default function Footer({ locale }: { locale: Locale }) {
   return (
     <footer className="site-footer">
@@ -33,6 +37,7 @@ export default function Footer({ locale }: { locale: Locale }) {
             </ul>
           </section>
         ))}
+        <NewsletterForm locale={locale} />
       </div>
     </footer>
   );

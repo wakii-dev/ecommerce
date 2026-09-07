@@ -174,6 +174,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
       ELASTICSEARCH_URI: http://elasticsearch:9200
+      CATALOG_MINIO_ENABLED: "true"       # SF-13 A3 — upload MinIO (review G1)
+      CATALOG_MINIO_ENDPOINT: http://minio:9000
     expose:
       - "8082"   # internal — gateway (full profile) gọi qua service name
     depends_on:
@@ -455,6 +457,7 @@ services:
       AFFILIATE_URI: http://affiliate-service:8092
       STOREFRONT_WEB_URI: http://storefront-web:3000
       SHELL_WEB_ORIGIN: http://frontend-web:80
+      MINIO_URI: http://minio:9000        # SF-13 A3 — route /media/** (review G1)
       SPRING_PROFILES_ACTIVE: full
     ports:
       - "8080:8080"   # public entry duy nhất của stack full
@@ -515,6 +518,46 @@ services:
     networks:
       - ecommerce-net
 
+  # ── SF-13 (FI-323) A3 — MinIO object storage (append-only block per SF) ────
+  # Ảnh sản phẩm: catalog-service upload S3 API :9000; public read qua gateway
+  # route /media/** (RewritePath /media/<seg> → /<seg> = bucket/key).
+  minio:
+    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    container_name: ecommerce-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API — catalog upload + gateway /media
+      - "9001:9001"   # console (dev)
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - ecommerce-net
+
+  # One-shot: bucket `products` + policy anonymous download (idempotent).
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: ecommerce-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+      (mc mb -p local/products || true) &&
+      mc anonymous set download local/products"
+    restart: "no"
+    networks:
+      - ecommerce-net
+
 volumes:
   pgdata:
   redisdata:
@@ -522,6 +565,7 @@ volumes:
   mailpitdata:
   mongodata:
   esdata:
+  miniodata:
 
 networks:
   ecommerce-net:

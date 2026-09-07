@@ -14,6 +14,7 @@ import {
   type AffiliateProfile,
   type LedgerPage,
 } from './affiliateApi';
+import LoyaltyPointsSection from './LoyaltyPointsSection'; // SF-14 (FI-324) chắp section điểm
 
 /**
  * Affiliate dashboard (SF-12 — pack slice `pages/affiliate/*`): đăng ký
@@ -139,6 +140,9 @@ export default function AffiliatePage(): ReactElement {
           {error}
         </div>
       ) : null}
+
+      {/* SF-14 (FI-324): block điểm thưởng — hiện cho mọi user đã đăng nhập */}
+      <LoyaltyPointsSection />
 
       {showForm ? (
         <Card>

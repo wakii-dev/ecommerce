@@ -56,14 +56,9 @@ Tasks (thứ tự + phụ thuộc DAG):
 - [ ] **Task 10 — engagement-it-tests** (cross): e2e `tests/engagement.spec.ts` (dark persist + PDP stock-alert form + **manifest 200/JSON/icons — không assert SW ready**); assert gateway-auth.yml đủ 3 dòng mới; full backend IT suite (identity + catalog + notification) xanh; docs demo snippet. **Exit criteria: e2e engagement suite PASS trên make dev; `cd backend && mvn -q test` identity/catalog/notification xanh.** Commit: `test(e2e): engagement suite`.
 - [ ] **Task 11 — acceptance-browser-walkthrough** (Rule 0, deps T10): đi 7 dòng ACCEPTANCE pack bằng browser thật — login Google qua mock provider (`infra/dev/mock-oauth-provider.mjs` boot cùng stack); 2FA turn-around (QR → mã test-harness/app → backup code → disable); restock → đọc email trong Mailpit UI; **PWA: storefront prod build (`next build && next start` :3001) → DevTools manifest + SW active + installable**; dark toggle persist; chat env on/off; screenshot từng màn → verdict `/tmp/story/sf-15-verify.md`. **Exit criteria: từng dòng ACCEPTANCE có bằng mắt + screenshot.** Commit: chỉ docs verdict (nếu có).
 
+File structure: theo codebase conventions (package-per-feature trong service; FE components theo app; migration `db/migration/V*__*.sql`).
+Testing strategy: IT WireMock (identity/catalog/notification) + vitest FE + Playwright e2e + browser walkthrough Rule 0 (mock provider thật, Mailpit UI, DevTools PWA, dark toggle, chat env on/off).
 ## 6. Risks & unknowns
 - Must verify trước merge: migration numbers SF-13/14 trên story branch (SF-14 đã commit `ordering V12__rma.sql` — không đụng identity/catalog; SF-13 docs-only tại thời điểm lập plan → re-check lại TRƯỚC merge; đụng → renumber migration mình).
 - **SF-13 shared-file coordination** (merge-order rule: ai merge trước giữ nguyên — story sau rebase + renumber): `mfe-account/src/api.ts` (SF-13 thêm forgot/reset helpers), identity `SecurityConfig` (cả 2 permitAll paths), identity/catalog `pom.xml` + `application.yml`, notification `application.yml`, V11 identity migration. Mình inline-order deterministic + merge đầu tiên nếu xong trước; rebase cẩn thận từng file khi merge sau.
 - Assumptions: java-otp 0.4.0 tải được Maven Central; `qrcode` npm (mfe-account) ok; Mailpit IT dùng cho restock mail; tawk.to chỉ verify script tag có/không (không cần load thật); mock provider .mjs chạy node thuần (không dep).
-
-File structure: theo codebase conventions (package-per-feature trong service; FE components theo app; migration `db/migration/V*__*.sql`).
-Testing strategy: IT WireMock (identity/catalog/notification) + vitest FE + Playwright e2e + browser walkthrough Rule 0 (mock provider thật, Mailpit UI, DevTools PWA, dark toggle, chat env on/off).
-
-## 6. Risks & unknowns
-- Must verify trước merge: migration numbers SF-13/14 trên story branch; port :3000 owner; generated TS types cho verify2fa signature.
-- Assumptions: java-otp 0.4.0 tải được từ Maven Central; qrcode npm nhỏ gọn được chấp nhận (mfe-account dep duy nhất mới); Mailpit IT dùng được cho restock mail; tawk.to script chỉ verify có/không script tag (không cần load thật).

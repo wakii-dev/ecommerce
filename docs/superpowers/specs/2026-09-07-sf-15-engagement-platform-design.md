@@ -105,7 +105,7 @@ infra/dev/mock-oauth-provider.mjs            (dev tool — browser verify không
 
 ### 4.7 Gateway + env
 
-- gateway-auth.yml public-paths **append**: `/api/identity/oauth/**`, `/api/identity/2fa/verify` (pattern "THÊM 1 DÒNG" có sẵn trong file).
+- gateway-auth.yml public-paths **append**: `/api/identity/oauth/**`, `/api/identity/2fa/verify`, `/api/inventory/availability` (pattern "THÊM 1 DÒNG" có sẵn trong file).
 - gateway-routes.yml storefront predicate append PWA paths (4.4).
 - `.env.example` append: `OAUTH_GOOGLE_CLIENT_ID/SECRET`, `OAUTH_FACEBOOK_CLIENT_ID/SECRET`, `IDENTITY_OAUTH_PUBLIC_BASE_URL`, `IDENTITY_OAUTH_FE_REDIRECT_BASE`, `IDENTITY_2FA_KEY`, `NEXT_PUBLIC_LIVECHAT_LICENSE_ID`, `VITE_LIVECHAT_LICENSE_ID`.
 
@@ -115,7 +115,7 @@ infra/dev/mock-oauth-provider.mjs            (dev tool — browser verify không
 - **e2e Playwright** (`frontend/e2e/tests/engagement.spec.ts`, chạy trên `make dev` — next dev): dark toggle persist qua reload; PDP hết hàng → stock-alert form success; **manifest.webmanifest 200 + JSON hợp lệ + icons link có mặt (KHÔNG assert `serviceWorker.ready` — PwaRegister dev-skip, quyết định ghi ở Task 7/11; SW active + cài được verify bằng storefront prod-build ở walkthrough Task 11)**.
 - **catalog IT** (WireMock inventory): stock-alert POST 202 + idempotent dup + slug 404 + variant sai 400; internal candidates chỉ trả variant available (WireMock trả availability 0 rồi 3); claim atomic flip + claim lần 2 rỗng.
 - **notification IT** (WireMock catalog internal + Mailpit thật): scheduler poll → gửi mail đúng nội dung → SendLog SENT → poll lại KHÔNG gửi lần 2 (claim rỗng) = "email 1 lần".
-- **e2e Playwright** (`frontend/e2e/tests/engagement.spec.ts`): dark toggle persist qua reload; PDP hết hàng → stock-alert form success; manifest 200 + SW registered (serviceWorker ready) — cần stack `make dev` sống (suite hiện có preflight global-setup).
+- **e2e Playwright** (`frontend/e2e/tests/engagement.spec.ts`, stack `make dev` — chi tiết ở bullet e2e phía trên, KHÔNG assert serviceWorker.ready).
 - FE unit (vitest nơi sẵn có): ThemeToggle logic (localStorage/media query mock), StockAlertInput render condition.
 - Browser verify (Rule 0, Task 11 — đi 7 dòng ACCEPTANCE pack): login Google qua **mock provider thật** (`infra/dev/mock-oauth-provider.mjs` — consumer của nó); 2FA turn-around (QR → mã TOTP app thật/test-harness → backup code → disable); restock email đọc trong **Mailpit UI**; PWA: storefront **prod build** (`next build && next start` port phụ) → DevTools thấy manifest + SW active + có thể cài; dark toggle; chat env on/off.
 

@@ -59,9 +59,10 @@ public class CatalogStockAlertClient {
     /** Claim atomic — trả các alert catalog flip thành công (đúng 1 lần). */
     public List<Candidate> claim(List<Candidate> candidates) {
         if (candidates.isEmpty()) return List.of();
+        // body = object {ids:[...]} khớp ClaimRequest (bare array → 400)
         String ids = candidates.stream()
             .map(c -> "\"" + c.alertId() + "\"")
-            .collect(Collectors.joining(",", "[", "]"));
+            .collect(Collectors.joining(",", "{\"ids\":[", "]}"));
         try {
             JsonNode body = rest.post()
                 .uri("/api/catalog/internal/stock-alerts/claim")

@@ -9,9 +9,14 @@ LOG_DIR=".run/test-logs"; mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/pytest-$(date +%Y%m%d-%H%M%S).log"
 
 if [ ! -x "$SVC/.venv/bin/pytest" ]; then
-  echo "[run-pytest] .venv thiếu pytest — cài…"
+  echo "[run-pytest] .venv thiếu pytest — cài deps + test deps…"
   test -x "$SVC/.venv/bin/python" || python3 -m venv "$SVC/.venv"
-  "$SVC/.venv/bin/pip" install --quiet pytest "fastapi>=0.115" "uvicorn>=0.30" "reportlab>=4.2" "pydantic>=2.8" httpx
+  # KHÔNG `pip install .` — flat-layout (app+assets) vỡ setuptools discovery;
+  # pyproject ghi "không cần pip install" (import qua pythonpath).
+  # List khớp pyproject [project.dependencies] + [dev] — giữ 2 bên đồng bộ.
+  "$SVC/.venv/bin/pip" install --quiet \
+    "fastapi>=0.115" "uvicorn>=0.30" "reportlab>=4.2" "pydantic>=2.8" \
+    "pytest>=8.3" "httpx>=0.27" "pypdf>=4.3"
 fi
 
 echo "[run-pytest] pytest $SVC/tests — log: $LOG"

@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Card, Modal, Skeleton, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
-import { stubApi } from '../lib/api';
-import { downloadBlob, invoiceBlob } from '../lib/invoice';
+import { orderingApi } from '../lib/api';
+import { downloadAdminInvoice } from '../lib/invoice';
 import { formatDateTime, formatVnd } from '../lib/format';
 import { canCancel, canDeliver, canShip } from '../lib/adminStub';
+import type { StubOrder } from '../lib/types';
 import { statusBadge } from './OrdersPage';
 
 export interface OrderDetailPageProps {
@@ -21,19 +22,19 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const orderQuery = useQuery({
-    queryKey: ['stub-orders', id],
-    queryFn: () => stubApi().getOrder(id)
+    queryKey: ['admin-orders', 'detail', id],
+    queryFn: async () => (await orderingApi().adminGetOrder({ id })) as unknown as StubOrder
   });
 
   const invalidate = (): void => {
-    void queryClient.invalidateQueries({ queryKey: ['stub-orders'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
   };
 
   const transition = useMutation({
     mutationFn: ({ action }: { action: 'ship' | 'deliver' | 'cancel' }) => {
-      if (action === 'ship') return stubApi().shipOrder(id);
-      if (action === 'deliver') return stubApi().deliverOrder(id);
-      return stubApi().cancelOrder(id);
+      if (action === 'ship') return orderingApi().adminShipOrder({ id });
+      if (action === 'deliver') return orderingApi().adminDeliverOrder({ id });
+      return orderingApi().adminCancelOrder({ id });
     },
     onSuccess: (_data, vars) => {
       invalidate();
@@ -57,9 +58,14 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
     }
   });
 
-  const onDownloadInvoice = (): void => {
-    downloadBlob(invoiceBlob(id), `hoa-don-${id}.pdf`);
-    toast.toast(t('admin.orders.invoiceDone'), { variant: 'success' });
+  const onDownloadInvoice = async (): Promise<void> => {
+    // SF-10 (D18): PDF thật từ ordering (409 khi chưa CONFIRMED — hiện detail)
+    try {
+      await downloadAdminInvoice(id);
+      toast.toast(t('admin.orders.invoiceDone'), { variant: 'success' });
+    } catch (error) {
+      toast.toast(error instanceof Error ? error.message : String(error), { variant: 'danger' });
+    }
   };
 
   if (orderQuery.isLoading) {
@@ -82,7 +88,7 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
           <Button variant='ghost' onClick={() => appNavigate('/admin/orders')}>
             ← {t('admin.orders.title')}
           </Button>
-          <Button variant='secondary' onClick={onDownloadInvoice}>
+          <Button variant='secondary' onClick={() => void onDownloadInvoice()}>
             ⬇ {t('admin.orders.invoice')}
           </Button>
           {/* State machine §3.6 — ship/deliver/cancel, KHÔNG có nút confirm
@@ -181,7 +187,7 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
             <ol style={{ margin: 0, paddingInlineStart: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[...order.timeline].reverse().map((event, i) => (
                 <li key={i}>
-                  <div style={{ fontSize: 13 }}>{event.description}</div>
+                  <div style={{ fontSize: 13 }}>{t(`admin.status.${event.status}`)}</div>
                   <div className='admin-hint'>{formatDateTime(event.at)}</div>
                 </li>
               ))}

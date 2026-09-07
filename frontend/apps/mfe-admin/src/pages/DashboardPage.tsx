@@ -14,8 +14,7 @@ import {
 } from 'recharts';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Card, EmptyState, Skeleton, Table } from '@ecommerce/ui-kit';
-import { inventoryApi } from '../lib/api';
-import { stubApi } from '../lib/api';
+import { inventoryApi, orderingApi } from '../lib/api';
 import { formatVnd } from '../lib/format';
 import type { StubRevenueDay, StubSummary } from '../lib/types';
 
@@ -38,18 +37,31 @@ function KpiTile({ label, value }: { label: string; value: string }): ReactEleme
 export default function DashboardPage(): ReactElement {
   const { t } = useT();
 
-  // Mock stats (ordering — SF-9; live ở SF-10).
+  // Stats LIVE (SF-10 — ordering.yaml admin stats endpoints).
   const summaryQuery = useQuery({
-    queryKey: ['stub-summary'],
-    queryFn: () => stubApi().ordersSummary()
+    queryKey: ['admin-summary'],
+    queryFn: async () => (await orderingApi().adminOrdersSummary({})) as StubSummary
   });
+  // revenue-by-day: contract REQUIRES from/to — mặc định 7 ngày gần nhất
+  const revenueRange = useMemo(() => {
+    const to = new Date();
+    const from = new Date(to.getTime() - 6 * 86_400_000);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    return { from: iso(from), to: iso(to) };
+  }, []);
   const revenueQuery = useQuery({
-    queryKey: ['stub-revenue'],
-    queryFn: () => stubApi().revenueByDay('', '')
+    queryKey: ['admin-revenue', revenueRange.from, revenueRange.to],
+    queryFn: async () =>
+      (await orderingApi().adminRevenueByDay(revenueRange)) as StubRevenueDay[]
   });
   const topQuery = useQuery({
-    queryKey: ['stub-top'],
-    queryFn: () => stubApi().topProducts()
+    queryKey: ['admin-top'],
+    queryFn: async () => (await orderingApi().adminTopProducts({})) as {
+      productId: string;
+      name: string;
+      qty: number;
+      revenue: number;
+    }[]
   });
 
   // Low-stock LIVE (inventory có từ SF-5) — error độc lập với charts mock.

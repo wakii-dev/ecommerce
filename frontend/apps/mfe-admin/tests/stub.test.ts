@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { createStubApi } from '../src/lib/adminStub';
-import { invoiceBlob } from '../src/lib/invoice';
 
 const api = (): ReturnType<typeof createStubApi> => createStubApi({ delayMs: 0 });
 
@@ -157,13 +156,6 @@ describe('stats + invoice', () => {
     expect(top.every((p) => p.revenue > 0 && p.qty > 0)).toBe(true);
   });
 
-  it('invoiceBlob là placeholder %PDF + download helper tồn tại', () => {
-    const blob = invoiceBlob('o-100231');
-    expect(blob.type).toBe('application/pdf');
-    // node 18+ Blob — đọc text kiểm header
-    return blob.text().then((text) => {
-      expect(text.startsWith('%PDF-1.4')).toBe(true);
-      expect(text).toContain('o-100231');
-    });
-  });
+  // SF-10: invoiceBlob placeholder đã XOÁ — PDF thật qua downloadAdminInvoice
+  // (lib/invoice.ts, authStore.fetch binary; assert E2E level).
 });

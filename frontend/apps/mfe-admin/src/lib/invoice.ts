@@ -1,21 +1,7 @@
-// lib/invoice.ts — hóa đơn MOCK (D18: invoice-service là SF-9, live ở SF-10).
-// Stub tạo Blob "PDF" placeholder đủ để chứng minh action shape download;
-// bytes thật (layout HĐ VN + VAT) sẽ đến từ ordering/admin invoice endpoint.
-
-export function invoiceBlob(orderId: string): Blob {
-  const content = [
-    '%PDF-1.4',
-    '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >> endobj',
-    'trailer << /Root 1 0 R >>',
-    `%% Hoad don demo (mock) — don hang ${orderId}`,
-    '%% SF-9 invoice-service se thay bang PDF that (mau HD VN, VAT breakdown).',
-    '%%EOF',
-    ''
-  ].join('\n');
-  return new Blob([content], { type: 'application/pdf' });
-}
+// lib/invoice.ts — hóa đơn LIVE (SF-10, D18): byte[] PDF thật từ ordering
+// admin endpoint GET /api/ordering/admin/orders/{id}/invoice (bearer admin,
+// authStore.fetch tự refresh khi 401). 409 khi đơn chưa CONFIRMED.
+import { authStore } from '@ecommerce/auth';
 
 /** Trigger download trình duyệt (client-only — chỉ gọi trong event handler). */
 export function downloadBlob(blob: Blob, filename: string): void {
@@ -27,4 +13,24 @@ export function downloadBlob(blob: Blob, filename: string): void {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Tải hóa đơn PDF thật — ném Error với detail từ problem+json khi lỗi. */
+export async function downloadAdminInvoice(orderId: string): Promise<string> {
+  const res = await authStore.fetch(`/api/ordering/admin/orders/${orderId}/invoice`);
+  if (!res.ok) {
+    let detail = `Tải hóa đơn lỗi (HTTP ${res.status})`;
+    try {
+      const problem = (await res.json()) as { detail?: string };
+      if (problem.detail) detail = problem.detail;
+    } catch {
+      // body không phải json — giữ detail mặc định
+    }
+    throw new Error(detail);
+  }
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const blob = await res.blob();
+  downloadBlob(blob, match?.[1] ?? `hoa-don-${orderId}.pdf`);
+  return match?.[1] ?? `hoa-don-${orderId}.pdf`;
 }

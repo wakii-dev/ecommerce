@@ -26,13 +26,16 @@ function fakeJwt(roles: string[]): string {
   return `.${b64(payload)}.`;
 }
 
-/** Response JSON giả dùng chung (fetch stub theo URL). */
+/** Response JSON giả dùng chung (fetch stub theo URL).
+ *  SF-10: executeRequest đọc arrayBuffer (binary-safe) — phải cung cấp. */
 function json(body: unknown): Response {
+  const text = JSON.stringify(body);
   return {
     ok: true,
     status: 200,
     headers: new Map([['content-type', 'application/json']]) as unknown as Headers,
-    json: async () => body
+    json: async () => body,
+    arrayBuffer: async () => new TextEncoder().encode(text).buffer as ArrayBuffer
   } as unknown as Response;
 }
 
@@ -48,7 +51,14 @@ function stubRoute(input: RequestInfo | URL): Promise<Response> {
     if (url.includes('/admin/products')) return json({ items: [], page: 1, size: 10, total: 0 });
     if (url.includes('/admin/categories')) return json([]);
     if (url.includes('/admin/low-stock')) return json([]);
-    if (url.includes('/stats')) return json({});
+    if (url.includes('/stats/orders-summary'))
+      return json({
+        pending: 0, paid: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0, failed: 0,
+        totalRevenue: 0, todayRevenue: 0, todayOrders: 0
+      });
+    if (url.includes('/stats/revenue-by-day')) return json([]);
+    if (url.includes('/stats/top-products')) return json([]);
+    if (url.includes('/admin/reviews')) return json({ items: [], page: 1, size: 20, total: 0 });
     return json({});
   })();
 }

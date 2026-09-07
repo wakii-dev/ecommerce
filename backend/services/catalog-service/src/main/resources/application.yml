@@ -45,6 +45,9 @@ spring:
 
 # SF-13 (FI-323) A3 — MinIO upload ảnh sản phẩm (compose service `minio`).
 # enabled=false → không nối MinIO lúc boot (IT mặc định; UploadIT bật true).
+# SF-15 (FI-325) — internal-token cũng sống dưới `catalog:` — 2 SF từng append
+# 2 block `catalog:` trùng top-level key → snakeyaml DuplicateKeyException,
+# service KHÔNG boot được từ jar sạch (bug register #1 — merge 1 block).
 catalog:
   minio:
     enabled: ${CATALOG_MINIO_ENABLED:false}
@@ -52,6 +55,7 @@ catalog:
     access-key: ${MINIO_ROOT_USER:minioadmin}
     secret-key: ${MINIO_ROOT_PASSWORD:minioadmin}
     bucket: products
+  internal-token: ${CATALOG_INTERNAL_TOKEN:dev-internal-token}
 
 # Search engine chọn lúc startup (D15): ES reachable → EsEngine (chính);
 # uri rỗng (ELASTICSEARCH_URI="") hoặc ping fail → PgFtsEngine fallback (WARN degraded).
@@ -86,11 +90,9 @@ outbox:
 
 # SF-15 (FI-325) — stock alert: inventory service trực tiếp + internal token
 # (service-to-service với notification — KHÔNG route public qua gateway).
+# internal-token đã merge vào block `catalog:` trên (duplicate-key fix).
 inventory:
   base-url: ${INVENTORY_BASE_URL:http://localhost:8084}
-
-catalog:
-  internal-token: ${CATALOG_INTERNAL_TOKEN:dev-internal-token}
 
 logging:
   pattern:

@@ -70,7 +70,7 @@ public class ProductsCsvExporter {
             p.getId().toString(),
             nullSafe(p.getSlugVi()),
             quote(nullSafe(p.getName() == null ? null : p.getName().vi())),
-            nullSafe(p.getBrand()),
+            quote(nullSafe(p.getBrand())),
             String.valueOf(p.getPrice()),
             compare == null ? "" : String.valueOf(compare),
             discount,

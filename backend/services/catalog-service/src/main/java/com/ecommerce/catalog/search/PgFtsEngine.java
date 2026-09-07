@@ -194,6 +194,10 @@ public class PgFtsEngine implements SearchEngine {
                 .addValue("lim", limit),
             (rs, i) -> UUID.fromString(rs.getString("id")));
         // hydrate mượn EsEngine path? PgFts tự hydrate: dùng productRepository + images
+        if (ids.isEmpty()) {
+            // review G3: guard IN-list rỗng (convention các caller khác)
+            return new com.ecommerce.catalog.web.dto.ProductCardPageDto(List.of(), 1, limit, 0);
+        }
         Map<UUID, ProductEntity> byId = productRepository.findAllById(ids).stream()
             .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
         Map<UUID, List<ProductImageEntity>> imagesById = imageRepository.findByProductIdInOrderByPositionAsc(ids)

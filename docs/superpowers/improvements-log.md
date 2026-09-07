@@ -17,3 +17,10 @@
 - orca CLI chưa có `linear comment remove/delete` — comment rác (do shell fallback pipe hỏng) không xóa được, phải can thiệp web UI. Suggested: thêm subcommand remove.
 - `orca linear comment add --json | jq` trong zsh eval dễ break → comment stub "logged" đăng lên nhờ fallback; recommended pattern: luôn heredoc đơn lẻ, không pipe qua jq trên cùng lệnh.
 - story-verify B2 chỉ quét `[ ]` trong plan file — plan nên chuẩn hóa checkbox để gate đọc được (plan SF-12 viết heading `## Task N` phải tick tay ở phần Verify).
+
+## 2026-09-07 — SF-15 (FI-325)
+- `next build` chạy nền cùng lúc `next dev` (cùng `.next`) phá dev server — cần guard trong dev-stack hoặc docs: prod-build verify chỉ chạy sau `make dev-stop` FE. Suggested: task-runner script chặn 2 lệnh cùng chạy.
+- WireMock static `stubFor` không `configureFor` thì bắn :8080 (gateway) — 404 im lặng, test vẫn "chạy". Suggested: base IT harness gọi configureFor sẵn sau khi start WireMockServer.
+- Mailpit list API (`/api/v1/search`) không trả HTML body — assert nội dung mail phải fetch `/api/v1/message/{id}`; `replaceAll` greedy bắt nhầm field cuối (MessageID) — dùng `Matcher.find()` first-match.
+- `dev-stack.sh start_jvm` skip-if-UP khiến sửa .env không có hiệu lực khi chỉ restart 1 service — cần `make dev-stop` từng service hoặc docs "sửa env = restart full".
+- Gateway `IDENTITY_JWKS_URI` default :8080 tự tham chiếu — với gateway chạy port khác (env SERVER_PORT) JWKS trỏ nhầm gateway khác → 401 JWT âm thầm. Suggested: default rỗng → gateway tự compose từ server.port.

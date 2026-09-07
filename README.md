@@ -8,7 +8,7 @@ Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán 
 
 ![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![Next.js](https://img.shields.io/badge/Next.js-SSR%2FISR-000000) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
 
-🚧 **Đang xây dựng** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · **15 sub-features · 7 tier · release 5 phase** · [📊 Tiến độ](#-tiến-độ-story) · [🚢 Release plan](#-release-plan--5-phases)
+🎉 **GA v1** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) · **15/15 sub-features Done · 5/5 phases released** · [📊 Tiến độ](#-tiến-độ-story) · [🚢 Release plan](#-release-plan--5-phases)
 
 </div>
 
@@ -256,9 +256,9 @@ flowchart TD
 | SF-10 | Convergence + E2E + ship | [FI-320](https://linear.app/my-app-hoivu/issue/FI-320) | ✅ Done |
 | SF-11 | Partner Open API (`/open-api/v1`) | [FI-321](https://linear.app/my-app-hoivu/issue/FI-321) | ✅ Done |
 | SF-12 | Affiliate module | [FI-322](https://linear.app/my-app-hoivu/issue/FI-322) | ✅ Done |
-| SF-13 | Essentials: password reset, COD, MinIO upload, abandoned cart, audit viewer, related, GA4, CSV, newsletter | [FI-323](https://linear.app/my-app-hoivu/issue/FI-323) | 🔨 In Progress |
-| SF-14 | Commerce extensions: RMA đổi trả, GHN shipping, loyalty điểm | [FI-324](https://linear.app/my-app-hoivu/issue/FI-324) | 🔨 In Progress |
-| SF-15 | Engagement: social login + 2FA, stock alert, PWA + dark mode, live chat | [FI-325](https://linear.app/my-app-hoivu/issue/FI-325) | 🔨 In Progress |
+| SF-13 | Essentials: password reset, COD, MinIO upload, abandoned cart, audit viewer, related, GA4, CSV, newsletter | [FI-323](https://linear.app/my-app-hoivu/issue/FI-323) | ✅ Done |
+| SF-14 | Commerce extensions: RMA đổi trả, GHN shipping, loyalty điểm | [FI-324](https://linear.app/my-app-hoivu/issue/FI-324) | ✅ Done |
+| SF-15 | Engagement: social login + 2FA, stock alert, PWA + dark mode, live chat | [FI-325](https://linear.app/my-app-hoivu/issue/FI-325) | ✅ Done |
 
 ---
 
@@ -272,7 +272,7 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 | **P2** Catalog & Identity | Đăng ký/đăng nhập · storefront Next.js SEO · search ES · tồn kho + Stripe nền | SF-3 ✅ + SF-4 ✅ + SF-5 ✅ | ✅ **[phase-2 released + merged main](https://github.com/wakii-dev/ecommerce/pull/2)** |
 | **P3** Transaction MVP | Giỏ → checkout (coupon, Stripe/COD) → saga → đơn + hóa đơn PDF · admin vận hành | SF-6 ✅ + SF-7 ✅ + SF-9 ✅ | ✅ **[phase-3 released + merged main](https://github.com/wakii-dev/ecommerce/pull/3)** |
 | **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 ✅ + SF-11 ✅ + SF-12 ✅ | ✅ **[phase-4 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-4)** |
-| **P5** Complete v1 | Convergence E2E + essentials + RMA/GHN/loyalty + social/2FA/PWA | SF-10 ✅ + SF-13/14/15 🔨 | 🔨 Đang chạy — GA v1 |
+| **P5** Complete v1 | Convergence E2E + essentials + RMA/GHN/loyalty + social/2FA/PWA | 15/15 ✅ | 🎉 **[phase-5 GA](https://github.com/wakii-dev/ecommerce/releases/tag/phase-5)** — merge [PR #6](https://github.com/wakii-dev/ecommerce/pull/6) |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |
 
 ## 📚 Tài liệu

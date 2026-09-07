@@ -111,40 +111,58 @@ flowchart LR
 
 ---
 
-## 🚀 Getting started
-
-> ⚙️ Services + FE apps đang được xây dần theo từng SF — dưới đây là lệnh THẬT
-> của nền móng (SF-1): infra + service template + gateway + FE workspace.
+## 🚀 Getting started — 1 lệnh chạy cả hệ (SF-10)
 
 ```bash
 # Yêu cầu: JDK 21 · Maven 3.9+ · Docker Desktop · Node 20+ · pnpm 10 (corepack enable)
-cp .env.example .env        # điền STRIPE_SECRET_KEY (sk_test_...) để bật payment
+cp .env.example .env
+# điền STRIPE_SECRET_KEY (sk_test_…) + STRIPE_WEBHOOK_SECRET (whsec_…) +
+# VITE_STRIPE_PUBLISHABLE_KEY (pk_test_…) — trống → payment degraded 503 (không crash)
 
-make infra                  # postgres (5 DB) · redis · rabbitmq · mailpit · mongo · elasticsearch
-cd backend && mvn install -DskipTests && cd ..   # lần đầu: đẩy parent + common-lib vào ~/.m2
-
-make dev svc=template-service   # chạy 1 service dev mode (template | gateway | identity | ...)
-make dev svc=gateway            # smoke: http://localhost:8080/api/smoke
-
-pnpm -C frontend install && pnpm -C frontend build   # FE workspace (turbo)
+make dev       # FULL STACK: compose infra + 10 JVM + invoice + 5 FE app (turbo parallel)
+make seed      # deterministic seed: admin@demo.vn · user@demo.vn · WELCOME10/GIAM50K · 2 đơn CONFIRMED · 1 review APPROVED
+make e2e       # Playwright E2E (cần stack đang sống) — frontend/e2e
 ```
 
-**Port DB:** postgres host = **5433** (container nội bộ 5432; máy dev có postgres
-compose khác giữ 5432) — đổi bằng `PG_HOST_PORT` trong `.env`.
+Lần đầu `mvn install` để đẩy parent + common-lib vào `~/.m2` nếu chưa.
+Dừng stack: `make dev-stop` (kill theo PID — infra vẫn chạy) · chạy 1 service
+riêng lẻ: `make dev svc=catalog` (identity catalog cart inventory ordering
+payment notification log affiliate partner-api invoice gateway).
 
-**Infra UIs:** RabbitMQ `:15672` · Mailpit `:8025` · mongo-express `:8089` · Elasticsearch `:9200` · stripe-cli (profile `stripe`)
+**100% containerized:**
 
-**Make targets khác:** `make dev-fe app=<name>` · `make keys` (RSA keypair JWT, SF-3) · `make down` · `make full` (stub — SF-10)
+```bash
+make full        # compose --profile full: mọi service + gateway + FE containers
+                 # gateway :8080 là public entry duy nhất (D16 route split)
+make full-stop
+```
 
-**🔑 Tài khoản demo (seed SF-3 — idempotent từ env `ADMIN_EMAIL`/`ADMIN_PASSWORD` trong `.env.example`):**
+**Kiến trúc chạy (D16 route split):** storefront-web Next SSR (:3000 / qua
+gateway) cho public pages `/`, `/c/*`, `/p/*`, `/search`, `/coupons`,
+sitemap/robots · shell (:5173 dev / static qua gateway profile full) cho
+`/cart`, `/checkout`, `/account`, `/admin` · API `/api/**` qua gateway :8080
+(JWT RS256 + RBAC + request-id).
+
+**Port DB:** postgres host = **5433** (đổi `PG_HOST_PORT` trong `.env`).
+**Infra UIs:** RabbitMQ `:15672` · Mailpit `:8025` · mongo-express `:8089`
+(event_log) · Elasticsearch `:9200` · stripe-cli (profile `stripe`).
+
+**🔑 Tài khoản demo (deterministic seed — `make seed`):**
 
 | Vai trò | Email | Mật khẩu | Ghi chú |
 |---|---|---|---|
-| **Admin** | `admin@ecommerce.local` | `admin123` | vào `/admin` (shell `:5173`) — products/categories CRUD live, dashboard |
-| Customer | tự đăng ký tại `/register` | — | vào `/admin` sẽ thấy trang 403 (RBAC guard UI) |
+| **Admin** | `admin@demo.vn` | `admin123` (`ADMIN_PASSWORD`) | `/admin` — orders/invoice/reviews/stats LIVE |
+| Customer | `user@demo.vn` | `Demo#2026` (`DEMO_USER_PASSWORD`) | 2 đơn CONFIRMED + review verified sẵn |
+| Customer | tự đăng ký `/register` | — | `/admin` → 403 (RBAC 2 lớp) |
 
-> Shell (mọi MFE): `http://localhost:5173` — login → menu user → hoặc gõ thẳng `/admin`.
-> Admin standalone dev: `http://localhost:5177` (proxy `/api` qua `GATEWAY_URL`, mặc định `:8080`).
+**💳 Thẻ Stripe test:** `4242 4242 4242 4242` thành công · `4000 0000 0000 0002`
+declined → saga compensation (đơn FAILED + trả stock + trả coupon). Không có
+keys → checkout báo payment_unconfigured rõ ràng; E2E tự chạy mode
+unconfigured (assert CONFIRMED/email đánh dấu `[PENDING-STRIPE-KEYS]`).
+
+**📖 Kịch bản demo 5 phút:** [docs/demo-script.md](docs/demo-script.md) ·
+**📚 ADR:** [docs/adr/](docs/adr/) — saga+outbox · contracts freeze · auth
+RS256 · service boundaries.
 
 ---
 

@@ -27,6 +27,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * thiếu JpaRepository trên classpath (xem RabbitMqConfig javadoc).</p>
  */
 @SpringBootApplication(scanBasePackages = {"com.ecommerce.cart", "com.ecommerce.common.web"})
+// SF-13 A4: abandoned-cart sweeper @Scheduled — common-lib auto-config KHÔNG
+// bật scheduling ở đây (cart không JPA → CommonLibAutoConfiguration backs off)
+// nên phải tự khai báo như OrderingServiceApplication.
+@org.springframework.scheduling.annotation.EnableScheduling
 public class CartServiceApplication {
 
     public static void main(String[] args) {

@@ -52,8 +52,18 @@ public final class CartModels {
         }
     }
 
-    /** Document giỏ lưu Redis — key {@code cart:guest:{token}} / {@code cart:user:{sub}}. */
-    public record CartDocument(List<LineItem> items, Instant updatedAt) {
+    /**
+     * Document giỏ lưu Redis — key {@code cart:guest:{token}} / {@code cart:user:{sub}}.
+     * {@code email} (SF-13 A4): JWT claim ghi lúc mutation authenticated —
+     * abandoned-cart sweeper dùng; giỏ cũ thiếu field → Jackson null (additive
+     * an toàn), sweeper bỏ qua giỏ chưa có email đến lần ghi sau.
+     */
+    public record CartDocument(List<LineItem> items, Instant updatedAt, String email) {
+
+        /** Backward-compat caller 2 tham số (guest/merge — chưa có email). */
+        public CartDocument(List<LineItem> items, Instant updatedAt) {
+            this(items, updatedAt, null);
+        }
 
         public static CartDocument empty() {
             return new CartDocument(new ArrayList<>(), Instant.now());
@@ -64,7 +74,11 @@ public final class CartModels {
         }
 
         public CartDocument withItems(List<LineItem> items) {
-            return new CartDocument(items, Instant.now());
+            return new CartDocument(items, Instant.now(), email);
+        }
+
+        public CartDocument withEmail(String newEmail) {
+            return new CartDocument(items, updatedAt, newEmail);
         }
     }
 }

@@ -45,6 +45,9 @@ notify:
     my-orders-url: ${NOTIFY_MY_ORDERS_URL:http://localhost:5173/account/orders}
     # SF-13 (FI-323) A1 — link trang reset password (shell origin)
     reset-password-url: ${NOTIFY_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
+    # SF-13 A4/A8 — link giỏ + coupon center trong mail (shell origin)
+    cart-url: ${NOTIFY_CART_URL:http://localhost:5173/cart}
+    coupon-center-url: ${NOTIFY_COUPON_CENTER_URL:http://localhost:3000/coupons}
   identity:
     base-url: ${NOTIFY_IDENTITY_BASE_URL:http://localhost:8081}
     timeout-ms: ${NOTIFY_IDENTITY_TIMEOUT_MS:5000}

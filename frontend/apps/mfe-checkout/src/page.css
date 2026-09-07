@@ -268,7 +268,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #eef9f4;
+  /* tint-success (FI-368 P1 fix: #eef9f4 literal => dark unreadable) */
+  background: var(--tint-success-bg);
   border: 1px dashed var(--c-success);
   border-radius: var(--radius-sm, 2px);
   font-size: 14px;
@@ -331,8 +332,9 @@
   display: inline-block;
   padding: 4px 12px;
   border-radius: 999px;
-  background: #eef9f4;
-  color: var(--c-success);
+  /* tint-success (FI-368 P1 fix) */
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
   font-weight: 600;
   font-size: 13px;
 }

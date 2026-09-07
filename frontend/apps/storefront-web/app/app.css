@@ -199,8 +199,8 @@ img {
 
 .search-item-hot {
   background: var(--c-danger);
-  /* trắng literal trên nền màu — --c-surface đảo gần-đen trong dark */
-  color: #ffffff;
+  /* trắng ở light; dark qua --hot-tag-text (trên #FF5A5A cần chữ tối) */
+  color: var(--hot-tag-text, #ffffff);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -2314,4 +2314,9 @@ img {
 [data-theme='dark'] {
   --footer-link: #a0a0a0; /* AA 4.5:1 trên --footer-bg #212121 */
   --footer-bg: #212121;
+  /* review P1: tag "ĐANG HOT" trắng trên danger-dark #FF5A5A chỉ 3.05:1 */
+  --hot-tag-text: #212121;
+}
+[data-theme='storefront'] {
+  --hot-tag-text: #ffffff;
 }

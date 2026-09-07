@@ -331,6 +331,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+
+.admin-chart-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4, 16px);
+  margin-bottom: var(--space-4, 16px);
+}
+
+.admin-chart-row h3 {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: 15px;
+}
+
+/* Charts tô màu QUA tokens (CSS override thắng presentation attribute của
+   recharts — không hex cứng trong TSX). */
+.admin-chart .recharts-line-curve {
+  stroke: var(--c-primary, #f53d2d);
+}
+
+.admin-chart .recharts-cartesian-axis-line,
+.admin-chart .recharts-cartesian-axis-tick-line {
+  stroke: var(--c-border, #eeeeee);
+}
+
+.admin-chart .recharts-bar-rectangle path {
+  fill: var(--c-primary, #f53d2d);
+}
+
 /* ── T9 responsive ≤900px: admin sidebar collapse → strip ngang scroll-x
    (direction §4: dưới 900px sidebar chuyển ngang) ── */
 @media (max-width: 900px) {
@@ -390,31 +418,4 @@
   .admin-order-grid {
     grid-template-columns: 1fr;
   }
-}
-
-.admin-chart-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4, 16px);
-  margin-bottom: var(--space-4, 16px);
-}
-
-.admin-chart-row h3 {
-  margin: 0 0 var(--space-3, 12px);
-  font-size: 15px;
-}
-
-/* Charts tô màu QUA tokens (CSS override thắng presentation attribute của
-   recharts — không hex cứng trong TSX). */
-.admin-chart .recharts-line-curve {
-  stroke: var(--c-primary, #f53d2d);
-}
-
-.admin-chart .recharts-cartesian-axis-line,
-.admin-chart .recharts-cartesian-axis-tick-line {
-  stroke: var(--c-border, #eeeeee);
-}
-
-.admin-chart .recharts-bar-rectangle path {
-  fill: var(--c-primary, #f53d2d);
 }

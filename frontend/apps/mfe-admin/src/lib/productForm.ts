@@ -200,6 +200,11 @@ export function buildProductWrite(state: ProductFormState): BuildResult {
       errors.push(`variant-${i}`);
       return;
     }
+    // stock: rỗng → 0 (pattern cũ); garbage "1e999" → NaN → chặn (không im lặng 0)
+    if (row.stock.trim() !== '' && Number.isNaN(stock)) {
+      errors.push(`variant-${i}`);
+      return;
+    }
     parsedVariants.push({
       nameI18n: { vi: row.nameVi.trim(), en: row.nameEn.trim() },
       options,

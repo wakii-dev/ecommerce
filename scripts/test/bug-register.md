@@ -38,7 +38,7 @@ bash scripts/test/run-e2e.sh      # Playwright serial — CẦN make dev đang c
 | BUG-05 | P1 | product-bug (test) | PartnerOrderTest | IdentityClient cache token (AtomicReference trong app context chung) — test self-heal để lại 'tok-new' (TTL 900s) → test khác assert 'Bearer svc-token' fail deterministic theo method order | @BeforeEach expire cache (reflection helper có sẵn) → login fresh mỗi test | 2abd182 |
 | BUG-02 | P1 | product-bug | catalog IT ↔ dev ES | IT catalog boot full context KHÔNG override `elasticsearch.uri` (vd ModerationAggregateTest) → default `localhost:9200` = **ES THẬT của dev stack** → EsEngine active → StartupReindexRunner wipe index dev + bulk fixture IT vào. Hậu quả: search storefront mất seed products (ES 14 docs vs DB 54) → 5 E2E fail (golden-path search, cod-checkout uniqlo, related-products, review-flow, §5.9) | `AbstractIntegrationTest` @TestPropertySource thêm `elasticsearch.uri=` (PgFts no-op cho mọi IT; RelatedTest/EsIndexerSearchTest vẫn override container riêng — verify 2 chiều: Moderation 2/2 + ES không đổi, ES-tests 10/10 + count 14 giữ nguyên). Dev index khôi phục: restart catalog → reindex 56 docs | FIXED (cea8cae) |
 | BUG-01 | P1 | product-bug | catalog-service | `application.yml` duplicate top-level key `catalog:` (SF-13 MinIO block dòng 48 + SF-15 internal-token block dòng 92) → snakeyaml `DuplicateKeyException` → **service không boot từ jar sạch** | Merge 2 block thành 1 (`internal-token` vào block `catalog:` đầu) | bd5a188 |
-| FI-337-#2 | — | product-bug? | shell/mfe-account vite proxy | "Vite proxy nuốt Set-Cookie khi register/login" — **REPRO NEGATIVE trên GA**: login/refresh/logout xuyên :5173 + :5176 round-trip cookie chuẩn (Set-Cookie intact: Path=/api/identity, HttpOnly, SameSite=Lax); register 201 **không** Set-Cookie ở CẢ direct lẫn proxy = backend design (register ≠ auto-login). Proxy không nuốt gì | Không cần fix runtime; thêm regression lock: e2e assert cookie round-trip xuyên proxy | (điền khi commit) |
+| FI-337-#2 | — | product-bug? | shell/mfe-account vite proxy | "Vite proxy nuốt Set-Cookie khi register/login" — **REPRO NEGATIVE trên GA**: login/refresh/logout xuyên :5173 + :5176 round-trip cookie chuẩn (Set-Cookie intact: Path=/api/identity, HttpOnly, SameSite=Lax); register 201 **không** Set-Cookie ở CẢ direct lẫn proxy = backend design (register ≠ auto-login). Proxy không nuốt gì | Không cần fix runtime; thêm regression lock auth-cookie.spec 4/4 (rotate + replay-401 + logout-clear) | 11d851d |
 
 ## Skips inventory — `[PENDING-STRIPE-KEYS]`
 
@@ -53,10 +53,27 @@ bash scripts/test/run-e2e.sh      # Playwright serial — CẦN make dev đang c
 
 > `hasStripe()` (helpers/env.ts): secret + publishable ĐỀU thật (không placeholder `xxx$`, prefix `sk_test_`). .env hiện tại: placeholder → 2 test skip thật (khớp evidence e2e 01:19: "2 skipped").
 
+## P2 backlog (từ code-review FI-367 — không chặn merge)
+
+| # | Nội dung | Nơi |
+|---|----------|-----|
+| BK-01 | InventoryJwtDecoderConfig copy ~130 dòng catalog JwtDecoderConfig — 2 bản security bắt đầu lệch; hoist lên common-lib | backend/services/inventory-service/config |
+| BK-02 | adminCreate check-then-insert: 2 create song song cùng code → 1 về 500 thay vì 409 | ordering CouponService:129 |
+| BK-03 | seed.sh `'$NAMEX'` interpolate thẳng SQL — name chứa `'` vỡ statement (pre-existing) | scripts/seed/seed.sh:189 |
+| BK-04 | .dockerignore thiếu frontend/, infra/, contracts/ — context upload thừa (chậm, không sai) | .dockerignore |
+| BK-05 | auth-cookie COOKIE_ATTRS regex dựa thứ tự attrs Playwright — identity đổi thứ tự cookie → false alarm; nên headersArray() | frontend/e2e/tests/auth-cookie.spec.ts:16 |
+| BK-06 | re-mint restart_consumer dùng jar pre-built — sửa code không rebuild → jar cũ im lặng; log mtime jar | scripts/dev-stack-re-mint.sh |
+| BK-07 | run-java aggregate đếm stale surefire txt từ run cũ (mvn test không clean) | scripts/test/run-java.sh |
+| BK-08 | inventory reservations permitAll (ordering saga gọi không auth) — internal-token như precedent SF-15 catalog | ordering InventoryClient + inventory SecurityConfig |
+
 ## Baseline report (run-batch)
 
-> Java batch 1 (00:58, chạy SONG SONG E2E — vi FLAKY-01): 143 pass / 2 error (ES container timeout, catalog). Batch 2 (01:31, sequential): dừng ở partner 2 fail (BUG-05/06) — fix → 45/45 solo. Batch final (02:18): dừng ở ordering — SagaTest/OrderAdminTest 401 do T10 (inventory guard) + test JWT sai JWKS + T11 mid-flight race → fix SECURITY_JWKS_URI side-context (89adcd9) → ordering 44/44 solo. **Chạy sạch cuối: xem java-*.log mới nhất (sau 02:53).**
-> ENV-04 (mới): Docker daemon half-death giữa suite (API 500, containers=0) — identity 39 errors "no valid Docker"; recovery: restart Docker Desktop + compose up + restart gateway/FE (turbo chết theo outage). 5-10' downtime, volume giữ nguyên.
+> **KẾT QUẢ CUỐI (03:04, HEAD cuối story) — toàn bộ XANH:**
+> - Java: **368/368 (0 fail / 0 error / 0 skip), exit=0** — `.run/test-logs/java-20260908-025333.log` (run sạch duy nhất đủ điều kiện ACCEPTANCE 1; các batch trước = chẩn đoán)
+> - E2E: **36 pass / 2 skip [PENDING-STRIPE-KEYS] / 0 fail, exit=0** — `.run/test-logs/e2e-20260908-030407.log`
+> - FE: **12/12 turbo XANH** — `.run/test-logs/fe-20260908-025259.log` · pytest **7/7** — `.run/test-logs/pytest-20260908-025317.log`
+>
+> Lịch sử chẩn đoán: batch 1 (00:58, chạy SONG SONG E2E — vi FLAKY-01) 143 pass/2 ES-timeout · batch 2 (01:31) dừng partner BUG-05/06 → 45/45 solo · batch 3 (02:18) dừng ordering (T10 JWKS + T11 mid-flight race) → fix 89adcd9 → 44/44 solo · ENV-04 Docker daemon half-death 02:13 (identity 39 errors, recovery 10') · batch CUỐI (02:53) 368/368 XANH.> ENV-04 (mới): Docker daemon half-death giữa suite (API 500, containers=0) — identity 39 errors "no valid Docker"; recovery: restart Docker Desktop + compose up + restart gateway/FE (turbo chết theo outage). 5-10' downtime, volume giữ nguyên.
 > FE: **12/12 XANH** (lần 1 + lần cuối 02:52) · pytest **7/7 XANH** (02:53).
 > E2E cuối (02:48): 34 pass / 2 fail (COD+saga kẹt /checkout) — root cause restart tay ordering với token rỗng (fix: re-mint loop ghi token file) → re-run 2 spec PASS → **36/36 non-stripe XANH, 2 skip [PENDING-STRIPE-KEYS]**. RBAC e2e 7/7 · auth-cookie 4/4.
 > FE (00:58): **12/12 turbo tasks XANH** — `.run/test-logs/fe-20260908-005758.log`

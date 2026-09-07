@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from 'next';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
@@ -20,6 +21,19 @@ const beVietnamPro = Be_Vietnam_Pro({
   subsets: ['vietnamese', 'latin'],
   display: 'swap',
 });
+
+/** PWA metadata (SF-15) — manifest qua app/manifest.ts; child generateMetadata
+ * ([locale]/layout) merge đè title/description, giữ manifest/icons. */
+export const metadata: Metadata = {
+  applicationName: 'ShopVN',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'ShopVN', statusBarStyle: 'default' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#F53D2D',
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const locale = headers().get('x-app-locale');

@@ -20,6 +20,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # SF-13 (FI-323): PG volume CHUNG giữa các worktree T6 — SF-15 đã apply
+    # V11 (oauth/2FA) vào db_identity; SF-13 dùng V13/V14 (rename — ADR 0005 §7).
+    # Pattern *:missing = bỏ qua applied migration không có trên classpath mình.
+    ignore-migration-patterns: "*:missing"
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}

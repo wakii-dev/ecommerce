@@ -25,8 +25,8 @@ class OrderStatusTest {
 
     @Test
     void illegalTransitions_rejected() {
-        // Không nhảy cóc: PENDING→CONFIRMED, PENDING→SHIPPED, PAID→SHIPPED
-        assertThat(OrderStatus.PENDING.canTransitionTo(OrderStatus.CONFIRMED)).isFalse();
+        // PENDING→CONFIRMED DUY NHẤT cho COD (SF-13/D21 — pack + ordering.yaml);
+        // còn lại vẫn cấm nhảy cóc: PENDING→SHIPPED, PAID→SHIPPED
         assertThat(OrderStatus.PENDING.canTransitionTo(OrderStatus.SHIPPED)).isFalse();
         assertThat(OrderStatus.PAID.canTransitionTo(OrderStatus.SHIPPED)).isFalse();
         // Không hồi sinh terminal

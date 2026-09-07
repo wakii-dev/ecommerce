@@ -73,6 +73,7 @@ public class CheckoutSaga {
     private final PricingAuthority pricing;
     private final InventoryClient inventory;
     private final PaymentClient payment;
+    private final com.ecommerce.ordering.service.OrderLifecycleService lifecycle;
     private final OutboxWriter outbox;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate tx;
@@ -85,6 +86,7 @@ public class CheckoutSaga {
         PricingAuthority pricing,
         InventoryClient inventory,
         PaymentClient payment,
+        com.ecommerce.ordering.service.OrderLifecycleService lifecycle,
         OutboxWriter outbox,
         ObjectMapper objectMapper,
         TransactionTemplate tx
@@ -96,6 +98,7 @@ public class CheckoutSaga {
         this.pricing = pricing;
         this.inventory = inventory;
         this.payment = payment;
+        this.lifecycle = lifecycle;
         this.outbox = outbox;
         this.objectMapper = objectMapper;
         this.tx = tx;
@@ -105,10 +108,9 @@ public class CheckoutSaga {
                                            String idempotencyKey, String correlationId) {
         // (0) Validate những gì bean-validation không che được
         ShippingMethods.Method shipping = ShippingMethods.byId(request.shippingMethod());
-        if ("cod".equalsIgnoreCase(request.paymentMethod())) {
-            // COD (D21) là scope SF-13 — chặn rõ ràng, không âm thầm xử khác
-            throw new UnsupportedFeatureException("Thanh toán COD chưa khả dụng — vui lòng chọn Stripe");
-        }
+        // COD (SF-13 A2/D21): bỏ guard chặn — saga SKIP bước payment intent,
+        // sau reserve → CONFIRMED luôn (state machine path PENDING→CONFIRMED).
+        boolean cod = "cod".equalsIgnoreCase(request.paymentMethod() == null ? "stripe" : request.paymentMethod());
         if (request.usePoints() != null && request.usePoints() > 0) {
             // Điểm thưởng (D22) — scope SF-14
             throw new UnsupportedFeatureException("Điểm thưởng chưa khả dụng");
@@ -213,6 +215,16 @@ public class CheckoutSaga {
             log.error("Reserve inventory fail cho order {} — compensation", order.getId(), e);
             failOrder(order.getId(), "inventory_unavailable", "OTHER", correlationId);
             throw new ExternalUnavailableException("Hệ thống kho tạm bận — đơn đã hủy, thử lại sau");
+        }
+
+        // (7-COD) sau reserve → CONFIRMED LUÔN (1 tx: transition + finalize coupon
+        // + outbox order.confirmed fat payload) — KHÔNG gọi payment, KHÔNG chờ
+        // webhook; tiền thu lúc giao qua capture (deliver, lifecycle.deliverCod).
+        if (cod) {
+            Order confirmed = lifecycle.confirmCodOrder(order.getId(), correlationId);
+            advanceSaga(order.getId(), SagaStep.DONE, correlationId);
+            log.info("Order {} COD — CONFIRMED sau reserve, bỏ bước intent (SF-13)", order.getId());
+            return new CreateOrderResponse(OrderMapper.toDto(confirmed), null);
         }
 
         // (7) REST create payment intent (NGOÀI tx; Idempotency-Key truyền tiếp)

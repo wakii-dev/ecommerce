@@ -104,10 +104,14 @@ public class AdminOrderController {
         return OrderDto.from(orders.save(o));
     }
 
-    /** POST /admin/orders/{id}/deliver — SHIPPED → DELIVERED (§3.6). */
+    /** POST /admin/orders/{id}/deliver — SHIPPED → DELIVERED (§3.6). COD (SF-13):
+     * capture tiền mặt + outbox order.paid LÚC GIAO (lifecycle.deliverCod). */
     @PostMapping("/orders/{id}/deliver")
     public OrderDto deliver(@PathVariable UUID id) {
         Order o = orders.findById(id).orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đơn"));
+        if ("cod".equalsIgnoreCase(o.getPaymentMethod())) {
+            return OrderDto.from(lifecycle.deliverCod(id));
+        }
         if (o.getStatus() != OrderStatus.SHIPPED) {
             throw new InvalidStateTransitionException("Chỉ đơn SHIPPED deliver được — đơn đang " + o.getStatus());
         }

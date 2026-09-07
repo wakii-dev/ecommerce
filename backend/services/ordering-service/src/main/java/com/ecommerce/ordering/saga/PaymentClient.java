@@ -54,9 +54,22 @@ public class PaymentClient {
             .toBodilessEntity();
     }
 
+    /** SF-13 COD: capture tiền mặt lúc giao — runtime endpoint /payment/cod/captures (ADR 0005). */
+    public void captureCod(UUID orderId, long amountVnd, UUID idempotencyKey) {
+        rest.post()
+            .uri("/payment/cod/captures")
+            .header("Idempotency-Key", idempotencyKey.toString())
+            .body(new CodCaptureBody(orderId.toString(), amountVnd, idempotencyKey.toString()))
+            .retrieve()
+            .toBodilessEntity();
+    }
+
     record IntentBody(String orderId, long amount, String currency) {
     }
 
     record RefundBody(String paymentIntentId, Long amount, String reason) {
+    }
+
+    record CodCaptureBody(String orderId, long amountVnd, String idempotencyKey) {
     }
 }

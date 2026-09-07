@@ -37,10 +37,13 @@ public class AdminProductController {
 
     private final AdminCatalogService admin;
     private final ProductStorage storage;
+    private final com.ecommerce.catalog.admin.ProductsCsvExporter productsCsv;
 
-    public AdminProductController(AdminCatalogService admin, ProductStorage storage) {
+    public AdminProductController(AdminCatalogService admin, ProductStorage storage,
+            com.ecommerce.catalog.admin.ProductsCsvExporter productsCsv) {
         this.admin = admin;
         this.storage = storage;
+        this.productsCsv = productsCsv;
     }
 
     /** GET /admin/products — q + status (DRAFT/PUBLISHED) + page 1-based + size. */
@@ -90,5 +93,21 @@ public class AdminProductController {
     @PostMapping(value = "/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UploadResponseDto> upload(@RequestParam("image") MultipartFile image) {
         return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResponseDto(storage.upload(image)));
+    }
+
+    /** GET /admin/products/export.csv — stream CSV (SF-13 A7b, ADR 0005). BOM UTF-8 Excel VN. */
+    @GetMapping(value = "/products/export.csv", produces = "text/csv")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> exportCsv() {
+        String filename = "products-" + java.time.LocalDate.now() + ".csv";
+        org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody body = out -> {
+            out.write(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
+            var writer = new java.io.OutputStreamWriter(out, java.nio.charset.StandardCharsets.UTF_8);
+            productsCsv.write(writer);
+            writer.flush(); // Spring chỉ đóng raw stream — KHÔNG flush writer tự động
+        };
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+            .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+            .body(body);
     }
 }

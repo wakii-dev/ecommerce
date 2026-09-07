@@ -408,6 +408,7 @@ export default function CheckoutPage(): ReactElement {
                     name="payment-method"
                     value="stripe"
                     checked={paymentMethod === 'stripe'}
+                    disabled={orderPhase !== 'idle'}
                     onChange={() => setPaymentMethod('stripe')}
                     data-testid="payment-method-stripe"
                   />
@@ -419,6 +420,7 @@ export default function CheckoutPage(): ReactElement {
                     name="payment-method"
                     value="cod"
                     checked={paymentMethod === 'cod'}
+                    disabled={orderPhase !== 'idle'}
                     onChange={() => setPaymentMethod('cod')}
                     data-testid="payment-method-cod"
                   />

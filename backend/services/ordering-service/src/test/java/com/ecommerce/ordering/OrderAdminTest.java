@@ -456,4 +456,33 @@ class OrderAdminTest extends AbstractSagaTest {
             HttpMethod.GET, String.class);
         assertThat(response.getStatusCode().value()).isEqualTo(409);
     }
+
+    // ── SF-13 (FI-323) A7b: export CSV ───────────────────────────────────────
+
+    @Test
+    void exportCsv_adminStreams_bomHeaderRows_customer403() throws Exception {
+        String[] order = createPending("csvexp@ecommerce.local");
+
+        // ADMIN — 200 text/csv, BOM 3 byte, header 11 cột, ≥1 dòng
+        ResponseEntity<byte[]> admin = exchange("/admin/orders/export.csv", adminJwt(),
+            HttpMethod.GET, byte[].class);
+        assertThat(admin.getStatusCode().value()).isEqualTo(200);
+        byte[] body = admin.getBody();
+        assertThat(body).isNotNull();
+        // UTF-8 BOM = EF BB BF (ACCEPTANCE "mở được bằng Excel" — critic P2)
+        assertThat(body[0]).isEqualTo((byte) 0xEF);
+        assertThat(body[1]).isEqualTo((byte) 0xBB);
+        assertThat(body[2]).isEqualTo((byte) 0xBF);
+        String text = new String(body, java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(text).startsWith("﻿");
+        assertThat(text).contains("order_id,created_at,status,payment_method,subtotal,discount,"
+            + "shipping_fee,total,currency,coupon_code,items_count");
+        assertThat(text).contains(order[0]); // dòng data của đơn vừa tạo
+        assertThat(text.split("\r\n").length).isGreaterThanOrEqualTo(2);
+
+        // customer → 403 (@PreAuthorize ADMIN)
+        ResponseEntity<String> customer = exchange("/admin/orders/export.csv",
+            customerJwt("cust-csv@ecommerce.local"), HttpMethod.GET, String.class);
+        assertThat(customer.getStatusCode().value()).isEqualTo(403);
+    }
 }

@@ -152,6 +152,7 @@ export const vi = {
       images: 'Ảnh sản phẩm',
       imageUrl: 'URL ảnh',
       imageAlt: 'Mô tả ảnh (alt)',
+      exportCsv: 'Xuất CSV',
       addImage: 'Thêm ảnh',
       uploadImage: 'Tải ảnh lên',
       uploadingImage: 'Đang tải lên…',
@@ -247,6 +248,7 @@ export const vi = {
     },
     orders: {
       title: 'Đơn hàng',
+      exportCsv: 'Xuất CSV',
       order: 'Mã đơn',
       customer: 'Khách hàng',
       items: 'Sản phẩm',

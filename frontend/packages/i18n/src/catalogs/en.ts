@@ -151,6 +151,7 @@ export const en = {
       images: 'Product images',
       imageUrl: 'Image URL',
       imageAlt: 'Alt text',
+      exportCsv: 'Export CSV',
       addImage: 'Add image',
       uploadImage: 'Upload image',
       uploadingImage: 'Uploading…',
@@ -246,6 +247,7 @@ export const en = {
     },
     orders: {
       title: 'Orders',
+      exportCsv: 'Export CSV',
       order: 'Order',
       customer: 'Customer',
       items: 'Items',

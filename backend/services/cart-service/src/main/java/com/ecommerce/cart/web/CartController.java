@@ -85,8 +85,15 @@ public class CartController {
         String sub = currentUserSub();
         if (sub != null) {
             CartRef ref = cart.loadOrCreateUser(sub);
-            store.save(ref.key(), stamped(ref.doc())); // ensure user key tồn tại (+ email A4)
-            return cart.toResponse(cart.enrichAll(ref.doc()), null);
+            // A4: stamp email lần ĐẦU thiếu thôi — không rewrite/TTL-refresh
+            // mỗi GET (review G2 P2: write amplification + giỏ bất tử)
+            CartDocument doc = ref.doc();
+            String email = currentUserEmail();
+            if (email != null && doc.email() == null) {
+                doc = doc.withEmail(email);
+                store.save(ref.key(), doc);
+            }
+            return cart.toResponse(cart.enrichAll(doc), null);
         }
         CartRef guest = cart.loadGuest(cookieToken)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,

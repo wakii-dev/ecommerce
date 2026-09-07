@@ -48,12 +48,32 @@ public class AdminOrderController {
     private final OrderRepository orders;
     private final OrderLifecycleService lifecycle;
     private final InvoiceProvider invoiceProvider;
+    private final com.ecommerce.ordering.service.OrdersCsvExporter csvExporter;
 
     public AdminOrderController(OrderRepository orders, OrderLifecycleService lifecycle,
-                                InvoiceProvider invoiceProvider) {
+                                InvoiceProvider invoiceProvider,
+                                com.ecommerce.ordering.service.OrdersCsvExporter csvExporter) {
         this.orders = orders;
         this.lifecycle = lifecycle;
         this.invoiceProvider = invoiceProvider;
+        this.csvExporter = csvExporter;
+    }
+
+    /** GET /admin/orders/export.csv — stream toàn bộ đơn (SF-13 A7b, runtime
+     * endpoint ngoài freeze — ADR 0005). BOM UTF-8 đầu stream cho Excel VN. */
+    @GetMapping(value = "/orders/export.csv", produces = "text/csv")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> exportCsv() {
+        String filename = "orders-" + java.time.LocalDate.now() + ".csv";
+        org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody body = out -> {
+            out.write(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}); // UTF-8 BOM
+            var writer = new java.io.OutputStreamWriter(out, java.nio.charset.StandardCharsets.UTF_8);
+            csvExporter.write(writer);
+            writer.flush(); // Spring chỉ đóng raw stream — KHÔNG flush writer tự động
+        };
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+            .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+            .body(body);
     }
 
     /** GET /admin/orders — filter status + q (id/email/tên trong address), paginate. */

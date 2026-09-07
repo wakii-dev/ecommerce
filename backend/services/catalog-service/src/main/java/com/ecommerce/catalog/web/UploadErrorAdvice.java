@@ -1,22 +1,23 @@
 package com.ecommerce.catalog.web;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Upload error mapping (SF-13 A3): multipart vượt limit servlet (6MB) ném
  * {@link MaxUploadSizeExceededException} TRƯỚC controller — map về 400
- * problem+json thay vì 500 raw (review G1 P2). Business limit 5MB vẫn do
- * {@code ProductStorage} (400 với message rõ).
+ * problem+json (review G2 P1: @ExceptionHandler PHẢI trả ResponseEntity/
+ * ProblemDetail — trả ResponseStatusException thì Spring không translate).
+ * Business limit 5MB vẫn do {@code ProductStorage} (400 với message rõ).
  */
-@ControllerAdvice
+@RestControllerAdvice
 public class UploadErrorAdvice {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseStatusException tooLarge(MaxUploadSizeExceededException e) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ảnh vượt giới hạn 5MB.");
+    public ProblemDetail tooLarge(MaxUploadSizeExceededException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Ảnh vượt giới hạn 5MB.");
     }
 }

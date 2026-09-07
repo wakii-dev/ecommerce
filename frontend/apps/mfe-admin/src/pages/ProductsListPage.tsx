@@ -5,6 +5,7 @@ import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Input, Modal, Select, Skeleton, Table, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
+import { downloadAdminFile } from '../lib/download';
 import { catalogApi } from '../lib/api';
 import { formatVnd } from '../lib/format';
 import { flattenCategories, indentLabel } from '../lib/productPayload';
@@ -143,6 +144,13 @@ export default function ProductsListPage(): ReactElement {
       <div className='admin-page-head'>
         <h1>{t('admin.products.title')}</h1>
         <div className='admin-page-head__actions'>
+          <Button
+            variant='secondary'
+            onClick={() => void downloadAdminFile('/api/catalog/admin/products/export.csv', 'products.csv')}
+            data-testid='products-export-csv'
+          >
+            {t('admin.products.exportCsv')}
+          </Button>
           <Button onClick={() => appNavigate('/admin/products/new')}>{t('admin.products.new')}</Button>
         </div>
       </div>

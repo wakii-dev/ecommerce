@@ -70,11 +70,17 @@ restart_consumer() { # $1 tên $2 port $3 module-path (backend/<path>/target/*.j
 sleep "$INTERVAL"
 while alive; do
   NEW_TOKEN=$(mint)
-  if [ -n "${NEW_TOKEN:-}" ] && [ "$NEW_TOKEN" != "${CATALOG_API_TOKEN:-}" ]; then
-    export CATALOG_API_TOKEN="$NEW_TOKEN"
-    log "token re-minted — restart 2 consumer (ordering, partner-api)"
-    restart_consumer ordering 8085 services/ordering-service
-    restart_consumer partner-api 8091 services/partner-api
+  if [ -n "${NEW_TOKEN:-}" ]; then
+    # Ghi token ra file — restart THỦ CÔNG (kill + java -jar ngoài loop) đọc
+    # được token CÙNG thế hệ; trước đây restart tay dùng env rỗng → re-price
+    # 401 → COD checkout treo /checkout (e2e 02:48).
+    printf '%s' "$NEW_TOKEN" > "$RUN_DIR/catalog-api-token"
+    if [ "$NEW_TOKEN" != "${CATALOG_API_TOKEN:-}" ]; then
+      export CATALOG_API_TOKEN="$NEW_TOKEN"
+      log "token re-minted — restart 2 consumer (ordering, partner-api)"
+      restart_consumer ordering 8085 services/ordering-service
+      restart_consumer partner-api 8091 services/partner-api
+    fi
   fi
   sleep "$INTERVAL"
 done

@@ -21,16 +21,10 @@ const STATUSES: ReadonlyArray<OrderStatusValue> = [
 
 const PAGE_SIZE = 10;
 
+/** Pill trạng thái §1.7 — palette --pill-* riêng từng enum (6 màu), FAILED
+ * chung family CANCELLED (danger). Thay Badge generic 4 màu trước đây. */
 export function statusBadge(status: OrderStatusValue, t: (k: string) => string): ReactElement {
-  const variant =
-    status === 'DELIVERED' || status === 'CONFIRMED'
-      ? 'success'
-      : status === 'CANCELLED' || status === 'FAILED'
-        ? 'danger'
-        : status === 'SHIPPED' || status === 'PAID'
-          ? 'primary'
-          : 'warning';
-  return <Badge variant={variant}>{t(`admin.status.${status}`)}</Badge>;
+  return <span className={`admin-pill admin-pill--${status}`}>{t(`admin.status.${status}`)}</span>;
 }
 
 /**
@@ -83,7 +77,7 @@ export default function OrdersPage(): ReactElement {
       header: t('admin.orders.order'),
       render: (row: StubOrder) => (
         <div>
-          <div style={{ fontWeight: 700 }}>#{row.id.slice(0, 8)}</div>
+          <div className='admin-order-code'>#{row.id.slice(0, 8)}</div>
           <div className='admin-hint'>{formatDateTime(row.createdAt)}</div>
         </div>
       )
@@ -108,7 +102,7 @@ export default function OrdersPage(): ReactElement {
       key: 'total',
       header: t('admin.orders.total'),
       align: 'right' as const,
-      render: (row: StubOrder) => <strong>{formatVnd(row.total)}</strong>
+      render: (row: StubOrder) => <strong className='admin-money'>{formatVnd(row.total)}</strong>
     },
     {
       key: 'payment',

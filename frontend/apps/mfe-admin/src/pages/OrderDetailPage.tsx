@@ -104,7 +104,11 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
             </Button>
           )}
           {canCancel(order.status) && (
-            <Button variant='danger' disabled={transition.isPending} onClick={() => setConfirmingCancel(true)}>
+            <Button
+              variant='danger-soft' /* §3 nút hủy admin: outline tint pill CANCELLED */
+              disabled={transition.isPending}
+              onClick={() => setConfirmingCancel(true)}
+            >
               ✕ {t('admin.orders.cancel')}
             </Button>
           )}
@@ -137,7 +141,7 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
           </table>
           <div className='admin-order-totals'>
             <div>
-              <span>{t('admin.orders.total')} (hàng):</span>
+              <span>{t('admin.orders.subtotal')}:</span>
               <span>{formatVnd(order.subtotal)}</span>
             </div>
             {order.discount > 0 && (
@@ -150,7 +154,9 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
               </div>
             )}
             <div>
-              <span>Ship ({order.shippingMethod}):</span>
+              <span>
+                {t('admin.orders.shipping')} ({order.shippingMethod}):
+              </span>
               <span>{formatVnd(order.shippingFee)}</span>
             </div>
             <div style={{ fontWeight: 800 }}>

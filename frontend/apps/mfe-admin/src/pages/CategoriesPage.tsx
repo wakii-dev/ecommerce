@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, Input, Select, Skeleton, useToast } from '@ecommerce/ui-kit';
+import { Button, Card, Input, Modal, Select, Skeleton, useToast } from '@ecommerce/ui-kit';
 import { catalogApi } from '../lib/api';
 import type { AdminCategoryNode } from '../lib/adminTypes';
 import {
@@ -143,6 +143,9 @@ export default function CategoriesPage(): ReactElement {
     }
   });
 
+  // T8: node chờ confirm xóa (null = modal đóng)
+  const [deleting, setDeleting] = useState<CategoryNodeLike | null>(null);
+
   const flat = useMemo(() => flattenCategories(treeQuery.data ?? []), [treeQuery.data]);
 
   const openCreate = (parentId?: string): void => {
@@ -276,10 +279,34 @@ export default function CategoriesPage(): ReactElement {
             t={t}
             onEdit={(node) => openEdit(node as AdminCategoryNode)}
             onAddChild={(node) => openCreate(node.id)}
-            onDelete={(node) => deleteMutation.mutate(node.id)}
+            onDelete={setDeleting /* FI-368 T8: confirm trước khi mutate */}
           />
         </Card>
       )}
+
+      {/* T8: confirm modal xóa category — trước đây bấm là xóa ngay */}
+      <Modal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        title={t('admin.common.delete')}
+      >
+        <p>{t('admin.common.confirmDelete')}</p>
+        <p style={{ fontWeight: 700 }}>{deleting?.name}</p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <Button variant='ghost' onClick={() => setDeleting(null)}>
+            {t('admin.common.no')}
+          </Button>
+          <Button
+            variant='danger'
+            onClick={() => {
+              if (deleting) deleteMutation.mutate(deleting.id);
+              setDeleting(null);
+            }}
+          >
+            {t('admin.common.yes')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

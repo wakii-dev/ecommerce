@@ -90,6 +90,18 @@
   filter: brightness(0.9);
 }
 
+/* §3 nút hủy admin: outline tint theo ngôn ngữ pill CANCELLED
+   (nền --pill-cancelled-bg, chữ --pill-cancelled-text) — hợp cả dark */
+.uk-btn--danger-soft {
+  background: var(--pill-cancelled-bg);
+  border: 1px solid var(--pill-cancelled-text);
+  color: var(--pill-cancelled-text);
+}
+
+.uk-btn--danger-soft:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
 .uk-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -491,11 +503,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--c-text-muted);
-  background: var(--c-bg);
+  background: var(--wash-hover); /* §2.6 thead #FAFAFA (dark: #262626) */
 }
 
 .uk-table tbody tr:hover td {
-  background: var(--c-bg);
+  background: var(--wash-hover);
 }
 
 .uk-table__empty {

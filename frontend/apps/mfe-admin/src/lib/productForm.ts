@@ -159,14 +159,28 @@ export interface BuildResult {
   errors: string[];
 }
 
+/**
+ * Guard số FI-368 T8: `Number('1e999')` = Infinity — vượt qua check NaN và
+ * lọt payload (JSON.stringify(Infinity) → null, API ăn rác). Số hợp lệ phải
+ * finite; Infinity/NaN đều quy về NaN để validation chặn.
+ */
+function toFiniteNumber(raw: string): number {
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : Number.NaN;
+}
+
 export function buildProductWrite(state: ProductFormState): BuildResult {
   const errors: string[] = [];
   const nameVi = state.nameVi.trim();
-  const price = Number(state.price);
+  const price = toFiniteNumber(state.price);
 
   if (nameVi === '') errors.push('nameVi');
   if (state.categoryId === '') errors.push('categoryId');
   if (state.price.trim() === '' || Number.isNaN(price) || price < 0) errors.push('price');
+
+  const comparePrice =
+    state.comparePrice.trim() !== '' ? toFiniteNumber(state.comparePrice) : undefined;
+  if (comparePrice !== undefined && Number.isNaN(comparePrice)) errors.push('comparePrice');
 
   const parsedVariants: Array<{
     nameI18n: { vi: string; en: string };
@@ -180,11 +194,16 @@ export function buildProductWrite(state: ProductFormState): BuildResult {
       errors.push(`variant-${i}`);
       return;
     }
-    const stock = Number(row.stock);
+    const stock = toFiniteNumber(row.stock);
+    const delta = row.priceDelta.trim() !== '' ? toFiniteNumber(row.priceDelta) : undefined;
+    if (delta !== undefined && Number.isNaN(delta)) {
+      errors.push(`variant-${i}`);
+      return;
+    }
     parsedVariants.push({
       nameI18n: { vi: row.nameVi.trim(), en: row.nameEn.trim() },
       options,
-      priceDelta: row.priceDelta.trim() !== '' ? Number(row.priceDelta) : undefined,
+      priceDelta: delta,
       stock: Number.isNaN(stock) || row.stock.trim() === '' ? 0 : stock
     });
   });
@@ -215,7 +234,7 @@ export function buildProductWrite(state: ProductFormState): BuildResult {
     slugEn,
     brand: state.brand.trim() || undefined,
     price,
-    comparePrice: state.comparePrice.trim() !== '' ? Number(state.comparePrice) : undefined,
+    comparePrice,
     flashSaleEndsAt: localDateTimeToIso(state.flashSaleEndsAt),
     tags: state.official ? ['Chính hãng'] : [],
     categoryId: state.categoryId,

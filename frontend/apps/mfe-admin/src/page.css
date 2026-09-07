@@ -5,11 +5,13 @@
 .admin-root {
   display: flex;
   min-height: calc(100vh - 57px); /* trừ shell header */
+  /* §2.6 main nền --c-bg (admin: #EFEFEF) — surface chỉ ở shell/topbar/cards */
+  background: var(--c-bg, #efefef);
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────── */
 .admin-side {
-  width: 224px;
+  width: 222px; /* §2.6 grid 222px + 1fr */
   flex-shrink: 0;
   border-right: 1px solid var(--c-border, #e5e7eb);
   padding: var(--space-5, 24px) var(--space-3, 12px);
@@ -21,7 +23,8 @@
 
 .admin-side__brand {
   font-weight: 800;
-  font-size: 15px;
+  font-size: 17px; /* §2.6 logo 17px/800 */
+  color: var(--c-link);
   padding: 0 var(--space-3, 12px);
   display: flex;
   align-items: center;
@@ -48,23 +51,25 @@
 
 .admin-nav-link {
   display: block;
-  padding: 9px var(--space-3, 12px);
-  border-radius: 8px;
-  color: var(--c-text, #212121);
+  padding: 11px 16px; /* §2.6 nav item 11px 16px, 14px/600 */
+  border-left: 3px solid transparent;
+  color: var(--c-text-muted, #757575);
   text-decoration: none;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .admin-nav-link:hover {
   background: var(--wash-hover);
+  color: var(--c-link);
 }
 
 .admin-nav-link--active,
 .admin-nav-link--active:hover {
   background: var(--tint-primary-bg);
+  border-left-color: var(--c-primary);
   color: var(--c-link);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* ── Body / topbar / content ─────────────────────────────────────────── */
@@ -80,9 +85,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4, 16px);
-  padding: var(--space-3, 12px) var(--space-6, 32px);
-  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  /* §2.6 topbar là card: surface + border + radius-md, padding 12px 16px,
+     nổi trên nền --c-bg — KHÔNG phải full-width strip */
+  margin: var(--space-4, 16px) var(--space-5, 24px) 0;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border: 1px solid var(--c-border, #e5e7eb);
+  border-radius: var(--radius-md, 4px);
   background: var(--c-surface, #fff);
+  box-shadow: var(--shadow-1);
 }
 
 .admin-topbar__user {
@@ -108,7 +118,7 @@
 }
 
 .admin-content {
-  padding: var(--space-6, 32px);
+  padding: var(--space-4, 16px) var(--space-5, 24px); /* §2.6 */
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
@@ -258,6 +268,15 @@
 }
 
 /* ── Dashboard KPI + charts ──────────────────────────────────────────── */
+/* §2.6 khối dữ liệu admin: bo --radius-md (uk-card mặc định --radius-lg) */
+.admin-body .uk-card {
+  border-radius: var(--radius-md, 4px);
+}
+
+.admin-kpi {
+  padding: var(--space-4, 16px);
+}
+
 .admin-kpi-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -266,17 +285,111 @@
 }
 
 .admin-kpi__label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px; /* §2.6 label 11px/700 uppercase ls 1px */
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 1px;
   color: var(--c-text-muted, #757575);
 }
 
 .admin-kpi__value {
   margin-top: 6px;
-  font-size: 22px;
+  font-size: 23px; /* §2.6 value 23px/800 */
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Status pill §1.7 — enum đơn hàng, palette --pill-* tokens ────────── */
+.admin-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full, 999px);
+  vertical-align: middle;
+}
+
+.admin-pill--PENDING   { background: var(--pill-pending-bg);   color: var(--pill-pending-text); }
+.admin-pill--PAID      { background: var(--pill-paid-bg);      color: var(--pill-paid-text); }
+.admin-pill--CONFIRMED { background: var(--pill-confirmed-bg); color: var(--pill-confirmed-text); }
+.admin-pill--SHIPPED   { background: var(--pill-shipped-bg);   color: var(--pill-shipped-text); }
+.admin-pill--DELIVERED { background: var(--pill-delivered-bg); color: var(--pill-delivered-text); }
+/* CANCELLED + FAILED cùng family danger (palette §1.7 có 6 trạng thái) */
+.admin-pill--CANCELLED,
+.admin-pill--FAILED    { background: var(--pill-cancelled-bg); color: var(--pill-cancelled-text); }
+
+/* §2.6 mã đơn 700 primary tabular-nums; tiền right-aligned 700 tabular */
+.admin-order-code {
+  font-weight: 700;
+  color: var(--c-link);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-money {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── T9 responsive ≤900px: admin sidebar collapse → strip ngang scroll-x
+   (direction §4: dưới 900px sidebar chuyển ngang) ── */
+@media (max-width: 900px) {
+  .admin-root {
+    flex-direction: column;
+  }
+
+  .admin-side {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4, 16px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    border-right: none;
+    border-bottom: 1px solid var(--c-border, #e5e7eb);
+    overflow-x: auto;
+  }
+
+  .admin-side__brand {
+    white-space: nowrap;
+  }
+
+  .admin-side__nav {
+    flex-direction: row;
+    gap: var(--space-1, 4px);
+  }
+
+  .admin-nav-link {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    padding: 8px 12px;
+  }
+
+  .admin-nav-link--active,
+  .admin-nav-link--active:hover {
+    border-bottom-color: var(--c-primary);
+  }
+
+  .admin-topbar {
+    margin: var(--space-3, 12px) var(--space-3, 12px) 0;
+    flex-wrap: wrap;
+  }
+
+  .admin-content {
+    padding: var(--space-3, 12px);
+  }
+
+  .admin-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-chart-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .admin-chart-row {
@@ -294,7 +407,7 @@
 /* Charts tô màu QUA tokens (CSS override thắng presentation attribute của
    recharts — không hex cứng trong TSX). */
 .admin-chart .recharts-line-curve {
-  stroke: var(--c-primary, #ee4d2d);
+  stroke: var(--c-primary, #f53d2d);
 }
 
 .admin-chart .recharts-cartesian-axis-line,
@@ -303,5 +416,5 @@
 }
 
 .admin-chart .recharts-bar-rectangle path {
-  fill: var(--c-primary, #ee4d2d);
+  fill: var(--c-primary, #f53d2d);
 }

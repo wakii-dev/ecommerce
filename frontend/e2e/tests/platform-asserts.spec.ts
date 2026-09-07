@@ -95,8 +95,16 @@ test('§5.14 affiliate: ?ref= → cookie attribution + track click (không lỗi
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${demo.accessToken}` },
     body: JSON.stringify({ note: 'e2e affiliate' })
   });
-  const regBody = (await reg.json().catch(() => ({}))) as { code?: string; id?: string; status?: string };
+  const regBody = (await reg.json().catch(() => ({}))) as { code?: string; id?: string; status?: string; detail?: string };
   let code = regBody.code ?? '';
+  if (!code && reg.status === 409) {
+    // đã có hồ sơ (chạy trước) — lấy code qua /api/affiliate/me
+    const me = await fetch(`${GATEWAY}/api/affiliate/me`, {
+      headers: { Authorization: `Bearer ${demo.accessToken}` }
+    });
+    const meBody = (await me.json()) as { code?: string; affiliate?: { code?: string } };
+    code = meBody.code ?? meBody.affiliate?.code ?? '';
+  }
   if (!code && regBody.id) {
     // PENDING → admin approve → lấy code
     const { login: loginAgain } = await import('../helpers/api');

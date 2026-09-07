@@ -8,11 +8,10 @@ import {
   hasStripe
 } from '../helpers/env';
 import {
-  login,
+  newCredentials,
   mailpitAttachmentNames,
   mailpitFindFor,
   mailpitMessages,
-  registerNewUser,
   type Session
 } from '../helpers/api';
 
@@ -35,8 +34,10 @@ let user: Session;
 
 test.describe.configure({ mode: 'serial' });
 
-test.beforeAll(async ({ request }) => {
-  user = await registerNewUser('golden');
+test.beforeAll(async () => {
+  // CHỈ sinh credentials — user ĐƯỢC ĐĂNG KÝ qua UI ở test 3 (API-register
+  // trước sẽ làm UI register báo "Email đã tồn tại" — live-verify round 1)
+  user = await newCredentials('golden');
 });
 
 test('1 — home SSR: header search + locale switcher + hero renders', async ({ page }) => {

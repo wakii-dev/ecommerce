@@ -107,6 +107,14 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <!-- repackage: jar executable (java -jar) — parent pom KHÔNG kế thừa
+               spring-boot-starter-parent nên phải khai báo tay.compose profile
+               full + scripts/dev-stack.sh chạy java -jar (SF-10). -->
+          <execution>
+            <goals><goal>repackage</goal></goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

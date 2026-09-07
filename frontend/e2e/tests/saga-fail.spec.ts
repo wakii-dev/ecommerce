@@ -48,24 +48,24 @@ test('payment fail → FAILED + stock released + coupon reusable', async ({ page
     description: STRIPE_READY ? 'declined card 4000…0002' : PENDING + ' payment_unconfigured path'
   });
 
-  // ── login + pick variant id từ PDP (search Áo thun — khác golden path) ──
+  // ── pick variant id từ API (product CÓ variant — áo thun uniqlo, seed) ──
   user = await registerNewUser('saga');
   await page.goto(`${STOREFRONT}/vi`);
-  await page.fill('input[type=search][name=q]', 'Áo thun');
+  await page.fill('input[type=search][name=q]', 'uniqlo');
   await page.press('input[type=search][name=q]', 'Enter');
-  const link = page.getByRole('link', { name: /Áo thun/i }).first();
+  const link = page.getByRole('link', { name: /uniqlo/i }).first();
   await expect(link).toBeVisible();
   const href = (await link.getAttribute('href')) ?? '';
   await link.click();
   await expect(page).toHaveURL(/\/p\//);
 
-  // variantId từ gallery/selector: lấy từ nút variant đầu (data-attribute của PDP)
-  // — fallback: đọc qua API product (public).
+  // variantId từ ProductDetail API (public) — field `slug` trên list item
+  // (slugVi là tên field admin — live-verify round 1)
   const slug = href.split('/').pop() ?? '';
   const productRes = await page.request.get(`${GATEWAY}/api/catalog/products/${slug}`);
   const product = (await productRes.json()) as { variants?: { id: string }[] };
   const variantId = product.variants?.[0]?.id;
-  expect(variantId, 'product có variant (pin §6.1.4)').toBeDefined();
+  expect(variantId, `product ${slug} có variant (pin §6.1.4)`).toBeDefined();
 
   const before = await availability(user.accessToken, variantId!);
   expect(before).toBeGreaterThan(0);

@@ -30,18 +30,25 @@ test.describe('Admin tạo product → storefront thấy (§5.3)', () => {
   });
 
   test('admin tạo product PUBLISHED (API) → storefront PLP + PDP + search thấy', async ({ page }) => {
+    // ProductWrite contract: nameI18n/descriptionI18n + categoryId REQUIRED
+    const cats = (await (await fetch(`${GATEWAY}/api/catalog/categories`)).json()) as {
+      items?: { id: string }[];
+    };
+    const categoryId = cats.items?.[0]?.id;
+    expect(categoryId, 'có category để gắn product').toBeDefined();
     const create = await fetch(`${GATEWAY}/api/catalog/admin/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
-        name: { vi: PRODUCT_NAME, en: PRODUCT_NAME },
-        description: { vi: `Mô tả ${PRODUCT_NAME} — E2E admin CRUD`, en: `Desc ${PRODUCT_NAME}` },
+        nameI18n: { vi: PRODUCT_NAME, en: PRODUCT_NAME },
+        descriptionI18n: { vi: `Mô tả ${PRODUCT_NAME} — E2E admin CRUD`, en: `Desc ${PRODUCT_NAME}` },
         slugVi: `e2e-product-${Date.now()}`,
         slugEn: `e2e-product-${Date.now()}`,
         brand: 'E2E',
         status: 'PUBLISHED',
         price: 199000,
-        variants: [{ size: null, color: 'Đen', price: 199000 }]
+        categoryId,
+        variants: [{ nameI18n: { vi: 'Đen' }, options: { color: 'Đen' }, priceDelta: 0, stock: 50 }]
       })
     });
     const bodyText = await create.text();

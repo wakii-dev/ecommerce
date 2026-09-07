@@ -17,6 +17,13 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> {
   return JSON.parse(json) as Record<string, unknown>;
 }
 
+/** Sinh credentials unique per-run — CHƯA đăng ký (UI/API đăng ký sau). */
+export function newCredentials(prefix = 'e2e'): Session {
+  const email = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@e2e.demo.vn`;
+  const password = 'E2e#2026demo';
+  return { email, password, accessToken: '', userId: '' };
+}
+
 /** Đăng ký user MỚI (email unique per-run) rồi login — trả session. */
 export async function registerNewUser(prefix = 'e2e'): Promise<Session> {
   const email = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@e2e.demo.vn`;
@@ -108,8 +115,11 @@ export async function mongoEventLogCount(eventType?: string): Promise<number> {
   // lệch khi chạy qua make e2e (code-review P1)
   const path = require('node:path') as typeof import('node:path');
   const repoRoot = path.resolve(__dirname, '../../..');
+  // eval ĐÓNG KHÉP double-quote (single-quote bên trong là literal — quoting
+  // ngược lại vỡ với {eventType:'product.changed'}: shell thấy 'product' lơ
+  // lửng → ReferenceError: product is not defined — live-verify round 1)
   const out = execSync(
-    `docker compose exec -T mongo mongosh --quiet db_log --eval '${filter}'`,
+    `docker compose exec -T mongo mongosh --quiet db_log --eval "${filter}"`,
     { encoding: 'utf8', cwd: repoRoot }
   );
   return Number(out.trim().split('\n').pop());

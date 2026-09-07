@@ -26,7 +26,14 @@ bash scripts/test/run-e2e.sh      # Playwright serial — CẦN make dev đang c
 
 | # | Sev | Loại | Bề mặt | Mô tả | Fix | Commit |
 |---|-----|------|--------|-------|-----|--------|
-| BUG-02 | P1 | product-bug | catalog IT ↔ dev ES | IT catalog boot full context KHÔNG override `elasticsearch.uri` (vd ModerationAggregateTest) → default `localhost:9200` = **ES THẬT của dev stack** → EsEngine active → StartupReindexRunner wipe index dev + bulk fixture IT vào. Hậu quả: search storefront mất seed products (ES 14 docs vs DB 54) → 5 E2E fail (golden-path search, cod-checkout uniqlo, related-products, review-flow, §5.9) | `AbstractIntegrationTest` @TestPropertySource thêm `elasticsearch.uri=` (PgFts no-op cho mọi IT; RelatedTest/EsIndexerSearchTest vẫn override container riêng — verify 2 chiều: Moderation 2/2 + ES không đổi, ES-tests 10/10 + count 14 giữ nguyên). Dev index khôi phục: restart catalog → reindex 56 docs | (điền khi commit) |
+| BUG-03 | P1 | product-bug | gateway storefront route | Predicate storefront-web thiếu `/vi,/vi/**` → mọi localized link qua gateway :8080 ăn 404 Whitelabel (language switcher link `/en/` hoạt động nhưng `/vi` 404; middleware locale routes dùng `/vi/**`). E2E không bắt được vì `STOREFRONT` env đi thẳng `:3000` | curl :8080/vi → 404 Whitelabel (01:22); /vi trực tiếp :3000 = 200 | FIXED — predicate thêm `/vi,/vi/**` (commit BUG-03); verify /vi,/en,/vi/c/*,/vi/search = 200 |
+| BUG-04 | P2 | product-bug | shell i18n runtime | Shell render RAW i18n key `nav.home` ở header (aria-label) + Home h1 — key ĐÃ tồn tại trong catalogs (`vi.nav.home='Trang chủ'`, test i18n pass) → nghi vấn MF shared-singleton: instance i18n của shell chưa init/instance khác remote | snapshot :5173 (01:2x): `banner "nav.home"` — t('nav.home') trả key | OPEN → **relay SF-2** (T7 i18n sweep) |
+| POLISH-01 | P2 | polish | Price VND | Giá shell/admin thiếu khoảng trắng trước ₫ ("390.000₫", "3.771.000₫") — direction §3: "format VND `1.290.000 ₫` (dấu chấm ngăn nghìn, khoảng trắng trước ₫)"; storefront-web ĐÚNG ("390.000 ₫") | snapshot cart/admin KPI | OPEN → **relay SF-2** (§3 Price qua primitive) |
+| POLISH-02 | P2 | polish | admin low-stock heading | Text dính "(tồn thấp)LIVE" — thiếu space giữa label + badge LIVE | snapshot admin dashboard | OPEN → **relay SF-2** |
+| POLISH-03 | P2 | polish | i18n admin.common.from/to | Keys `from`/`to` thiếu trong CẢ vi + en catalogs (admin.common chỉ có create/edit/delete/...) | grep catalogs (01:4x) | OPEN → **relay SF-2** (T7, known gap) |
+| POLISH-04 | P2 | polish | OrderDetailPage i18n | 0 match `useT` — hardcoded string chưa translát (known gap) | grep 01:4x | OPEN → **relay SF-2** (T7) |
+| A11Y-01 | P2 | polish | focus-visible | `:focus-visible` chỉ có trên `.uk-btn`/`.uk-input` (ui-kit.css) — direction §3 yêu cầu global outline `2px --c-primary`; các element ngoài uk-* (links, chips, tabs) chưa thấy coverage | grep ui-kit styles (01:4x) | OPEN → **relay SF-2** verify + extend |
+| BUG-02 | P1 | product-bug | catalog IT ↔ dev ES | IT catalog boot full context KHÔNG override `elasticsearch.uri` (vd ModerationAggregateTest) → default `localhost:9200` = **ES THẬT của dev stack** → EsEngine active → StartupReindexRunner wipe index dev + bulk fixture IT vào. Hậu quả: search storefront mất seed products (ES 14 docs vs DB 54) → 5 E2E fail (golden-path search, cod-checkout uniqlo, related-products, review-flow, §5.9) | `AbstractIntegrationTest` @TestPropertySource thêm `elasticsearch.uri=` (PgFts no-op cho mọi IT; RelatedTest/EsIndexerSearchTest vẫn override container riêng — verify 2 chiều: Moderation 2/2 + ES không đổi, ES-tests 10/10 + count 14 giữ nguyên). Dev index khôi phục: restart catalog → reindex 56 docs | FIXED (cea8cae) |
 | BUG-01 | P1 | product-bug | catalog-service | `application.yml` duplicate top-level key `catalog:` (SF-13 MinIO block dòng 48 + SF-15 internal-token block dòng 92) → snakeyaml `DuplicateKeyException` → **service không boot từ jar sạch** | Merge 2 block thành 1 (`internal-token` vào block `catalog:` đầu) | bd5a188 |
 | FI-337-#2 | — | product-bug? | shell/mfe-account vite proxy | "Vite proxy nuốt Set-Cookie khi register/login" — **REPRO NEGATIVE trên GA**: login/refresh/logout xuyên :5173 + :5176 round-trip cookie chuẩn (Set-Cookie intact: Path=/api/identity, HttpOnly, SameSite=Lax); register 201 **không** Set-Cookie ở CẢ direct lẫn proxy = backend design (register ≠ auto-login). Proxy không nuốt gì | Không cần fix runtime; thêm regression lock: e2e assert cookie round-trip xuyên proxy | (điền khi commit) |
 
@@ -39,4 +46,23 @@ bash scripts/test/run-e2e.sh      # Playwright serial — CẦN make dev đang c
 
 ## Baseline report (run-batch)
 
-> Fill sau T2: số test/pass/fail mỗi suite + log path.
+> Java batch 1 (00:58, chạy SONG SONG E2E — vi FLAKY-01): 143 pass / 2 error (ES container timeout, catalog); batch còn lại reactor dừng ở catalog. Re-run đơn sau fix: catalog 81/81 gồm RelatedTest 3/3 + EsIndexerSearchTest 7/7. Full sequential re-run:xem log `.run/test-logs/java-*.log` mới nhất.
+> FE (00:58): **12/12 turbo tasks XANH** — `.run/test-logs/fe-20260908-005758.log`
+> pytest: **7/7 XANH** (sau ENV-03 fix) — `.run/test-logs/pytest-20260908-005952.log`
+> E2E lần 1 (01:00): 11 fail = playwright browser thiếu (env) → install chromium. Lần 2 (01:01): 19 pass / 2 fail / 5 did-not-run — root cause BUG-02 (ES index wiped). Sau BUG-02 fix + reindex 56 docs: re-run 6 spec fail → **15 pass / 2 skip [PENDING-STRIPE-KEYS] / 0 fail** (01:19).
+
+## Walkthrough record (T5-T8 — 01:20-01:45, orca browser snapshot)
+
+> Screenshot PNG FAIL (Orca window không foreground — CDP capture timeout ×3) → theo recipe memory: đi flow bằng snapshot + eval + console; evidence = snapshot text trong log này. Diff so direction `fi310-storefront-direction.md`:
+
+| Màn | Route | Kết quả vs direction |
+|-----|-------|---------------------|
+| Home | :8080/vi | ✓ header wordmark+ticker §2.1 · search bar · mini-nav · hero 3 slide + arrows/dots §2.2.1 · flash countdown hh:mm:ss + card -25% §2.2.2 · VND "749.000 ₫" ĐÚNG §3 |
+| PLP | :8080/vi/c/dien-tu | ✓ breadcrumb · h1 uppercase + count §2.4 · sidebar cây danh mục (parent/child) |
+| PDP | :8080/vi/p/ao-thun-nam-uniqlo-dry-ex | ✓ gallery tabs · price 390.000 ₫ · chips M/L/XL · qty stepper (− disabled ở 1) · CTA 2 nút · tabs §2.5 |
+| Cart (click THÊM VÀO GIỎ thật) | :5173/cart | ✓ item xuất hiện, badge "Giỏ hàng — 1" · POLISH-01 giá thiếu space ₫ |
+| Login → account | :5173/login | ✓ login → redirect Tài khoản, session persist (FI-337 UI-level OK) · BUG-04 raw nav.home |
+| RBAC UI | :5173/admin (user) | ✓ customer bị chặn "Không có quyền" — message rõ |
+| Admin dashboard | :5173/admin (admin) | ✓ sidebar 11 mục §2.6 · KPI 4 card · 2 SVG chart · low-stock LIVE · POLISH-01/02 |
+
+**Console**: sạch (chỉ React DevTools info).

@@ -44,20 +44,20 @@ KHÔNG đổi kiến trúc — mọi fix nằm trong seam có sẵn. **FI-337 cu
 
 **SF-1 backend-e2e-stabilize (15 tasks):**
 1. Chuẩn hóa suite runner: `scripts/test/` — `mvn -q test` reactor từ `backend/` (+ `-am`/repackage-trap ghi chú) · `pnpm -r test` qua turbo · pytest `.venv` · E2E serial
-2. Chạy full Java suite ×11 service → log từng module vào **bug register** (P0/P1/P2, file+line, repro)
-3. Chạy full FE suite (36 file) → register
-4. Chạy pytest invoice → register
-5. Preflight hạ tầng: `make dev` fullstack 1 session · `make seed` ×2 idempotency · record GATEWAY_URL/port thật
-6. E2E tổng không-keys → inventory chính xác các skip `[PENDING-STRIPE-KEYS]`
-7. Browser walkthrough storefront (home/PLP/PDP/cart) so direction §1-3 → diff list
-8. Browser walkthrough shell/checkout/account + admin so direction §2.6 → diff list
-9. Theme audit: tokens.css 3 theme — completeness, hex rời, contrast dark
-10. A11y + i18n audit: focus-visible, i18n key missing, hardcoded string scan 5 apps
-11. Security/ops sweep: secrets grep, `infra/keys` double-entry dọn, rbac spot-check
-12. **RBAC fixes**: gateway admin-prefixes thêm `/api/inventory/admin/**` + `/api/catalog/admin/**` (defense-in-depth đồng bộ pattern identity/ordering) + inventory-service Spring Security guard tối giản
-13. **AdminCouponController** (ordering): POST/PUT/DELETE /admin/coupons theo contracts amendment A2 (%, fixed, window, usage limit) + validation
-14. **Bug register tổng hợp** (P0/P1/P2 + phân loại env-infra/product-bug/flaky; flaky retry 1 lần rồi register; P1 > 15 → coordinator tách story follow-up) — **living document, sync lại sau T10/T11** — hand-off SF-2
-15. **Stripe-enabled re-run** (điều kiện: keys có mặt `.env`; hết story chưa có → PENDING documented): restart stack nhặt `.env` → chạy cả **7 test skip** (`golden-path` ×2, `platform-asserts` ×3, `review-flow` ×1, `saga-fail` ×1); FAIL do bug stripe-branch → fix + chạy lại bình thường
+2. **Run-batch toàn bộ suite** (Java ×11 service + FE 36 file + pytest invoice) → log vào **bug register** (P0/P1/P2 + phân loại env-infra/product-bug/flaky; flaky retry 1 lần rồi register; P1 > 15 → coordinator tách follow-up) — **living document `scripts/test/bug-register.md`, sync sau T-audit**
+3. Preflight hạ tầng: `make dev` fullstack **1 session (SF-1 own start/stop)** · `make seed` ×2 idempotency · record GATEWAY_URL/port · **dev-stack token TTL re-mint + single-session guard**
+4. E2E tổng không-keys → inventory chính xác các skip `[PENDING-STRIPE-KEYS]`
+5. Browser walkthrough storefront (home/PLP/PDP/cart) so direction §1-3 → diff list
+6. Browser walkthrough shell/checkout/account + admin so direction §2.6 → diff list
+7. **Audit sweep** (theme tokens 3 theme + contrast dark · a11y focus-visible · i18n key missing · hardcoded string 5 apps · secrets grep · `infra/keys` double-entry · rbac spot-check) → register
+8. **FI-337 residual**: Set-Cookie qua vite proxy repro + fix (`shell/vite.config.ts` + `mfe-account/vite.config.ts`) + regression test + cookie e2e assert (backend rotate/AuthStore/AdminApp ĐÃ fix từ GA — KHÔNG đụng)
+9. **RBAC fixes**: gateway admin-prefixes thêm `/api/inventory/admin/**` + `/api/catalog/admin/**` + inventory-service Spring Security guard tối giản
+10. **AdminCouponController** (ordering): POST/PUT/DELETE /admin/coupons theo contracts amendment A2 (%, fixed, window, usage limit) + validation
+11. **GATEWAY_URL single-source 13 files** (list §3) + `make full` sanity re-run sau fix
+12. **Seed/coupon data repair**: verify checksum V11 volume dev → V12 migration (coupon limit/expiry) hoặc seed.sh UPSERT-only; stock repair `DO UPDATE` giữ idempotent — chạy đúng cả volume cũ lẫn compose fresh
+13. **Bug register tổng hợp cuối** (P0/P1/P2 + baseline report) — hand-off SF-2 (coordinator relay)
+14. **Stripe-enabled re-run** (per T4 inventory; điều kiện keys `.env`; hết story chưa có → PENDING documented): restart stack nhặt `.env` → chạy các test skip; FAIL stripe-branch → fix + chạy lại
+15. Security re-sweep + update `docs/superpowers/improvements-log.md` (đánh dấu mục đã xử lý)
 
 **SF-2 frontend-polish-theme (13 tasks):**
 1. Tokens diff vs direction §1 — fix values (không đổi tên biến)
@@ -70,7 +70,7 @@ KHÔNG đổi kiến trúc — mọi fix nằm trong seam có sẵn. **FI-337 cu
 8. UX guards: confirm deletes, productForm numeric "1e999", empty/error states
 9. Responsive ≤900px: header wrap, mini-nav scroll-x, admin sidebar
 10. FE unit tests vỡ fix + token-regression test nhỏ
-11. Browser walkthrough sau-fix **trên stack SF-1 đang chạy (consumer — E4)** + screenshot record (KHÔNG chạy E2E — SF-1 own)
+11. Browser walkthrough sau-fix — **day-1 rig preflight**: chứng minh 1 trang round-trip FE-local (`make dev-fe app=<name>`, GATEWAY_URL → stack SF-1) TRƯỚC khi polish (cross-worktree MF host/remote chưa từng chứng minh) + screenshot record (KHÔNG chạy E2E — SF-1 own)
 12. Hand-off notes cho SF-1 T13 (stripe re-run)
 13. Cấm thêm dep FE mới nếu không note coordinator; nếu có → re-run `pnpm install` lúc merge (pnpm-lock đã verify: turbo test có sẵn, risk ≈ 0)
 13. **Coupons admin form** (read-only page → CRUD): form tạo/sửa coupon (%, fixed, window, usage limit) gọi AdminCouponController (amendment A2) + confirm delete
@@ -95,10 +95,10 @@ KHÔNG đổi kiến trúc — mọi fix nằm trong seam có sẵn. **FI-337 cu
 
 | SF | Tên | Tier | Depends | Tasks |
 |---|---|---|---|---|
-| SF-1 | backend-e2e-stabilize | 0 | — | 12 (như §4) — own: backend/**, scripts/**, e2e/**, auth-flow FE files (AuthStore/AdminApp/vite-proxy), dev-stack lifecycle |
-| SF-2 | frontend-polish-theme | 0 | — | 12 (như §4) — own: ui-kit tokens, 5 apps pages/theme/i18n/guards, KHÔNG fullstack |
+| SF-1 | backend-e2e-stabilize | 0 | — | 15 (như §4) — own: backend/**, scripts/**, e2e/**, 2 vite configs Set-Cookie, dev-stack lifecycle |
+| SF-2 | frontend-polish-theme | 0 | — | 13 (như §4) — own: ui-kit tokens, 5 apps pages/theme/i18n/guards, KHÔNG fullstack (consumer stack SF-1) |
 
-Register là living document: SF-1 sync lại sau T10/T11 (i18n/a11y audit sinh finding muộn) → SF-2 T7 đọc bản mới nhất. **Integration gate (coordinator-owned, sau khi CẢ 2 SF merged)**: full Java + FE + pytest + E2E chạy 1 lần trên nhánh `story/fi310-qa-polish` — §5.1-3 chỉ tính đạt sau gate này (chống 'mỗi SF xanh riêng nhưng nhánh đích chưa từng verify tổng').
+Register = **living document** tại `scripts/test/bug-register.md` trên branch SF-1; **coordinator relay deltas** cho SF-2 qua task message sau early-register (T2) và sau audit sweep (T7-T9). **Integration gate (coordinator-owned, sau khi CẢ 2 SF merged — merge order: SF-1 trước → SF-2 rebase → gate)**: full Java + FE + pytest + E2E + `pnpm install` (nếu deps đổi) + **disk pre-check (≥20G)** chạy 1 lần trên nhánh `story/fi310-qa-polish` — checklist **ĐẦY ĐỦ §5.1-10** (gồm UI-level verify bởi coordinator browser) — §5.1-3 chỉ tính đạt sau gate (chống 'mỗi SF xanh riêng nhưng nhánh đích chưa từng verify tổng').
 
 ## 7. Risks
 

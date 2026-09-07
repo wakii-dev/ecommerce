@@ -137,4 +137,22 @@ public class Coupon {
     public String getDescription() {
         return description;
     }
+
+    /**
+     * Admin update (FI-366 SF-1 T11 — spec §4.10 shape): thay giá trị chính sách,
+     * GIỮ nguyên {@code usedCount} (usage đã reserve không mất khi sửa limit/hạn)
+     * + gắn cờ active theo request. Không đổi code (PK).
+     */
+    public void applyUpdate(CouponType type, long value, Long minOrderValue,
+                            Instant startsAt, Instant endsAt, Integer usageLimit,
+                            boolean active, String description) {
+        this.type = type;
+        this.value = value;
+        this.minOrderValue = minOrderValue;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
+        this.usageLimit = usageLimit;
+        this.active = active;
+        this.description = description;
+    }
 }

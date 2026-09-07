@@ -1,19 +1,23 @@
 package com.ecommerce.ordering.service;
 
 import com.ecommerce.ordering.api.CouponInvalidException;
+import com.ecommerce.ordering.api.dto.CouponDtos.AdminCouponRequest;
 import com.ecommerce.ordering.api.dto.CouponDtos.PublicCouponDto;
 import com.ecommerce.ordering.api.dto.CouponDtos.ValidateCouponResponse;
 import com.ecommerce.ordering.domain.Coupon;
 import com.ecommerce.ordering.domain.CouponReservation;
 import com.ecommerce.ordering.domain.CouponReservationStatus;
+import com.ecommerce.ordering.domain.CouponType;
 import com.ecommerce.ordering.repo.CouponRepository;
 import com.ecommerce.ordering.repo.CouponReservationRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -114,5 +118,79 @@ public class CouponService {
                     log.warn("Coupon finalize race tại đơn {} — path khác đã xử lý", orderId);
                 }
             });
+    }
+
+    // ── Admin CRUD (FI-366 SF-1 T11 — spec §4.10; contracts A2 pending) ─────
+
+    /** Tạo — code trùng → 409 (controller map). Validation chung {@link #validateAdmin}. */
+    public Coupon adminCreate(AdminCouponRequest req) {
+        validateAdmin(req);
+        String code = req.code() == null ? "" : req.code().trim().toUpperCase(Locale.ROOT);
+        if (coupons.findByCode(code).isPresent()) {
+            throw new IllegalStateException("Mã giảm giá đã tồn tại: " + code);
+        }
+        Coupon coupon = new Coupon(code, CouponType.valueOf(req.type()), req.value(),
+            req.minOrderValue(),
+            req.startsAt() == null ? Instant.now() : req.startsAt(),
+            req.endsAt(), req.usageLimit(),
+            req.description() == null ? "" : req.description().trim());
+        return coupons.save(coupon);
+    }
+
+    /** Sửa — preserve used_count (domain {@code applyUpdate}); không thấy → 404 (controller map). */
+    public Coupon adminUpdate(String code, AdminCouponRequest req) {
+        validateAdmin(req);
+        Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
+            .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
+        coupon.applyUpdate(CouponType.valueOf(req.type()), req.value(), req.minOrderValue(),
+            req.startsAt() == null ? coupon.getStartsAt() : req.startsAt(),
+            req.endsAt(), req.usageLimit(),
+            req.active() == null ? coupon.isActive() : req.active(),
+            req.description() == null ? coupon.getDescription() : req.description().trim());
+        return coupons.save(coupon);
+    }
+
+    /** Xóa — mã đang có reservation RESERVED thì chặn (usage đã hứa cho đơn). */
+    public void adminDelete(String code) {
+        Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
+            .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
+        if (reservations.countReservedForCoupon(coupon.getCode()) > 0) {
+            throw new IllegalStateException("Mã đang có lượt dùng đang giữ (RESERVED) — không xóa được");
+        }
+        coupons.delete(coupon);
+    }
+
+    /**
+     * Validation §4.10: type ∈ {PERCENT, FIXED}; PERCENT value 1-100, FIXED > 0;
+     * window endsAt > startsAt; usageLimit null hoặc ≥ 1; minOrderValue ≥ 0.
+     * Sai → 400 (controller map ResponseStatusException).
+     */
+    private void validateAdmin(AdminCouponRequest req) {
+        if (req.code() == null || req.code().isBlank()
+            || !req.code().trim().matches("[A-Za-z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException("code không hợp lệ (1-64 ký tự [A-Za-z0-9_-])");
+        }
+        CouponType type;
+        try {
+            type = CouponType.valueOf(req.type());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("type phải là PERCENT hoặc FIXED");
+        }
+        if (type == CouponType.PERCENT && (req.value() < 1 || req.value() > 100)) {
+            throw new IllegalArgumentException("PERCENT value phải trong [1, 100]");
+        }
+        if (type == CouponType.FIXED && req.value() <= 0) {
+            throw new IllegalArgumentException("FIXED value phải > 0");
+        }
+        if (req.minOrderValue() != null && req.minOrderValue() < 0) {
+            throw new IllegalArgumentException("minOrderValue không âm");
+        }
+        Instant effectiveStart = req.startsAt() == null ? Instant.now() : req.startsAt();
+        if (req.endsAt() != null && !req.endsAt().isAfter(effectiveStart)) {
+            throw new IllegalArgumentException("endsAt phải sau startsAt (cửa sổ không rỗng)");
+        }
+        if (req.usageLimit() != null && req.usageLimit() < 1) {
+            throw new IllegalArgumentException("usageLimit phải ≥ 1 (null = không giới hạn)");
+        }
     }
 }

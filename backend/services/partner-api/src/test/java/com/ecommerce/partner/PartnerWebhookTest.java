@@ -133,12 +133,28 @@ class PartnerWebhookTest extends AbstractPartnerApiTest {
     @Test
     void orderNotFromPartner_noDelivery() {
         // đơn KHÔNG trong partner_order_refs (đơn customer thường) → bỏ qua.
-        // Publish RAW bytes (helper publish) — convertAndSend(String) double-encode
-        // khiến message rơi vào poison-parse, KHÔNG tới nhánh ref-miss cần test.
-        publish("order.paid", UUID.randomUUID());
+        //
+        // FI-366 SF-1 (BUG-06): helper publish() đặt payload.orderId = field
+        // `orderId` CỦA TEST NÀY (đã ref ở @BeforeEach) — tham số thứ 2 là
+        // eventId, KHÔNG phải orderId → bản cũ publish đơn ĐÃ ref rồi expect 0
+        // delivery = mâu thuẫn thiết kế (deliver là ĐÚNG; fail theo method
+        // order kèm retry bleed của test 500). Publish thẳng envelope với
+        // payload.orderId = UUID lạ (chưa ref) → consumer bỏ qua thật.
+        UUID unknownOrder = UUID.randomUUID();
+        String envelope = """
+            {"eventId": "%s", "eventType": "order.paid", "occurredAt": "2026-09-07T03:00:00.123456Z",
+             "correlationId": "req-it", "producer": "ordering-service", "schemaVersion": 1,
+             "payload": {"orderId": "%s", "paymentIntentId": "pi_x", "paidAt": "2026-09-07T03:00:00Z"}}
+            """.formatted(UUID.randomUUID(), unknownOrder);
+        org.springframework.amqp.core.MessageProperties props = new org.springframework.amqp.core.MessageProperties();
+        props.setContentType("application/json");
+        rabbitTemplate.send("ecommerce.events", "order.paid",
+            new org.springframework.amqp.core.Message(envelope.getBytes(java.nio.charset.StandardCharsets.UTF_8), props));
 
+        // scope theo unknownOrder (chống bleed retry test 500 chạy trước)
         Awaitility.await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(5))
-            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))));
+            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))
+                .withRequestBody(com.github.tomakehurst.wiremock.client.WireMock.containing(unknownOrder.toString()))));
     }
 
     @Test
@@ -163,10 +179,13 @@ class PartnerWebhookTest extends AbstractPartnerApiTest {
     void suspendedPartner_noDelivery() {
         partner.setStatus(com.ecommerce.partner.domain.PartnerStatus.SUSPENDED);
         partners.save(partner);
-        publish("order.confirmed", UUID.randomUUID());
+        UUID suspendedOrder = UUID.randomUUID();
+        publish("order.confirmed", suspendedOrder);
 
+        // BUG-06: scope theo orderId (đồng lí do orderNotFromPartner_noDelivery)
         Awaitility.await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(5))
-            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))));
+            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))
+                .withRequestBody(com.github.tomakehurst.wiremock.client.WireMock.containing(suspendedOrder.toString()))));
     }
 
     @Test
@@ -183,7 +202,8 @@ class PartnerWebhookTest extends AbstractPartnerApiTest {
             new org.springframework.amqp.core.Message(envelope.getBytes(java.nio.charset.StandardCharsets.UTF_8), props));
 
         Awaitility.await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(5))
-            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))));
+            .untilAsserted(() -> WIRE.verify(0, postRequestedFor(urlEqualTo(RECEIVER_PATH))
+                .withRequestBody(com.github.tomakehurst.wiremock.client.WireMock.containing(orderId.toString()))));
         // KHÔNG tạo delivery cho orderId của test này (bảng chung — filter theo orderId)
         assertThat(deliveries.findAll().stream()
             .filter(d -> d.getOrderId().equals(orderId)).count()).isZero();

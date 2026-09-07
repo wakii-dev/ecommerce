@@ -5,12 +5,12 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 # WORKDIR = backend/ (nơi có parent pom — mvn -pl chạy từ đây)
 WORKDIR /workspace/backend
-COPY backend/pom.xml pom.xml
-COPY backend/shared/ shared/
-COPY backend/services/log-service/pom.xml services/log-service/pom.xml
-COPY backend/services/log-service/src services/log-service/src
-# parent pom (relativePath) + common-lib nằm trong reactor của -am — 1 lệnh đủ
-RUN mvn -q package -pl services/log-service -am -DskipTests
+# BUG-07 (FI-366 SF-1): parent pom khai báo TẤT CẢ modules — image 1 service
+# cần mọi module dir tồn tại (chỉ COPY pom của mình vỡ reactor mỗi khi 1 SF
+# mới append module — make full chết từ sau SF-10). COPY cả backend/ (context
+# đã slim qua .dockerignore) + cache .m2 cho build 10 image nhanh gấp bội.
+COPY backend/ .
+RUN --mount=type=cache,target=/root/.m2 mvn -q package -pl services/log-service -am -Dmaven.test.skip=true
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

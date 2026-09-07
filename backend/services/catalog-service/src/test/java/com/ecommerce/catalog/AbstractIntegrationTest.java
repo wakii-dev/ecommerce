@@ -51,6 +51,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     "catalog.seed.enabled=false",
     "outbox.relay.enabled=false",
     "spring.rabbitmq.listener.simple.auto-startup=false",
+    // BUG-02 (FI-366 SF-1 run-batch 08-09): elasticsearch.uri mặc định RỖNG →
+    // PgFts (no-op index) cho MỌI IT. Trước đây IT full-context không override
+    // (vd ModerationAggregateTest) dùng default application.yml localhost:9200 =
+    // ES THẬT của dev stack → EsEngine active → StartupReindexRunner WIPE index
+    // dev + bulk fixture IT vào (search storefront mất seed products — golden
+    // path search fail). Đặt trong @TestPropertySource (KHÔNG phải
+    // @DynamicPropertySource — ở đó giá trị BASE ghi đè subclass, đã gặp thật
+    // với EsIndexerSearchTest); IT cần ES thật override bằng registry.add
+    // (RelatedTest / EsIndexerSearchTest — dynamic thắng @TestPropertySource).
+    "elasticsearch.uri=",
     // Task 7: redis mặc định DEAD PORT — host 6379 là Redis THẬT của máy dev
     // (ecommerce-redis); cache-aside ghi tree/prod keys TTL 1800s vào đó sẽ
     // nhiễm chéo giữa các run (CategoryApiTest đọc tree cached của run trước —

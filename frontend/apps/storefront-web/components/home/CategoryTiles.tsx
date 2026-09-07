@@ -48,7 +48,9 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
             <span className="cat-name">{category.name}</span>
           </a>
         ))}
-        <a className="cat-tile cat-tile--more" href="#">
+        {/* Trang "tất cả danh mục" chưa có → /search là surface duyệt chung
+            (empty-q có gợi ý từ khóa, không phải dead end). */}
+        <a className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
           {locale === 'en' ? 'See more →' : 'Xem thêm →'}
         </a>
       </div>

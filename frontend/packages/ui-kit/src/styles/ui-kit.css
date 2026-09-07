@@ -65,14 +65,16 @@
   border-color: var(--c-border);
 }
 
+/* §3 secondary outline: hover nền primary-tint (#FDEEEE / dark tint) */
 .uk-btn--secondary:hover:not(:disabled) {
   border-color: var(--c-primary);
-  color: var(--c-primary);
+  color: var(--c-link);
+  background: var(--tint-primary-bg);
 }
 
 .uk-btn--ghost {
   background: transparent;
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .uk-btn--ghost:hover:not(:disabled) {
@@ -453,8 +455,8 @@
 }
 
 .uk-tab--active {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom: 3px solid var(--c-primary);
 }
 
 .uk-tab:disabled {
@@ -590,7 +592,7 @@
   padding: 0;
   font-size: var(--text-lg);
   line-height: 1;
-  color: var(--c-border);
+  color: var(--star-track); /* §1.6 track #D8D8D8 (trước dùng --c-border) */
   cursor: default;
 }
 
@@ -603,7 +605,7 @@ button.uk-star {
 }
 
 .uk-star--half {
-  color: var(--c-border);
+  color: var(--star-track);
 }
 
 /* nửa sao: sao đầy clip 50% đè lên sao rỗng */
@@ -639,7 +641,7 @@ button.uk-star {
   flex-wrap: wrap;
   gap: var(--space-2);
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: 800; /* §3 Giá: luôn --c-danger 800 */
   color: var(--c-danger);
 }
 
@@ -782,4 +784,13 @@ button.uk-star {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
+ * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
+ * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */
+[data-theme='dark'] .uk-badge--warning,
+[data-theme='dark'] .uk-badge--success,
+[data-theme='dark'] .uk-badge--danger {
+  color: var(--c-on-accent);
 }

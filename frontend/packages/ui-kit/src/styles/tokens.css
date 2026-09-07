@@ -32,6 +32,13 @@
   --c-success: #26AA99;
   --c-focus: #F53D2D; /* :focus-visible outline primary (hand-off §3) */
   --c-accent: #FFD839; /* flash-deal / cart badge / CTA "Mua ngay" hero */
+  /* FI-368 T2: chữ đặt TRÊN nền accent/warning/success (đạt AA cả dark —
+     dark --c-text là trắng → trên vàng #FFD839 chỉ 1.35:1) */
+  --c-on-accent: #212121;
+  /* FI-368 T2: primary dùng làm CHỮ (link, tab active...) — dark cần bản
+     sáng hơn #F53D2D (4.44:1 trên surface) để đạt AA 4.5:1; light = nguyên
+     primary (không đổi UI sáng). NÚT vẫn dùng --c-primary (thương hiệu). */
+  --c-link: #F53D2D;
 
   /* Tint palette — badge/pill/hover tint (hand-off §1.6) */
   --tint-primary-bg: #FDEEEE;
@@ -113,6 +120,8 @@
   --c-success: #26AA99;
   --c-focus: #F53D2D;
   --c-accent: #FFD839;
+  --c-on-accent: #212121;
+  --c-link: #F53D2D;
 
   /* Tint palette (hand-off §1.6) */
   --tint-primary-bg: #FDEEEE;
@@ -193,6 +202,8 @@
   --c-success: #2FD5BE;
   --c-focus: #FF6B54;
   --c-accent: #FFD839;
+  --c-on-accent: #212121;
+  --c-link: #FF6B54; /* AA text trên surface (5.94:1) — nút vẫn --c-primary */
 
   --tint-primary-bg: #3A1B17;
   --tint-primary-text: #FF8A73;

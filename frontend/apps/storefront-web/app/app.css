@@ -90,7 +90,7 @@ img {
 .logo-word {
   font-size: 26px;
   font-weight: 800;
-  color: var(--c-primary);
+  color: var(--c-link);
   letter-spacing: -0.5px;
   display: inline-flex;
   align-items: baseline;
@@ -176,8 +176,8 @@ img {
 
 .search-item:hover,
 .search-item.is-active {
-  background: #fafafa;
-  color: var(--c-primary);
+  background: var(--wash-hover);
+  color: var(--c-link);
 }
 
 .search-item-name {
@@ -264,7 +264,7 @@ img {
 }
 
 .header-action:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 /* Locale switcher (Task 10) — ghost: 13px/600, muted → primary hover,
@@ -280,7 +280,7 @@ img {
 }
 
 .locale-switch:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 /* Hàng 2 — mini-nav nền primary */
@@ -444,7 +444,7 @@ img {
   padding: 12px 32px;
   border-radius: var(--radius-md);
   background: var(--c-accent);
-  color: var(--c-text);
+  color: var(--c-on-accent);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
@@ -455,7 +455,7 @@ img {
   top: 28px;
   right: 8%;
   background: var(--c-surface);
-  color: var(--c-primary);
+  color: var(--c-link);
   font-size: 14px;
   font-weight: 800;
   padding: 8px 14px;
@@ -700,7 +700,7 @@ img {
 }
 
 .featured-more {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -817,7 +817,7 @@ img {
 }
 
 .p-card:hover .p-name {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .p-price-row {
@@ -888,7 +888,7 @@ img {
 }
 
 .plp-breadcrumb a:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-breadcrumb-current {
@@ -977,14 +977,14 @@ img {
 
 .plp-tree-root:hover,
 .plp-tree-child:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-tree-root.is-active,
 .plp-tree-child.is-active {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 700;
-  border-left-color: var(--c-primary);
+  border-left-color: var(--c-link);
 }
 
 /* Link-khoảng-giá/rating mô phỏng checkbox 15×15 (single-select, toggle-off = bỏ param) */
@@ -999,7 +999,7 @@ img {
 }
 
 .plp-check:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .plp-check-box {
@@ -1016,16 +1016,16 @@ img {
   line-height: 1;
   color: var(--c-surface);
   /* accent-color primary §2.4 — áp cho hộp checked (mô phỏng input) */
-  accent-color: var(--c-primary);
+  accent-color: var(--c-link);
 }
 
 .plp-check.is-checked .plp-check-box {
   background: var(--c-primary);
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
 }
 
 .plp-check.is-checked {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 600;
 }
 
@@ -1060,7 +1060,7 @@ img {
   border: 1px solid var(--c-primary);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
-  color: var(--c-primary);
+  color: var(--c-link);
   padding: 7px 12px;
   font-size: 13px;
   font-weight: 700;
@@ -1081,7 +1081,7 @@ img {
   text-align: center;
   font-size: 13px;
   font-weight: 700;
-  color: var(--c-primary);
+  color: var(--c-link);
   background: var(--c-surface);
   text-decoration: none;
 }
@@ -1126,8 +1126,8 @@ img {
 }
 
 .plp-sort select:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 /* Grid kết quả 3 cột gap 16px, dùng chung .p-card (§2.4) */
@@ -1175,13 +1175,13 @@ img {
 }
 
 .plp-page-btn:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 .plp-page-btn.is-active {
   background: var(--c-primary);
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
   color: var(--c-surface);
   cursor: default;
 }
@@ -1288,7 +1288,7 @@ img {
 }
 
 .pdp-thumb--active {
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
 }
 
 /* Info: h1 23px/700/1.35 + meta (đã bán + sao) */
@@ -1400,7 +1400,7 @@ img {
 }
 
 .pdp-swatch--active {
-  border-color: var(--c-primary);
+  border-color: var(--c-link);
   box-shadow: 0 0 0 3px var(--tint-primary-bg);
 }
 
@@ -1454,7 +1454,7 @@ img {
 }
 
 .pdp-stepper-btn:hover:not(:disabled) {
-  background: #fafafa;
+  background: var(--wash-hover);
 }
 
 .pdp-stepper-btn:disabled {
@@ -1513,7 +1513,7 @@ img {
 .pdp-cta--secondary {
   background: var(--c-surface);
   border: 2px solid var(--c-primary);
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .pdp-cta--secondary:hover:not(:disabled) {
@@ -1603,7 +1603,7 @@ img {
 }
 
 .pdp-tab-bar a:hover {
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .pdp-panel {
@@ -1620,8 +1620,8 @@ img {
 }
 
 .pdp-tab-bar a[href='#tab-desc'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-tabs:has(#tab-info:target) a[href='#tab-desc'],
@@ -1631,13 +1631,13 @@ img {
 }
 
 .pdp-tabs:has(#tab-info:target) a[href='#tab-info'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-tabs:has(#tab-reviews:target) a[href='#tab-reviews'] {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-link);
+  border-bottom-color: var(--c-link);
 }
 
 .pdp-desc {
@@ -1665,7 +1665,7 @@ img {
 
 .pdp-spec th {
   width: 220px;
-  background: #fafafa;
+  background: var(--wash-hover);
   color: var(--c-text-muted);
   font-weight: 600;
 }
@@ -1680,7 +1680,7 @@ img {
   margin: 0;
   font-size: 64px;
   font-weight: 800;
-  color: var(--c-primary);
+  color: var(--c-link);
 }
 
 .not-found-title {
@@ -1695,7 +1695,7 @@ img {
 }
 
 .not-found-home {
-  color: var(--c-primary);
+  color: var(--c-link);
   font-weight: 700;
   text-decoration: none;
 }
@@ -1732,8 +1732,8 @@ img {
 }
 
 .search-keyword-chip:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-link);
+  color: var(--c-link);
 }
 
 /* ── Coupon center (Task 14 — mock-gate đến SF-9) ────────────────────────── */
@@ -1786,7 +1786,7 @@ img {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 1.5px;
-  color: var(--c-primary);
+  color: var(--c-link);
   border: 1px dashed var(--c-primary);
   border-radius: var(--radius-sm);
   padding: 6px 12px;

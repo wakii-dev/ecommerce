@@ -33,8 +33,9 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--c-accent, #ee4d2d);
-  border: 1px solid var(--c-accent, #ee4d2d);
+  color: var(--c-link);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
   border-radius: 999px;
   padding: 1px 8px;
 }
@@ -56,13 +57,13 @@
 }
 
 .admin-nav-link:hover {
-  background: var(--c-surface-2, #f5f5f5);
+  background: var(--wash-hover);
 }
 
 .admin-nav-link--active,
 .admin-nav-link--active:hover {
-  background: var(--c-accent-soft, #fff1ec);
-  color: var(--c-accent, #ee4d2d);
+  background: var(--tint-primary-bg);
+  color: var(--c-link);
   font-weight: 700;
 }
 
@@ -97,7 +98,7 @@
 
 .admin-topbar__store {
   font-size: 13px;
-  color: var(--c-accent, #ee4d2d);
+  color: var(--c-link);
   text-decoration: none;
   font-weight: 600;
 }

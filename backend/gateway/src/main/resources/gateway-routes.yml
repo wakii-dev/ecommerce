@@ -39,6 +39,14 @@ spring:
       # ("service nhận path còn lại sau /api/<service>") và template PingController
       # map @RequestMapping("/api/template") (giữ FULL prefix) — controllers
       # catalog-service map /api/catalog/** nên forward nguyên path.
+      # SF-15 (2026-09-07): internal stock-alert (PII email) KHÔNG public qua
+      # gateway — block route đặt TRƯỚC block catalog (first-match-wins), pattern
+      # affiliate-internal-blocked của SF-14. Service gọi trực tiếp :8082 kèm
+      # X-Internal-Token.
+        - id: catalog-internal-blocked                     # SF-15 · block route
+          uri: ${CATALOG_URI:http://localhost:8082}
+          predicates: [ "Path=/api/catalog/internal/**" ]
+          filters: [ "SetStatus=404" ]
         - id: catalog                                      # SF-4 · port 8082
           uri: ${CATALOG_URI:http://localhost:8082}
           predicates: [ "Path=/api/catalog/**" ]

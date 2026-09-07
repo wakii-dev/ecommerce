@@ -61,6 +61,7 @@ public class TwoFactorService {
     /** POST /2fa/setup — sinh secret pending; 409 nếu đã enabled. */
     @Transactional
     public SetupResponse setup(UUID userId, String email) {
+        requirePasswordUser(userId);
         TwoFactorEntity entity = repository.findByUserId(userId).orElseGet(() -> {
             TwoFactorEntity fresh = new TwoFactorEntity();
             fresh.setUserId(userId);
@@ -82,6 +83,7 @@ public class TwoFactorService {
     /** POST /2fa/enable — verify mã TOTP đầu tiên từ pending; trả backup codes 1 lần. */
     @Transactional
     public EnableResponse enable(UUID userId, String code) {
+        requirePasswordUser(userId);
         TwoFactorEntity entity = repository.findByUserId(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chưa setup 2FA"));
         if (entity.isEnabled()) {
@@ -101,6 +103,19 @@ public class TwoFactorService {
         List<String> plain = generateBackupCodes(entity);
         repository.save(entity);
         return new EnableResponse(plain);
+    }
+
+    /**
+     * 2FA chỉ bảo vệ login MẬT KHẨU — OAuth-only user (hash NULL) không bật
+     * được (disable yêu cầu password nên bật = kẹt vĩnh viễn, code-review P1).
+     */
+    private void requirePasswordUser(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (user.getPasswordHash() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "2FA áp dụng cho tài khoản đăng nhập bằng mật khẩu");
+        }
     }
 
     /**

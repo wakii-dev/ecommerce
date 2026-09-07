@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,21 +35,25 @@ public class StockAlertService {
 
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final int MAX_CANDIDATE_VARIANTS = 100; // cap batch availability
+    private static final String DEFAULT_TOKEN = "dev-internal-token";
 
     private final StockAlertRepository alertRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
     private final InventoryAvailabilityClient inventory;
     private final String internalToken;
+    private final org.springframework.core.env.Environment environment;
 
     public StockAlertService(StockAlertRepository alertRepository, ProductRepository productRepository,
                              ProductVariantRepository variantRepository, InventoryAvailabilityClient inventory,
-                             @Value("${catalog.internal-token:dev-internal-token}") String internalToken) {
+                             @Value("${catalog.internal-token:dev-internal-token}") String internalToken,
+                             org.springframework.core.env.Environment environment) {
         this.alertRepository = alertRepository;
         this.productRepository = productRepository;
         this.variantRepository = variantRepository;
         this.inventory = inventory;
         this.internalToken = internalToken;
+        this.environment = environment;
     }
 
     public record RegisterRequest(String email, UUID variantId) {}
@@ -88,7 +94,9 @@ public class StockAlertService {
     /** ACTIVE alerts của variant vừa có hàng (availability > 0) — chưa flip. */
     @Transactional(readOnly = true)
     public List<Candidate> candidates(int limit) {
-        List<StockAlertEntity> active = alertRepository.findByStatus(StockAlertEntity.STATUS_ACTIVE);
+        // query-level cap (P2): không load cả bảng ACTIVE khi phình to
+        List<StockAlertEntity> active = alertRepository.findByStatus(
+            StockAlertEntity.STATUS_ACTIVE, org.springframework.data.domain.PageRequest.of(0, 500));
         if (active.isEmpty()) return List.of();
         List<UUID> variantIds = active.stream().map(StockAlertEntity::getVariantId).distinct()
             .limit(MAX_CANDIDATE_VARIANTS)
@@ -117,9 +125,21 @@ public class StockAlertService {
     }
 
     /** X-Internal-Token service-to-service — /api/catalog/** public ở gateway
-     * nên internal endpoint bắt buộc tự giữ của riêng mình (spec §4.3). */
+     * nên internal endpoint bắt buộc tự giữ của riêng mình (spec §4.3).
+     * Prod thiếu token/giữ default → fail-fast (code-review P1); so sánh
+     * constant-time (MessageDigest.isEqual). */
     void requireToken(String token) {
-        if (internalToken == null || internalToken.isBlank() || !internalToken.equals(token)) {
+        if (internalToken == null || internalToken.isBlank() || DEFAULT_TOKEN.equals(internalToken)) {
+            for (String profile : environment.getActiveProfiles()) {
+                if (profile.contains("prod")) {
+                    throw new IllegalStateException(
+                        "CATALOG_INTERNAL_TOKEN bắt buộc set (khác default) ở profile prod");
+                }
+            }
+        }
+        if (token == null || internalToken == null
+            || !MessageDigest.isEqual(
+                internalToken.getBytes(StandardCharsets.UTF_8), token.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Internal token không hợp lệ");
         }
     }

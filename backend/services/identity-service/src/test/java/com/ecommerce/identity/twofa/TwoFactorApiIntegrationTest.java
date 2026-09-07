@@ -45,6 +45,9 @@ class TwoFactorApiIntegrationTest extends AbstractIntegrationTest {
         registry.add("identity.twofa.encryption-key", () -> "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     WebTestClient http() {
         if (http == null) {
             http = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -217,5 +220,24 @@ class TwoFactorApiIntegrationTest extends AbstractIntegrationTest {
         Matcher m = Pattern.compile("\"" + field + "\":\"([^\"]+)\"").matcher(json);
         assertThat(m.find()).as("field " + field).isTrue();
         return m.group(1);
+    }
+
+    @Test
+    @Order(6)
+    void oauthOnlyUserCannotEnable2fa() {
+        // OAuth-only user (password_hash NULL — code-review P1): bật 2FA → 409
+        // (disable yêu cầu password nên cho bật = kẹt vĩnh viễn).
+        String email = "oauth-only-2fa@example.com";
+        http().post().uri("/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"email\":\"" + email + "\",\"password\":\"Password#123\",\"fullName\":\"OAuth Only\"}")
+            .exchange().expectStatus().isCreated();
+        String body = loginBody(email, "Password#123");
+        String token = extract(body, "accessToken");
+        jdbc.update("UPDATE users SET password_hash = NULL WHERE email = ?", email);
+
+        http().post().uri("/2fa/setup")
+            .header("Authorization", "Bearer " + token)
+            .exchange().expectStatus().isEqualTo(409);
     }
 }

@@ -1,5 +1,6 @@
 package com.ecommerce.catalog.stockalert;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 public interface StockAlertRepository extends JpaRepository<StockAlertEntity, UUID> {
 
-    List<StockAlertEntity> findByStatus(String status);
+    List<StockAlertEntity> findByStatus(String status, Pageable pageable);
 
     boolean existsByUserEmailAndVariantIdAndStatus(String userEmail, UUID variantId, String status);
 

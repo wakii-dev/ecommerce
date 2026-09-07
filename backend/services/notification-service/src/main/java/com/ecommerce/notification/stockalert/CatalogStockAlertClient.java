@@ -28,7 +28,6 @@ public class CatalogStockAlertClient {
                             String productName, String variantName) {}
 
     private final RestClient rest;
-    private final String internalToken;
 
     public CatalogStockAlertClient(StockAlertProperties props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -39,7 +38,6 @@ public class CatalogStockAlertClient {
             .baseUrl(props.catalog().baseUrl())
             .defaultHeader("X-Internal-Token", props.catalog().internalToken())
             .build();
-        this.internalToken = props.catalog().internalToken();
     }
 
     /** ACTIVE alerts của variant vừa có hàng. */

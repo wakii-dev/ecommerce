@@ -15,9 +15,10 @@ import java.util.Base64;
 
 /**
  * AES-256-GCM cho secret TOTP at-rest (SF-15). Output = IV(12B) || ciphertext;
- * random IV mỗi lần encrypt. Key từ IDENTITY_2FA_KEY; dev thiếu key → fallback
- * dev-key + WARN; profile khác thiếu key → FAIL-FAST boot (không chạy 2FA với
- * key "im lặng").
+ * random IV mỗi lần encrypt. Key từ IDENTITY_2FA_KEY: profile dev/test/local
+ * (hoặc không profile) thiếu key → fallback dev-key + WARN; mọi profile KHÁC
+ * thiếu key → FAIL-FAST boot (code-review P1: không chạy 2FA với key im lặng
+ * ở staging/prod).
  */
 @Component
 public class SecretCipher {
@@ -32,8 +33,12 @@ public class SecretCipher {
     public SecretCipher(TwoFactorProperties props, Environment env) {
         String base64 = props.encryptionKey();
         if (base64 == null || base64.isBlank()) {
-            if (Arrays.stream(env.getActiveProfiles()).anyMatch(p -> p.contains("prod"))) {
-                throw new IllegalStateException("IDENTITY_2FA_KEY bắt buộc ở profile prod — từ chối boot");
+            String[] profiles = env.getActiveProfiles();
+            boolean devLike = profiles.length == 0 || Arrays.stream(profiles)
+                .allMatch(p -> p.equals("dev") || p.equals("test") || p.equals("local"));
+            if (!devLike) {
+                throw new IllegalStateException(
+                    "IDENTITY_2FA_KEY bắt buộc set ở profile " + Arrays.toString(profiles) + " — từ chối boot");
             }
             log.warn("[2fa] IDENTITY_2FA_KEY rỗng — dùng DEV-ONLY fallback key (KHÔNG dùng prod)");
             base64 = TwoFactorProperties.DEV_FALLBACK_KEY;

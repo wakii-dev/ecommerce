@@ -274,6 +274,7 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 | **P4** Growth & Partners | Reviews + wishlist · partner Open API + webhooks · affiliate hoa hồng | SF-8 ✅ + SF-11 ✅ + SF-12 ✅ | ✅ **[phase-4 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-4)** |
 | **P5** Complete v1 | Convergence E2E + essentials + RMA/GHN/loyalty + social/2FA/PWA | 15/15 ✅ | ✅ **[phase-5 GA merged main](https://github.com/wakii-dev/ecommerce/pull/6)** |
 | **P6** QA & Polish v1.1 | Full-suite xanh lần đầu + bug fixes + UI polish vs direction A | FI-366: SF-1 ✅ + SF-2 ✅ | ✅ **[phase-6 merged main](https://github.com/wakii-dev/ecommerce/pull/8)** |
+| **P7** No-Fallback & Feature-Complete | Stripe keys tự lắp + E2E golden path FULL thật · Coupon CRUD A3 (GET list + toggle + FE form) · Honesty pass (zero dead link + registry ADR) | FI-369: SF-1 🔨 + SF-2 🔨 + SF-3 🔨 | 🔨 Đang chạy — GA v1.1 cuối |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |
 
 ## 📚 Tài liệu

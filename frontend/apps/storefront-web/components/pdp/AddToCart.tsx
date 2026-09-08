@@ -13,7 +13,9 @@ import { shellUrl } from '../../lib/site';
  * cart_token; thành công → toast "Đã thêm vào giỏ" + dispatch
  * `ecommerce:cart-changed` (CartBadge của shell cùng window qua gateway tự
  * refresh) + nhớ cartToken (localStorage ecommerce.guest_cart_token) cho
- * merge-on-login. Lỗi MẠNG (cart-service chết) → toast êm cũ, KHÔNG crash.
+ * merge-on-login. Lỗi MẠNG/cart-service chết → toast LỖI THẬT ("Không thêm
+ * được vào giỏ — thử lại"), KHÔNG crash, KHÔNG nói dối "coming soon" (SF-3
+ * honesty-pass).
  * "MUA NGAY" → thêm xong điều hướng /cart (shell app pages, cùng cookie jar
  * localhost — cookie không phân biệt port).
  *
@@ -29,11 +31,12 @@ import { shellUrl } from '../../lib/site';
  *  code-review P1: '/cart' relative 404 trên mọi dev topology). Next app dùng
  *  process.env.NEXT_PUBLIC_* (KHÔNG import.meta.env — Vite-only, crash PDP). */
 
-const COPY = {
+/** Copy PDP CTA — export cho unit test honesty (SF-3: toastFail là lỗi thật). */
+export const COPY = {
   vi: {
     add: 'THÊM VÀO GIỎ',
     buy: 'MUA NGAY',
-    toastFail: 'Giỏ hàng sẽ sớm khả dụng',
+    toastFail: 'Không thêm được vào giỏ — thử lại',
     toastOk: 'Đã thêm vào giỏ ✓',
     inStock: 'Còn hàng',
     outStock: 'Hết hàng',
@@ -42,7 +45,7 @@ const COPY = {
   en: {
     add: 'ADD TO CART',
     buy: 'BUY NOW',
-    toastFail: 'Cart is coming soon',
+    toastFail: "Couldn't add to cart — please try again",
     toastOk: 'Added to cart ✓',
     inStock: 'In stock',
     outStock: 'Out of stock',
@@ -144,7 +147,7 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
       showToast(true);
       if (buyNow) window.location.assign(`${shellUrl()}/cart`);
     } catch {
-      // network/cart-service chết → toast êm (giữ hành vi cũ, không crash)
+      // network/cart-service chết → toast lỗi thật (không crash, không fake)
       showToast(false);
     } finally {
       setPending(false);

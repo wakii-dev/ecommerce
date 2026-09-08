@@ -20,7 +20,9 @@ export function IconButton({
   children,
   ...rest
 }: IconButtonProps) {
-  if (!ariaLabel && process.env.NODE_ENV !== 'production') {
+  if (!ariaLabel) {
+    // Warn MỌI env (types đã bắt buộc aria-label — rơi xuống đây là lỗi caller;
+    // không dùng process.env vì tsc program của shell không có @types/node).
     console.error(
       'IconButton: thiếu aria-label — nút icon không có tên với screen reader.'
     );

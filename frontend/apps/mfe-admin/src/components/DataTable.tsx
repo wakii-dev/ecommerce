@@ -1,5 +1,4 @@
 import type { ReactElement, ReactNode } from 'react';
-import { useT } from '@ecommerce/i18n';
 import { TableSkeleton } from '@ecommerce/ui-kit';
 import { useClientSort } from '../lib/tableSort';
 import type { SortAccessor, SortState } from '../lib/tableSort';
@@ -57,7 +56,6 @@ export function DataTable<Row>({
   onSortToggle,
   rowProps
 }: DataTableProps<Row>): ReactElement {
-  const { t } = useT();
   const internal = useClientSort(rows);
   const controlled = sortProp !== undefined;
   const activeSort = controlled ? sortProp : internal.sort;
@@ -98,26 +96,23 @@ export function DataTable<Row>({
         {caption ? <caption className="uk-hint">{caption}</caption> : null}
         <thead>
           <tr>
-            {columns.map((col) => {
-              const headerText = typeof col.header === 'string' ? col.header : undefined;
-              return (
-                <th
-                  key={col.key}
-                  scope="col"
-                  aria-sort={ariaSortOf(col)}
-                  className={alignClass(col.align).trim() || undefined}
-                >
-                  {col.sortValue !== undefined ? (
-                    <button
-                      type="button"
-                      className="admin-th-sort"
-                      onClick={() => handleSortClick(col)}
-                      aria-label={
-                        headerText !== undefined
-                          ? `${headerText} — ${t('admin.common.sortLabel')}`
-                          : t('admin.common.sortLabel')
-                      }
-                    >
+            {columns.map((col) => (
+              <th
+                key={col.key}
+                scope="col"
+                aria-sort={ariaSortOf(col)}
+                className={alignClass(col.align).trim() || undefined}
+              >
+                {col.sortValue !== undefined ? (
+                  // KHÔNG aria-label trên nút sort: accessible name lấy từ text
+                  // header (đủ cho screen reader — "GIÁ TRỊ, nút"). aria-label
+                  // "… — Sắp xếp" từng substring-trùng getByLabel('Giá trị')
+                  // trong e2e → strict mode violation (FI-395).
+                  <button
+                    type="button"
+                    className="admin-th-sort"
+                    onClick={() => handleSortClick(col)}
+                  >
                       {col.header}
                       <span
                         aria-hidden="true"
@@ -129,9 +124,8 @@ export function DataTable<Row>({
                   ) : (
                     col.header
                   )}
-                </th>
-              );
-            })}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

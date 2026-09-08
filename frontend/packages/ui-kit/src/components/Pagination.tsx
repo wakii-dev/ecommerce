@@ -119,9 +119,13 @@ export function Pagination({
         )
       ) : null}
 
-      {buildWindow(page, totalPages).map((item) =>
+      {buildWindow(page, totalPages).map((item, i) =>
         item === 'dots' ? (
-          <span key="dots" className="uk-page uk-page--dots" aria-hidden="true">
+          <span
+            key={`dots-${i}`}
+            className="uk-page uk-page--dots"
+            aria-hidden="true"
+          >
             …
           </span>
         ) : (

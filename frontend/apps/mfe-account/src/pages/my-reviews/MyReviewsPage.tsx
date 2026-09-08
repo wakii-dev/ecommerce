@@ -76,7 +76,9 @@ export default function MyReviewsPage(): ReactElement {
           </Card>
         ) : null}
         {reviews === null ? (
-          <ListSkeleton count={3} />
+          <div role="status" aria-label={t('account.reviews.loading')}>
+            <ListSkeleton count={3} />
+          </div>
         ) : reviews.length === 0 ? (
           <EmptyState
             icon={<Icon name="star" size={40} />}

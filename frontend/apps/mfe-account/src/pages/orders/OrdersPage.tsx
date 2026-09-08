@@ -57,11 +57,12 @@ function OrdersPageContent(): ReactElement {
       }
       fetchMyOrders()
         .then((page) => alive && setOrders(page.items))
-        .catch((err: unknown) => alive && setError(err instanceof Error ? err.message : 'Có lỗi xảy ra'));
+        .catch((err: unknown) => alive && setError(err instanceof Error ? err.message : t('account.order.errorGeneric')));
     });
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (error) {

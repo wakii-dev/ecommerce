@@ -502,7 +502,7 @@ Markup: `<ol className="uk-stepper" aria-label={label}>` — mỗi `<li classNam
 - Create: `frontend/packages/ui-kit/src/components/Icon.tsx` (component + `ICON_PATHS` catalog cùng file — catalog là data, tách file không cần)
 - Modify: ui-kit.css, components/index.ts, UiKitDemo.tsx, uiKit.test.tsx
 
-- [ ] **Step 1: Component** — API:
+- [x] **Step 1: Component** — API:
 ```tsx
 export type IconName =
   | 'cart' | 'user' | 'heart' | 'search' | 'sun' | 'moon' | 'check' | 'x'
@@ -518,13 +518,13 @@ export interface IconProps {
 ```
 Render `<svg width height viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden|role="img">` + path(s). Catalog: object `Record<IconName, JSX.Element>` path data stroke-based 24×24 — vẽ theo chuẩn Feather-icons geometry (path data tự viết, đơn giản đúng hình; kiểm bằng mắt ở demo). Server-safe (không 'use client').
 
-- [ ] **Step 2: CSS** — `.uk-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }` (svg nhận class).
+- [x] **Step 2: CSS** — `.uk-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }` (svg nhận class).
 
-- [ ] **Step 3: Barrel + demo** — section "Icon set": grid 22 icon + tên dưới mỗi icon (dùng catalog keys — thêm IconName list từ object, không hardcode 2 lần).
+- [x] **Step 3: Barrel + demo** — section "Icon set": grid 22 icon + tên dưới mỗi icon (dùng catalog keys — thêm IconName list từ object, không hardcode 2 lần).
 
-- [ ] **Step 4: Test SSR** — đủ 22 name render không throw (loop IconName); default aria-hidden="true"; với title → role="img" + <title>; size prop → width/height attr.
+- [x] **Step 4: Test SSR** — đủ 22 name render không throw (loop IconName); default aria-hidden="true"; với title → role="img" + <title>; size prop → width/height attr.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): Icon set 22 stroke-based server-safe (FI-391 T11)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): Icon set 22 stroke-based server-safe (FI-391 T11)`.
 
 ### Task 12: Skeleton compositions + shimmer upgrade
 
@@ -532,9 +532,9 @@ Render `<svg width height viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 - Create: `frontend/packages/ui-kit/src/components/skeletons.tsx` (3 compositions cùng file — cùng nhóm trách nhiệm loading)
 - Modify: ui-kit.css (shimmer upgrade + compositions), components/index.ts, UiKitDemo.tsx, uiKit.test.tsx
 
-- [ ] **Step 1: Shimmer upgrade `uk-skeleton-pulse`** (hand-off §2.5 — giữ tên keyframe/class, đổi rule): `.uk-skeleton` background = `linear-gradient(90deg, var(--wash-hover) 25%, var(--c-border) 50%, var(--wash-hover) 75%)` background-size 240% 100%; keyframe quét `background-position: 120% 0 → -120% 0`, duration `var(--dur-shimmer)` linear infinite. (dark cascade: wash/border đã là token — tự đúng màu tối.)
+- [x] **Step 1: Shimmer upgrade `uk-skeleton-pulse`** (hand-off §2.5 — giữ tên keyframe/class, đổi rule): `.uk-skeleton` background = `linear-gradient(90deg, var(--wash-hover) 25%, var(--c-border) 50%, var(--wash-hover) 75%)` background-size 240% 100%; keyframe quét `background-position: 120% 0 → -120% 0`, duration `var(--dur-shimmer)` linear infinite. (dark cascade: wash/border đã là token — tự đúng màu tối.)
 
-- [ ] **Step 2: Compositions** —
+- [x] **Step 2: Compositions** —
 ```tsx
 export function ProductCardSkeleton({ className }: { className?: string }): ReactElement
 // .uk-sk-card: thumb vuông uk-skeleton--rect (aspect 1/1) + 2 dòng text (clamp) + dòng giá (w 60%)
@@ -545,11 +545,11 @@ export function ListSkeleton({ count = 3, className }: { count?: number; classNa
 ```
 Tất cả compose từ Skeleton primitive có sẵn (variant rect/text/circle) + wrapper div css; aria-hidden nội bộ (Skeleton đã aria-hidden), wrapper có aria-busy.
 
-- [ ] **Step 3: Demo** — 3 section skeleton hiển thị cạnh nhau (không bấm được — static).
+- [x] **Step 3: Demo** — 3 section skeleton hiển thị cạnh nhau (không bấm được — static).
 
-- [ ] **Step 4: Test SSR** — TableSkeleton rows=3 cols=4 → đúng số hàng (count `uk-sk-table__row`), aria-busy="true"; ProductCardSkeleton chứa uk-skeleton class (dùng primitive thật); ListSkeleton count override.
+- [x] **Step 4: Test SSR** — TableSkeleton rows=3 cols=4 → đúng số hàng (count `uk-sk-table__row`), aria-busy="true"; ProductCardSkeleton chứa uk-skeleton class (dùng primitive thật); ListSkeleton count override.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): skeleton compositions ×3 + shimmer hand-off §2.5 (FI-391 T12)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): skeleton compositions ×3 + shimmer hand-off §2.5 (FI-391 T12)`.
 
 ### Task 13: Motion utilities — useReveal + reduced-motion global + demo completion
 

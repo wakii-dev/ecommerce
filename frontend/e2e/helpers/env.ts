@@ -3,7 +3,9 @@
  *
  * STRIPE KEYS: .env của user (gitignored). Placeholder `sk_test_xxx` (từ
  * .env.example) coi như KHÔNG có key (plan-critic P1 — payment sẽ 401 thay
- * vì degraded sạch). hasStripe() = secret + publishable đều thật.
+ * vì degraded sạch). hasStripe() = secret + publishable + webhook secret đều
+ * thật (SF-1: + whsec_ — golden path PAID đi qua webhook, thiếu whsec =
+ * không bao giờ CONFIRMED dù sk+pk có thật).
  */
 
 function readEnvFile(): Record<string, string> {
@@ -47,13 +49,17 @@ const PLACEHOLDER = /xxx$/;
 export function hasStripe(): boolean {
   const sk = env('STRIPE_SECRET_KEY');
   const pk = env('VITE_STRIPE_PUBLISHABLE_KEY');
+  const wh = env('STRIPE_WEBHOOK_SECRET');
   return (
     sk !== '' &&
     !PLACEHOLDER.test(sk) &&
     sk.startsWith('sk_test_') &&
     pk !== '' &&
     !PLACEHOLDER.test(pk) &&
-    pk.startsWith('pk_test_')
+    pk.startsWith('pk_test_') &&
+    wh !== '' &&
+    !PLACEHOLDER.test(wh) &&
+    wh.startsWith('whsec_')
   );
 }
 

@@ -102,8 +102,10 @@ export function mailpitFindFor(
 export async function mailpitAttachmentNames(id: string): Promise<string[]> {
   const res = await fetch(`${MAILPIT_API}/api/v1/message/${id}`);
   if (!res.ok) return [];
-  const body = (await res.json()) as { Attachments: { Filename: string }[] };
-  return (body.Attachments ?? []).map((a) => a.Filename);
+  // Mailpit API trả `FileName` (N hoa) — `Filename` đọc ra undefined suốt
+  // (SF-1 live-verify: test 6 lần đầu chạy thật sau khi un-skip)
+  const body = (await res.json()) as { Attachments: { FileName: string }[] };
+  return (body.Attachments ?? []).map((a) => a.FileName);
 }
 
 // ── Postgres helper (cleanup state spec — pattern mongoEventLogCount) ──────

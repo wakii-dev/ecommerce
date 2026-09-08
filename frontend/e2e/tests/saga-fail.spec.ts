@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { GATEWAY, SHELL, STOREFRONT, hasStripe } from '../helpers/env';
 import { authedFetch, registerNewUser, type Session } from '../helpers/api';
+import { clickPayWithRetry } from '../helpers/checkout';
 
 /**
  * §5.7 SAGA FAIL (SF-10): payment fail → order FAILED + availability API hồi
@@ -119,7 +120,7 @@ test('payment fail → FAILED + stock released + coupon reusable', async ({ page
     await stripe.locator('input[name=number], input[autocomplete=cc-number]').first().fill('4000 0000 0000 0002');
     await stripe.locator('input[name=expiry], input[autocomplete=cc-exp]').first().fill('12 / 34');
     await stripe.locator('input[name=cvc], input[autocomplete=cc-csc]').first().fill('123');
-    await page.getByRole('button', { name: /Thanh toán bằng thẻ/ }).click();
+    await clickPayWithRetry(page); // helper/checkout.ts — click lost khi layout shift
     await expect(page.locator('.pay-error')).toBeVisible({ timeout: 30_000 }); // card_declined
   } else {
     // không keys: saga 502 ngay tại POST /orders — UI hiện lý do server

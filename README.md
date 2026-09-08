@@ -157,8 +157,26 @@ sitemap/robots · shell (:5173 dev / static qua gateway profile full) cho
 
 **💳 Thẻ Stripe test:** `4242 4242 4242 4242` thành công · `4000 0000 0000 0002`
 declined → saga compensation (đơn FAILED + trả stock + trả coupon). Không có
-keys → checkout báo payment_unconfigured rõ ràng; E2E tự chạy mode
-unconfigured (assert CONFIRMED/email đánh dấu `[PENDING-STRIPE-KEYS]`).
+keys → checkout báo payment_unconfigured rõ ràng (503 fail-loud — regression
+`PaymentDegradedTest`); golden-path E2E hard-assert keys thật (SF-1).
+
+**🔁 Webhook Stripe local (runbook — SF-1):** đơn PAID/CONFIRMED đi QUA WEBHOOK
+(`payment_intent.succeeded` — không có confirm-sync endpoint), nên local cần
+`stripe listen` forward về payment-service:
+
+```bash
+# 1. .env: STRIPE_SECRET_KEY=sk_test_… + VITE_STRIPE_PUBLISHABLE_KEY=pk_test_…
+make stripe-listen        # 2. stripe-cli (compose) forward → :8086/payment/webhook
+#    → target in ra STRIPE_WEBHOOK_SECRET=whsec_…
+# 3. dán whsec vào .env → restart payment (đọc secret lúc boot):
+make dev svc=payment
+# 4. giữ stripe-listen chạy trong lúc demo/E2E. Test tay không qua checkout:
+#    docker logs ecommerce-stripe-cli-listen   # xem forward live
+```
+
+whsec ổn định giữa các lần chạy (CLI tái dùng webhook endpoint theo account +
+URL) — khỏi dán lại mỗi lần `make stripe-listen`. Thiếu whsec/forward:
+intent confirm OK trên Stripe nhưng đơn kẹt không CONFIRMED (E2E poll timeout).
 
 **📖 Kịch bản demo 5 phút:** [docs/demo-script.md](docs/demo-script.md) ·
 **📚 ADR:** [docs/adr/](docs/adr/) — saga+outbox · contracts freeze · auth

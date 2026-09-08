@@ -816,6 +816,7 @@
 
 .od-meta-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2, 8px);
   align-items: center;
 }
@@ -1083,4 +1084,22 @@
 
 .af-loyalty__error {
   margin: 0;
+}
+
+/* ── SF-4 (FI-394 T11) — responsive audit <600px ─────────────────────────── */
+/* Audit: acc-shell collapse + acc-nav ngang (T1), account-grid 720px, af-kpis
+   auto-fit, wl-grid auto-fill minmax 200 — ĐÃ CÓ, giữ nguyên. Còn thiếu: */
+
+/* Auth card — full-width max-400 có sẵn; giảm padding dọc 48→24 cho mobile. */
+@media (max-width: 600px) {
+  .auth-page {
+    padding: var(--space-5, 24px) var(--space-4, 16px);
+  }
+
+  /* Bảng trong Card (od items / af ledger) — uk-table width:100% tự nén, chỉ
+     tràn khi tên/cột không break được; cho Card chứa table scroll-x (CSS thuần
+     qua :has — markup KHÔNG có .od-items-wrap, tsx GIỮ nguyên per T11 scope). */
+  .acc-shell .uk-card:has(> table.uk-table) {
+    overflow-x: auto;
+  }
 }

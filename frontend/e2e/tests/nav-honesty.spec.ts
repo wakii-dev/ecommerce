@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { SHELL, STOREFRONT } from '../helpers/env';
+import { STOREFRONT } from '../helpers/env';
 
 /**
  * SF-3 honesty-pass (FI-372 T11) — binary hoá "zero dead link":

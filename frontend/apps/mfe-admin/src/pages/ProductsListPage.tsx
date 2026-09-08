@@ -3,14 +3,14 @@ import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Input, Modal, Select, Skeleton, Table, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Input, Modal, Select, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
 import { catalogApi } from '../lib/api';
 import { formatVnd } from '../lib/format';
 import { flattenCategories, indentLabel } from '../lib/productPayload';
-
-const PAGE_SIZE = 10;
 
 function statusBadge(status: string, t: (k: string) => string): ReactElement {
   return status === 'PUBLISHED' ? (
@@ -26,6 +26,7 @@ export default function ProductsListPage(): ReactElement {
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'' | 'DRAFT' | 'PUBLISHED'>('');
@@ -33,11 +34,11 @@ export default function ProductsListPage(): ReactElement {
   const [deactivating, setDeactivating] = useState<{ id: string; name: string } | null>(null);
 
   const productsQuery = useQuery({
-    queryKey: ['admin-products', { page, q, status }],
+    queryKey: ['admin-products', { page, pageSize, q, status }],
     queryFn: () =>
       catalogApi().adminListProducts({
         page,
-        size: PAGE_SIZE,
+        size: pageSize,
         q: q || undefined,
         status: status || undefined
       })
@@ -74,7 +75,7 @@ export default function ProductsListPage(): ReactElement {
   }, [productsQuery.data, categoryFilter]);
 
   const total = productsQuery.data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const columns = [
     {
@@ -93,6 +94,7 @@ export default function ProductsListPage(): ReactElement {
     {
       key: 'name',
       header: t('admin.products.title'),
+      sortValue: (row: (typeof rows)[number]) => row.name,
       render: (row: (typeof rows)[number]) => (
         <div>
           <div style={{ fontWeight: 600 }}>{row.name}</div>
@@ -106,17 +108,21 @@ export default function ProductsListPage(): ReactElement {
       key: 'price',
       header: t('admin.products.price'),
       align: 'right' as const,
+      sortValue: (row: (typeof rows)[number]) => row.price,
       render: (row: (typeof rows)[number]) => formatVnd(row.price)
     },
     {
       key: 'category',
       header: t('admin.products.category'),
+      sortValue: (row: (typeof rows)[number]) =>
+        categories.find((c) => c.id === row.categoryId)?.name ?? row.categoryId,
       render: (row: (typeof rows)[number]) =>
         categories.find((c) => c.id === row.categoryId)?.name ?? row.categoryId
     },
     {
       key: 'status',
       header: t('admin.common.status'),
+      sortValue: (row: (typeof rows)[number]) => row.status,
       render: (row: (typeof rows)[number]) => statusBadge(row.status, t)
     },
     {
@@ -199,14 +205,22 @@ export default function ProductsListPage(): ReactElement {
             </option>
           ))}
         </Select>
+        <PageSizeSelect
+          value={pageSize}
+          onChange={(n) => {
+            setPage(1);
+            setPageSize(n);
+          }}
+          label={t('admin.common.pageSize')}
+        />
       </div>
 
       {productsQuery.isLoading ? (
-        <Skeleton variant='rect' height={240} />
+        <DataTable loading columns={columns} rows={[]} />
       ) : productsQuery.isError ? (
         <p className='admin-error-text'>{t('admin.common.loadFail')}</p>
       ) : (
-        <Table
+        <DataTable
           columns={columns}
           rows={rows}
           rowKey={(row) => row.id}

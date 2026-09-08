@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, EmptyState, Input, Skeleton, Table } from '@ecommerce/ui-kit';
+import { Button, Card, EmptyState, Input } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
 
 /**
  * Audit log viewer (SF-13 A5, D21) — đọc event_log qua log-service
@@ -27,7 +29,7 @@ interface EventLogPage {
   total: number;
 }
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 50;
 
 export default function AuditPage(): ReactElement {
   const { t } = useT();
@@ -37,7 +39,13 @@ export default function AuditPage(): ReactElement {
   const [data, setData] = useState<EventLogPage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState({ eventType: '', from: '', to: '', page: 1 });
+  const [query, setQuery] = useState({
+    eventType: '',
+    from: '',
+    to: '',
+    page: 1,
+    size: DEFAULT_PAGE_SIZE
+  });
 
   const load = useCallback(async (q: typeof query): Promise<void> => {
     setLoading(true);
@@ -48,6 +56,7 @@ export default function AuditPage(): ReactElement {
       if (q.from) params.set('from', new Date(q.from).toISOString());
       if (q.to) params.set('to', new Date(q.to).toISOString());
       params.set('page', String(q.page));
+      params.set('size', String(q.size));
       const res = await authStore.fetch(`/api/log/admin/events?${params.toString()}`);
       if (!res.ok) {
         throw new Error(t('admin.common.error'));
@@ -69,7 +78,7 @@ export default function AuditPage(): ReactElement {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const next = { eventType, from, to, page: 1 };
+    const next = { eventType, from, to, page: 1, size: query.size };
     setQuery(next);
     void load(next);
   };
@@ -80,7 +89,39 @@ export default function AuditPage(): ReactElement {
     void load(q);
   };
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const changePageSize = (n: number): void => {
+    const q = { ...query, page: 1, size: n };
+    setQuery(q);
+    void load(q);
+  };
+
+  const pageSize = query.size;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
+
+  const columns = [
+    {
+      key: 'occurredAt',
+      header: t('admin.audit.time'),
+      sortValue: (row: EventLogItem) => row.occurredAt,
+      render: (row: EventLogItem) => formatTime(row.occurredAt)
+    },
+    {
+      key: 'eventType',
+      header: t('admin.audit.eventTypeCol'),
+      sortValue: (row: EventLogItem) => row.eventType
+    },
+    { key: 'correlationId', header: t('admin.audit.correlation') },
+    {
+      key: 'payload',
+      header: t('admin.audit.payload'),
+      render: (row: EventLogItem) => (
+        <code style={{ fontSize: 12 }} title={JSON.stringify(row.payload)}>
+          {JSON.stringify(row.payload).slice(0, 120)}
+          {JSON.stringify(row.payload).length > 120 ? '…' : ''}
+        </code>
+      )
+    }
+  ];
 
   return (
     <div className="admin-page" data-testid="audit-page">
@@ -117,7 +158,7 @@ export default function AuditPage(): ReactElement {
         </form>
 
         {loading ? (
-          <Skeleton count={6} />
+          <DataTable loading columns={columns} rows={[]} />
         ) : error ? (
           <div className="admin-error" role="alert">{error}</div>
         ) : !data || data.items.length === 0 ? (
@@ -128,32 +169,19 @@ export default function AuditPage(): ReactElement {
           />
         ) : (
           <>
-            <Table
+            <DataTable
               caption={t('admin.audit.title')}
               rows={data.items}
               rowKey={(row) => row.id}
               empty={<EmptyState icon="🗂️" title={t('admin.audit.empty')} />}
-              columns={[
-                {
-                  key: 'occurredAt',
-                  header: t('admin.audit.time'),
-                  render: (row: EventLogItem) => formatTime(row.occurredAt)
-                },
-                { key: 'eventType', header: t('admin.audit.eventTypeCol') },
-                { key: 'correlationId', header: t('admin.audit.correlation') },
-                {
-                  key: 'payload',
-                  header: t('admin.audit.payload'),
-                  render: (row: EventLogItem) => (
-                    <code style={{ fontSize: 12 }} title={JSON.stringify(row.payload)}>
-                      {JSON.stringify(row.payload).slice(0, 120)}
-                      {JSON.stringify(row.payload).length > 120 ? '…' : ''}
-                    </code>
-                  )
-                }
-              ]}
+              columns={columns}
             />
             <div className="admin-pagination">
+              <PageSizeSelect
+                value={pageSize}
+                onChange={changePageSize}
+                label={t('admin.common.pageSize')}
+              />
               <span>
                 {t('admin.common.pageOf', { page: data.page, total: totalPages })} — {data.total}{' '}
                 {t('admin.audit.events')}

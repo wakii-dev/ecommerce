@@ -16,7 +16,7 @@ import { useT } from '@ecommerce/i18n';
 import { Badge, Card, EmptyState, Skeleton, Table } from '@ecommerce/ui-kit';
 import { inventoryApi, orderingApi } from '../lib/api';
 import { formatVnd } from '../lib/format';
-import type { StubRevenueDay, StubSummary } from '../lib/types';
+import type { AdminRevenueDay, AdminSummary } from '../lib/types';
 
 /** Định dạng trục giá rút gọn: 2.400.000 → 2,4tr (trục, không phải tiền tệ). */
 function axisVnd(value: number): string {
@@ -40,7 +40,7 @@ export default function DashboardPage(): ReactElement {
   // Stats LIVE (SF-10 — ordering.yaml admin stats endpoints).
   const summaryQuery = useQuery({
     queryKey: ['admin-summary'],
-    queryFn: async () => (await orderingApi().adminOrdersSummary({})) as StubSummary
+    queryFn: async () => (await orderingApi().adminOrdersSummary({})) as AdminSummary
   });
   // revenue-by-day: contract REQUIRES from/to — mặc định 7 ngày gần nhất
   const revenueRange = useMemo(() => {
@@ -52,7 +52,7 @@ export default function DashboardPage(): ReactElement {
   const revenueQuery = useQuery({
     queryKey: ['admin-revenue', revenueRange.from, revenueRange.to],
     queryFn: async () =>
-      (await orderingApi().adminRevenueByDay(revenueRange)) as StubRevenueDay[]
+      (await orderingApi().adminRevenueByDay(revenueRange)) as AdminRevenueDay[]
   });
   const topQuery = useQuery({
     queryKey: ['admin-top'],
@@ -70,7 +70,7 @@ export default function DashboardPage(): ReactElement {
     queryFn: () => inventoryApi().listLowStock({})
   });
 
-  const summary: StubSummary | undefined = summaryQuery.data;
+  const summary: AdminSummary | undefined = summaryQuery.data;
 
   const revenue7d = useMemo(() => {
     const days = revenueQuery.data ?? [];
@@ -84,7 +84,7 @@ export default function DashboardPage(): ReactElement {
     return Math.round(summary.totalRevenue / Math.max(1, paidOrders));
   }, [summary]);
 
-  const revenueData = (revenueQuery.data ?? []).map((d: StubRevenueDay) => ({
+  const revenueData = (revenueQuery.data ?? []).map((d: AdminRevenueDay) => ({
     ...d,
     label: d.date.slice(5).replace('-', '/')
   }));

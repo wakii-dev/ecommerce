@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Badge,
+  Breadcrumbs,
   Button,
   Card,
   Drawer,
   EmptyState,
+  IconButton,
   Input,
   Modal,
   Pagination,
@@ -74,6 +77,7 @@ function DemoInner() {
   const [rating, setRating] = useState(4);
   const [qty, setQty] = useState(1);
   const [page, setPage] = useState(4);
+  const [alertKey, setAlertKey] = useState(0);
 
   return (
     <div className="uk-demo">
@@ -199,6 +203,68 @@ function DemoInner() {
           <span>
             Trang {page}/12
           </span>
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Breadcrumbs</h2>
+        <Breadcrumbs
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: 'Danh mục', href: '/c' },
+            { label: 'Áo thun' }
+          ]}
+        />
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">IconButton</h2>
+        <div className="uk-demo__row">
+          <IconButton aria-label="Tìm kiếm">
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+          </IconButton>
+          <IconButton aria-label="Thêm" variant="outline">
+            +
+          </IconButton>
+          <IconButton aria-label="Đóng" size="sm">
+            ×
+          </IconButton>
+          <IconButton aria-label="Xoá" variant="outline" size="sm">
+            ×
+          </IconButton>
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Alert</h2>
+        <div className="uk-demo__col">
+          <Alert title="Đang có khuyến mãi" icon="i">
+            Freeship cho đơn từ 300.000 ₫ — áp dụng tới hết tuần.
+          </Alert>
+          <Alert variant="success" title="Đặt hàng thành công">
+            Chúng tôi đã gửi email xác nhận đơn hàng của bạn.
+          </Alert>
+          <Alert variant="warning" title="Kho sắp hết">
+            Chỉ còn 2 sản phẩm — nhanh tay kẻo lỡ.
+          </Alert>
+          <Alert variant="danger" title="Thanh toán thất bại">
+            Thẻ của bạn bị từ chối, vui lòng thử phương thức khác.
+          </Alert>
+          <Alert
+            key={alertKey}
+            variant="info"
+            title="Thông báo có thể đóng"
+            dismissible
+            onClose={() => toast('Đã đóng thông báo', { variant: 'info' })}
+          >
+            Bấm nút × để đóng — hoặc &quot;Hiện lại&quot;.
+          </Alert>
+          <Button variant="secondary" size="sm" onClick={() => setAlertKey((k) => k + 1)}>
+            Hiện lại
+          </Button>
         </div>
       </section>
 

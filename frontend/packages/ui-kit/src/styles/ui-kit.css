@@ -798,6 +798,12 @@ button.uk-star {
   gap: var(--space-3);
 }
 
+.uk-demo__col {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
 /* ── QuantityStepper (SF-1 FI-391) ──────────────────────────────────── */
 /* 3 khối dính liền trong khung chung: .uk-qty giữ border + radius +
  * overflow hidden; input chỉ có viền dọc phân cách với 2 nút. */
@@ -912,6 +918,160 @@ button.uk-star {
   border: none;
   background: transparent;
   cursor: default;
+}
+
+/* ── Breadcrumbs (SF-1 FI-391) ──────────────────────────────────────── */
+
+.uk-breadcrumbs {
+  font-family: var(--font-sans);
+}
+
+.uk-breadcrumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uk-breadcrumbs__item {
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+.uk-breadcrumbs__item a {
+  color: var(--c-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-pop);
+}
+
+.uk-breadcrumbs__item a:hover {
+  text-decoration: underline;
+}
+
+.uk-breadcrumbs__item [aria-current='page'] {
+  font-weight: 600;
+}
+
+.uk-breadcrumbs__sep {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-text-muted);
+}
+
+/* ── IconButton (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--c-link);
+  font-family: var(--font-sans);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop),
+    transform var(--dur-fast) var(--ease-pop);
+}
+
+.uk-icon-btn:hover:not(:disabled) {
+  background: var(--wash-hover);
+}
+
+.uk-icon-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.uk-icon-btn--sm {
+  width: 28px;
+  height: 28px;
+}
+
+.uk-icon-btn--outline {
+  border-color: var(--c-border);
+}
+
+.uk-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uk-icon-btn:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ── Alert (SF-1 FI-391) ── tint theo variant: info=tint-primary-*,
+ * success=tint-success-*, warning=tint-new-*, danger=pill-cancelled-* ── */
+
+.uk-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: var(--radius-md);
+  background: var(--tint-primary-bg);
+  color: var(--tint-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.uk-alert--success {
+  border-color: var(--tint-success-border);
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
+}
+
+.uk-alert--warning {
+  border-color: var(--tint-new-border);
+  background: var(--tint-new-bg);
+  color: var(--tint-new-text);
+}
+
+.uk-alert--danger {
+  border-color: var(--pill-cancelled-bg);
+  background: var(--pill-cancelled-bg);
+  color: var(--pill-cancelled-text);
+}
+
+.uk-alert__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.uk-alert__content {
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.uk-alert__title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.uk-alert__close {
+  border: none;
+  padding: 0 var(--space-1);
+  background: transparent;
+  color: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-pop);
+}
+
+.uk-alert__close:hover {
+  opacity: 0.7;
 }
 
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng

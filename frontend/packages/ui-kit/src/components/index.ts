@@ -36,3 +36,18 @@ export {
   type QuantityStepperProps
 } from './QuantityStepper';
 export { Pagination, type PaginationProps } from './Pagination';
+export {
+  Breadcrumbs,
+  breadcrumbJsonld,
+  type BreadcrumbItem,
+  type BreadcrumbsProps
+} from './Breadcrumbs';
+export {
+  IconButton,
+  type IconButtonProps
+} from './IconButton';
+export {
+  Alert,
+  type AlertProps,
+  type AlertVariant
+} from './Alert';

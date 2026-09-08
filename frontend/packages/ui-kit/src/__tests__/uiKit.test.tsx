@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { formatPrice, Price } from '../components/Price';
 import { StarRating } from '../components/StarRating';
@@ -10,6 +10,12 @@ import { EmptyState } from '../components/EmptyState';
 import { Pagination } from '../components/Pagination';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { ToastProvider } from '../components/Toast';
+import {
+  Breadcrumbs,
+  breadcrumbJsonld
+} from '../components/Breadcrumbs';
+import { IconButton } from '../components/IconButton';
+import { Alert } from '../components/Alert';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -225,5 +231,133 @@ describe('ToastProvider', () => {
     expect(html).toContain('uk-toast-region');
     expect(html).toContain('children');
     expect(html).not.toContain('uk-toast uk-toast--');
+  });
+});
+
+describe('Breadcrumbs', () => {
+  const items = [
+    { label: 'Trang chủ', href: '/' },
+    { label: 'Danh mục', href: '/c' },
+    { label: 'Áo thun' }
+  ];
+
+  it('nav aria-label + item cuối span aria-current="page" + item giữa <a>', () => {
+    const html = renderToStaticMarkup(<Breadcrumbs items={items} />);
+    expect(html).toContain('aria-label="Bạn đang ở:"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/c"');
+    // item cuối là span, không phải link
+    expect(html).toContain('<span aria-current="page">Áo thun</span>');
+    // separator li aria-hidden giữa các item
+    expect(html).toContain('uk-breadcrumbs__sep');
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('item giữa KHÔNG href → span thường', () => {
+    const html = renderToStaticMarkup(
+      <Breadcrumbs items={[{ label: 'A' }, { label: 'B', href: '/b' }, { label: 'C' }]} />
+    );
+    expect(html).toContain('<span>A</span>');
+  });
+
+  it('breadcrumbJsonld — JSON hợp lệ BreadcrumbList, Position 1-based', () => {
+    const parsed = JSON.parse(breadcrumbJsonld(items)) as {
+      '@context': string;
+      '@type': string;
+      itemListElement: { '@type': string; position: number; name: string; item?: string }[];
+    };
+    expect(parsed['@context']).toBe('https://schema.org');
+    expect(parsed['@type']).toBe('BreadcrumbList');
+    expect(parsed.itemListElement).toHaveLength(3);
+    expect(parsed.itemListElement[0]).toEqual({
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Trang chủ',
+      item: '/'
+    });
+    // item cuối không href → không có field item
+    expect(parsed.itemListElement[2]).toEqual({
+      '@type': 'ListItem',
+      position: 3,
+      name: 'Áo thun'
+    });
+  });
+});
+
+describe('IconButton', () => {
+  it('aria-label + class size/variant default md/ghost', () => {
+    const html = renderToStaticMarkup(<IconButton aria-label="Đóng">×</IconButton>);
+    expect(html).toContain('class="uk-icon-btn uk-icon-btn--md uk-icon-btn--ghost"');
+    expect(html).toContain('aria-label="Đóng"');
+    expect(html).toContain('type="button"');
+  });
+
+  it('size/variant props → class tương ứng', () => {
+    const html = renderToStaticMarkup(
+      <IconButton aria-label="Thêm" size="sm" variant="outline">
+        +
+      </IconButton>
+    );
+    expect(html).toContain('uk-icon-btn--sm');
+    expect(html).toContain('uk-icon-btn--outline');
+  });
+
+  it('thiếu aria-label → console.error dev-warn nhưng vẫn render (không crash)', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const html = renderToStaticMarkup(
+      <IconButton {...({} as Record<string, never>)}>×</IconButton>
+    );
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    expect(html).toContain('uk-icon-btn');
+    errSpy.mockRestore();
+  });
+});
+
+describe('Alert', () => {
+  it('4 variant → class tint tương ứng', () => {
+    for (const variant of ['info', 'success', 'warning', 'danger'] as const) {
+      const html = renderToStaticMarkup(<Alert variant={variant}>Nội dung</Alert>);
+      expect(html).toContain(`uk-alert--${variant}`);
+    }
+  });
+
+  it('default info + role: danger → alert, còn lại → status', () => {
+    expect(renderToStaticMarkup(<Alert>Nội dung</Alert>)).toContain(
+      'role="status"'
+    );
+    for (const variant of ['info', 'success', 'warning'] as const) {
+      expect(renderToStaticMarkup(<Alert variant={variant}>x</Alert>)).toContain(
+        'role="status"'
+      );
+    }
+    expect(renderToStaticMarkup(<Alert variant="danger">x</Alert>)).toContain(
+      'role="alert"'
+    );
+  });
+
+  it('dismissible → nút × aria-label default; title/icon render', () => {
+    const html = renderToStaticMarkup(
+      <Alert
+        variant="danger"
+        title="Thanh toán thất bại"
+        icon="!"
+        dismissible
+      >
+        Thử lại sau.
+      </Alert>
+    );
+    expect(html).toContain('aria-label="Đóng thông báo"');
+    expect(html).toContain('uk-alert__close');
+    expect(html).toContain('uk-alert__title');
+    expect(html).toContain('Thanh toán thất bại');
+    expect(html).toContain('!');
+  });
+
+  it('dismissLabel override theo ui.alert.dismiss surface truyền vào', () => {
+    const html = renderToStaticMarkup(
+      <Alert dismissible dismissLabel="Tắt cảnh báo">x</Alert>
+    );
+    expect(html).toContain('aria-label="Tắt cảnh báo"');
   });
 });

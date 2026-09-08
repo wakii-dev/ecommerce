@@ -313,11 +313,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 ### Task 15: walkthrough-screenshots-e2e-golden-nav-green (nhóm D — coordinator chủ trì)
 
-- [ ] **Step 1:** Boot dev stack (gateway + catalog data + storefront :3000; kiểm port trước).
-- [ ] **Step 2:** Browser walkthrough 5 màn (home/PLP/PDP/search/coupons) — Rule 0 3 tầng: DOM eval + screenshot mỗi màn + đi trọn flow golden-path (sort/filter/pagination/link KHÔNG trắng trang); mobile 375×667 sweep (sticky ATC, grid 2-col, nav scroll-x); reduced-motion emulation check; screenshot lưu `docs/superpowers/evidence/sf-2/`.
-- [ ] **Step 3:** e2e subset: `pnpm -C frontend/e2e exec playwright test golden-path nav-honesty related-products review-flow` (package `@ecommerce/e2e`; P2 critic: filter-by-name không dùng). Storefront dev của worktree NÀY + `E2E_STOREFRONT_URL` override theo helpers/env (nav-honesty header ghi rõ pattern mock-gateway :9099 + storefront GATEWAY_URL trỏ mock) — KHÔNG test nhầm storefront :3000 của main checkout.
-- [ ] **Step 4:** Unit tests toàn app storefront xanh + lint xanh.
-- [ ] **Step 5:** Fix mọi phát hiện (fix nhỏ trong task; phát hiện lớn → report coordinator) → commit `test(storefront): SF-2 walkthrough evidence + e2e subset green (FI-392)` (chỉ khi có artifact/fix).
+- [x] **Step 1:** Boot dev stack (gateway + catalog data + storefront :3000; kiểm port trước).
+- [x] **Step 2:** Browser walkthrough 5 màn (home/PLP/PDP/search/coupons) — Rule 0 3 tầng: DOM eval + screenshot mỗi màn + đi trọn flow golden-path (sort/filter/pagination/link KHÔNG trắng trang); mobile 375×667 sweep (sticky ATC, grid 2-col, nav scroll-x); reduced-motion emulation check; screenshot lưu `docs/superpowers/evidence/sf-2/`.
+- [x] **Step 3:** e2e subset: `pnpm -C frontend/e2e exec playwright test golden-path nav-honesty related-products review-flow` (package `@ecommerce/e2e`; P2 critic: filter-by-name không dùng). Storefront dev của worktree NÀY + `E2E_STOREFRONT_URL` override theo helpers/env (nav-honesty header ghi rõ pattern mock-gateway :9099 + storefront GATEWAY_URL trỏ mock) — KHÔNG test nhầm storefront :3000 của main checkout.
+- [x] **Step 4:** Unit tests toàn app storefront xanh + lint xanh.
+- [x] **Step 5:** Fix mọi phát hiện (fix nhỏ trong task; phát hiện lớn → report coordinator) → commit `test(storefront): SF-2 walkthrough evidence + e2e subset green (FI-392)` (chỉ khi có artifact/fix).
 
 ---
 

@@ -165,12 +165,12 @@ git commit -m "feat(account): AccountLayout side-nav 6 mục + active + collapse
 - Modify: `pages/AccountPage.tsx`, `pages/twofa/TwoFactorSection.tsx`, `src/page.css`, `catalogs/{vi,en}.ts`
 - Create test: `src/__tests__/profileValidation.test.tsx`
 
-- [ ] **Step 1: Profile form** — fullName validate on-blur (T2 pattern), phone `inputMode="tel"` + validate khi CÓ nhập: ` /^(0|\+84)\d{8,10}$/ ` (vi format — error inline; rỗng = hợp lệ vì optional); banner/saved giữ role alert/status; KHÔNG đụng onSubmit API shape.
-- [ ] **Step 2: Email/role read-only** — giữ dl `account-rows`; role Badge → tint đúng (CUSTOMER → neutral, ADMIN → primary — map nhỏ, không hard-code vi ngoài keys).
-- [ ] **Step 3: TwoFactorSection polish** — badge 'Đang bật/Đang tắt' → keys; note texts → keys; spacing/nhịp theo direction (giữ mọi logic setup/confirm/disable/QR/recovery-codes nguyên văn — CHỈ text + class). `twofa-codes` grid 2 cột giữ.
-- [ ] **Step 4: i18n** — `account.profile.*` (title, personalInfo, email, role, fullName, phone, phoneInvalid, save, saved, roleCustomer, roleAdmin, errorGeneric) + `account.twofa.*` (title, enabled, disabled, enable, disable, note*3, code, activationCode, backupCodes*2, confirmDisable, cancel, password, qrAlt).
-- [ ] **Step 5: Unit test** — fullName blur rỗng → error; phone 'abc' blur → error; phone rỗng → OK; submit hợp lệ gọi updateProfile (mock api module).
-- [ ] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): profile validate realtime inputMode tel + 2FA polish i18n (FI-394 T4)`.
+- [x] **Step 1: Profile form** — fullName validate on-blur (T2 pattern), phone `inputMode="tel"` + validate khi CÓ nhập: ` /^(0|\+84)\d{8,10}$/ ` (vi format — error inline; rỗng = hợp lệ vì optional); banner/saved giữ role alert/status; KHÔNG đụng onSubmit API shape.
+- [x] **Step 2: Email/role read-only** — giữ dl `account-rows`; role Badge → tint đúng (CUSTOMER → neutral, ADMIN → primary — map nhỏ, không hard-code vi ngoài keys).
+- [x] **Step 3: TwoFactorSection polish** — badge 'Đang bật/Đang tắt' → keys; note texts → keys; spacing/nhịp theo direction (giữ mọi logic setup/confirm/disable/QR/recovery-codes nguyên văn — CHỈ text + class). `twofa-codes` grid 2 cột giữ.
+- [x] **Step 4: i18n** — `account.profile.*` (title, personalInfo, email, role, fullName, phone, phoneInvalid, save, saved, roleCustomer, roleAdmin, errorGeneric) + `account.twofa.*` (title, enabled, disabled, enable, disable, note*3, code, activationCode, backupCodes*2, confirmDisable, cancel, password, qrAlt).
+- [x] **Step 5: Unit test** — fullName blur rỗng → error; phone 'abc' blur → error; phone rỗng → OK; submit hợp lệ gọi updateProfile (mock api module).
+- [x] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): profile validate realtime inputMode tel + 2FA polish i18n (FI-394 T4)`.
 
 ### Task 5: OrdersPage — card polish + pill 6 màu + skeleton + empty
 
@@ -178,12 +178,12 @@ git commit -m "feat(account): AccountLayout side-nav 6 mục + active + collapse
 - Modify: `pages/orders/OrdersPage.tsx`, `src/page.css`, `catalogs/{vi,en}.ts`
 - Create test: `src/__tests__/ordersPage.test.tsx`
 
-- [ ] **Step 1: Status pill 6 màu** — thay Badge variants bằng span `.pill .pill--<status>` map ĐÚNG token: pending→`--pill-pending-*`, paid→`--pill-paid-*`, confirmed→`--pill-confirmed-*`, shipped→`--pill-shipped-*`, delivered→`--pill-delivered-*`, cancelled→`--pill-cancelled-*`, **failed→cancelled family** (red). CSS `.pill { display:inline-flex; align-items:center; font-size:11px; font-weight:800; letter-spacing:.05em; padding:3px 9px; border-radius: var(--radius-full,999px); background: var(--pill-<s>-bg); color: var(--pill-<s>-text); }`. StatusBadge giữ export (OrderDetailPage import) + data giữ. Labels → keys `account.order.status.*` (7 statuses).
-- [ ] **Step 2: Card polish** — decss list (inline styles → `.order-card*` classes): card shadow-1 radius-md; hover translateY(-2px) + shadow-2 `--dur-base` (order card KHÔNG lên shadow-3 — direction cascade: tile thường ≤2); order id `--c-link` 700 tabular-nums; meta 13 muted; total phải `--c-danger` 800. date/pay-method format GIỮ (vi-VN locale qua hàm formatDateTime — key hóa prefix text nếu có).
-- [ ] **Step 3: Skeleton + empty** — loading → `<ListSkeleton count={4} />` thay `<p>Đang tải đơn hàng…`; empty → EmptyState icon `<Icon name="package" size={40} />` (thay 🛍️) + keys title/desc/cta; error giữ EmptyState alert icon Icon alert + keys.
-- [ ] **Step 4: i18n** — `account.orders.*`: title ('Đơn hàng của tôi'), orderId, itemsCount ('{{count}} sản phẩm'), loading (giữ key dù UI skeleton — dùng cho aria), emptyTitle/emptyDesc/emptyCta, errorTitle, retry, paymentCod/paymentStripe.
-- [ ] **Step 5: Unit test** — render với orders giả: pill class đúng theo status (7 map), formatVnd, link href `/account/orders/:id`; loading → ListSkeleton aria-busy; empty → EmptyState.
-- [ ] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): orders card polish + status pill 6 token + ListSkeleton + empty Icon (FI-394 T5)`.
+- [x] **Step 1: Status pill 6 màu** — thay Badge variants bằng span `.pill .pill--<status>` map ĐÚNG token: pending→`--pill-pending-*`, paid→`--pill-paid-*`, confirmed→`--pill-confirmed-*`, shipped→`--pill-shipped-*`, delivered→`--pill-delivered-*`, cancelled→`--pill-cancelled-*`, **failed→cancelled family** (red). CSS `.pill { display:inline-flex; align-items:center; font-size:11px; font-weight:800; letter-spacing:.05em; padding:3px 9px; border-radius: var(--radius-full,999px); background: var(--pill-<s>-bg); color: var(--pill-<s>-text); }`. StatusBadge giữ export (OrderDetailPage import) + data giữ. Labels → keys `account.order.status.*` (7 statuses).
+- [x] **Step 2: Card polish** — decss list (inline styles → `.order-card*` classes): card shadow-1 radius-md; hover translateY(-2px) + shadow-2 `--dur-base` (order card KHÔNG lên shadow-3 — direction cascade: tile thường ≤2); order id `--c-link` 700 tabular-nums; meta 13 muted; total phải `--c-danger` 800. date/pay-method format GIỮ (vi-VN locale qua hàm formatDateTime — key hóa prefix text nếu có).
+- [x] **Step 3: Skeleton + empty** — loading → `<ListSkeleton count={4} />` thay `<p>Đang tải đơn hàng…`; empty → EmptyState icon `<Icon name="package" size={40} />` (thay 🛍️) + keys title/desc/cta; error giữ EmptyState alert icon Icon alert + keys.
+- [x] **Step 4: i18n** — `account.orders.*`: title ('Đơn hàng của tôi'), orderId, itemsCount ('{{count}} sản phẩm'), loading (giữ key dù UI skeleton — dùng cho aria), emptyTitle/emptyDesc/emptyCta, errorTitle, retry, paymentCod/paymentStripe.
+- [x] **Step 5: Unit test** — render với orders giả: pill class đúng theo status (7 map), formatVnd, link href `/account/orders/:id`; loading → ListSkeleton aria-busy; empty → EmptyState.
+- [x] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): orders card polish + status pill 6 token + ListSkeleton + empty Icon (FI-394 T5)`.
 
 ### Task 6: OrderDetailPage decss + Table + Textarea + timeline
 

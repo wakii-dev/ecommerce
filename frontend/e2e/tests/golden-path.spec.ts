@@ -14,17 +14,19 @@ import {
   registerNewUser,
   type Session
 } from '../helpers/api';
+import { clickPayWithRetry } from '../helpers/checkout';
 
 /**
  * §5.2 GOLDEN PATH (SF-10): browse home → search → PDP (SEO SSR) → đăng ký
  * user mới (UI) → add to cart → coupon WELCOME10 → checkout → Stripe 4242 →
  * confirmation poll CONFIRMED → Mailpit email xác nhận → admin thấy đơn.
  *
- * STRIPE parameterization (REQUIREMENT-GAP FI-310 — coordinator duyệt):
- * - hasStripe() = true  → full flow (4242 → CONFIRMED → email → admin thấy).
- * - hasStripe() = false → assert tới bước tạo đơn (502 payment_unconfigured —
- *   saga compensation đúng §3.3: stock released + coupon reusable); các assert
- *   CONFIRMED/email/admin đánh dấu [PENDING-STRIPE-KEYS] và SKIP.
+ * SF-1 (FI-369): suite này CHẠY VỚI KEYS THẬT — test đầu hard-assert
+ * hasStripe() (sk_test_* + pk_test_* + whsec_*) fail-loud thay vì silent
+ * degrade. Payment PAID là webhook-only (payment_intent.succeeded) → thiếu
+ * whsec/`make stripe-listen` = CONFIRMED không bao giờ tới. Regression
+ * không-keys (payUnavailable 503 fail-loud): docs/demo-script.md — stripe
+ * runbook (PaymentDegradedTest + UnconfiguredAdapter).
  *
  * user (API, beforeAll) dùng cho tests 4-7 — ĐỘC LẬP test 3 (UI register dùng
  * uiUser riêng: --grep một test không phá chuỗi phụ thuộc — live-verify r4).
@@ -32,6 +34,9 @@ import {
 
 const STRIPE_READY = hasStripe();
 const PENDING = '[PENDING-STRIPE-KEYS]';
+// SF-1 FI-369: keys thật đã LIVE + E2E chạy full — marker chuyển trạng thái
+const VERIFIED = '[VERIFIED-STRIPE]';
+const STRIPE_TAG = STRIPE_READY ? VERIFIED : PENDING;
 
 let uiUser: Session;
 let user: Session;
@@ -75,6 +80,17 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   uiUser = newCredentials('golden-ui');
   user = await registerNewUser('golden');
+});
+
+// SF-1: fail-loud đầu suite — keys/whsec thiếu → dừng ngay, không chạy silent-degrade
+test('0 — Stripe keys live (hard-assert hasStripe)', () => {
+  expect(
+    STRIPE_READY,
+    'Golden path cần Stripe keys thật: .env đủ STRIPE_SECRET_KEY=sk_test_*, ' +
+      'VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*, STRIPE_WEBHOOK_SECRET=whsec_* ' +
+      '(+ `make stripe-listen` đang chạy để forward webhook). ' +
+      'Chi tiết: README → "Webhook Stripe local (runbook)".'
+  ).toBe(true);
 });
 
 test('1 — home SSR: header search + locale switcher + hero renders', async ({ page }) => {
@@ -179,7 +195,7 @@ test('5 — checkout: coupon WELCOME10 −10% → tạo đơn', async ({ page })
   await stripe.locator('input[name=number], input[autocomplete=cc-number]').first().fill('4242 4242 4242 4242');
   await stripe.locator('input[name=expiry], input[autocomplete=cc-exp]').first().fill('12 / 34');
   await stripe.locator('input[name=cvc], input[autocomplete=cc-csc]').first().fill('123');
-  await page.getByRole('button', { name: /Thanh toán bằng thẻ/ }).click();
+  await clickPayWithRetry(page); // helper/checkout.ts — click lost khi layout shift
 
   // confirmation page — poll tới CONFIRMED
   await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30_000 });
@@ -188,8 +204,16 @@ test('5 — checkout: coupon WELCOME10 −10% → tạo đơn', async ({ page })
   });
 });
 
-test(`6 — Mailpit email cảm ơn + attach PDF ${PENDING}`, async () => {
+test(`6 — Mailpit email cảm ơn + attach PDF ${STRIPE_TAG}`, async () => {
   test.skip(!STRIPE_READY, PENDING);
+  // email đến SAU khi order CONFIRMED (ordering → order.confirmed →
+  // notification ThankYouMailer → invoice PDF) — poll Mailpit, không one-shot
+  await expect
+    .poll(async () => {
+      const messages = await mailpitMessages();
+      return mailpitFindFor(messages, user.email, 'Cảm ơn bạn đã mua hàng')?.ID ?? null;
+    }, { timeout: 30_000, intervals: [2_000] })
+    .not.toBeNull();
   const messages = await mailpitMessages();
   const mail = mailpitFindFor(messages, user.email, 'Cảm ơn bạn đã mua hàng');
   expect(mail, 'email cảm ơn cho user mới').toBeDefined();
@@ -197,11 +221,13 @@ test(`6 — Mailpit email cảm ơn + attach PDF ${PENDING}`, async () => {
   expect(attachments.some((a) => a.endsWith('.pdf')), 'đính kèm PDF hóa đơn').toBe(true);
 });
 
-test(`7 — admin thấy đơn CONFIRMED trong admin orders ${PENDING}`, async ({ page }) => {
+test(`7 — admin thấy đơn CONFIRMED trong admin orders ${STRIPE_TAG}`, async ({ page }) => {
   test.skip(!STRIPE_READY, PENDING);
   await uiLogin(page, ADMIN_EMAIL, ADMIN_PASSWORD);
   await page.goto(`${SHELL}/admin/orders`);
-  // đơn CONFIRMED của user e2e trong bảng
-  await expect(page.getByText(user.email.slice(0, 20)).first()).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText('Đã xác nhận').first()).toBeVisible();
+  // Cột KHÁCH HÀNG hiển thị TÊN + SĐT (không email — live-verify SF-1 08-09);
+  // bảng sort mới→cũ: đơn CONFIRMED vừa tạo (test 5, tên địa chỉ test 5) = dòng đầu
+  const newest = page.locator('tbody tr').first();
+  await expect(newest).toContainText('E2E Golden Tester', { timeout: 20_000 });
+  await expect(newest).toContainText('Đã xác nhận');
 });

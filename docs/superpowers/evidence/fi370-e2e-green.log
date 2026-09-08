@@ -1,0 +1,20 @@
+
+Running 15 tests using 1 worker
+
+  ✓   1 tests/golden-path.spec.ts:86:5 › 0 — Stripe keys live (hard-assert hasStripe) (3ms)
+  ✓   2 tests/golden-path.spec.ts:96:5 › 1 — home SSR: header search + locale switcher + hero renders (738ms)
+  ✓   3 tests/golden-path.spec.ts:103:5 › 2 — search ES "Tai nghe" → có kết quả; SEO view-source PDP có tên + giá + JSON-LD (738ms)
+  ✓   4 tests/golden-path.spec.ts:123:5 › 3 — đăng ký user mới qua UI + đăng nhập (751ms)
+  ✓   5 tests/golden-path.spec.ts:139:5 › 4 — PDP add to cart → cart badge → /cart thấy item (10.1s)
+  ✓   6 tests/golden-path.spec.ts:156:5 › 5 — checkout: coupon WELCOME10 −10% → tạo đơn (19.1s)
+  ✓   7 tests/golden-path.spec.ts:207:5 › 6 — Mailpit email cảm ơn + attach PDF [VERIFIED-STRIPE] (2.0s)
+  ✓   8 tests/golden-path.spec.ts:224:5 › 7 — admin thấy đơn CONFIRMED trong admin orders [VERIFIED-STRIPE] (1.0s)
+  ✓   9 tests/platform-asserts.spec.ts:17:5 › §5.8 Mongo event_log có documents cho domain events của demo (1.5s)
+  ✓  10 tests/platform-asserts.spec.ts:27:5 › §5.9 ES products index count > 0 + search endpoint trả kết quả (182ms)
+  ✓  11 tests/platform-asserts.spec.ts:44:5 › §5.10 sitemap.xml + robots.txt 200 với URL products (116ms)
+  ✓  12 tests/platform-asserts.spec.ts:54:5 › §5.11 i18n: /en/p/<slug-en> nội dung tiếng Anh + hreflang + search ?locale=en (293ms)
+  ✓  13 tests/platform-asserts.spec.ts:73:5 › §5.13 partner Open API: key đúng 200, key sai 401, docs portal mở (146ms)
+  ✓  14 tests/platform-asserts.spec.ts:91:5 › §5.14 affiliate: ?ref= → cookie attribution + track click (không lỗi) (726ms)
+  ✓  15 tests/saga-fail.spec.ts:60:5 › payment fail → FAILED + stock released + coupon reusable (11.3s)
+
+  15 passed (50.0s)

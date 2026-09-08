@@ -352,7 +352,7 @@ export default function CouponsPage(): ReactElement {
               <Button type='button' variant='ghost' onClick={() => setForm(null)}>
                 {t('admin.common.cancel')}
               </Button>
-              <Button type='submit' disabled={saveMutation.isPending}>
+              <Button type='submit' data-testid='coupon-submit-btn' disabled={saveMutation.isPending}>
                 {editing ? t('admin.common.save') : t('admin.coupons.new')}
               </Button>
             </div>

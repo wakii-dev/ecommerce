@@ -187,11 +187,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/Header.tsx`, css header (`app/app.css` section Header).
 
-- [ ] **Step 1:** Search polish §2.1: focus-within ring `0 0 0 4px var(--tint-primary-bg)` + `--shadow-2`; nút Tìm kiếm hover `--c-primary-hover` (giá trị đã đúng css hiện có — kiểm và bổ sung thiếu).
-- [ ] **Step 2:** Actions: icon-btn 42×42 radius-md, hover nền `--wash-hover` + chữ `--c-link`; cart-badge nền `--c-accent` chữ `--c-on-accent` min 18×18 font 10.5/800 border 2px surface (cart-badge là link — nếu chưa có badge số, chỉ polish visual badge khi có; KHÔNG tạo fetch giỏ mới — cart state là shell/SF-3).
-- [ ] **Step 3:** Mini-nav: link trắng 13/600 padding 8×14 hover `--c-primary-hover`; mục accent `--c-accent`; scroll-x khi hẹp (chạy được — T13 hoàn thiện mobile). 3 link GIỮ trỏ `/c/dien-tu` (spec: polish visual; slug root categories thật CHỈ khi API sẵn — categories API có sẵn nhưng Header là server component không fetch thêm: GIỮ nguyên 3 link hiện trạng, polish thôi).
-- [ ] **Step 4:** z-index `--z-header` + shadow `--shadow-1` khi sticky.
-- [ ] **Step 5:** vitest + lint xanh → commit `feat(storefront): header search focus ring + actions + mini-nav polish per direction §2.1 (FI-392)`.
+- [x] **Step 1:** Search polish §2.1: focus-within ring `0 0 0 4px var(--tint-primary-bg)` + `--shadow-2`; nút Tìm kiếm hover `--c-primary-hover` (giá trị đã đúng css hiện có — kiểm và bổ sung thiếu).
+- [x] **Step 2:** Actions: icon-btn 42×42 radius-md, hover nền `--wash-hover` + chữ `--c-link`; cart-badge nền `--c-accent` chữ `--c-on-accent` min 18×18 font 10.5/800 border 2px surface (cart-badge là link — nếu chưa có badge số, chỉ polish visual badge khi có; KHÔNG tạo fetch giỏ mới — cart state là shell/SF-3).
+- [x] **Step 3:** Mini-nav: link trắng 13/600 padding 8×14 hover `--c-primary-hover`; mục accent `--c-accent`; scroll-x khi hẹp (chạy được — T13 hoàn thiện mobile). 3 link GIỮ trỏ `/c/dien-tu` (spec: polish visual; slug root categories thật CHỈ khi API sẵn — categories API có sẵn nhưng Header là server component không fetch thêm: GIỮ nguyên 3 link hiện trạng, polish thôi).
+- [x] **Step 4:** z-index `--z-header` + shadow `--shadow-1` khi sticky.
+- [x] **Step 5:** vitest + lint xanh → commit `feat(storefront): header search focus ring + actions + mini-nav polish per direction §2.1 (FI-392)`.
 
 ### Task 4: hero-carousel-elevation-kenburns-pause-a11y (nhóm A)
 

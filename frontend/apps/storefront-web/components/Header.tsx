@@ -20,7 +20,7 @@ export default function Header({ locale }: { locale: Locale }) {
   return (
     <header className="site-header">
       <div className="container header-main">
-        <Link className="logo" href={localePath('/', locale)} aria-label="Shop VN — trang chủ">
+        <Link className="logo" href={localePath('/', locale)} aria-label={t(locale, 'header.logo')}>
           <span className="logo-word">
             ShopVN
             <span className="logo-dot" aria-hidden="true" />
@@ -52,7 +52,7 @@ export default function Header({ locale }: { locale: Locale }) {
       {/* Mini-nav → PLP flagship /c/dien-tu (khớp convention hero CTA; slug
           seed thật). Sort newest/rating proxy Hàng mới/Bán chạy (API chưa có
           sort bestseller); route "toàn sàn" chưa có — khi có thì trỏ đó. */}
-      <nav className="mini-nav" aria-label="Danh mục nhanh">
+      <nav className="mini-nav" aria-label={t(locale, 'header.quickNav')}>
         <div className="container mini-nav-inner">
           <Link href={localePath('/c/dien-tu', locale)}>{t(locale, 'header.categories')}</Link>
           <Link className="accent" href={localePath('/c/dien-tu?sort=newest', locale)}>{t(locale, 'header.newArrivals')}</Link>

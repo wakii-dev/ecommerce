@@ -285,11 +285,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** mới `lib/i18n.ts` + `tests/i18n.test.ts`; 12+ file COPY (Header, SearchBar, PDP page, PdpBuyBox, AddToCart (COPY export GIỮ — re-export từ i18n), search, coupons, StockAlertInput, WriteReviewModal, MyPendingReviewPanel, WriteReviewControl, WishlistHeart, NewsletterForm, RecentlyViewed, HeroCarousel, LocaleSwitcher, ThemeToggle, Footer, CategoryTiles, home page inline copy, not-found ×2, SortSelect, Toolbar, Gallery, Countdown aria).
 
-- [ ] **Step 1:** Thiết kế `lib/i18n.ts`: catalogs grouped theo miền (`header`, `home`, `hero`, `plp`, `pdp`, `search`, `coupons`, `footer`, `reviews`, `common`) — mỗi key `Record<Locale, string>`; export `t(locale, key)` typed (key union từ catalogs) + helper `useT` KHÔNG cần (components nhận locale prop sẵn). Type-safe: `keyof` catalogs.
-- [ ] **Step 2:** Migrate từng component COPY → import i18n (giữ hành vi; AddToCart `export const COPY` re-export từ i18n để test cũ không vỡ).
-- [ ] **Step 3:** ~17 aria-label hardcoded → keys vi/en (breadcrumb nav, pagination prev/next/page, countdown timer, carousel arrows/dots, qty stepper −/+, category sections, logo, locale switcher...). Grep `aria-label="` xác nhận 0 hardcoded vi còn lại (trừ label động product name).
-- [ ] **Step 4:** Test mới `tests/i18n.test.ts`: parity vi/en (mọi key đủ 2 locale, không rỗng) + spot-check vài key.
-- [ ] **Step 5:** vitest + lint xanh → **2 commit** (P2 critic — rollback unit gọn hơn): `refactor(storefront): COPY objects → lib/i18n module (FI-392)` + `refactor(storefront): aria-label hardcoded → i18n keys vi/en (FI-392)`.
+- [x] **Step 1:** Thiết kế `lib/i18n.ts`: catalogs grouped theo miền (`header`, `home`, `hero`, `plp`, `pdp`, `search`, `coupons`, `footer`, `reviews`, `common`) — mỗi key `Record<Locale, string>`; export `t(locale, key)` typed (key union từ catalogs) + helper `useT` KHÔNG cần (components nhận locale prop sẵn). Type-safe: `keyof` catalogs.
+- [x] **Step 2:** Migrate từng component COPY → import i18n (giữ hành vi; AddToCart `export const COPY` re-export từ i18n để test cũ không vỡ).
+- [x] **Step 3:** ~17 aria-label hardcoded → keys vi/en (breadcrumb nav, pagination prev/next/page, countdown timer, carousel arrows/dots, qty stepper −/+, category sections, logo, locale switcher...). Grep `aria-label="` xác nhận 0 hardcoded vi còn lại (trừ label động product name).
+- [x] **Step 4:** Test mới `tests/i18n.test.ts`: parity vi/en (mọi key đủ 2 locale, không rỗng) + spot-check vài key.
+- [x] **Step 5:** vitest + lint xanh → **2 commit** (P2 critic — rollback unit gọn hơn): `refactor(storefront): COPY objects → lib/i18n module (FI-392)` + `refactor(storefront): aria-label hardcoded → i18n keys vi/en (FI-392)`.
 
 ### Task 13: responsive-600-mobile-nav-sticky-atc-grid (nhóm D)
 

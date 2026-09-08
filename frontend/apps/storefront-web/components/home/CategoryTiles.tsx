@@ -40,7 +40,7 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
   if (categories.length === 0) return null;
 
   return (
-    <section className="cat-section" aria-label="Danh mục nổi bật">
+    <section className="cat-section" aria-label={t(locale, 'home.categoriesTitle')}>
       <div className="cat-grid">
         {categories.map((category, index) => (
           <Link

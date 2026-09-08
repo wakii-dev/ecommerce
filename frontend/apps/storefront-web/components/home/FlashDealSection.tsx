@@ -33,7 +33,7 @@ export default function FlashDealSection({ items, locale }: { items: ProductCard
   const endsAt = earliestFlashEndsAt(items);
 
   return (
-    <section className="flash" aria-label="Flash sale">
+    <section className="flash" aria-label={t(locale, 'home.flashSection')}>
       <div className="flash-head">
         <h3 className="flash-title">
           <svg
@@ -48,7 +48,7 @@ export default function FlashDealSection({ items, locale }: { items: ProductCard
           </svg>
           Flash Sale
         </h3>
-        {endsAt ? <Countdown endsAt={endsAt} /> : null}
+        {endsAt ? <Countdown endsAt={endsAt} locale={locale} /> : null}
         <Link
           className="flash-more"
           href={localePath('/c/dien-tu?sort=discount', locale)}

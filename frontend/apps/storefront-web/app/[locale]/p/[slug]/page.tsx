@@ -195,7 +195,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       </nav>
 
       <div className="pdp-layout">
-        <Gallery images={galleryImages} name={product.name} gradient={gradient} emoji={emoji} percent={percent} />
+        <Gallery images={galleryImages} name={product.name} gradient={gradient} emoji={emoji} percent={percent} locale={locale} />
 
         <div className="pdp-info">
           <h1 className="pdp-name">{product.name}</h1>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Locale } from '../../lib/format';
-import { COPY } from '../../lib/i18n';
+import { COPY, t } from '../../lib/i18n';
 import { shellUrl } from '../../lib/site';
 
 /**
@@ -149,7 +149,7 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
           <button
             type="button"
             className="pdp-stepper-btn"
-            aria-label="−"
+            aria-label={t(locale, 'pdp.qtyDec')}
             disabled={qty <= 1 || pending}
             onClick={() => setQty((value) => Math.max(1, value - 1))}
           >
@@ -170,7 +170,7 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
           <button
             type="button"
             className="pdp-stepper-btn"
-            aria-label="+"
+            aria-label={t(locale, 'pdp.qtyInc')}
             disabled={qty >= 99 || pending}
             onClick={() => setQty((value) => Math.min(99, value + 1))}
           >

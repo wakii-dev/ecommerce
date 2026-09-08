@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { localePath, type Locale } from '../../lib/format';
-import { HERO_SLIDES, t } from '../../lib/i18n';
+import { HERO_SLIDES, t, tParams } from '../../lib/i18n';
 
 /**
  * Hero carousel (direction §2.2.1) — 3 slide gradient 120deg §1.8 (ken-burns
@@ -52,7 +52,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
     <section
       className="hero"
       aria-roledescription="carousel"
-      aria-label="Khuyến mãi nổi bật"
+      aria-label={t(locale, 'hero.section')}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
@@ -80,7 +80,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
       <button
         type="button"
         className="hero-arrow hero-arrow--prev"
-        aria-label={locale === 'en' ? 'Previous slide' : 'Slide trước'}
+        aria-label={t(locale, 'hero.prev')}
         onClick={() => setIndex((current) => (current - 1 + slides.length) % slides.length)}
       >
         ‹
@@ -88,7 +88,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
       <button
         type="button"
         className="hero-arrow hero-arrow--next"
-        aria-label={locale === 'en' ? 'Next slide' : 'Slide sau'}
+        aria-label={t(locale, 'hero.next')}
         onClick={() => setIndex((current) => (current + 1) % slides.length)}
       >
         ›
@@ -99,7 +99,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
             key={slide.gradient}
             type="button"
             className={slideIndex === index ? 'hero-dot is-active' : 'hero-dot'}
-            aria-label={locale === 'en' ? `Go to slide ${slideIndex + 1}` : `Chuyển đến slide ${slideIndex + 1}`}
+            aria-label={tParams(locale, 'hero.goToSlide', { n: slideIndex + 1 })}
             aria-current={slideIndex === index}
             onClick={() => setIndex(slideIndex)}
           />

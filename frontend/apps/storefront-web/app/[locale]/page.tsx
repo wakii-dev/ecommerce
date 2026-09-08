@@ -87,7 +87,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
       ) : null}
 
       {featured.length > 0 ? (
-        <section className="featured" aria-label="Gợi ý hôm nay">
+        <section className="featured" aria-label={t(locale, 'home.featuredTitle')}>
           <Reveal className="featured-head">
             <div className="featured-head-left">
               <span className="section-bar" aria-hidden="true" />

@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import type { MouseEvent } from 'react';
 
+import type { Locale } from '../../lib/format';
+import { tParams } from '../../lib/i18n';
+
 /**
  * Gallery PDP (direction §2.5, plan Task 13): ảnh chính aspect 1/1 (url rỗng
  * → gradient theo danh mục + emoji), flag -% góc trên-trái nền primary, thumbs
@@ -11,6 +14,7 @@ import type { MouseEvent } from 'react';
  * css scale 1.18 + lens (gate hover+pointer:fine — placeholder không zoom).
  * URL rỗng/ảnh placeholder seed /media/** → <img> thường (protocol SF-4,
  * <Image> khi ảnh thật — cùng quyết định ProductCardView).
+ * T12: aria-label thumbs vi/en (trước đây hardcode vi cả 2 locale).
  */
 
 /** Set --mx/--my (px trong ảnh) trên wrapper — transform-origin + lens theo con trỏ. */
@@ -29,9 +33,11 @@ export interface GalleryProps {
   emoji: string;
   /** % giảm giá (chỉ hiện flag khi có). */
   percent?: number;
+  /** Locale cho aria-label thumbs (T12 — i18n). */
+  locale: Locale;
 }
 
-export default function Gallery({ images, name, gradient, emoji, percent }: GalleryProps) {
+export default function Gallery({ images, name, gradient, emoji, percent, locale }: GalleryProps) {
   const [active, setActive] = useState(0);
   const current = images[Math.min(active, Math.max(0, images.length - 1))];
   const hasImage = Boolean(current?.url);
@@ -55,14 +61,14 @@ export default function Gallery({ images, name, gradient, emoji, percent }: Gall
       </div>
 
       {images.length > 1 ? (
-        <div className="pdp-gallery-thumbs" role="tablist" aria-label={`${name} — ảnh sản phẩm`}>
+        <div className="pdp-gallery-thumbs" role="tablist" aria-label={tParams(locale, 'pdp.galleryThumbs', { name })}>
           {images.slice(0, 4).map((image, index) => (
             <button
               key={`${image.url ?? 'ph'}-${index}`}
               type="button"
               role="tab"
               aria-selected={index === active}
-              aria-label={`${name} — ảnh ${index + 1}`}
+              aria-label={tParams(locale, 'pdp.galleryImage', { name, n: index + 1 })}
               className={`pdp-thumb${index === active ? ' pdp-thumb--active' : ''}`}
               style={image.url ? undefined : { background: gradient }}
               onClick={() => setActive(index)}

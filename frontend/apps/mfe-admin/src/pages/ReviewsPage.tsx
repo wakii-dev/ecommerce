@@ -77,13 +77,16 @@ export default function ReviewsPage(): ReactElement {
   const [pageSize, setPageSize] = useState(10);
   const { sort, sortedRows, toggleSort } = useClientSort<AdminReview>(rows);
   const onSortToggle = (key: string, accessor: SortAccessor<AdminReview>): void => {
-    setPage(1);
+    // sort→slice trên toàn bộ rows đã load → trang hiện tại vẫn hợp lệ khi sort
     toggleSort(key, accessor);
   };
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  // render-clamp: moderate (approve/reject) gỡ row khỏi list → page cũ có thể
+  // vượt totalPages (bảng trắng) — clamp lúc render, không effect.
+  const safePage = Math.min(page, totalPages);
   const pagedRows = useMemo(
-    () => sortedRows.slice((page - 1) * pageSize, page * pageSize),
-    [sortedRows, page, pageSize]
+    () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sortedRows, safePage, pageSize]
   );
 
   const columns = [
@@ -176,7 +179,10 @@ export default function ReviewsPage(): ReactElement {
         <div className='admin-page-head__actions'>
           <Select
             value={status}
-            onChange={(e) => setStatus(e.target.value as ModerationStatus | '')}
+            onChange={(e) => {
+              setPage(1); // status đổi → data set đổi hoàn toàn
+              setStatus(e.target.value as ModerationStatus | '');
+            }}
             aria-label={t('admin.common.status')}
           >
             <option value='PENDING'>{t('admin.status.PENDING')}</option>
@@ -210,7 +216,7 @@ export default function ReviewsPage(): ReactElement {
               label={t('admin.common.pageSize')}
             />
             <span>
-              {t('admin.common.pageOf', { page, total: totalPages })} —{' '}
+              {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: rows.length })}
             </span>
           </div>

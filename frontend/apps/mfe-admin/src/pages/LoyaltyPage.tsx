@@ -58,11 +58,18 @@ export default function LoyaltyPage(): ReactElement {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [adjustPoints, setAdjustPoints] = useState('');
   const [adjustNote, setAdjustNote] = useState('');
+  // Ledger load theo server page (size = pageSize) — khai báo sớm để mutation
+  // closure dưới đây đọc được pageSize khi refetch sau adjust.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const lookup = useMutation({
-    mutationFn: (id: string) =>
-      executeRequest(affiliateOptions(), LOOKUP_ROUTE, { userId: id, page: 1, size: 10 }) as
-        unknown as Promise<AdminLoyaltyResponse>,
+    mutationFn: (input: { id: string; size: number }) =>
+      executeRequest(affiliateOptions(), LOOKUP_ROUTE, {
+        userId: input.id,
+        page: 1,
+        size: input.size
+      }) as unknown as Promise<AdminLoyaltyResponse>,
     onSuccess: () => setLookupError(null),
     onError: () => setLookupError(t('admin.loyalty.notFound'))
   });
@@ -76,7 +83,7 @@ export default function LoyaltyPage(): ReactElement {
       toast.toast(t('admin.loyalty.adjustDone'), { variant: 'success' });
       setAdjustPoints('');
       setAdjustNote('');
-      if (userId) lookup.mutate(userId);
+      if (userId) lookup.mutate({ id: userId, size: pageSize });
     },
     onError: (error) => toast.toast(String(error), { variant: 'danger' })
   });
@@ -89,7 +96,7 @@ export default function LoyaltyPage(): ReactElement {
       return;
     }
     setUserId(id);
-    lookup.mutate(id);
+    lookup.mutate({ id, size: pageSize });
   };
 
   const onAdjustSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -105,19 +112,19 @@ export default function LoyaltyPage(): ReactElement {
 
   const data = lookup.data;
 
-  // Ledger load theo server page (size 10) — sort client + slice trang hiện tại
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const { sort, sortedRows, toggleSort } = useClientSort<LedgerEntry>(data?.ledger ?? []);
   const onSortToggle = (key: string, accessor: SortAccessor<LedgerEntry>): void => {
-    setPage(1);
+    // sort→slice trên toàn bộ ledger đã load → trang hiện tại vẫn hợp lệ khi sort
     toggleSort(key, accessor);
   };
   const ledgerCount = data?.ledger.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(ledgerCount / pageSize));
+  // render-clamp: lookup mới/adjust refetch co ledger → page cũ có thể vượt
+  // totalPages (bảng trắng) — clamp lúc render, không effect.
+  const safePage = Math.min(page, totalPages);
   const pagedRows = useMemo(
-    () => sortedRows.slice((page - 1) * pageSize, page * pageSize),
-    [sortedRows, page, pageSize]
+    () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sortedRows, safePage, pageSize]
   );
 
   const columns = [
@@ -254,7 +261,7 @@ export default function LoyaltyPage(): ReactElement {
               label={t('admin.common.pageSize')}
             />
             <span>
-              {t('admin.common.pageOf', { page, total: totalPages })} —{' '}
+              {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: ledgerCount })}
             </span>
           </div>

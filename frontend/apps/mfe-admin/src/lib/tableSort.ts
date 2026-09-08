@@ -72,6 +72,10 @@ export function useClientSort<T>(rows: T[]): ClientSortResult<T> {
   }, []);
 
   const sortedRows = useMemo(() => {
+    // Đọc accessorRef.current ngoài deps là CỐ Ý: toggleSort luôn ghi ref
+    // TRƯỚC setSort (cùng 1 event handler) → khi memo re-run vì sort đổi,
+    // ref đã trỏ đúng accessor của cột vừa click. Accessor là inline closure
+    // per-column (identity đổi mỗi render) nên đưa vào deps chỉ gây re-sort thừa.
     const accessor = accessorRef.current;
     if (sort === null || accessor === null) return rows;
     return [...rows].sort((a, b) => compareRows(a, b, accessor, sort.dir));

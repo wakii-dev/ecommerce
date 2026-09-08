@@ -167,11 +167,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** 13 file liệt kê touch map + `components/plp/SortSelect.tsx`
 
-- [ ] **Step 1:** Migration `<a href>` thô → `next/link` `Link` CHO MỌI internal anchor (target `localePath(...)` hoặc path nội bộ `/`): logo + mini-nav (Header), footer cột Danh mục (cột Tài khoản là `shellUrl()` — GIỮ `<a>`), hero CTA, fcard, cat-tile, p-card (ProductCardView), breadcrumb PDP/PLP, search chips, not-found home link, WriteReviewModal guest CTA là `shellUrl()` (GIỮ `<a>`). Link render `<a>` thật — no-JS fallback giữ nguyên.
-- [ ] **Step 2:** `prefetch={false}` CHỈ cho links filter/sort tham số dài (sidebar tree/check links qua `buildPlpUrl`, featured-more `?sort=discount`); links thường prefetch mặc định.
-- [ ] **Step 3:** SortSelect: `window.location.assign` → `useRouter().push(url.toString(), { scroll: false })` (giữ logic reset page + build URL từ `window.location.href` — URL-driven không đổi). BuyNow `window.location.assign(shellUrl()/cart)` GIỮ nguyên (cross-origin shell).
-- [ ] **Step 4:** Grep kiểm: `grep -rn "<a " app components --include="*.tsx"` — còn lại CHỈ các chỗ cross-origin shell (`shellUrl()`) + Pagination (T7 xử lý) + 3 anchor tab `#tab-*` (page.tsx:270-272 — T8b thay bằng Tabs primitive, KHÔNG migrate sang Link trong T1) + hero arrows/dots (button). Không còn internal `<a href>` khác.
-- [ ] **Step 5:** vitest + lint xanh → commit `feat(storefront): next/link migration 24 internal links + SortSelect router.push (FI-392)`.
+- [x] **Step 1:** Migration `<a href>` thô → `next/link` `Link` CHO MỌI internal anchor (target `localePath(...)` hoặc path nội bộ `/`): logo + mini-nav (Header), footer cột Danh mục (cột Tài khoản là `shellUrl()` — GIỮ `<a>`), hero CTA, fcard, cat-tile, p-card (ProductCardView), breadcrumb PDP/PLP, search chips, not-found home link, WriteReviewModal guest CTA là `shellUrl()` (GIỮ `<a>`). Link render `<a>` thật — no-JS fallback giữ nguyên.
+- [x] **Step 2:** `prefetch={false}` CHỈ cho links filter/sort tham số dài (sidebar tree/check links qua `buildPlpUrl`, featured-more `?sort=discount`); links thường prefetch mặc định.
+- [x] **Step 3:** SortSelect: `window.location.assign` → `useRouter().push(url.toString(), { scroll: false })` (giữ logic reset page + build URL từ `window.location.href` — URL-driven không đổi). BuyNow `window.location.assign(shellUrl()/cart)` GIỮ nguyên (cross-origin shell).
+- [x] **Step 4:** Grep kiểm: `grep -rn "<a " app components --include="*.tsx"` — còn lại CHỈ các chỗ cross-origin shell (`shellUrl()`) + Pagination (T7 xử lý) + 3 anchor tab `#tab-*` (page.tsx:270-272 — T8b thay bằng Tabs primitive, KHÔNG migrate sang Link trong T1) + hero arrows/dots (button). Không còn internal `<a href>` khác.
+- [x] **Step 5:** vitest + lint xanh → commit `feat(storefront): next/link migration 24 internal links + SortSelect router.push (FI-392)`.
 
 ### Task 2: loading-error-notfound-skeleton-compositions (nhóm A)
 

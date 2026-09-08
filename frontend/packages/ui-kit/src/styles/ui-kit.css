@@ -1132,6 +1132,7 @@ button.uk-star {
 .uk-check__input,
 .uk-radio__input {
   position: absolute;
+  z-index: 1; /* review-G2 P1: input vẽ TRÊN box (relative) — box chiếm click vùng 18×18 nếu để auto */
   width: 18px;
   height: 18px;
   margin: 0;

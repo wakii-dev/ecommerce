@@ -5,6 +5,10 @@ import { mergeGuestCart, readGuestToken } from './lib/cartApi';
 // FI-368 T11: page.css chỉ import ở main.tsx (standalone) — dưới shell remote
 // không chạy main.tsx => page-specific css mất. Vite dedupe standalone.
 import './page.css';
+// SF-1 FI-391: ui-kit css cả 2 biên MF (FI-368 T11 — remote standalone qua
+// bootstrap không chạy main.tsx; dưới shell dedupe vô hại với import của host).
+import '@ecommerce/ui-kit/tokens.css';
+import '@ecommerce/ui-kit/styles.css';
 
 export type SlotKey = 'left' | 'center' | 'right';
 

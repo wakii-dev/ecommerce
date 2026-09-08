@@ -210,40 +210,40 @@ Ghi chú critic-P2: Slot wrapper `[data-slot='center']` hiện không grow — h
 
 **Files:** `CheckoutPage.tsx`
 
-- [ ] **Step 1:** Bỏ `<ol class="stepper">` hand-roll → `<Stepper steps={[{key:'address',label:t('checkout.stepper.address')},{key:'shipping',...},{key:'payment',...}]} current={step-1} onStepClick={(i)=>{ if(i+1<step) setStep((i+1) as 1|2|3); }} label={t('checkout.title')} />` — primitive disable future + keyboard roving. (Click step hiện tại: primitive cho phép onStepClick mọi i≤current; guard i+1<step tránh re-set state.)
-- [ ] **Step 2:** Xóa css `.stepper*` cũ trong page.css (Task 10 sẽ không giữ). e2e đã grep — không spec nào reference `.stepper`.
-- [ ] **Step 3:** Verify: keyboard Tab/Arrow/Enter quay lại step trước; browser smoke.
-- [ ] **Step 4:** Commit `feat(checkout): Stepper primitive keyboard thay hand-roll (FI-393 T6)`.
+- [x] **Step 1:** Bỏ `<ol class="stepper">` hand-roll → `<Stepper steps={[{key:'address',label:t('checkout.stepper.address')},{key:'shipping',...},{key:'payment',...}]} current={step-1} onStepClick={(i)=>{ if(i+1<step) setStep((i+1) as 1|2|3); }} label={t('checkout.title')} />` — primitive disable future + keyboard roving. (Click step hiện tại: primitive cho phép onStepClick mọi i≤current; guard i+1<step tránh re-set state.)
+- [x] **Step 2:** Xóa css `.stepper*` cũ trong page.css (Task 10 sẽ không giữ). e2e đã grep — không spec nào reference `.stepper`.
+- [x] **Step 3:** Verify: keyboard Tab/Arrow/Enter quay lại step trước; browser smoke.
+- [x] **Step 4:** Commit `feat(checkout): Stepper primitive keyboard thay hand-roll (FI-393 T6)`.
 
 ### Task 7: Checkout step-1 form UX realtime + inputMode + autocomplete
 
 **Files:** `CheckoutPage.tsx`
 
-- [ ] **Step 1:** Touched map state `touched: Partial<Record<keyof Address,boolean>>`; onBlur field → set touched + validate riêng field đó (`validateField(name, value)` tách từ validateAddress); onChange → nếu touched rồi thì validate realtime. Submit giữ validate toàn bộ (set touched all).
-- [ ] **Step 2:** `field()` helper: thêm `inputMode` (phone→'tel'), `autoComplete` map: fullName→'name', phone→'tel', line1→'address-line1', ward→'address-level3', district→'address-level2', city→'address-level1'. Label i18n — GIỮ EXACT chuỗi e2e.
-- [ ] **Step 3:** Label điểm thưởng (dòng 491) ngắn 1 dòng: `points.label` = "Dùng điểm (tối đa {{max}} ≈ {{value}})" — chi tiết balance đưa xuống summary-note dưới input.
-- [ ] **Step 4:** Inline error per field: Input primitive đã hỗ trợ `error` prop — hiện khi touched (không chờ submit). Verify: gõ SĐT sai → blur → lỗi ngay; mobile inputMode=tel.
-- [ ] **Step 5:** Commit `feat(checkout): step-1 realtime validate + inputMode + autocomplete (FI-393 T7)`.
+- [x] **Step 1:** Touched map state `touched: Partial<Record<keyof Address,boolean>>`; onBlur field → set touched + validate riêng field đó (`validateField(name, value)` tách từ validateAddress); onChange → nếu touched rồi thì validate realtime. Submit giữ validate toàn bộ (set touched all).
+- [x] **Step 2:** `field()` helper: thêm `inputMode` (phone→'tel'), `autoComplete` map: fullName→'name', phone→'tel', line1→'address-line1', ward→'address-level3', district→'address-level2', city→'address-level1'. Label i18n — GIỮ EXACT chuỗi e2e.
+- [x] **Step 3:** Label điểm thưởng (dòng 491) ngắn 1 dòng: `points.label` = "Dùng điểm (tối đa {{max}} ≈ {{value}})" — chi tiết balance đưa xuống summary-note dưới input.
+- [x] **Step 4:** Inline error per field: Input primitive đã hỗ trợ `error` prop — hiện khi touched (không chờ submit). Verify: gõ SĐT sai → blur → lỗi ngay; mobile inputMode=tel.
+- [x] **Step 5:** Commit `feat(checkout): step-1 realtime validate + inputMode + autocomplete (FI-393 T7)`.
 
 ### Task 8: Checkout step 2-3 — shipping cards + summary ảnh
 
 **Files:** `CheckoutPage.tsx`
 
-- [ ] **Step 1:** Shipping options: label radio → card `shipping-card` — border 1.5 padding 16 radius-md, hover −2px shadow-1, selected: border primary + nền tint-primary-bg + check tròn 20px góc trên-phải (Icon check trong vòng). Fee + ETA (Dự kiến {{days}} ngày) + note GHN/flat. Radio input vẫn trong label (a11y giữ, visually-hidden style).
-- [ ] **Step 2:** Summary sidebar: line item thêm ảnh vuông 56px (fallback svg) + qty badge nền primary góc (−6,−6 border 2 surface) + tên 13/600 + giá phải 700; coupon-applied pill style tint; Tổng `--summary-row--total` 26/800 danger border-top 2px; nút đặt `--grad-cta` cao 52 `--shadow-cta` (class `btn-order`).
-- [ ] **Step 3:** Payment section: giữ logic Stripe/COD + testid + `.pay-panel`; style pay-method card hoá nhẹ (border, selected tint) — radio native giữ.
-- [ ] **Step 4:** Skeleton summary khi cart loading: `useCart()` loading → summary card render 4 Skeleton row (thay vì list trống). Panel chính cũng skeleton khi loading.
-- [ ] **Step 5:** Verify browser: step2 cards select, step3 summary ảnh đúng, skeleton lúc load chậm (throttle).
-- [ ] **Step 6:** Commit `feat(checkout): shipping cards + summary ảnh + skeleton + pay polish (FI-393 T8)`.
+- [x] **Step 1:** Shipping options: label radio → card `shipping-card` — border 1.5 padding 16 radius-md, hover −2px shadow-1, selected: border primary + nền tint-primary-bg + check tròn 20px góc trên-phải (Icon check trong vòng). Fee + ETA (Dự kiến {{days}} ngày) + note GHN/flat. Radio input vẫn trong label (a11y giữ, visually-hidden style).
+- [x] **Step 2:** Summary sidebar: line item thêm ảnh vuông 56px (fallback svg) + qty badge nền primary góc (−6,−6 border 2 surface) + tên 13/600 + giá phải 700; coupon-applied pill style tint; Tổng `--summary-row--total` 26/800 danger border-top 2px; nút đặt `--grad-cta` cao 52 `--shadow-cta` (class `btn-order`).
+- [x] **Step 3:** Payment section: giữ logic Stripe/COD + testid + `.pay-panel`; style pay-method card hoá nhẹ (border, selected tint) — radio native giữ.
+- [x] **Step 4:** Skeleton summary khi cart loading: `useCart()` loading → summary card render 4 Skeleton row (thay vì list trống). Panel chính cũng skeleton khi loading.
+- [x] **Step 5:** Verify browser: step2 cards select, step3 summary ảnh đúng, skeleton lúc load chậm (throttle).
+- [x] **Step 6:** Commit `feat(checkout): shipping cards + summary ảnh + skeleton + pay polish (FI-393 T8)`.
 
 ### Task 9: ConfirmationPage — hero SVG + CTA về trang chủ
 
 **Files:** `ConfirmationPage.tsx`
 
-- [ ] **Step 1:** Hero: gradient `--grad-hero-1` radius-lg shadow-2 padding; icon vòng tròn: `<Icon name={terminalBad?'alert':'check'} size={30}/>` trong `.confirm-check` (nền trắng alpha/success); kicker "ĐƠN HÀNG" + h2 status; giữ testid order-id/order-status/data-status-code + email note + failed note + link my-orders.
-- [ ] **Step 2:** Status timeline polish: pill status tint (giữ tint-success ok / tint-new pending / cancelled-danger) + note đã có — polish pill + spacing; KHÔNG đụng polling/gtag.
-- [ ] **Step 3:** CTA "Tiếp tục mua sắm" → `window.location.assign(storefrontUrl())` — trang chủ **STOREFRONT** (context pack item 8: "về trang chủ storefront"; cross-origin nên full navigation, không appNavigate).
-- [ ] **Step 4:** i18n hóa strings (keys Task 1). Verify browser: hero renders 2 trạng thái (CONFIRMED/FAILED — COD + saga-fail path), CTA về `/`.
+- [x] **Step 1:** Hero: gradient `--grad-hero-1` radius-lg shadow-2 padding; icon vòng tròn: `<Icon name={terminalBad?'alert':'check'} size={30}/>` trong `.confirm-check` (nền trắng alpha/success); kicker "ĐƠN HÀNG" + h2 status; giữ testid order-id/order-status/data-status-code + email note + failed note + link my-orders.
+- [x] **Step 2:** Status timeline polish: pill status tint (giữ tint-success ok / tint-new pending / cancelled-danger) + note đã có — polish pill + spacing; KHÔNG đụng polling/gtag.
+- [x] **Step 3:** CTA "Tiếp tục mua sắm" → `window.location.assign(storefrontUrl())` — trang chủ **STOREFRONT** (context pack item 8: "về trang chủ storefront"; cross-origin nên full navigation, không appNavigate).
+- [x] **Step 4:** i18n hóa strings (keys Task 1). Verify browser: hero renders 2 trạng thái (CONFIRMED/FAILED — COD + saga-fail path), CTA về `/`.
 - [ ] **Step 5:** Commit `feat(checkout): confirmation hero gradient + Icon SVG + CTA về trang chủ (FI-393 T9)`.
 
 ### Task 10: page.css elevation — hex sweep + motion + dark fix (2 app)

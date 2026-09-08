@@ -59,3 +59,8 @@ export {
   type RadioGroupProps
 } from './Radio';
 export { Textarea, type TextareaProps } from './Textarea';
+export {
+  Stepper,
+  type StepperProps,
+  type StepperStep
+} from './Stepper';

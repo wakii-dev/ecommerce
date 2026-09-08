@@ -19,6 +19,7 @@ import {
   Select,
   Skeleton,
   StarRating,
+  Stepper,
   Table,
   Tabs,
   Textarea,
@@ -84,6 +85,7 @@ function DemoInner() {
   const [alertKey, setAlertKey] = useState(0);
   const [agree, setAgree] = useState(false);
   const [payment, setPayment] = useState('cod');
+  const [step, setStep] = useState(0);
 
   return (
     <div className="uk-demo">
@@ -315,6 +317,38 @@ function DemoInner() {
           <Button variant="secondary" size="sm" onClick={() => setAlertKey((k) => k + 1)}>
             Hiện lại
           </Button>
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Stepper (keyboard ←→)</h2>
+        <div className="uk-demo__col">
+          <Stepper
+            steps={[
+              { key: 'cart', label: 'Giỏ hàng' },
+              { key: 'pay', label: 'Thanh toán' },
+              { key: 'confirm', label: 'Xác nhận' }
+            ]}
+            current={step}
+            onStepClick={setStep}
+          />
+          <div className="uk-demo__row">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+            >
+              Lùi
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setStep((s) => Math.min(2, s + 1))}
+            >
+              Tiếp
+            </Button>
+            <span>Bước {step + 1}/3</span>
+          </div>
         </div>
       </section>
 

@@ -1216,6 +1216,113 @@ button.uk-star {
   box-shadow: 0 0 0 3px var(--c-danger);
 }
 
+/* ── Stepper (SF-1 FI-391 — hand-off §2.4) ── connector: li::before track
+ * + li::after fill scaleX; segment sang step --done được fill. ── */
+
+.uk-stepper {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-sans);
+}
+
+.uk-stepper__step {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.uk-stepper__step + .uk-stepper__step {
+  margin-left: 48px;
+}
+
+.uk-stepper__step + .uk-stepper__step::before,
+.uk-stepper__step + .uk-stepper__step::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -31px;
+  width: 48px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+.uk-stepper__step + .uk-stepper__step::before {
+  background: var(--c-border);
+  transform: translateY(-50%);
+}
+
+.uk-stepper__step + .uk-stepper__step::after {
+  background: var(--c-success);
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
+  transition: transform 350ms var(--ease-pop);
+}
+
+.uk-stepper__step--done:not(:first-child)::after {
+  transform: translateY(-50%) scaleX(1);
+}
+
+.uk-stepper__dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid var(--c-border);
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease-pop),
+    border-color var(--dur-base) var(--ease-pop),
+    box-shadow var(--dur-base) var(--ease-pop),
+    transform var(--dur-base) var(--ease-pop);
+}
+
+.uk-stepper__dot:disabled {
+  cursor: default;
+}
+
+.uk-stepper__dot:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.uk-stepper__step--done .uk-stepper__dot {
+  border-color: var(--c-success);
+  background: var(--c-success);
+  color: transparent; /* ẩn số — hiện tick ::after */
+  font-size: 0;
+}
+
+.uk-stepper__step--done .uk-stepper__dot::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid var(--c-surface);
+  border-bottom: 2px solid var(--c-surface);
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.uk-stepper__step--current .uk-stepper__dot {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  box-shadow: 0 0 0 5px var(--tint-primary-bg);
+  transform: scale(1.08);
+}
+
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
  * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
  * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */

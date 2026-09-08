@@ -15,10 +15,12 @@ import {
   breadcrumbJsonld
 } from '../components/Breadcrumbs';
 import { IconButton } from '../components/IconButton';
+import type { IconButtonProps } from '../components/IconButton';
 import { Alert } from '../components/Alert';
 import { Checkbox } from '../components/Checkbox';
 import { Radio, RadioGroup } from '../components/Radio';
 import { Textarea } from '../components/Textarea';
+import { Stepper } from '../components/Stepper';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -308,9 +310,9 @@ describe('IconButton', () => {
 
   it('thiếu aria-label → console.error dev-warn nhưng vẫn render (không crash)', () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const html = renderToStaticMarkup(
-      <IconButton {...({} as Record<string, never>)}>×</IconButton>
-    );
+    // mô phỏng consumer JS bỏ qua type bắt buộc
+    const badProps = { children: '×' } as unknown as IconButtonProps;
+    const html = renderToStaticMarkup(<IconButton {...badProps} />);
     expect(errSpy).toHaveBeenCalledTimes(1);
     expect(html).toContain('uk-icon-btn');
     errSpy.mockRestore();
@@ -473,5 +475,35 @@ describe('Textarea', () => {
     expect(html).not.toContain('aria-invalid');
     expect(html).toContain('-hint"');
     expect(html).toContain('class="uk-field"');
+  });
+});
+
+describe('Stepper — SSR', () => {
+  const STEPS = [
+    { key: 'cart', label: 'Giỏ hàng' },
+    { key: 'pay', label: 'Thanh toán' },
+    { key: 'confirm', label: 'Xác nhận' }
+  ];
+
+  it('aria-current="step" đúng vị trí + class --done/--current + aria-label số thứ tự', () => {
+    const html = renderToStaticMarkup(
+      <Stepper steps={STEPS} current={1} onStepClick={() => {}} />
+    );
+    expect(html).toContain('aria-label="Tiến trình"');
+    expect((html.match(/aria-current="step"/g) ?? []).length).toBe(1);
+    expect(html).toContain('aria-current="step" aria-label="2. Thanh toán"');
+    expect(html).toContain('uk-stepper__step--done');
+    expect(html).toContain('uk-stepper__step--current');
+    expect(html).not.toContain('aria-label="1. Giỏ hàng" aria-current');
+  });
+
+  it('future disabled; done click-able chỉ khi có onStepClick', () => {
+    const withClick = renderToStaticMarkup(
+      <Stepper steps={STEPS} current={1} onStepClick={() => {}} />
+    );
+    expect(withClick).toContain('aria-label="3. Xác nhận" disabled');
+    expect(withClick).not.toContain('aria-label="1. Giỏ hàng" disabled');
+    const noClick = renderToStaticMarkup(<Stepper steps={STEPS} current={1} />);
+    expect((noClick.match(/ disabled/g) ?? []).length).toBe(3);
   });
 });

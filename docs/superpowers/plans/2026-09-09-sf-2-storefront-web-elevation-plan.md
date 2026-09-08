@@ -207,12 +207,12 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/home/{FlashDealSection,CategoryTiles}.tsx`, `app/[locale]/page.tsx`, mới `components/Reveal.tsx`, css home.
 
-- [ ] **Step 1:** Client wrapper `components/Reveal.tsx` ('use client'): div bọc dùng `useReveal` ui-kit (props: `delayMs?`); SSR/no-JS/reduced-motion → content hiện sẵn (hook tự no-op — KHÔNG css-default-hidden).
-- [ ] **Step 2:** FlashDeal §2.2.2: khối `--grad-flash` radius-lg padding 16 shadow-2; title 24/800 uppercase + icon sét (inline SVG storefront — Icon catalog không có zap); countdown hộp 36×36 tabular-nums; link "Xem tất cả" pill nền trắng .4 hover .65; fcard ngang scroll-x rộng 186 (thumb 150), badge -% góc trên-trái, tên clamp 2 dòng cao 37, giá danger + gạch, progress bar 5px `--grad-cta` + "Đã bán N/M" — progress dữ liệu: ProductCard KHÔNG có field sold/stock → progress bar CHỈ khi có dữ liệu thật; không có → bỏ progress (không bịa số — honesty). Ghi commit note.
-- [ ] **Step 3:** CategoryTiles §2.2.3: grid 6 cột gap 12, tile gradient `--grad-cat-*` border + shadow-1 radius-lg padding 16×12, tên 13/700, count 11 muted (Category PUBLIC DTO có `productCount`? — kiểm `lib/catalog-api.ts` type; không có → bỏ count, không bịa), hover −2px + shadow-2, tile "Xem thêm" border dashed shadow-none.
-- [ ] **Step 4:** Featured §2.2.4: sec-title = thanh dọc primary 5×22 + h3 21/800 uppercase + "Xem thêm ›"; grid 4 cột gap 12.
-- [ ] **Step 5:** Scroll-reveal: Reveal bọc FlashDeal/CategoryTiles/featured section (stagger card trong featured qua delayMs 70ms×index, cap ~5); KHÔNG reveal ở trang khác (§5.5).
-- [ ] **Step 6:** vitest + lint xanh → commit `feat(storefront): home sections elevation + scroll-reveal per direction §2.2 (FI-392)`.
+- [x] **Step 1:** Client wrapper `components/Reveal.tsx` ('use client'): div bọc dùng `useReveal` ui-kit (props: `delayMs?`); SSR/no-JS/reduced-motion → content hiện sẵn (hook tự no-op — KHÔNG css-default-hidden).
+- [x] **Step 2:** FlashDeal §2.2.2: khối `--grad-flash` radius-lg padding 16 shadow-2; title 24/800 uppercase + icon sét (inline SVG storefront — Icon catalog không có zap); countdown hộp 36×36 tabular-nums; link "Xem tất cả" pill nền trắng .4 hover .65; fcard ngang scroll-x rộng 186 (thumb 150), badge -% góc trên-trái, tên clamp 2 dòng cao 37, giá danger + gạch, progress bar 5px `--grad-cta` + "Đã bán N/M" — progress dữ liệu: ProductCard KHÔNG có field sold/stock → progress bar CHỈ khi có dữ liệu thật; không có → bỏ progress (không bịa số — honesty). Ghi commit note.
+- [x] **Step 3:** CategoryTiles §2.2.3: grid 6 cột gap 12, tile gradient `--grad-cat-*` border + shadow-1 radius-lg padding 16×12, tên 13/700, count 11 muted (Category PUBLIC DTO có `productCount`? — kiểm `lib/catalog-api.ts` type; không có → bỏ count, không bịa), hover −2px + shadow-2, tile "Xem thêm" border dashed shadow-none.
+- [x] **Step 4:** Featured §2.2.4: sec-title = thanh dọc primary 5×22 + h3 21/800 uppercase + "Xem thêm ›"; grid 4 cột gap 12.
+- [x] **Step 5:** Scroll-reveal: Reveal bọc FlashDeal/CategoryTiles/featured section (stagger card trong featured qua delayMs 70ms×index, cap ~5); KHÔNG reveal ở trang khác (§5.5).
+- [x] **Step 6:** vitest + lint xanh → commit `feat(storefront): home sections elevation + scroll-reveal per direction §2.2 (FI-392)`.
 
 ### Task 6: productcard-price-primitive-consolidate-hover (nhóm B)
 

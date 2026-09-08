@@ -448,37 +448,83 @@
   white-space: pre-wrap;
 }
 
-/* ── Confirmation ────────────────────────────────────────────────────── */
+/* ── Confirmation (FI-393 T9 — hero gradient, direction §2.4) ────────── */
 .confirm-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2, 8px);
-  padding: var(--space-6, 32px) 0;
+  padding: 32px 16px;
   text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--grad-hero-1);
+  box-shadow: var(--shadow-2);
+  color: var(--c-surface);
+}
+
+/* h1/note kế thừa màu page — trên gradient phải trắng */
+.confirm-hero .page-title {
+  color: var(--c-surface);
+  font-size: 26px;
+}
+
+.confirm-hero .summary-note {
+  color: var(--c-surface);
+  opacity: 0.85;
+}
+
+.confirm-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 .confirm-check {
   width: 56px;
   height: 56px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--c-success);
-  color: var(--c-on-accent);
+  color: var(--c-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+}
+
+.confirm-check--bad {
+  background: var(--c-danger);
 }
 
 .confirm-status {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 999px;
-  /* tint-success (FI-368 P1 fix) */
+  /* terminal-ok mặc định tint-success (FI-368 P1 fix); còn lại theo status */
   background: var(--tint-success-bg);
   color: var(--tint-success-text);
   font-weight: 600;
   font-size: 13px;
+}
+
+.confirm-status[data-status-code='PENDING'],
+.confirm-status[data-status-code='PAID'] {
+  background: var(--tint-new-bg);
+  color: var(--tint-new-text);
+}
+
+.confirm-status[data-status-code='FAILED'],
+.confirm-status[data-status-code='CANCELLED'] {
+  background: var(--pill-cancelled-bg);
+  color: var(--c-danger);
+}
+
+/* CTA "Tiếp tục mua sắm" — accent (2 class specificity thắng uk-btn--secondary) */
+.uk-btn.confirm-cta {
+  border: none;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 800;
 }
 
 /* ── Mini-cart drawer (FI-393 T3) — override instance ui-kit Drawer ────

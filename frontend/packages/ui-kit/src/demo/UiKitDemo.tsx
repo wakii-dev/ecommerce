@@ -7,6 +7,7 @@ import {
   EmptyState,
   Input,
   Modal,
+  Pagination,
   Price,
   QuantityStepper,
   Select,
@@ -72,6 +73,7 @@ function DemoInner() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rating, setRating] = useState(4);
   const [qty, setQty] = useState(1);
+  const [page, setPage] = useState(4);
 
   return (
     <div className="uk-demo">
@@ -187,6 +189,16 @@ function DemoInner() {
           <QuantityStepper value={qty} onChange={setQty} />
           <span>Giá trị: {qty}</span>
           <QuantityStepper value={2} onChange={() => {}} disabled />
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Pagination</h2>
+        <div className="uk-demo__row">
+          <Pagination page={page} totalPages={12} onPageChange={setPage} />
+          <span>
+            Trang {page}/12
+          </span>
         </div>
       </section>
 

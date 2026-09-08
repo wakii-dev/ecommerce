@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { Tabs } from '../components/Tabs';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { Pagination } from '../components/Pagination';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { ToastProvider } from '../components/Toast';
 
@@ -171,6 +172,46 @@ describe('QuantityStepper', () => {
       <QuantityStepper value={2} onChange={() => {}} disabled />
     );
     expect(count(html, 'disabled')).toBe(3);
+  });
+});
+
+describe('Pagination — SSR', () => {
+  const href = (p: number) => `/c/ao-thun?page=${p}`;
+
+  it('URL mode: <a href> đúng pageHref(2) khi page=2 + aria-current + rel prev/next', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={2} totalPages={12} pageHref={href} />
+    );
+    expect(html).toContain('href="/c/ao-thun?page=2"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('rel="prev"');
+    expect(html).toContain('rel="next"');
+    expect(html).toContain('aria-label="Phân trang"');
+    expect(html).not.toContain('<button');
+  });
+
+  it('client mode: render <button>, không có href', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={2} totalPages={12} onPageChange={() => {}} />
+    );
+    expect(html).toContain('<button');
+    expect(html).not.toContain('<a ');
+    expect(html).not.toContain('href=');
+  });
+
+  it('totalPages=1 → markup rỗng (null)', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={1} totalPages={1} onPageChange={() => {}} />
+    );
+    expect(html).toBe('');
+  });
+
+  it('totalPages>7 → window xuất hiện ellipsis …', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={4} totalPages={12} onPageChange={() => {}} />
+    );
+    expect(html).toContain('…');
+    expect(html).toContain('uk-page--dots');
   });
 });
 

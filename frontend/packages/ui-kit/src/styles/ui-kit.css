@@ -865,6 +865,55 @@ button.uk-star {
   cursor: not-allowed;
 }
 
+/* ── Pagination (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.uk-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop);
+}
+
+.uk-page:hover {
+  background: var(--wash-hover);
+}
+
+.uk-page:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.uk-page--active,
+.uk-page--active:hover {
+  background: var(--c-primary);
+  border-color: transparent;
+  color: var(--c-surface);
+}
+
+.uk-page--dots,
+.uk-page--dots:hover {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
  * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
  * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */

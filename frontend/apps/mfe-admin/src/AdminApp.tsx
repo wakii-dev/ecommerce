@@ -248,10 +248,16 @@ export default function AdminApp(): ReactElement {
   if (state === 'booting') {
     body = <p className="admin-booting">{t('admin.guard.checking')}</p>;
   } else if (state === 'guest') {
-    // Standalone không có trang login — hướng dẫn mở qua shell.
+    // Standalone không có trang login — hướng dẫn + link sang shell login
+    // (next=%2Fadmin; LoginPage honor next → login xong quay đúng lại admin).
     body = (
       <div className="admin-guard">
         <EmptyState icon="🔐" title={t('admin.guard.forbiddenTitle')} description={t('admin.guard.standaloneGuest')} />
+        <p>
+          <a className="admin-guard__login" href="http://localhost:5173/login?next=%2Fadmin">
+            {t('admin.guard.loginViaShell')}
+          </a>
+        </p>
       </div>
     );
   } else if (state === 'forbidden') {

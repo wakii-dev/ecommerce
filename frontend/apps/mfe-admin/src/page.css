@@ -130,6 +130,20 @@
   color: var(--c-text-muted, #757575);
 }
 
+.admin-guard__login {
+  display: inline-block;
+  margin-top: var(--space-4, 16px);
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  border: 1px solid var(--c-border, #e0e0e0);
+  border-radius: var(--radius-md, 8px);
+  color: var(--c-text, #212121);
+  text-decoration: none;
+}
+
+.admin-guard__login:hover {
+  background: var(--c-surface-hover, #f5f5f5);
+}
+
 /* ── Page header pattern (title + actions) ───────────────────────────── */
 .admin-page-head {
   display: flex;

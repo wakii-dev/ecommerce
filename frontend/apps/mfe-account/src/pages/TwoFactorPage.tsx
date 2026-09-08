@@ -3,6 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
 import { TWOFA_CHALLENGE_KEY, verify2fa } from '../api';
 import { appNavigate } from '../bootstrap';
+import { safeNextPath } from '../lib/nextPath';
 import '../page.css';
 
 /**
@@ -31,7 +32,7 @@ export default function TwoFactorPage(): ReactElement {
     verify2fa(challenge, code.trim())
       .then(() => {
         sessionStorage.removeItem(TWOFA_CHALLENGE_KEY);
-        appNavigate('/account');
+        appNavigate(safeNextPath(window.location.search, '/account'));
       })
       .catch((err: unknown) => {
         setBanner(

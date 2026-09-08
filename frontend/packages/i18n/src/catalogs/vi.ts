@@ -137,7 +137,8 @@ export const vi = {
       forbiddenTitle: 'Không có quyền',
       forbiddenDesc: 'Tài khoản của bạn không có quyền truy cập khu vực quản trị.',
       backHome: 'Về trang chủ',
-      standaloneGuest: 'Chưa đăng nhập. Hãy mở khu quản trị qua shell (http://localhost:5173) và đăng nhập bằng tài khoản admin.'
+      standaloneGuest: 'Chưa đăng nhập. Hãy mở khu quản trị qua shell (http://localhost:5173) và đăng nhập bằng tài khoản admin.',
+      loginViaShell: 'Đăng nhập qua shell'
     },
     status: {
       DRAFT: 'Nháp',

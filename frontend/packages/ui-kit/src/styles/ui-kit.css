@@ -1074,6 +1074,148 @@ button.uk-star {
   opacity: 0.7;
 }
 
+/* ── Checkbox / Radio (SF-1 FI-391) ── input visually-hidden NHƯNG
+ * focusable (opacity 0, không display:none) — box custom 18×18. ── */
+
+.uk-check,
+.uk-radio {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+.uk-check__input,
+.uk-radio__input {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.uk-check__box,
+.uk-radio__box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop),
+    box-shadow var(--dur-fast) var(--ease-pop);
+}
+
+.uk-radio__box {
+  border-radius: var(--radius-full);
+}
+
+.uk-check__input:checked + .uk-check__box,
+.uk-radio__input:checked + .uk-radio__box {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+/* checkmark: chữ L (border-right/bottom) rotate 45deg — không svg */
+.uk-check__input:checked + .uk-check__box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border-right: 2px solid var(--c-surface);
+  border-bottom: 2px solid var(--c-surface);
+  transform: rotate(45deg);
+}
+
+/* chấm tròn giữa box radio */
+.uk-radio__input:checked + .uk-radio__box::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+}
+
+.uk-check__input[aria-invalid='true'] + .uk-check__box,
+.uk-radio__input[aria-invalid='true'] + .uk-radio__box {
+  border-color: var(--c-danger);
+}
+
+.uk-check__input:focus-visible + .uk-check__box,
+.uk-radio__input:focus-visible + .uk-radio__box {
+  box-shadow: 0 0 0 3px var(--tint-primary-bg);
+}
+
+.uk-check__input:disabled + .uk-check__box,
+.uk-radio__input:disabled + .uk-radio__box {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uk-check__label,
+.uk-radio__label {
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+/* ── RadioGroup (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-radio-group {
+  display: grid;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+}
+
+.uk-radio-group__options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* ── Textarea (SF-1 FI-391) ─────────────────────────────────────────── */
+
+.uk-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 80px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uk-textarea::placeholder {
+  color: var(--c-text-muted);
+}
+
+.uk-textarea:focus-visible {
+  outline: none;
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 3px var(--c-focus);
+}
+
+.uk-textarea--error {
+  border-color: var(--c-danger);
+}
+
+.uk-textarea--error:focus-visible {
+  box-shadow: 0 0 0 3px var(--c-danger);
+}
+
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
  * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
  * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */

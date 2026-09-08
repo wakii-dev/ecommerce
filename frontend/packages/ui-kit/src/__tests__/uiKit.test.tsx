@@ -16,6 +16,9 @@ import {
 } from '../components/Breadcrumbs';
 import { IconButton } from '../components/IconButton';
 import { Alert } from '../components/Alert';
+import { Checkbox } from '../components/Checkbox';
+import { Radio, RadioGroup } from '../components/Radio';
+import { Textarea } from '../components/Textarea';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -359,5 +362,116 @@ describe('Alert', () => {
       <Alert dismissible dismissLabel="Tắt cảnh báo">x</Alert>
     );
     expect(html).toContain('aria-label="Tắt cảnh báo"');
+  });
+});
+
+describe('Checkbox', () => {
+  it('label htmlFor khớp id input + aria-describedby khi error (error ưu tiên hint)', () => {
+    const html = renderToStaticMarkup(
+      <Checkbox label="Đồng ý điều khoản" error="Bắt buộc chọn" />
+    );
+    const inputId = html.match(/id="([^"]+)"/)?.[1] ?? '';
+    expect(inputId).not.toBe('');
+    expect(html).toContain(`for="${inputId}"`);
+    expect(html).toContain(`aria-describedby="${inputId}-error"`);
+    expect(html).toContain(`id="${inputId}-error"`);
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain('-hint"');
+  });
+
+  it('hint khi không error + checked render (defaultChecked) + aria-invalid khi error', () => {
+    const ok = renderToStaticMarkup(
+      <Checkbox label="A" hint="Gợi ý" defaultChecked />
+    );
+    expect(ok).toContain('-hint"');
+    // SSR serialize defaultChecked → attr checked=""
+    expect(ok).toContain('checked=""');
+    expect(ok).not.toContain('aria-invalid');
+    const errHtml = renderToStaticMarkup(<Checkbox label="B" error="Lỗi" />);
+    expect(errHtml).toContain('aria-invalid="true"');
+  });
+});
+
+describe('Radio / RadioGroup', () => {
+  it('name xuyên group qua Context — input name attr = group name', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" label="Thanh toán">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/name="payment"/g) ?? []).length).toBe(2);
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('aria-labelledby');
+    expect(html).not.toContain('name="undefined"');
+  });
+
+  it('Radio trong group KHÔNG truyền name vẫn nhận name qua Context', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="ship">
+        <Radio value="standard" />
+      </RadioGroup>
+    );
+    expect(html).toContain('name="ship"');
+  });
+
+  it('controlled: group value="momo" → radio momo checked, cod không', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" value="momo">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain('checked="" value="momo"');
+  });
+
+  it('uncontrolled: defaultValue="cod" → defaultChecked đúng radio (SSR serialize thành checked="")', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" defaultValue="cod">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain('checked="" value="cod"');
+  });
+
+  it('group error → .uk-error role=alert + aria-describedby trên radiogroup', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" error="Chọn một phương thức">
+        <Radio value="cod" />
+      </RadioGroup>
+    );
+    expect(html).toContain('role="alert"');
+    const groupId = html.match(/aria-describedby="([^"]+)"/)?.[1] ?? '';
+    expect(groupId).not.toBe('');
+    expect(html).toContain(`id="${groupId}"`);
+    expect(html).not.toContain('aria-invalid="true"');
+  });
+});
+
+describe('Textarea', () => {
+  it('label htmlFor khớp id + class uk-textarea + aria-invalid khi error', () => {
+    const html = renderToStaticMarkup(
+      <Textarea label="Ghi chú" placeholder="..." error="Quá ngắn" />
+    );
+    const taId = html.match(/id="([^"]+)"/)?.[1] ?? '';
+    expect(taId).not.toBe('');
+    expect(html).toContain(`for="${taId}"`);
+    expect(html).toContain('uk-textarea--error');
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain(`aria-describedby="${taId}-error"`);
+    expect(html).toContain('role="alert"');
+  });
+
+  it('không error + có hint → aria-describedby trỏ hint, uk-field wrapper', () => {
+    const html = renderToStaticMarkup(
+      <Textarea label="Ghi chú" hint="Tùy chọn" defaultValue="abc" />
+    );
+    expect(html).not.toContain('uk-textarea--error');
+    expect(html).not.toContain('aria-invalid');
+    expect(html).toContain('-hint"');
+    expect(html).toContain('class="uk-field"');
   });
 });

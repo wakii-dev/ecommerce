@@ -5,6 +5,7 @@ import {
   Breadcrumbs,
   Button,
   Card,
+  Checkbox,
   Drawer,
   EmptyState,
   IconButton,
@@ -13,11 +14,14 @@ import {
   Pagination,
   Price,
   QuantityStepper,
+  Radio,
+  RadioGroup,
   Select,
   Skeleton,
   StarRating,
   Table,
   Tabs,
+  Textarea,
   ToastProvider,
   useToast
 } from '../components';
@@ -78,6 +82,8 @@ function DemoInner() {
   const [qty, setQty] = useState(1);
   const [page, setPage] = useState(4);
   const [alertKey, setAlertKey] = useState(0);
+  const [agree, setAgree] = useState(false);
+  const [payment, setPayment] = useState('cod');
 
   return (
     <div className="uk-demo">
@@ -115,6 +121,50 @@ function DemoInner() {
             <option value="price-asc">Giá thấp → cao</option>
             <option value="price-desc">Giá cao → thấp</option>
           </Select>
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Checkbox</h2>
+        <div className="uk-demo__col">
+          <Checkbox
+            label="Đồng ý điều khoản dịch vụ"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+            hint={agree ? 'Đã đồng ý' : undefined}
+          />
+          <Checkbox label="Nhận tin khuyến mãi" defaultChecked />
+          <Checkbox label="Checkbox bị lỗi" error="Bắt buộc chọn mục này" />
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Radio</h2>
+        <RadioGroup
+          label="Phương thức thanh toán"
+          name="payment"
+          value={payment}
+          onChange={setPayment}
+        >
+          <Radio value="cod" label="Thanh toán khi nhận hàng (COD)" />
+          <Radio value="momo" label="Ví MoMo" />
+          <Radio value="card" label="Thẻ tín dụng / ghi nợ" />
+        </RadioGroup>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Textarea</h2>
+        <div className="uk-demo__col">
+          <Textarea
+            label="Ghi chú đơn hàng"
+            placeholder="Ví dụ: giao giờ hành chính..."
+            hint="Tùy chọn — tối đa 200 ký tự"
+          />
+          <Textarea
+            label="Địa chỉ giao hàng"
+            defaultValue="Số 1, đường ABC"
+            error="Địa chỉ quá ngắn, vui lòng nhập chi tiết hơn"
+          />
         </div>
       </section>
 

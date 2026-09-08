@@ -51,3 +51,11 @@ export {
   type AlertProps,
   type AlertVariant
 } from './Alert';
+export { Checkbox, type CheckboxProps } from './Checkbox';
+export {
+  Radio,
+  RadioGroup,
+  type RadioProps,
+  type RadioGroupProps
+} from './Radio';
+export { Textarea, type TextareaProps } from './Textarea';

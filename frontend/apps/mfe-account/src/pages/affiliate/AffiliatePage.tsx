@@ -122,9 +122,17 @@ function AffiliatePageContent({ hash }: { hash: string }): ReactElement {
 
   const affiliateLink = (path: string): string => {
     const base = path.trim() || '/';
-    const url = new URL(base, window.location.origin);
-    url.searchParams.set('ref', profile?.code ?? '');
-    return url.toString();
+    // FI-394 review G3: base không host (vd 'http://') → new URL throw
+    // TypeError giữa render → fallback chuỗi an toàn trên origin hiện tại.
+    try {
+      const url = new URL(base, window.location.origin);
+      url.searchParams.set('ref', profile?.code ?? '');
+      return url.toString();
+    } catch {
+      return `${window.location.origin}/?ref=${encodeURIComponent(
+        profile?.code ?? ''
+      )}`;
+    }
   };
 
   const copyText = async (text: string, label: string): Promise<void> => {
@@ -165,6 +173,7 @@ function AffiliatePageContent({ hash }: { hash: string }): ReactElement {
     {
       key: 'rate',
       header: t('account.affiliate.colRate'),
+      render: (entry) => `${entry.rate}%`,
     },
     {
       key: 'commission',

@@ -7,7 +7,14 @@
 // pushState cùng pathname) → nav active đổi + scrollIntoView gọi. Mock
 // affiliateApi + loyaltyApi + bootstrap (globals:false → cleanup afterEach,
 // pattern ordersPage.test.tsx). Copy clipboard KHÔNG test (navigator.clipboard).
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
 import { formatPrice } from '@ecommerce/ui-kit';
@@ -134,6 +141,33 @@ describe('AffiliatePage', () => {
     expect(container.querySelector('.uk-sk-list')).toBeTruthy();
     expect(screen.queryByText(/Đang tải/)).toBeNull();
     expect(screen.queryByTestId('loyalty-section')).toBeNull();
+  });
+
+  // FI-394 review G3: cột Rate phải có %, linkBase không host không được crash.
+  it('review-G3: ledger cell rate "5%", linkBase "http://" → fallback origin, không crash', async () => {
+    vi.mocked(fetchProfile).mockResolvedValue(profile());
+    vi.mocked(fetchLedger).mockResolvedValue(ledgerPage([ENTRY]));
+
+    const { container } = render(<AffiliatePage />);
+    await screen.findByTestId('affiliate-link');
+
+    // P1: rate 5 → cell hiển thị "5%" (trước fix render RAW "5").
+    const rateCell = container.querySelector(
+      '.af-ledger tbody tr td:nth-child(3)'
+    );
+    expect(rateCell?.textContent).toBe('5%');
+
+    // P2: base không host ('http://') → new URL throw TypeError giữa render
+    // nếu không guard; sau fix fallback `${origin}/?ref=KENH01`.
+    fireEvent.change(
+      screen.getByLabelText('Link sản phẩm hoặc trang bất kỳ'),
+      { target: { value: 'http://' } }
+    );
+    expect(screen.getByTestId('affiliate-link').textContent).toBe(
+      `${window.location.origin}/?ref=KENH01`
+    );
+    // Page vẫn render nguyên vẹn — ledger không biến mất sau re-render.
+    expect(container.querySelector('.af-ledger tbody tr')).toBeTruthy();
   });
 });
 

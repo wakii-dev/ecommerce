@@ -17,6 +17,202 @@ export const en = {
     register: 'Sign up',
     forgot: 'Forgot password?'
   },
+  // ── SF-3 checkout (FI-393) — money flow; cart./confirmation./drawer. are
+  // NESTED groups of checkout (checkout.cart.* ...) — no other top-level.
+  // Mirrors vi 1:1 (same key set); e2e contract pins vi values only ─────────
+  checkout: {
+    title: 'Checkout',
+    stepper: {
+      address: 'Address',
+      shipping: 'Shipping',
+      payment: 'Payment'
+    },
+    step1: {
+      title: 'Shipping address',
+      fullName: {
+        label: 'Recipient name',
+        placeholder: 'Nguyen Van A',
+        error: 'Enter the recipient name'
+      },
+      phone: {
+        label: 'Phone number',
+        placeholder: '0901234567',
+        error: 'Invalid phone number'
+      },
+      line1: {
+        label: 'House number + street',
+        placeholder: '12 Nguyen Hue',
+        error: 'Enter house number + street'
+      },
+      ward: {
+        label: 'Ward',
+        placeholder: 'Ben Nghe',
+        error: 'Enter ward'
+      },
+      district: {
+        label: 'District',
+        placeholder: 'Quan 1',
+        error: 'Enter district'
+      },
+      city: {
+        label: 'Province/City',
+        placeholder: 'TP. Ho Chi Minh',
+        error: 'Enter province/city'
+      }
+    },
+    continueShipping: 'Continue — choose shipping',
+    continuePayment: 'Continue — payment',
+    backAddress: '← Back to address',
+    backShipping: '← Back to shipping',
+    step2: {
+      title: 'Shipping method'
+    },
+    eta: 'Estimated {{days}} days',
+    ghnNote: 'GHN fee by address',
+    flatNote: 'standard flat fee',
+    coupon: {
+      title: 'Coupon code',
+      label: 'Coupon code',
+      apply: 'Apply',
+      checking: 'Checking…',
+      applied: 'save {{amount}}',
+      remove: 'Remove',
+      invalid: 'Invalid coupon code'
+    },
+    points: {
+      title: 'Loyalty points',
+      label: 'Use points (max {{max}} ≈ {{value}})',
+      use: 'Use {{points}} points — save {{amount}}',
+      remove: 'Remove',
+      none: 'You have 0 points — CONFIRMED orders earn 1% points.',
+      noPoints: 'You have no points yet — CONFIRMED orders earn 1% points.',
+      notEligible: 'Points cannot be used on this order (merchandise value after discount must be ≥ {{amount}}).'
+    },
+    payment: {
+      title: 'Payment',
+      stripe: 'International card (Stripe)',
+      cod: 'COD — Cash on delivery'
+    },
+    codNote: 'Inspect and pay cash on delivery — the order is confirmed immediately.',
+    payUnavailable: {
+      prefix: 'Order {{id}} was created but the card form could not be mounted (missing VITE_STRIPE_PUBLISHABLE_KEY).',
+      ctaLink: 'My orders',
+      suffix: 'to pay — unpaid orders are auto-cancelled after 30 minutes.'
+    },
+    placeOrder: {
+      card: 'Review & create order — {{total}}',
+      cod: 'Place COD order — {{total}}'
+    },
+    payingCard: 'Processing card…',
+    payByCard: 'Pay by card',
+    summary: {
+      title: 'Order',
+      subtotal: 'Subtotal',
+      discount: 'Discount',
+      points: 'Loyalty points ({{points}})',
+      shipping: 'Shipping fee (standard fee)',
+      total: 'Total',
+      shipTo: 'Ship to:'
+    },
+    empty: {
+      title: 'Nothing to check out',
+      description: 'Go back to your cart to review your order.',
+      back: 'Back to cart'
+    },
+    guestGate: {
+      prefix: 'You need to',
+      ctaLink: 'log in',
+      middle: 'to check out. Your cart is kept after you sign in.'
+    },
+    noAvailableItems: 'No available items to check out.',
+    loadingFee: 'Loading shipping fees…',
+    feeLoadFail: 'Could not load shipping fees — go back to the address step.',
+    cart: {
+      titleCount: 'Cart ({{count}} products)',
+      line: {
+        removeFromCart: 'Remove',
+        total: 'Line total'
+      },
+      removeConfirm: {
+        title: 'Remove item',
+        description: 'Remove {{name}} from your cart?',
+        cancel: 'Keep',
+        confirm: 'Remove'
+      },
+      summary: {
+        title: 'Order summary',
+        available: 'Subtotal ({{count}} available products)',
+        note: 'Prices shown in the cart are approved — the final total is confirmed at checkout.'
+      },
+      checkout: 'Checkout',
+      empty: {
+        title: 'Your cart is empty',
+        description: 'Browse the store and add products you like to your cart!',
+        home: 'Back to home'
+      },
+      noAvailable: 'No available products to check out.'
+    },
+    confirmation: {
+      hero: {
+        ok: 'Thanks for your purchase!',
+        fail: 'Sorry, your order was not completed'
+      },
+      received: 'Order {{id}} has been recorded.',
+      ctaHome: 'Continue shopping',
+      myOrders: 'View My orders',
+      failedNote: 'The order was not completed — stock and coupon have been released, you can order again.',
+      cancelledNote: 'The order was cancelled. If you already paid, the money will be refunded via the payment gateway.',
+      emailNote: 'A confirmation email with the PDF invoice has been sent — check the dev mailbox (Mailpit).',
+      notFound: {
+        title: 'Order not found',
+        description: 'The order is no longer on this device (sessionStorage). Your orders live in My orders.'
+      },
+      status: {
+        CONFIRMED: 'Processing',
+        SHIPPED: 'Shipping',
+        DELIVERED: 'Delivered',
+        PENDING: 'Awaiting payment',
+        PAID: 'Paid — confirming',
+        CANCELLED: 'Cancelled',
+        FAILED: 'Failed'
+      },
+      detail: 'Order detail',
+      pollError: 'Could not load the latest status from the system',
+      kicker: 'ORDER'
+    },
+    drawer: {
+      title: 'Your cart',
+      empty: 'No products in the cart',
+      continueShopping: 'Continue shopping',
+      viewCart: 'View cart',
+      checkout: 'Checkout',
+      subtotal: 'Subtotal',
+      freeship: 'Free shipping for orders from {{amount}}',
+      unavailable: 'No longer available',
+      close: 'Close'
+    }
+  },
+  // ── SF-3 shell header (FI-393 T2) — shell header labels ─────────────────
+  shell: {
+    search: {
+      placeholder: 'Search products, brands...',
+      submit: 'Search'
+    },
+    mininav: {
+      categories: 'Categories',
+      new: 'New arrivals',
+      best: 'Best sellers'
+    },
+    theme: {
+      toDark: 'Switch to dark theme',
+      toLight: 'Switch to light theme',
+      dark: 'Dark',
+      light: 'Light'
+    },
+    cart: {
+      aria: 'Cart — {{count}} products'
+    }
+  },
   actions: {
     save: 'Save',
     cancel: 'Cancel',

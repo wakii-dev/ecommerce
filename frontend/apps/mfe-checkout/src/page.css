@@ -42,6 +42,11 @@
   border-bottom: 1px solid var(--c-border, #e5e7eb);
 }
 
+/* FI-393 T4 — line hover wash (direction §2.4 density) */
+.cart-line:hover {
+  background: var(--wash-hover);
+}
+
 .cart-line--unavailable {
   opacity: 0.75;
 }
@@ -51,6 +56,7 @@
   height: 80px;
   object-fit: cover;
   border-radius: var(--radius-sm, 2px);
+  border: 1px solid var(--c-border);
   background: var(--wash-hover);
   flex: none;
 }
@@ -74,7 +80,7 @@
 }
 
 .cart-line-name:hover {
-  color: var(--c-primary, #F53D2D);
+  color: var(--c-link);
 }
 
 .cart-line-row {
@@ -86,40 +92,7 @@
 
 .cart-line-price {
   font-weight: 700;
-  color: var(--c-primary, #F53D2D);
-}
-
-/* Stepper qty (− input +) */
-.qty-stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--c-border, #e5e7eb);
-  border-radius: var(--radius-sm, 2px);
-  overflow: hidden;
-}
-
-.qty-stepper button {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: var(--c-surface, #fff);
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--c-text, #212121);
-}
-
-.qty-stepper button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.qty-stepper input {
-  width: 44px;
-  height: 32px;
-  text-align: center;
-  border: none;
-  border-inline: 1px solid var(--c-border, #e5e7eb);
-  font: inherit;
+  color: var(--c-danger);
 }
 
 .cart-line-remove {

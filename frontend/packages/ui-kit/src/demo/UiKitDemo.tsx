@@ -31,27 +31,35 @@ import {
   ToastProvider,
   useToast
 } from '../components';
+// Hook nội bộ — không qua barrel (useOverlay cũng không export từ barrel)
+import { useReveal } from '../components/useReveal';
 import type { ButtonVariant, IconName, TableColumn } from '../components';
 
-export type ThemeName = 'storefront' | 'admin';
+export type ThemeName = 'storefront' | 'admin' | 'dark' | 'admin-dark';
+
+const THEMES: { value: ThemeName; label: string }[] = [
+  { value: 'storefront', label: 'Storefront' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'dark', label: 'Storefront dark' },
+  { value: 'admin-dark', label: 'Admin dark' }
+];
 
 function readTheme(): ThemeName {
   if (typeof document === 'undefined') return 'storefront';
-  return document.documentElement.dataset.theme === 'admin'
-    ? 'admin'
-    : 'storefront';
+  const current = document.documentElement.dataset.theme as ThemeName;
+  return THEMES.some((t) => t.value === current) ? current : 'storefront';
 }
 
-/** Switch theme bằng data-theme trên <html> — storefront <-> admin */
-function useThemeSwitcher(): [ThemeName, () => void] {
+/** Switch theme bằng data-theme trên <html> — 4 state (FI-391 T13) */
+function useThemeSwitcher(): [ThemeName, (next: ThemeName) => void] {
   const [theme, setTheme] = useState<ThemeName>(readTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === 'storefront' ? 'admin' : 'storefront'));
-  return [theme, toggle];
+  const switchTheme = (next: ThemeName) => setTheme(next);
+  return [theme, switchTheme];
 }
 
 const DEMO_PRODUCTS = [
@@ -79,9 +87,20 @@ const TAB_ITEMS = [
   { key: 'reviews', label: 'Đánh giá', content: <p>Đánh giá của khách hàng — tab ba.</p> }
 ];
 
+/** Thẻ reveal demo — hook gắn `uk-reveal--pending`, intersect đầu thì hiện */
+function RevealCard({ title, delayMs }: { title: string; delayMs: number }) {
+  const ref = useReveal<HTMLDivElement>({ delayMs });
+  return (
+    <div className="uk-card" ref={ref}>
+      <h3 className="uk-card__title">{title}</h3>
+      <p>Cuộn tới là hiện dần — stagger {delayMs}ms.</p>
+    </div>
+  );
+}
+
 function DemoInner() {
   const { toast } = useToast();
-  const [theme, toggleTheme] = useThemeSwitcher();
+  const [theme, switchTheme] = useThemeSwitcher();
   const [modalOpen, setModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rating, setRating] = useState(4);
@@ -96,9 +115,18 @@ function DemoInner() {
     <div className="uk-demo">
       <header className="uk-demo__header">
         <h1 className="uk-demo__title">UI Kit v1</h1>
-        <Button variant="secondary" onClick={toggleTheme}>
-          Theme: {theme} (đổi)
-        </Button>
+        <div className="uk-demo__themes" role="group" aria-label="Theme demo">
+          {THEMES.map((t) => (
+            <Button
+              key={t.value}
+              variant={theme === t.value ? 'primary' : 'secondary'}
+              aria-pressed={theme === t.value}
+              onClick={() => switchTheme(t.value)}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </div>
       </header>
 
       <section className="uk-demo__section">
@@ -384,6 +412,15 @@ function DemoInner() {
           <ProductCardSkeleton />
           <TableSkeleton rows={4} cols={3} />
           <ListSkeleton count={3} />
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Scroll reveal</h2>
+        <div className="uk-demo__row">
+          <RevealCard title="Giao nhanh 2h" delayMs={0} />
+          <RevealCard title="Đổi trả 30 ngày" delayMs={70} />
+          <RevealCard title="Thanh toán an toàn" delayMs={140} />
         </div>
       </section>
 

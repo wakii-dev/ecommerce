@@ -812,6 +812,12 @@ button.uk-star {
   justify-items: start;
 }
 
+.uk-demo__themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .uk-demo__icons {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
@@ -1428,4 +1434,33 @@ button.uk-star {
 
 .uk-sk-table__cell .uk-skeleton {
   width: 100%;
+}
+
+/* ── Scroll reveal (SF-1 FI-391 — hand-off §3.2) ── class gắn BẰNG JS qua
+ * useReveal: mount → `uk-reveal uk-reveal--pending`, intersect đầu → bỏ
+ * `--pending` (transition chạy về trạng thái thường). Không JS / IO /
+ * reduced-motion → không class nào, nội dung hiện sẵn. */
+.uk-reveal {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+}
+
+.uk-reveal--pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+/* ── prefers-reduced-motion global (SF-1 FI-391 — hand-off §3.3) ────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .uk-reveal--pending {
+    opacity: 1;
+    transform: none;
+  }
 }

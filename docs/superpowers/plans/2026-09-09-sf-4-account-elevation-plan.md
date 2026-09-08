@@ -228,33 +228,33 @@ git commit -m "feat(account): AccountLayout side-nav 6 mục + active + collapse
 - Modify: `pages/affiliate/AffiliatePage.tsx`, `pages/affiliate/LoyaltyPointsSection.tsx`, `src/page.css`, `catalogs/{vi,en}.ts`
 - Create test: `src/__tests__/affiliatePage.test.tsx`
 
-- [ ] **Step 1: KPI stats cards** — decss 16 inline + KPI pattern direction §2.5/§4: label 11/700 uppercase tracking .08em muted + value 23/800 tabular-nums (Clicks/Conversions/Hoa hồng); card shadow-1 radius-md; GIỮ data-testid.
-- [ ] **Step 2: Ledger → Table primitive** — table tay + thStyle/tdStyle → ui-kit `Table` columns (Đơn left tabular link-màu / Giá trị right / Tỷ lệ center / Hoa hồng right 700 / Trạng thái → pill tint map ĐÚNG enum `LedgerEntry.status` (affiliateApi.ts:32 — chỉ 'PENDING' | 'CONFIRMED'): PENDING→pill-pending, CONFIRMED→pill-confirmed, giá trị lạ → pill-cancelled); row hover wash `--dur-fast`; empty ledger giữ text key.
-- [ ] **Step 3: Ref-link + code polish** — **GIỮ data-testid `affiliate-code` + `affiliate-link`**. Code 24/700 letter-spacing 4 tabular giữ + Badge rate tint-primary; copy button giữ logic + copied state; link `wordBreak` decss `.af-*`. LƯU Ý direction §4 nhắc "rút tiền CTA = --grad-cta" — page HIỆN KHÔNG có chức năng rút tiền (out of scope — không thêm tính năng mới); khi sau này có, áp CTA đó.
-- [ ] **Step 4: Loyalty anchor + KPI** — `LoyaltyPointsSection` render `<section id="loyalty" className="af-loyalty">` + useEffect scrollIntoView({behavior:'smooth'|'auto' reduced-motion, block:'start'}) khi `window.location.hash === '#loyalty'`; stats theo KPI pattern (Điểm hiện có value 23/800 `--c-primary`? — direction §4: rank/tier tint-primary; điểm = value 23/800 tabular, color text chuẩn + pill '≈ VND' tint-primary); loading → ListSkeleton 1; GIỮ data-testid loyalty-section/loyalty-balance.
-- [ ] **Step 5: i18n** — `account.affiliate.*` (title, register*4, pending*2, suspended*2, statsClicks/statsConversions/statsEarnings, refCode, rate, generateLink, linkLabel, copyLink, copied, ledger, ledgerEmpty, ledgerCol*5, status labels, errorLoad, errorSubmit) + `account.loyalty.*` (title, balance, totalEarned, convert, convertRate, loading, errorLoad).
-- [ ] **Step 6: Unit test** — APPROVED profile mock → 3 KPI testid giá trị + code + link chứa ?ref=CODE; ledger rows render Table; PENDING → pending card. Mock affiliateApi module.
-- [ ] **Step 7: Run** vitest + tsc + parity → PASS. Commit: `feat(account): affiliate KPI + ledger Table + loyalty anchor #loyalty (FI-394 T9)`.
+- [x] **Step 1: KPI stats cards** — decss 16 inline + KPI pattern direction §2.5/§4: label 11/700 uppercase tracking .08em muted + value 23/800 tabular-nums (Clicks/Conversions/Hoa hồng); card shadow-1 radius-md; GIỮ data-testid.
+- [x] **Step 2: Ledger → Table primitive** — table tay + thStyle/tdStyle → ui-kit `Table` columns (Đơn left tabular link-màu / Giá trị right / Tỷ lệ center / Hoa hồng right 700 / Trạng thái → pill tint map ĐÚNG enum `LedgerEntry.status` (affiliateApi.ts:32 — chỉ 'PENDING' | 'CONFIRMED'): PENDING→pill-pending, CONFIRMED→pill-confirmed, giá trị lạ → pill-cancelled); row hover wash `--dur-fast`; empty ledger giữ text key.
+- [x] **Step 3: Ref-link + code polish** — **GIỮ data-testid `affiliate-code` + `affiliate-link`**. Code 24/700 letter-spacing 4 tabular giữ + Badge rate tint-primary; copy button giữ logic + copied state; link `wordBreak` decss `.af-*`. LƯU Ý direction §4 nhắc "rút tiền CTA = --grad-cta" — page HIỆN KHÔNG có chức năng rút tiền (out of scope — không thêm tính năng mới); khi sau này có, áp CTA đó.
+- [x] **Step 4: Loyalty anchor + KPI** — `LoyaltyPointsSection` render `<section id="loyalty" className="af-loyalty">` + useEffect scrollIntoView({behavior:'smooth'|'auto' reduced-motion, block:'start'}) khi `window.location.hash === '#loyalty'`; stats theo KPI pattern (Điểm hiện có value 23/800 `--c-primary`? — direction §4: rank/tier tint-primary; điểm = value 23/800 tabular, color text chuẩn + pill '≈ VND' tint-primary); loading → ListSkeleton 1; GIỮ data-testid loyalty-section/loyalty-balance.
+- [x] **Step 5: i18n** — `account.affiliate.*` (title, register*4, pending*2, suspended*2, statsClicks/statsConversions/statsEarnings, refCode, rate, generateLink, linkLabel, copyLink, copied, ledger, ledgerEmpty, ledgerCol*5, status labels, errorLoad, errorSubmit) + `account.loyalty.*` (title, balance, totalEarned, convert, convertRate, loading, errorLoad).
+- [x] **Step 6: Unit test** — APPROVED profile mock → 3 KPI testid giá trị + code + link chứa ?ref=CODE; ledger rows render Table; PENDING → pending card. Mock affiliateApi module.
+- [x] **Step 7: Run** vitest + tsc + parity → PASS. Commit: `feat(account): affiliate KPI + ledger Table + loyalty anchor #loyalty (FI-394 T9)`.
 
 ### Task 10: i18n sweep residual + parity lock
 
 **Files:**
 - Modify: `catalogs/{vi,en}.ts` (residual keys nếu T2-T9 sót), các page còn hard-code sót
 
-- [ ] **Step 1: Sweep** — residual hard-code tiếng Việt trong `apps/mfe-account/src` ngoài test (macOS: BSD grep KHÔNG có -P — dùng rg): `rg -n "[ơưạáàảãấầẩẫậắằẳẵặéèẻẽếềểễệíìỉĩịóòỏõốồổỗộớờởỡợúùủũứừửữựýỳỷỹỵđ]" frontend/apps/mfe-account/src -g '*.tsx' -g '!*test*'` + review từng hit: key hóa (vi+en cùng commit) hoặc ghi lý do giữ (vd formatVnd '₫', date locale, placeholder động).
-- [ ] **Step 2: useT wiring audit** — mọi page đã đăng nhập + auth pages dùng `useT()` (initI18n chạy ở bootstrap/main + shell host — verify cả 2 biên đã init; standalone main.tsx có initI18n, shell host App dùng useT sẵn — OK).
-- [ ] **Step 3: Parity + unit** — `pnpm -C packages/i18n exec vitest run` (parity structural vi/en TOÀN catalogs) + `pnpm -C apps/mfe-account exec vitest run` + tsc. Commit: `feat(i18n): account.* sweep residual + parity lock (FI-394 T10)`.
+- [x] **Step 1: Sweep** — residual hard-code tiếng Việt trong `apps/mfe-account/src` ngoài test (macOS: BSD grep KHÔNG có -P — dùng rg): `rg -n "[ơưạáàảãấầẩẫậắằẳẵặéèẻẽếềểễệíìỉĩịóòỏõốồổỗộớờởỡợúùủũứừửữựýỳỷỹỵđ]" frontend/apps/mfe-account/src -g '*.tsx' -g '!*test*'` + review từng hit: key hóa (vi+en cùng commit) hoặc ghi lý do giữ (vd formatVnd '₫', date locale, placeholder động).
+- [x] **Step 2: useT wiring audit** — mọi page đã đăng nhập + auth pages dùng `useT()` (initI18n chạy ở bootstrap/main + shell host — verify cả 2 biên đã init; standalone main.tsx có initI18n, shell host App dùng useT sẵn — OK).
+- [x] **Step 3: Parity + unit** — `pnpm -C packages/i18n exec vitest run` (parity structural vi/en TOÀN catalogs) + `pnpm -C apps/mfe-account exec vitest run` + tsc. Commit: `feat(i18n): account.* sweep residual + parity lock (FI-394 T10)`.
 
 ### Task 11: Responsive + walkthrough + unit consolidation + e2e subset
 
 **Files:**
 - Modify: `src/page.css` (responsive fixes nếu walkthrough thấy), unit tests consolidation
 
-- [ ] **Step 1: Responsive audit <600px** — side-nav ngang scroll-x (T1); account-grid 1 cột (720px breakpoint có sẵn — giữ); auth-card full-width padding 16; OrderDetail tables scroll-x (`.od-items-wrap { overflow-x:auto }` nếu tràn); affiliate KPI auto-fit giữ; wishlist grid minmax 200 → 1 cột mượt.
-- [ ] **Step 2: Unit consolidation** — `pnpm -C apps/mfe-account exec vitest run` toàn bộ xanh + tsc sạch + i18n parity xanh.
-- [ ] **Step 3: BROWSER WALKTHROUGH (Rule 0 — 3 tầng)** — live stack (make dev / shell :5173): login → side-nav điều hướng TẤT CẢ 6 trang → OrderDetail (modal RMA + hủy focus/ESC) → wishlist xóa confirm → đổi locale en toàn account → UserMenu keyboard cả flow → logout; screenshot MỖI màn + dark mode sweep account; console sạch. FAIL → fix + re-chụp.
-- [ ] **Step 4: e2e subset** — prerequisite: Mailpit :8025 sống (password-reset đọc mail qua Mailpit API) + identity + catalog + ordering. `auth-cookie.spec.ts`, `password-reset.spec.ts`, `engagement.spec.ts` XANH trên stack thật (port-base +200 nếu isolate; SHELL/GATEWAY_URL env override). KHÔNG sửa spec (read-only).
-- [ ] **Step 5: Commit** fixes nếu có: `fix(account): responsive/walkthrough fixes (FI-394 T11)`.
+- [x] **Step 1: Responsive audit <600px** — side-nav ngang scroll-x (T1); account-grid 1 cột (720px breakpoint có sẵn — giữ); auth-card full-width padding 16; OrderDetail tables scroll-x (`.od-items-wrap { overflow-x:auto }` nếu tràn); affiliate KPI auto-fit giữ; wishlist grid minmax 200 → 1 cột mượt.
+- [x] **Step 2: Unit consolidation** — `pnpm -C apps/mfe-account exec vitest run` toàn bộ xanh + tsc sạch + i18n parity xanh.
+- [x] **Step 3: BROWSER WALKTHROUGH (Rule 0 — 3 tầng)** — live stack (make dev / shell :5173): login → side-nav điều hướng TẤT CẢ 6 trang → OrderDetail (modal RMA + hủy focus/ESC) → wishlist xóa confirm → đổi locale en toàn account → UserMenu keyboard cả flow → logout; screenshot MỖI màn + dark mode sweep account; console sạch. FAIL → fix + re-chụp.
+- [x] **Step 4: e2e subset** — prerequisite: Mailpit :8025 sống (password-reset đọc mail qua Mailpit API) + identity + catalog + ordering. `auth-cookie.spec.ts`, `password-reset.spec.ts`, `engagement.spec.ts` XANH trên stack thật (port-base +200 nếu isolate; SHELL/GATEWAY_URL env override). KHÔNG sửa spec (read-only).
+- [x] **Step 5: Commit** fixes nếu có: `fix(account): responsive/walkthrough fixes (FI-394 T11)`.
 
 ---
 

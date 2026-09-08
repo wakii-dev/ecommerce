@@ -19,57 +19,70 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 ## 1. Tasks
 
 ### T1 header-mini-nav-probe-slug
-- [ ] Probe CHỐT: `dien-tu` ∈ seed (SeedData.java:41), `newest|rating` ∈ PlpSort → links GIỮ nguyên
-- [ ] Sửa stale comment Header.tsx:36 ("placeholder '#' tới khi Task 12" — nói dối, code đã wire từ trước)
+- [x] Probe CHỐT: `dien-tu` ∈ seed (SeedData.java:41), `newest|rating` ∈ PlpSort → links GIỮ nguyên
+- [x] Sửa stale comment Header.tsx:36 ("placeholder '#' tới khi Task 12" — nói dối, code đã wire từ trước)
 
 ### T2 categorytiles-home-route-that
-- [ ] Verify CategoryTiles:53 `/search` + home:87-94 `/c/{first}?sort=discount` → routes thật, GIỮ
-- [ ] Sửa stale comments CategoryTiles.tsx:7-8 + home page.tsx:84-86 (bỏ "placeholder '#'", ghi đúng đích hiện tại)
+- [x] Verify CategoryTiles:53 `/search` + home:87-94 `/c/{first}?sort=discount` → routes thật, GIỮ
+- [x] Sửa stale comments CategoryTiles.tsx:7-8 + home page.tsx:84-86 (bỏ "placeholder '#'", ghi đúng đích hiện tại)
 
 ### T3 footer-trim-routes-that
-- [ ] Footer.tsx: COLUMNS → links thật: cột "Danh mục nổi bật" (5 slugs `/c/{slug}` — seed-verified) + cột "Tài khoản" (shell: `/cart`, `/account`, `/account/orders`, `/account/wishlist`, `/account/reviews` qua `shellUrl()`) + NewsletterForm giữ; XOÁ cột care/about/social (không có trang thật — N5)
-- [ ] app.css `.site-footer-inner` `repeat(4,1fr)` → `repeat(3,1fr)` (mobile 2 giữ)
+- [x] Footer.tsx: COLUMNS → links thật: cột "Danh mục nổi bật" (5 slugs `/c/{slug}` — seed-verified) + cột "Tài khoản" (shell: `/cart`, `/account`, `/account/orders`, `/account/wishlist`, `/account/reviews` qua `shellUrl()`) + NewsletterForm giữ; XOÁ cột care/about/social (không có trang thật — N5)
+- [x] app.css `.site-footer-inner` `repeat(4,1fr)` → `repeat(3,1fr)` (mobile 2 giữ)
 
 ### T4 addtocart-toastfail-loi-that
-- [ ] COPY.toastFail → vi "Không thêm được vào giỏ — thử lại" / en "Couldn't add to cart — please try again"; export COPY
-- [ ] Cập nhật doc-comment component (:16 "toast êm cũ" → lỗi thật)
-- [ ] `tests/addtocart.test.ts` mới: COPY 2 locale đúng chuỗi trung thực + mọi COPY value không match /soon|sớm/i
+- [x] COPY.toastFail → vi "Không thêm được vào giỏ — thử lại" / en "Couldn't add to cart — please try again"; export COPY
+- [x] Cập nhật doc-comment component (:16 "toast êm cũ" → lỗi thật)
+- [x] `tests/addtocart.test.ts` mới: COPY 2 locale đúng chuỗi trung thực + mọi COPY value không match /soon|sớm/i
 
 ### T5 xoa-dead-i18n-reviewssoon
-- [ ] Xoá COPY.reviewsSoon (p/[slug]/page.tsx:51 vi + :69 en)
-- [ ] Reword comment :307 (bỏ cụm "Sắp ra mắt" — sweep pattern)
+- [x] Xoá COPY.reviewsSoon (p/[slug]/page.tsx:51 vi + :69 en)
+- [x] Reword comment :307 (bỏ cụm "Sắp ra mắt" — sweep pattern)
 
 ### T6 tach-orderrules-purge-createstubapi
-- [ ] `lib/orderRules.ts` mới: canShip/canDeliver/canCancel + CAN_* sets (doc §3.6) — pure
-- [ ] OrderDetailPage import re-point → `../lib/orderRules`
-- [ ] XOÁ `lib/adminStub.ts` (createStubApi+seed+dayKey+MOCK_PRODUCT_NAMES chết theo) + `tests/stub.test.ts`
-- [ ] `tests/orderRules.test.ts` mới: truth-table 3 hàm (ship PAID/CONFIRMED-only, deliver SHIPPED-only, cancel PENDING/PAID/CONFIRMED-only) + invariant không có action confirm
-- [ ] `lib/api.ts`: cập nhật comment + re-export 3 helpers (chỗImport §3.6 duy nhất)
+- [x] `lib/orderRules.ts` mới: canShip/canDeliver/canCancel + CAN_* sets (doc §3.6) — pure
+- [x] OrderDetailPage import re-point → `../lib/orderRules`
+- [x] XOÁ `lib/adminStub.ts` (createStubApi+seed+dayKey+MOCK_PRODUCT_NAMES chết theo) + `tests/stub.test.ts`
+- [x] `tests/orderRules.test.ts` mới: truth-table 3 hàm (ship PAID/CONFIRMED-only, deliver SHIPPED-only, cancel PENDING/PAID/CONFIRMED-only) + invariant không có action confirm
+- [x] `lib/api.ts`: cập nhật comment + re-export 3 helpers (chỗImport §3.6 duy nhất)
 
 ### T7 rename-stub-types-5-pages
-- [ ] types.ts: XOÁ StubCoupon/StubCouponInput (chỉ adminStub dùng); rename StubReview→AdminReview, StubOrderLine→AdminOrderLine, StubAddress→AdminAddress, StubOrderEvent→AdminOrderEvent, StubOrder→AdminOrder, StubSummary→AdminSummary, StubRevenueDay→AdminRevenueDay, StubTopProduct→AdminTopProduct
-- [ ] 4 pages mechanical: OrdersPage, OrderDetailPage, ReviewsPage, DashboardPage (CouponsPage KHÔNG đụng — không dùng Stub)
-- [ ] `grep -r "Stub" mfe-admin/src` = 0; typecheck + vitest green
+- [x] types.ts: XOÁ StubCoupon/StubCouponInput (chỉ adminStub dùng); rename StubReview→AdminReview, StubOrderLine→AdminOrderLine, StubAddress→AdminAddress, StubOrderEvent→AdminOrderEvent, StubOrder→AdminOrder, StubSummary→AdminSummary, StubRevenueDay→AdminRevenueDay, StubTopProduct→AdminTopProduct
+- [x] 4 pages mechanical: OrdersPage, OrderDetailPage, ReviewsPage, DashboardPage (CouponsPage KHÔNG đụng — không dùng Stub)
+- [x] `grep -r "Stub" mfe-admin/src` = 0; typecheck + vitest green
 
 ### T8 shell-uikit-env-gate
-- [ ] App.tsx:173: `path === '/ui-kit' && import.meta.env.VITE_UIKIT_DEV === '1'` + comment (Vite bake VITE_*; unset = rơi Home)
+- [x] App.tsx:173: `path === '/ui-kit' && import.meta.env.VITE_UIKIT_DEV === '1'` + comment (Vite bake VITE_*; unset = rơi Home)
 
 ### T9 degraded-by-design-registry-adr
-- [ ] `docs/adr/0006-degraded-by-design-registry.md`: khung 3-question test N2 + registry: ES→PgFts (D15) GIỮ · payment 503 fail-loud GIỮ · GHN flat GIỮ + nhãn UI
-- [ ] CheckoutPage:639 + ConfirmationPage:198: "Phí vận chuyển" → "Phí vận chuyển (phí tiêu chuẩn)" — trung thực flat-fee
+- [x] `docs/adr/0006-degraded-by-design-registry.md`: khung 3-question test N2 + registry: ES→PgFts (D15) GIỮ · payment 503 fail-loud GIỮ · GHN flat GIỮ + nhãn UI
+- [x] CheckoutPage:639 + ConfirmationPage:198: "Phí vận chuyển" → "Phí vận chuyển (phí tiêu chuẩn)" — trung thực flat-fee
 
 ### T10 grep-sweep-cuoi-whitelist-report
-- [ ] Sweep scope `storefront-web` + `mfe-admin` + `shell/src` + `mfe-checkout` (2 dòng nhãn): patterns `href="#"`, `Sắp ra mắt`, `coming soon`, `createStubApi`, `Stub[A-Z]` → zero match sống
-- [ ] Whitelist enumerate vào ADR 0006: vi.mock unit tests · `placeholder=` attr · `_skeleton-remote` (infra app) · ui-kit demo (đã env-gate) — từng match kèm lý do
+- [x] Sweep scope `storefront-web` + `mfe-admin` + `shell/src` + `mfe-checkout` (2 dòng nhãn): patterns `href="#"`, `Sắp ra mắt`, `coming soon`, `createStubApi`, `Stub[A-Z]` → zero match sống
+- [x] Whitelist enumerate vào ADR 0006: vi.mock unit tests · `placeholder=` attr · `_skeleton-remote` (infra app) · ui-kit demo (đã env-gate) — từng match kèm lý do
 
 ### T11 playwright-nav-asserts-binary
-- [ ] `frontend/e2e/tests/nav-honesty.spec.ts`: header 3 links → `/vi/c/dien-tu(+sort)`; tiles → `/c/{slug}`; "Xem thêm" → `/search`; featured "Xem thêm" → `?sort=discount`; footer: zero `href="#"` + click từng link → URL đích; PDP `route.abort` POST `/api/cart/items` → toast lỗi thật
-- [ ] Chạy suite với live stack (`make dev`) — nav-honesty + regression specs liên quan green
+- [x] `frontend/e2e/tests/nav-honesty.spec.ts`: header 3 links → `/vi/c/dien-tu(+sort)`; tiles → `/c/{slug}`; "Xem thêm" → `/search`; featured "Xem thêm" → `?sort=discount`; footer: zero `href="#"` + click từng link → URL đích; PDP `route.abort` POST `/api/cart/items` → toast lỗi thật
+- [x] Chạy suite với live stack (`make dev`) — nav-honesty + regression specs liên quan green
 
 ## 2. Gate checkpoints (Bridge 2)
 - G1 sau T7 (mfe-admin refactor complete — typecheck + vitest)
 - G2 sau T9 (registry ADR + nhãn — sweep nội bộ sạch)
 - G3 sau T11 (final: full FE unit + typecheck + e2e + code-reviewer APPROVED)
+
+## 2b. Tick evidence (2026-09-08)
+- T1-T2: slug `dien-tu` + 4 slugs root ∈ SeedData.java:41-60; `newest|rating` ∈ plp-params.ts:10 → links GIỮ, comments reword (commits 80dd1d3, 955a589)
+- T3: Footer 2 cột thật + CSS 3 cột — zero `href="#"` (commit 025b092)
+- T4: toastFail lỗi thật + tests/addtocart.test.ts — vitest 126/126 (commit a57fc12)
+- T5: reviewsSoon xoá :51,:69 (commit 65e5711)
+- T6: orderRules.ts + purge adminStub/stub.test — vitest 53/53 (commit d6990ca)
+- T7: rename 8 types Stub*→Admin* + 20 refs qua 4 pages (commit 1b47ef0)
+- T8: VITE_UIKIT_DEV gate (commit e22352b)
+- T9: ADR 0006 + nhãn phí tiêu chuẩn ×2 (commit aa7fbb2)
+- T10: sweep 0/7 (find+xargs) + whitelist ADR (commit b70baad)
+- T11: nav-honesty.spec.ts 7/7 PASSED (commit f7f6dd8)
+- Deviation ghi FI-369/FI-372: VITE_UIKIT_DEV (Vite không bake NEXT_PUBLIC_*); e2e chạy isolated mock (docker/PG chết — stack SF-1 giữ ports chuẩn), full suite là gate SF-1/2
 
 ## 3. Meta
 1. Test commands: `pnpm --filter <pkg> test|lint` (storefront-web, mfe-admin); e2e `cd frontend && pnpm --filter @ecommerce/e2e exec playwright test`

@@ -118,6 +118,31 @@ export const en = {
       confirmDisable: 'Confirm disable',
       cancel: 'Cancel',
       qrAlt: '2FA enrollment QR code'
+    },
+    // ── T5 — OrdersPage — mirrors vi 1:1 ──
+    orders: {
+      title: 'My orders',
+      orderId: 'Order #{{id}}',
+      itemsCount: '{{count}} items',
+      loading: 'Loading your orders…',
+      emptyTitle: "You don't have any orders yet",
+      emptyDesc: 'Explore thousands of products on hot sale.',
+      emptyCta: 'Continue shopping',
+      errorTitle: 'Could not load your orders',
+      retry: 'Try again',
+      paymentStripe: 'Stripe',
+      paymentCod: 'COD'
+    },
+    order: {
+      status: {
+        pending: 'Pending payment',
+        paid: 'Paid',
+        confirmed: 'Confirmed',
+        shipped: 'Shipping',
+        delivered: 'Delivered',
+        cancelled: 'Cancelled',
+        failed: 'Failed'
+      }
     }
   },
   auth: {

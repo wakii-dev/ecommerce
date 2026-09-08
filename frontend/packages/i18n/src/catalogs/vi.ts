@@ -120,6 +120,31 @@ export const vi = {
       confirmDisable: 'Xác nhận tắt',
       cancel: 'Hủy',
       qrAlt: 'Mã QR đăng ký 2FA'
+    },
+    // ── T5 — OrdersPage (chuỗi vi GIỮ NGUYÊN text đang có — e2e locate theo text) ──
+    orders: {
+      title: 'Đơn hàng của tôi',
+      orderId: 'Đơn #{{id}}',
+      itemsCount: '{{count}} sản phẩm',
+      loading: 'Đang tải đơn hàng…',
+      emptyTitle: 'Bạn chưa có đơn hàng nào',
+      emptyDesc: 'Khám phá hàng ngàn sản phẩm đang khuyến mãi hot.',
+      emptyCta: 'Tiếp tục mua sắm',
+      errorTitle: 'Không tải được đơn hàng',
+      retry: 'Thử lại',
+      paymentStripe: 'Stripe',
+      paymentCod: 'COD'
+    },
+    order: {
+      status: {
+        pending: 'Chờ thanh toán',
+        paid: 'Đã thanh toán',
+        confirmed: 'Đã xác nhận',
+        shipped: 'Đang giao',
+        delivered: 'Đã giao',
+        cancelled: 'Đã hủy',
+        failed: 'Thất bại'
+      }
     }
   },
   auth: {

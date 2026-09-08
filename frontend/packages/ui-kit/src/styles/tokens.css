@@ -3,15 +3,18 @@
  *
  * Nguồn giá trị: docs/superpowers/designs/fi310-storefront-direction.md §1
  * (user chọn hướng A · prototype /tmp/fi310-design-312/a.html).
+ * Tokens v2 — motion/z-index/breakpoint/gradient/admin-dark (SF-1 FI-391):
+ * docs/superpowers/designs/fi390-uiux-elevation-direction.md §1
+ * (hướng B "Chợ Sôi Động 2.0").
  *
  * Tên biến = API nội bộ của ui-kit (T14 shell + demo đang dùng) — chỉ thay
  * VALUE, KHÔNG đổi/xóa tên. Biến mới (accent, tint, pill) thêm ADDITIVE.
- * 2 theme switch bằng attribute `data-theme` trên <html>
- * (demo: storefront <-> admin; app gắn data-theme ở layout/root).
+ * 4 theme values qua attribute `data-theme` trên <html>:
+ * storefront | admin | dark | admin-dark (app gắn data-theme ở layout/root).
  *
- * FONT: 'Be Vietnam Pro' weights 400;500;600;700;800 (subset vietnamese) —
- * app tự load (KHÔNG @import ở đây), vd Google Fonts link trong <head> của
- * layout: family=Be+Vietnam+Pro:wght@400;500;600;700;800
+ * FONT: 'Be Vietnam Pro' weights 400;500;600;700;800 (subset
+ * vietnamese+latin) — self-host qua @font-face ở đầu file này
+ * (SF-1 FI-391), KHÔNG cần Google Fonts link trong <head>.
  *
  * Quy tắc: ui-kit.css CHỈ được dùng var(--*) từ file này — cấm hex trực tiếp.
  */
@@ -101,6 +104,50 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08); /* header, card tĩnh, KPI */
   --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.12); /* hover lift, dropdown, hero */
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16); /* dự phòng modal/drawer */
+
+  /* ── Tokens v2 (SF-1 FI-391) — hand-off §1.2 */
+  /* Motion durations (hand-off §1.2) */
+  --dur-fast: 140ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+  --dur-carousel: 450ms;
+  --dur-kb: 16s;
+  --dur-shimmer: 1.3s;
+  --dur-float: 6s;
+
+  /* Easing (hand-off §1.2) */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-pop: cubic-bezier(0.34, 1.4, 0.4, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0.3, 1.08);
+
+  /* Z-index scale (hand-off §1.2) */
+  --z-header: 100;
+  --z-dropdown: 200;
+  --z-drawer: 300;
+  --z-toast: 400;
+
+  /* Breakpoints (hand-off §1.2) — doc/JS reference; @media KHÔNG đọc var() */
+  --bp-sm: 600px;
+  --bp-md: 960px;
+  --bp-lg: 1240px;
+
+  /* Gradients + CTA shadow (hand-off §1.3 — family FI-310 §1.8) */
+  --grad-cta: linear-gradient(90deg, #F53D2D, #FF7A45);
+  --grad-flash: linear-gradient(180deg, #FFD839, #FFB800);
+  --grad-hero-1: linear-gradient(120deg, #F53D2D, #FF7A45);
+  --grad-hero-2: linear-gradient(120deg, #CB1B00, #F53D2D);
+  --grad-hero-3: linear-gradient(120deg, #FF512F, #DD2476);
+  --grad-cat-dientu: linear-gradient(140deg, #EAF3FF, #D9E9FF);
+  --grad-cat-thoitrang: linear-gradient(140deg, #FFEEE8, #FFDFD2);
+  --grad-cat-nhacua: linear-gradient(140deg, #E9F7EE, #D8F0E1);
+  --grad-cat-sach: linear-gradient(140deg, #FFF7DC, #FFEFBC);
+  --grad-cat-lamdep: linear-gradient(140deg, #F4EBFC, #EBDCF8);
+  --grad-swatch-den: linear-gradient(140deg, #4a4a4a, #1a1a1a);
+  --grad-swatch-trang: linear-gradient(140deg, #ffffff, #ededed);
+  --grad-swatch-navy: linear-gradient(140deg, #33507f, #22355c);
+  --grad-swatch-be: linear-gradient(140deg, #e6d6b8, #d9c7a7);
+  --shadow-cta: 0 4px 12px rgba(245, 61, 45, 0.35);
+  --shadow-cta-hover: 0 6px 18px rgba(245, 61, 45, 0.45);
 }
 
 /* Admin: cùng family màu A (primary/danger/warning/success/accent không đổi) —
@@ -230,4 +277,64 @@
   --pill-delivered-text: #52C97E;
   --pill-cancelled-bg: #331417;
   --pill-cancelled-text: #FF7A85;
+
+  /* SF-1 FI-391 §1.4: shadow đậm hơn cho nền tối */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Admin-dark theme (SF-1 FI-391 — hand-off §1.5) — block CUỐI file, cùng
+ * specificity pattern admin/dark (source-order thắng). `admin-dark` KHÔNG
+ * cascade từ `dark` (khác giá trị attribute) → re-declare ĐỦ các biến đè:
+ * tint/pill/wash/star copy đúng block dark, shadow = bộ dark §1.4.
+ * Motion/z-index/breakpoint/spacing/radius/typography cascade từ :root. */
+[data-theme='admin-dark'] {
+  --c-bg: #0F0F0F; /* hex MỚI duy nhất của elevation — nền tối phân tầng với surface */
+  --c-surface: #1E1E1E;
+  --c-text: #F5F5F5;
+  --c-text-muted: #9E9E9E;
+  --c-border: #2C2C2C;
+  --c-primary: #F53D2D;
+  --c-primary-hover: #FF6B54;
+  --c-link: #FF6B54; /* AA text trên surface — nút vẫn --c-primary */
+  --c-focus: #FF6B54;
+  --c-danger: #FF5A5A;
+  --c-warning: #FE9C08;
+  --c-success: #2FD5BE;
+  --c-accent: #FFD839;
+  --c-on-accent: #212121;
+
+  /* tint/wash/star = copy đúng block dark */
+  --tint-primary-bg: #3A1B17;
+  --tint-primary-text: #FF8A73;
+  --tint-primary-border: #5C2A22;
+  --tint-success-bg: #11302B;
+  --tint-success-text: #4CD0BC;
+  --tint-success-border: #1F5148;
+  --tint-new-bg: #33270E;
+  --tint-new-text: #F2C14E;
+  --tint-new-border: #57431A;
+  --wash-price-bg: #2A1512;
+  --wash-hover: #262626;
+  --star-track: #3D3D3D;
+
+  /* Status pill — 6 cặp = copy đúng block dark */
+  --pill-pending-bg: #33270E;
+  --pill-pending-text: #F2C14E;
+  --pill-paid-bg: #12253D;
+  --pill-paid-text: #6FB2FF;
+  --pill-confirmed-bg: #0F2E29;
+  --pill-confirmed-text: #3FCBB6;
+  --pill-shipped-bg: #1D1D3A;
+  --pill-shipped-text: #9C9CF0;
+  --pill-delivered-bg: #10291A;
+  --pill-delivered-text: #52C97E;
+  --pill-cancelled-bg: #331417;
+  --pill-cancelled-text: #FF7A85;
+
+  /* shadow = bộ dark §1.4 (đậm hơn cho nền tối) */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.6);
 }

@@ -74,7 +74,15 @@ export const en = {
       affiliates: 'Affiliates',
       // SF-14 (FI-324) append
       rma: 'Returns',
-      loyalty: 'Loyalty'
+      loyalty: 'Loyalty',
+      // SF-5 (FI-395) append
+      group: {
+        overview: 'Overview',
+        products: 'Products',
+        orders: 'Orders',
+        engagement: 'Customers & engagement',
+        system: 'System'
+      }
     },
     newsletter: {
       title: 'Newsletter — subscribers',

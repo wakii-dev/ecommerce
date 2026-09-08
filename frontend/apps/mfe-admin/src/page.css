@@ -433,3 +433,82 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Sidebar groups + icons (SF-5 FI-395) ────────────────────────────── */
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Direction §2.5: group label 11px uppercase tracking .12em muted */
+.admin-nav-group__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--c-text-muted);
+  margin: var(--space-4, 16px) var(--space-3, 12px) var(--space-1, 4px);
+}
+
+.admin-nav-group:first-child .admin-nav-group__label {
+  margin-top: 0;
+}
+
+/* Nav item: icon 18 + label cùng hàng (icon kế thừa currentColor → active
+   theo --c-link của --active tự động) */
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.admin-nav-link__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* User block cuối sidebar — direction §2.5 border-top */
+.admin-side__user {
+  margin-top: auto; /* đẩy xuống đáy sidebar */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+  padding: var(--space-4, 16px) var(--space-2, 8px) 0;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px;
+}
+
+.admin-side__user-name {
+  font-weight: 600;
+  color: var(--c-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-side__user-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-link);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* ≤900px strip ngang: giữ flat scroll — group item xếp hàng, ẩn label */
+@media (max-width: 900px) {
+  .admin-nav-group {
+    flex-direction: row;
+  }
+
+  .admin-nav-group__label {
+    display: none;
+  }
+}

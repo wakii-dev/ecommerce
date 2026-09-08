@@ -9,16 +9,19 @@ import i18next from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { authStore, configureAuth, logout, useAuth } from '@ecommerce/auth';
 import { useT } from '@ecommerce/i18n';
-import { Button, EmptyState, ToastProvider } from '@ecommerce/ui-kit';
+import { Button, EmptyState, Icon, ToastProvider } from '@ecommerce/ui-kit';
 import { appNavigate, hasShellNavigate } from './bootstrap';
 import {
   ADMIN_NAV,
+  ADMIN_NAV_GROUPS, // SF-5 (FI-395 T2) append
   activeNavIndex,
   resolveAdminRoute,
   resolveGuardState,
   type AdminGuardState,
+  type AdminNavIcon,
   type AdminRoute
 } from './lib/guard';
+import { ADMIN_ICON_NAMES, AdminIcon, type AdminIconName } from './components/AdminIcon';
 import AuditPage from './pages/AuditPage';
 import NewsletterPage from './pages/NewsletterPage';
 import AffiliatesPage from './pages/AffiliatesPage';
@@ -80,12 +83,20 @@ function renderPage(route: AdminRoute, t: (key: string) => string): ReactElement
   }
 }
 
+/** Icon admin-local hay ui-kit? — phân loại theo catalog AdminIcon (SF-5). */
+function isAdminIcon(name: AdminNavIcon): name is AdminIconName {
+  return (ADMIN_ICON_NAMES as readonly string[]).includes(name);
+}
+
 /** Shell layout — sidebar nav + topbar (user/storefront/logout). AdminApp con. */
 function AdminShell({ path }: { path: string }): ReactElement {
   const { t } = useT();
   const { user, logout: clearLocal } = useAuth();
   const route = resolveAdminRoute(path);
-  const active = activeNavIndex(path);
+  // Active qua activeNavIndex giữ nguyên semantics (order-detail → Orders) —
+  // map ngược index → `to` của ADMIN_NAV flat để so với item trong nhóm.
+  const activeTo = ADMIN_NAV[activeNavIndex(path)]?.to;
+  const roleLabel = user?.roles?.[0]?.toUpperCase();
 
   const onNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, to: string): void => {
     // Giữ open-in-new-tab cho modifier click (giống pattern Link của shell).
@@ -113,18 +124,36 @@ function AdminShell({ path }: { path: string }): ReactElement {
           ecommerce <span className="admin-side__badge">{t('nav.admin')}</span>
         </div>
         <nav className="admin-side__nav" aria-label={t('nav.admin')}>
-          {ADMIN_NAV.map((item, i) => (
-            <a
-              key={item.to}
-              href={item.to}
-              className={i === active ? 'admin-nav-link admin-nav-link--active' : 'admin-nav-link'}
-              aria-current={i === active ? 'page' : undefined}
-              onClick={(e) => onNavClick(e, item.to)}
-            >
-              {t(item.key)}
-            </a>
+          {ADMIN_NAV_GROUPS.map((group) => (
+            <div key={group.labelKey} className="admin-nav-group">
+              <div className="admin-nav-group__label">{t(group.labelKey)}</div>
+              {group.items.map((item) => (
+                <a
+                  key={item.to}
+                  href={item.to}
+                  className={
+                    item.to === activeTo ? 'admin-nav-link admin-nav-link--active' : 'admin-nav-link'
+                  }
+                  aria-current={item.to === activeTo ? 'page' : undefined}
+                  onClick={(e) => onNavClick(e, item.to)}
+                >
+                  <span className="admin-nav-link__icon">
+                    {isAdminIcon(item.icon) ? (
+                      <AdminIcon name={item.icon} />
+                    ) : (
+                      <Icon name={item.icon} size={18} />
+                    )}
+                  </span>
+                  {t(item.key)}
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
+        <div className="admin-side__user">
+          <span className="admin-side__user-name">{user?.fullName || user?.email || user?.id}</span>
+          {roleLabel ? <span className="admin-side__user-pill">{roleLabel}</span> : null}
+        </div>
       </aside>
       <div className="admin-body">
         <header className="admin-topbar">

@@ -75,7 +75,15 @@ export const vi = {
       newsletter: 'Newsletter',
       // SF-14 (FI-324) append
       rma: 'Trả hàng',
-      loyalty: 'Điểm thưởng'
+      loyalty: 'Điểm thưởng',
+      // SF-5 (FI-395) append
+      group: {
+        overview: 'Tổng quan',
+        products: 'Sản phẩm',
+        orders: 'Đơn hàng',
+        engagement: 'Khách hàng & tương tác',
+        system: 'Hệ thống'
+      }
     },
     newsletter: {
       title: 'Newsletter — người nhận tin',

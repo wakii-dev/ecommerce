@@ -21,6 +21,8 @@ import { Checkbox } from '../components/Checkbox';
 import { Radio, RadioGroup } from '../components/Radio';
 import { Textarea } from '../components/Textarea';
 import { Stepper } from '../components/Stepper';
+import { ICON_PATHS, Icon } from '../components/Icon';
+import type { IconName } from '../components/Icon';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -475,6 +477,40 @@ describe('Textarea', () => {
     expect(html).not.toContain('aria-invalid');
     expect(html).toContain('-hint"');
     expect(html).toContain('class="uk-field"');
+  });
+});
+
+describe('Icon — SSR', () => {
+  const NAMES = Object.keys(ICON_PATHS) as IconName[];
+
+  it('đủ 22 name trong catalog + loop render không throw', () => {
+    expect(NAMES).toHaveLength(22);
+    for (const name of NAMES) {
+      expect(() => renderToStaticMarkup(<Icon name={name} />)).not.toThrow();
+    }
+  });
+
+  it('default: aria-hidden="true" (decorative) + size 20 + stroke attrs', () => {
+    const html = renderToStaticMarkup(<Icon name="cart" />);
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toContain('role="img"');
+    expect(html).toContain('width="20"');
+    expect(html).toContain('height="20"');
+    expect(html).toContain('stroke-width="1.8"');
+    expect(html).toContain('viewBox="0 0 24 24"');
+  });
+
+  it('title → role="img" + <title>, không còn aria-hidden', () => {
+    const html = renderToStaticMarkup(<Icon name="heart" title="Yêu thích" />);
+    expect(html).toContain('role="img"');
+    expect(html).toContain('<title>Yêu thích</title>');
+    expect(html).not.toContain('aria-hidden');
+  });
+
+  it('size prop → width/height attr', () => {
+    const html = renderToStaticMarkup(<Icon name="check" size={32} />);
+    expect(html).toContain('width="32"');
+    expect(html).toContain('height="32"');
   });
 });
 

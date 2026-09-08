@@ -804,6 +804,25 @@ button.uk-star {
   justify-items: start;
 }
 
+.uk-demo__icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--space-3);
+}
+
+.uk-demo__icon {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  font-size: var(--text-xs);
+  text-align: center;
+  word-break: break-word;
+}
+
 /* ── QuantityStepper (SF-1 FI-391) ──────────────────────────────────── */
 /* 3 khối dính liền trong khung chung: .uk-qty giữ border + radius +
  * overflow hidden; input chỉ có viền dọc phân cách với 2 nút. */
@@ -1330,4 +1349,12 @@ button.uk-star {
 [data-theme='dark'] .uk-badge--success,
 [data-theme='dark'] .uk-badge--danger {
   color: var(--c-on-accent);
+}
+
+/* ── Icon (SF-1 FI-391) ─────────────────────────────────────────────── */
+
+.uk-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }

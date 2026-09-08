@@ -64,3 +64,9 @@ export {
   type StepperProps,
   type StepperStep
 } from './Stepper';
+export {
+  Icon,
+  ICON_PATHS,
+  type IconName,
+  type IconProps
+} from './Icon';

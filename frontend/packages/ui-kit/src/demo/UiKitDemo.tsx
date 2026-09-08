@@ -8,7 +8,9 @@ import {
   Checkbox,
   Drawer,
   EmptyState,
+  Icon,
   IconButton,
+  ICON_PATHS,
   Input,
   Modal,
   Pagination,
@@ -26,7 +28,7 @@ import {
   ToastProvider,
   useToast
 } from '../components';
-import type { ButtonVariant, TableColumn } from '../components';
+import type { ButtonVariant, IconName, TableColumn } from '../components';
 
 export type ThemeName = 'storefront' | 'admin';
 
@@ -349,6 +351,18 @@ function DemoInner() {
             </Button>
             <span>Bước {step + 1}/3</span>
           </div>
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Icon set</h2>
+        <div className="uk-demo__icons">
+          {(Object.keys(ICON_PATHS) as IconName[]).map((name) => (
+            <div key={name} className="uk-demo__icon">
+              <Icon name={name} />
+              <span>{name}</span>
+            </div>
+          ))}
         </div>
       </section>
 

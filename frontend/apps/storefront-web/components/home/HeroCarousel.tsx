@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { localePath, type Locale } from '../../lib/format';
 
@@ -60,9 +61,9 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
           >
             <p className="hero-kicker">{slide.kicker}</p>
             <h2 className="hero-title">{slide.title}</h2>
-            <a className="hero-cta" href={ctaHref} tabIndex={slideIndex === index ? undefined : -1}>
+            <Link className="hero-cta" href={ctaHref} tabIndex={slideIndex === index ? undefined : -1}>
               {CTA_LABEL[locale]}
-            </a>
+            </Link>
             <span className="hero-ribbon" aria-hidden="true">
               {slide.ribbon}
             </span>

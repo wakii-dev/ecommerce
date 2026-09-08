@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import Pagination from '../../../../components/plp/Pagination';
@@ -160,9 +161,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   : 'Thử bỏ một vài bộ lọc hoặc xem danh mục khác nhé.'
               }
               action={
-                <a className="plp-clear-all" href={basePath}>
+                <Link className="plp-clear-all" href={basePath}>
                   {locale === 'en' ? 'Clear all' : 'Xóa tất cả'}
-                </a>
+                </Link>
               }
             />
           ) : (
@@ -190,7 +191,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 function Breadcrumb({ locale, name, homeLabel }: { locale: Locale; name: string; homeLabel: string }) {
   return (
     <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-      <a href={localePath('/', locale)}>{homeLabel}</a>
+      <Link href={localePath('/', locale)}>{homeLabel}</Link>
       <span className="plp-breadcrumb-sep" aria-hidden="true">
         ›
       </span>

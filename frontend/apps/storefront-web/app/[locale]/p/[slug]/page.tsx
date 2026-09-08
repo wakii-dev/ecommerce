@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductCardView from '../../../../components/ProductCardView';
@@ -159,7 +160,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     return (
       <div className="container pdp">
         <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-          <a href={localePath('/', locale)}>{copy.home}</a>
+          <Link href={localePath('/', locale)}>{copy.home}</Link>
         </nav>
         <EmptyState icon="🛠️" title={copy.unavailable} description={copy.unavailableDesc} />
       </div>
@@ -213,13 +214,13 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-        <a href={localePath('/', locale)}>{copy.home}</a>
+        <Link href={localePath('/', locale)}>{copy.home}</Link>
         {(path ?? []).map((node) => (
           <span key={node.id} className="plp-breadcrumb-item">
             <span className="plp-breadcrumb-sep" aria-hidden="true">
               ›
             </span>
-            <a href={localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale)}>{node.name}</a>
+            <Link href={localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale)}>{node.name}</Link>
           </span>
         ))}
         <span className="plp-breadcrumb-sep" aria-hidden="true">

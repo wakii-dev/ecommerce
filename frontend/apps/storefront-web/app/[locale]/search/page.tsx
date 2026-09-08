@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import Pagination from '../../../components/plp/Pagination';
@@ -126,9 +127,9 @@ export default async function SearchPage({ params, searchParams }: SearchPagePro
             <span className="search-keywords">
               {t.tryKeywords}{' '}
               {SEARCH_SUGGESTED_KEYWORDS[locale].map((keyword) => (
-                <a key={keyword} className="search-keyword-chip" href={`${basePath}?q=${encodeURIComponent(keyword)}`}>
+                <Link key={keyword} className="search-keyword-chip" href={`${basePath}?q=${encodeURIComponent(keyword)}`}>
                   {keyword}
-                </a>
+                </Link>
               ))}
             </span>
           }

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import WishlistHeart from './wishlist/WishlistHeart';
 
 import { categoryGradient, discountPercent, type ProductCard } from '../lib/catalog-api';
@@ -74,7 +76,7 @@ export default function ProductCardView({ product, locale, gradientKey }: Produc
   const pills = cardTagPills(product.tags);
 
   return (
-    <a className="p-card" href={href}>
+    <Link className="p-card" href={href}>
       <span className="p-thumb" style={{ background: gradient }}>
         {/* SF-8: wishlist heart overlay — client island, click không điều hướng */}
         <WishlistHeart productId={product.id} locale={locale} variant="card" />
@@ -106,6 +108,6 @@ export default function ProductCardView({ product, locale, gradientKey }: Produc
           <span className="p-rating-count">({product.ratingCount})</span>
         </span>
       </span>
-    </a>
+    </Link>
   );
 }

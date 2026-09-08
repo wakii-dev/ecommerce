@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { Locale } from '../lib/format';
 import { localePath } from '../lib/format';
 import { shellUrl } from '../lib/site';
@@ -84,7 +86,13 @@ export default function Footer({ locale }: { locale: Locale }) {
             <ul>
               {column.links.map((link) => (
                 <li key={link.label}>
-                  <a href={link.href}>{link.label}</a>
+                  {/* Shell link (origin khác — cart/account) giữ <a> thường;
+                      link nội bộ (Danh mục) → next/link SPA nav. */}
+                  {link.href.startsWith('http') ? (
+                    <a href={link.href}>{link.label}</a>
+                  ) : (
+                    <Link href={link.href}>{link.label}</Link>
+                  )}
                 </li>
               ))}
             </ul>

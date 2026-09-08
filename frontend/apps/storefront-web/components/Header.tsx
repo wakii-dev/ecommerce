@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { Locale } from '../lib/format';
 import { localePath } from '../lib/format';
 import { shellUrl } from '../lib/site';
@@ -41,13 +43,13 @@ export default function Header({ locale }: { locale: Locale }) {
   return (
     <header className="site-header">
       <div className="container header-main">
-        <a className="logo" href={localePath('/', locale)} aria-label="Shop VN — trang chủ">
+        <Link className="logo" href={localePath('/', locale)} aria-label="Shop VN — trang chủ">
           <span className="logo-word">
             ShopVN
             <span className="logo-dot" aria-hidden="true" />
           </span>
           <span className="logo-ticker">{t.ticker}</span>
-        </a>
+        </Link>
         <SearchBar locale={locale} />
         <div className="header-actions">
           <LocaleSwitcher locale={locale} />
@@ -75,9 +77,9 @@ export default function Header({ locale }: { locale: Locale }) {
           sort bestseller); route "toàn sàn" chưa có — khi có thì trỏ đó. */}
       <nav className="mini-nav" aria-label="Danh mục nhanh">
         <div className="container mini-nav-inner">
-          <a href={localePath('/c/dien-tu', locale)}>{t.categories}</a>
-          <a className="accent" href={localePath('/c/dien-tu?sort=newest', locale)}>{t.newArrivals}</a>
-          <a className="accent" href={localePath('/c/dien-tu?sort=rating', locale)}>{t.bestSellers}</a>
+          <Link href={localePath('/c/dien-tu', locale)}>{t.categories}</Link>
+          <Link className="accent" href={localePath('/c/dien-tu?sort=newest', locale)}>{t.newArrivals}</Link>
+          <Link className="accent" href={localePath('/c/dien-tu?sort=rating', locale)}>{t.bestSellers}</Link>
         </div>
       </nav>
     </header>

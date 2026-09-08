@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { discountPercent, type ProductCard } from '../../lib/catalog-api';
 import { formatVnd, localePath, type Locale } from '../../lib/format';
 import { earliestFlashEndsAt } from '../../lib/home-composition';
@@ -28,7 +30,7 @@ export default function FlashDealSection({ items, locale }: { items: ProductCard
         {items.map((product) => {
           const percent = product.discountPercent ?? discountPercent(product.price, product.comparePrice);
           return (
-            <a key={product.id} className="flash-card" href={localePath(`/p/${product.slug}`, locale)}>
+            <Link key={product.id} className="flash-card" href={localePath(`/p/${product.slug}`, locale)}>
               <span className="flash-thumb" style={{ background: productGradient(product.id) }}>
                 {product.image.url ? (
                   // eslint-disable-next-line @next/next/no-img-element -- placeholder seed /media/**, <Image> khi ảnh thật
@@ -43,7 +45,7 @@ export default function FlashDealSection({ items, locale }: { items: ProductCard
                   <s className="flash-price-compare">{formatVnd(product.comparePrice)}</s>
                 ) : null}
               </span>
-            </a>
+            </Link>
           );
         })}
       </div>

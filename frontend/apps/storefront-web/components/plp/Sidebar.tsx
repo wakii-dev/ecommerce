@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { Category } from '../../lib/catalog-api';
 import { localePath, type Locale } from '../../lib/format';
 import {
@@ -38,22 +40,24 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
         <h3 className="plp-block-title">{en ? 'Categories' : 'Danh mục'}</h3>
         {tree.map((root) => (
           <div key={root.id}>
-            <a
+            <Link
               className={`plp-tree-root${activeIds.has(root.id) ? ' is-active' : ''}`}
               href={buildPlpUrl(localePath(`/c/${root.slug}`, locale), withFilters(query, {}))}
+              prefetch={false}
             >
               {root.name}
-            </a>
+            </Link>
             {root.children.length > 0 ? (
               <div className="plp-tree-children">
                 {root.children.map((child) => (
-                  <a
+                  <Link
                     key={child.id}
                     className={`plp-tree-child${activeIds.has(child.id) ? ' is-active' : ''}`}
                     href={buildPlpUrl(localePath(`/c/${child.slug}`, locale), withFilters(query, {}))}
+                    prefetch={false}
                   >
                     {child.name}
-                  </a>
+                  </Link>
                 ))}
               </div>
             ) : null}
@@ -66,16 +70,17 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
         {PRICE_PRESETS.map((preset) => {
           const checked = query.filters.price === preset.key;
           return (
-            <a
+            <Link
               key={preset.key}
               className={`plp-check${checked ? ' is-checked' : ''}`}
               href={priceHref(checked ? undefined : preset.key)}
+              prefetch={false}
             >
               <span className="plp-check-box" aria-hidden="true">
                 {checked ? '✓' : ''}
               </span>
               {preset.label[locale]}
-            </a>
+            </Link>
           );
         })}
       </div>
@@ -85,17 +90,18 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
         {[4, 3].map((stars) => {
           const checked = query.filters.rating === stars;
           return (
-            <a
+            <Link
               key={stars}
               className={`plp-check${checked ? ' is-checked' : ''}`}
               href={ratingHref(checked ? undefined : stars)}
+              prefetch={false}
             >
               <span className="plp-check-box" aria-hidden="true">
                 {checked ? '✓' : ''}
               </span>
               <span className="plp-check-stars">{'★'.repeat(stars)}</span>
               {en ? ' & up' : ' trở lên'}
-            </a>
+            </Link>
           );
         })}
       </div>
@@ -125,9 +131,9 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
         </form>
       </div>
 
-      <a className="plp-clear-all" href={basePath}>
+      <Link className="plp-clear-all" href={basePath}>
         {en ? 'Clear all' : 'Xóa tất cả'}
-      </a>
+      </Link>
     </aside>
   );
 }

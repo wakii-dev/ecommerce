@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { formatPrice } from '@ecommerce/ui-kit';
+import Link from 'next/link';
 import { readRecentlyViewed, type RecentlyViewedItem } from '../lib/recently-viewed';
 
 const COPY = {
@@ -46,7 +47,7 @@ export default function RecentlyViewed({ locale }: { locale: string }): ReactEle
       </div>
       <div className="featured-grid">
         {items.map((item, index) => (
-          <a
+          <Link
             key={item.slug}
             href={locale === 'en' ? `/en/p/${item.slugEn || item.slug}` : `/p/${item.slug}`}
             className="rv-card"
@@ -80,7 +81,7 @@ export default function RecentlyViewed({ locale }: { locale: string }): ReactEle
                 {formatPrice(item.comparePrice)}
               </span>
             ) : null}
-          </a>
+          </Link>
         ))}
       </div>
     </section>

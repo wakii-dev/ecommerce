@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 import type { Locale } from '../../lib/format';
 import type { PlpSort } from '../../lib/plp-params';
 
@@ -7,6 +9,8 @@ import type { PlpSort } from '../../lib/plp-params';
  * Sort select — CLIENT (interaction duy nhất của PLP cần JS: onChange →
  * navigate URL mới, giữ filters, reset page). Hướng URL-driven như sidebar:
  * không state client, server render lại theo query mới (plan Task 12).
+ * FI-392 T1: router.push (SPA nav, scroll:false) thay window.location.assign
+ * — không còn reload trắng; URL vẫn là state (share/bookmark giữ nguyên).
  */
 const SORT_LABELS: Record<PlpSort, Record<Locale, string>> = {
   price_asc: { vi: 'Giá: thấp → cao', en: 'Price: low → high' },
@@ -22,11 +26,13 @@ export interface SortSelectProps {
 }
 
 export default function SortSelect({ value, locale }: SortSelectProps) {
+  const router = useRouter();
+
   function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const url = new URL(window.location.href);
     url.searchParams.set('sort', event.target.value);
     url.searchParams.delete('page'); // đổi sort → kết quả đổi → về trang 1
-    window.location.assign(url.toString());
+    router.push(url.toString(), { scroll: false });
   }
 
   return (

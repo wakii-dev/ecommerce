@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { categoryGradient, type Category } from '../../lib/catalog-api';
 import { localePath, type Locale } from '../../lib/format';
 
@@ -36,7 +38,7 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
     <section className="cat-section" aria-label="Danh mục nổi bật">
       <div className="cat-grid">
         {categories.map((category, index) => (
-          <a
+          <Link
             key={category.id}
             className="cat-tile"
             href={localePath(`/c/${category.slug}`, locale)}
@@ -46,13 +48,13 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
               {emojiFor(category.slug, index)}
             </span>
             <span className="cat-name">{category.name}</span>
-          </a>
+          </Link>
         ))}
         {/* Trang "tất cả danh mục" chưa có → /search là surface duyệt chung
             (empty-q có gợi ý từ khóa, không phải dead end). */}
-        <a className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
+        <Link className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
           {locale === 'en' ? 'See more →' : 'Xem thêm →'}
-        </a>
+        </Link>
       </div>
     </section>
   );

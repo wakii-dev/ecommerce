@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 /**
  * 404 trong segment [locale] — render BÊN TRONG locale layout (Header/Footer
  * giữ nguyên). Dùng cho PDP/PLP slug không tồn tại (notFound() từ page).
@@ -9,9 +11,9 @@ export default function LocaleNotFound() {
       <p className="not-found-code">404</p>
       <h1 className="not-found-title">Không tìm thấy trang</h1>
       <p className="not-found-desc">Page not found — Trang bạn tìm không tồn tại hoặc đã bị xóa.</p>
-      <a className="not-found-home" href="/">
+      <Link className="not-found-home" href="/">
         ← Trang chủ / Home
-      </a>
+      </Link>
     </div>
   );
 }

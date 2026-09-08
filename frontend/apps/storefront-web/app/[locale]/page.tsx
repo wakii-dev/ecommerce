@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductCardView from '../../components/ProductCardView';
@@ -84,12 +85,13 @@ export default async function HomePage({ params }: { params: { locale: string } 
             {/* E7d: "Xem thêm" → PLP danh mục gốc đầu theo sort=discount (đúng
                 ngôn ngữ "gợi ý giảm giá"; route thật, slug từ API categories). */}
             {categories.length > 0 ? (
-              <a
+              <Link
                 className="featured-more"
                 href={localePath(`/c/${categories[0]?.slug}?sort=discount`, locale)}
+                prefetch={false}
               >
                 {locale === 'en' ? 'See more' : 'Xem thêm'}
-              </a>
+              </Link>
             ) : null}
           </div>
           <div className="featured-grid">

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 /**
  * 404 ROOT — locale không hợp lệ (/fr/...) khi [locale]/layout tự notFound().
  * Không có root layout riêng (html/body sống ở [locale]/layout theo pattern
@@ -9,9 +11,9 @@ export default function RootNotFound() {
       <p className="not-found-code">404</p>
       <h1 className="not-found-title">Không tìm thấy trang</h1>
       <p className="not-found-desc">Page not found — Trang bạn tìm không tồn tại hoặc đã bị xóa.</p>
-      <a className="not-found-home" href="/">
+      <Link className="not-found-home" href="/">
         ← Trang chủ / Home
-      </a>
+      </Link>
     </div>
   );
 }

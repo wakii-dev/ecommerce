@@ -19,7 +19,7 @@ function countDef(token: string, value: string): number {
   return (css.match(pattern) ?? []).length;
 }
 
-describe('tokens.css — direction A §1.1 màu gốc (storefront + admin + dark)', () => {
+describe('tokens.css — direction A §1.1 màu gốc (storefront + admin + dark + admin-dark)', () => {
   it('primary/hover/danger/warning/success/accent đúng hex §1.1', () => {
     expect(countDef('--c-primary', '#F53D2D')).toBeGreaterThanOrEqual(2); // storefront + admin (+dark)
     expect(countDef('--c-primary-hover', '#CB1B00')).toBe(2); // light themes; dark #FF6B54

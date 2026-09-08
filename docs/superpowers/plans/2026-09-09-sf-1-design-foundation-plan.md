@@ -95,9 +95,9 @@ Consumers/regression: `tokens.test.ts` (7 exact-count assertion — cập nhật
 
 Giá trị NGUỒN: hand-off §1.2–§1.5 (đã liệt kê đủ dưới đây — không sáng tạo thêm).
 
-- [ ] **Step 0: Pre-flight môi trường** — worktree chưa có node_modules: `cd frontend && pnpm install` (mỗi lần đầu). Verify `cd frontend/packages/ui-kit && pnpm vitest run` chạy được (suite cũ xanh) TRƯỚC khi sửa bất cứ gì.
+- [x] **Step 0: Pre-flight môi trường** — worktree chưa có node_modules: `cd frontend && pnpm install` (mỗi lần đầu). Verify `cd frontend/packages/ui-kit && pnpm vitest run` chạy được (suite cũ xanh) TRƯỚC khi sửa bất cứ gì.
 
-- [ ] **Step 1: Thêm motion + z-index + breakpoints vào block `:root, [data-theme='storefront']`** (sau section Elevation, comment `/* ── Tokens v2 (SF-1 FI-391) — hand-off §1.2 */`):
+- [x] **Step 1: Thêm motion + z-index + breakpoints vào block `:root, [data-theme='storefront']`** (sau section Elevation, comment `/* ── Tokens v2 (SF-1 FI-391) — hand-off §1.2 */`):
 
 ```css
   /* Motion durations (hand-off §1.2) */
@@ -128,7 +128,7 @@ Giá trị NGUỒN: hand-off §1.2–§1.5 (đã liệt kê đủ dưới đây 
 
 LƯU Ý: easing cubic-bezier viết `0.22` (leading zero, convention file). Chỉ trong :root/storefront — admin/dark KHÔNG re-declare (cascade). `--dur-float` giữ trong file dù hiện chưa dùng (hand-off liệt kê đầy đủ).
 
-- [ ] **Step 2: Thêm gradient + CTA shadow tokens vào cùng block** (hand-off §1.3 — hex dẫn xuất family FI-310, hex mới DUY NHẤT được phép ngoài #0F0F0F: không có — gradient dùng đúng hex liệt kê):
+- [x] **Step 2: Thêm gradient + CTA shadow tokens vào cùng block** (hand-off §1.3 — hex dẫn xuất family FI-310, hex mới DUY NHẤT được phép ngoài #0F0F0F: không có — gradient dùng đúng hex liệt kê):
 
 ```css
   /* Gradients + CTA shadow (hand-off §1.3 — family FI-310 §1.8) */
@@ -152,7 +152,7 @@ LƯU Ý: easing cubic-bezier viết `0.22` (leading zero, convention file). Ch�
 
 Gradient/swatch: giữ nguyên hex lowercase như hand-off viết (chỉ dùng trong test bằng exact-string; không dùng lại ở nơi khác). `--shadow-cta(-hover)` là 2 chỗ rgba primary DUY NHẤT được phép (hand-off §5.2).
 
-- [ ] **Step 3: Đè 3 shadow vào block `[data-theme='dark']`** (hand-off §1.4 — dark hiện KHÔNG declare shadow, cascade từ :root):
+- [x] **Step 3: Đè 3 shadow vào block `[data-theme='dark']`** (hand-off §1.4 — dark hiện KHÔNG declare shadow, cascade từ :root):
 
 ```css
   /* SF-1 FI-391 §1.4: shadow đậm hơn cho nền tối */
@@ -161,15 +161,15 @@ Gradient/swatch: giữ nguyên hex lowercase như hand-off viết (chỉ dùng t
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.6);
 ```
 
-- [ ] **Step 4: Thêm block `[data-theme='admin-dark']` CUỐI file** (hand-off §1.5 — block cuối = source-order thắng, cùng specificity pattern admin/dark). Đủ nội dung theo hand-off §1.5: `--c-bg: #0F0F0F` (hex mới duy nhất), surface/text/muted/border/primary/primary-hover/link/focus/danger/warning/success/accent/on-accent ĐÚNG giá trị §1.5, tint ×3 bộ + wash + star copy đúng block dark hiện có, 6 pill copy đúng block dark, 3 shadow = bộ dark §1.4 (Step 3).
+- [x] **Step 4: Thêm block `[data-theme='admin-dark']` CUỐI file** (hand-off §1.5 — block cuối = source-order thắng, cùng specificity pattern admin/dark). Đủ nội dung theo hand-off §1.5: `--c-bg: #0F0F0F` (hex mới duy nhất), surface/text/muted/border/primary/primary-hover/link/focus/danger/warning/success/accent/on-accent ĐÚNG giá trị §1.5, tint ×3 bộ + wash + star copy đúng block dark hiện có, 6 pill copy đúng block dark, 3 shadow = bộ dark §1.4 (Step 3).
 
-- [ ] **Step 5: Cập nhật header comment tokens.css** — dòng "FONT:" bổ sung "self-host qua @font-face ở đầu file này (SF-1 FI-391)"; thêm ref `docs/superpowers/designs/fi390-uiux-elevation-direction.md §1` cạnh ref FI-310; mô tả 4 theme values (`storefront | admin | dark | admin-dark`).
+- [x] **Step 5: Cập nhật header comment tokens.css** — dòng "FONT:" bổ sung "self-host qua @font-face ở đầu file này (SF-1 FI-391)"; thêm ref `docs/superpowers/designs/fi390-uiux-elevation-direction.md §1` cạnh ref FI-310; mô tả 4 theme values (`storefront | admin | dark | admin-dark`).
 
-- [ ] **Step 6: Cập nhật `tokens.test.ts` CÙNG COMMIT** — sửa 7 exact-count vỡ + thêm assertion mới:
+- [x] **Step 6: Cập nhật `tokens.test.ts` CÙNG COMMIT** — sửa 7 exact-count vỡ + thêm assertion mới:
   - Số count thay đổi do admin-dark: `--c-warning #FE9C08` 3→4 · `--c-accent #FFD839` 3→4 · `--c-on-accent #212121` 3→4 · `--c-link #FF6B54` 1→2 · `--c-text-muted #9E9E9E` 1→2 · `--c-border #2C2C2C` 1→2 · `--c-danger #FF5A5A` 1→2.
   - THÊM: `countDef('--c-bg', '#0F0F0F')` = 1 (admin-dark duy nhất); dark shadows `0 1px 2px rgba(0, 0, 0, 0.4)` = **2** (dark + admin-dark — `admin-dark` KHÔNG cascade từ `dark` vì khác attribute value, hand-off §1.5 ghi "shadow = bộ dark §1.4" = re-declare trong block; tương tự 0.5/0.6 = 2); `--dur-fast: 140ms` = 1, `--dur-base: 180ms` = 1, `--dur-slow: 260ms` = 1; `--ease-pop` = 1; `--z-toast: 400` = 1; `--bp-md: 960px` = 1; `--grad-cta` contains `#F53D2D` (substring assert trên css); `--shadow-cta: 0 4px 12px rgba(245, 61, 45, 0.35)` = 1. describe mới `'tokens v2 — SF-1 FI-391 (hand-off §1.2-§1.5)'`.
 
-- [ ] **Step 7: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
+- [x] **Step 7: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/styles/tokens.css frontend/packages/ui-kit/src/__tests__/tokens.test.ts
 git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-391 T1, hand-off §1.2-§1.5) + regression cùng commit"
@@ -181,9 +181,9 @@ git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-3
 - Create: `frontend/packages/ui-kit/src/assets/fonts/be-vietnam-pro-{400,500,600,700,800}-{latin,vietnamese}.woff2` (10 file, ~106KB tổng — OFL)
 - Modify: `frontend/packages/ui-kit/src/styles/tokens.css` (đầu file, trước `:root`)
 
-- [ ] **Step 1: Copy woff2 vào repo** — staging có sẵn `/tmp/bvp-fonts/files/*.woff2` (`mkdir -p frontend/packages/ui-kit/src/assets/fonts && cp /tmp/bvp-fonts/files/*.woff2 frontend/packages/ui-kit/src/assets/fonts/`; nếu staging mất: `curl -s -A "Mozilla/5.0 ... Chrome/120"` GET `https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap`, parse 10 URL khối `/* vietnamese */` + `/* latin */`, tải về đặt tên `be-vietnam-pro-<weight>-<subset>.woff2`). Verify: `file *.woff2` = "Web Open Font Format (Version 2)". KHÔNG commit file NON-woff2.
+- [x] **Step 1: Copy woff2 vào repo** — staging có sẵn `/tmp/bvp-fonts/files/*.woff2` (`mkdir -p frontend/packages/ui-kit/src/assets/fonts && cp /tmp/bvp-fonts/files/*.woff2 frontend/packages/ui-kit/src/assets/fonts/`; nếu staging mất: `curl -s -A "Mozilla/5.0 ... Chrome/120"` GET `https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap`, parse 10 URL khối `/* vietnamese */` + `/* latin */`, tải về đặt tên `be-vietnam-pro-<weight>-<subset>.woff2`). Verify: `file *.woff2` = "Web Open Font Format (Version 2)". KHÔNG commit file NON-woff2.
 
-- [ ] **Step 2: Thêm 10 @font-face block ĐẦU tokens.css** — template (lặp 5 weights × 2 subsets; unicode-range giống hệt nhau giữa các weight):
+- [x] **Step 2: Thêm 10 @font-face block ĐẦU tokens.css** — template (lặp 5 weights × 2 subsets; unicode-range giống hệt nhau giữa các weight):
 
 ```css
 /* ── @font-face Be Vietnam Pro (SF-1 FI-391 — hand-off §1.6) — self-host OFL
@@ -213,7 +213,7 @@ git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-3
 /* ... lặp cho 500/600/700/800 — chỉ đổi font-weight + tên file ... */
 ```
 
-- [ ] **Step 3: Run** `cd frontend/packages/ui-kit && pnpm vitest run` (tokens.test đọc text — @font-face không ảnh hưởng countDef) → PASS. Commit (git add tokens.css + 10 woff2):
+- [x] **Step 3: Run** `cd frontend/packages/ui-kit && pnpm vitest run` (tokens.test đọc text — @font-face không ảnh hưởng countDef) → PASS. Commit (git add tokens.css + 10 woff2):
 ```bash
 git add frontend/packages/ui-kit/src/styles/tokens.css frontend/packages/ui-kit/src/assets/fonts/
 git commit -m "feat(ui-kit): @font-face Be Vietnam Pro self-host 400-800 vietnamese+latin (FI-391 T2)"

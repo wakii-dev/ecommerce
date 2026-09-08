@@ -294,6 +294,9 @@
 }
 
 .mr-card-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 700;
   color: var(--tint-success-text, #197A6D);

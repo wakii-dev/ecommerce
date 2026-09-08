@@ -222,6 +222,19 @@ export const en = {
       deleting: 'Removing…',
       errorLoad: 'Could not load your wishlist',
       errorRemove: 'Removal failed — try again'
+    },
+    // ── T8 — my reviews (badge label = key, resolve at render) ──
+    reviews: {
+      title: 'My reviews',
+      statusPending: 'Pending',
+      statusApproved: 'Approved',
+      statusRejected: 'Rejected',
+      verified: 'Verified purchase',
+      emptyTitle: 'You have not written any reviews yet',
+      emptyDesc: 'Go to a product page to write your first review.',
+      loading: 'Loading reviews…',
+      errorLoad: 'Could not load your reviews',
+      productFallback: 'Product'
     }
   },
   auth: {

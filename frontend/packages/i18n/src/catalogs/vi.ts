@@ -226,6 +226,19 @@ export const vi = {
       deleting: 'Đang xóa…',
       errorLoad: 'Không tải được wishlist',
       errorRemove: 'Xóa thất bại — thử lại'
+    },
+    // ── T8 — my reviews (badge label = key, resolve lúc render) ──
+    reviews: {
+      title: 'Đánh giá của tôi',
+      statusPending: 'Chờ duyệt',
+      statusApproved: 'Đã duyệt',
+      statusRejected: 'Bị từ chối',
+      verified: 'Mua đã xác nhận',
+      emptyTitle: 'Bạn chưa viết đánh giá nào',
+      emptyDesc: 'Vào trang sản phẩm để viết đánh giá đầu tiên.',
+      loading: 'Đang tải đánh giá…',
+      errorLoad: 'Không tải được đánh giá của bạn',
+      productFallback: 'Sản phẩm'
     }
   },
   auth: {

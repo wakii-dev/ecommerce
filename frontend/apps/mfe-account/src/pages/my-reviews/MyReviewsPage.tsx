@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
-import { Badge, Card, EmptyState } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
+import { Badge, Card, EmptyState, Icon, ListSkeleton } from '@ecommerce/ui-kit';
 
 import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import '../../page.css';
 
 /**
- * My-reviews page (SF-8 — pack slice `pages/my-reviews/*`): list review của
- * tôi + badge trạng thái PENDING/APPROVED/REJECTED + tên product + sao +
- * nội dung. Fetch self-contained trong page dir. GET /api/catalog/me/reviews
- * là endpoint ADDITIVE ngoài contract (REQUIREMENT-GAP FI-310) → không có
- * typed client, fetch thẳng shape `MeReviewPage`.
+ * My-reviews page (SF-8 pack slice — SF-4 FI-394 T8 elevation): list review
+ * của tôi + Badge trạng thái PENDING/APPROVED/REJECTED (variant tints giữ
+ * nguyên, label qua keys `account.reviews.*`) + Icon check verified + sao
+ * `--c-warning` (tĩnh text — list không interactive, không StarRating) +
+ * ListSkeleton khi tải / EmptyState star khi trống. Review card KHÔNG hover
+ * cascade (không phải commerce card — direction §4). Fetch self-contained
+ * trong page dir. GET /api/catalog/me/reviews là endpoint ADDITIVE ngoài
+ * contract (REQUIREMENT-GAP FI-310) → không có typed client, fetch thẳng
+ * shape `MeReviewPage`.
  */
 
-interface MeReview {
+export interface MeReview {
   id: string;
   productId: string;
   productName: string | null;
@@ -27,13 +32,15 @@ interface MeReview {
   createdAt: string;
 }
 
+/** Label = i18n key `account.reviews.*` (resolve lúc render qua useT). */
 const STATUS_BADGE: Record<MeReview['status'], { label: string; variant: 'warning' | 'success' | 'danger' }> = {
-  PENDING: { label: 'Chờ duyệt', variant: 'warning' },
-  APPROVED: { label: 'Đã duyệt', variant: 'success' },
-  REJECTED: { label: 'Bị từ chối', variant: 'danger' },
+  PENDING: { label: 'account.reviews.statusPending', variant: 'warning' },
+  APPROVED: { label: 'account.reviews.statusApproved', variant: 'success' },
+  REJECTED: { label: 'account.reviews.statusRejected', variant: 'danger' }
 };
 
 export default function MyReviewsPage(): ReactElement {
+  const { t } = useT();
   const [reviews, setReviews] = useState<MeReview[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,51 +56,63 @@ export default function MyReviewsPage(): ReactElement {
         .fetch('/api/catalog/me/reviews?page=1&size=50')
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
         .then((data: { items?: MeReview[] }) => alive && setReviews(data.items ?? []))
-        .catch(() => alive && setError('Không tải được đánh giá của bạn'));
+        .catch(() => {
+          if (!alive) return;
+          setError(t('account.reviews.errorLoad'));
+          setReviews([]); // dừng skeleton — alert + empty thay vì tải vô hạn
+        });
     });
-    return () => {
-      alive = false;
-    };
+    // Mount-once (deps rỗng) như các page khác — guard authReady race.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <AccountLayout active="reviews">
-      <div className="account-page">
-        <h1 className="account-title">Đánh giá của tôi</h1>
-      {error ? (
-        <Card>
-          <p role="alert">{error}</p>
-        </Card>
-      ) : null}
-      {reviews === null ? (
-        <p>Đang tải…</p>
-      ) : reviews.length === 0 ? (
-        <EmptyState title="Bạn chưa viết đánh giá nào" description="Vào trang sản phẩm để viết đánh giá đầu tiên." />
-      ) : (
-        <div className="mr-list">
-          {reviews.map((review) => {
-            const badge = STATUS_BADGE[review.status] ?? STATUS_BADGE.PENDING;
-            return (
-              <Card key={review.id} className="mr-card">
-                <div className="mr-card-head">
-                  <span className="mr-card-stars" aria-label={`${review.rating}/5`}>
-                    {'★'.repeat(review.rating)}
-                    {'☆'.repeat(5 - review.rating)}
-                  </span>
-                  <Badge variant={badge.variant}>{badge.label}</Badge>
-                  {review.verifiedPurchase ? <span className="mr-card-verified">✓ Mua đã xác nhận</span> : null}
-                  <time className="mr-card-date" dateTime={review.createdAt}>
-                    {formatDate(review.createdAt)}
-                  </time>
-                </div>
-                <p className="mr-card-product-name">{review.productName ?? 'Sản phẩm'}</p>
-                {review.title ? <p className="mr-card-title">{review.title}</p> : null}
-                <p className="mr-card-content">{review.content}</p>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <div className="acc-content">
+        <h1 className="acc-page-title">{t('account.reviews.title')}</h1>
+        {error ? (
+          <Card>
+            <p role="alert">{error}</p>
+          </Card>
+        ) : null}
+        {reviews === null ? (
+          <ListSkeleton count={3} />
+        ) : reviews.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="star" size={40} />}
+            title={t('account.reviews.emptyTitle')}
+            description={t('account.reviews.emptyDesc')}
+          />
+        ) : (
+          <div className="mr-list">
+            {reviews.map((review) => {
+              const badge = STATUS_BADGE[review.status] ?? STATUS_BADGE.PENDING;
+              return (
+                <Card key={review.id} className="mr-card">
+                  <div className="mr-card-head">
+                    <span className="mr-card-stars" aria-label={`${review.rating}/5`}>
+                      {'★'.repeat(review.rating)}
+                      {'☆'.repeat(5 - review.rating)}
+                    </span>
+                    <Badge variant={badge.variant}>{t(badge.label)}</Badge>
+                    {review.verifiedPurchase ? (
+                      <span className="mr-card-verified">
+                        <Icon name="check" size={14} />
+                        {t('account.reviews.verified')}
+                      </span>
+                    ) : null}
+                    <time className="mr-card-date" dateTime={review.createdAt}>
+                      {formatDate(review.createdAt)}
+                    </time>
+                  </div>
+                  <p className="mr-card-product-name">{review.productName ?? t('account.reviews.productFallback')}</p>
+                  {review.title ? <p className="mr-card-title">{review.title}</p> : null}
+                  <p className="mr-card-content">{review.content}</p>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     </AccountLayout>
   );

@@ -23,7 +23,7 @@ import {
 } from '../../../../lib/catalog-api';
 import { localePath, resolveLocale } from '../../../../lib/format';
 import { t } from '../../../../lib/i18n';
-import { categoryPathById, jsonLdFor } from '../../../../lib/pdp';
+import { breadcrumbJsonld, categoryPathById, jsonLdFor } from '../../../../lib/pdp';
 import { pdpMetadata } from '../../../../lib/seo';
 import { siteUrl } from '../../../../lib/site';
 
@@ -157,6 +157,20 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     siteUrl(),
   );
 
+  // T14: BreadcrumbList JSON-LD khớp breadcrumb hiển thị (Trang chủ → categories
+  // path → PDP hiện tại). breadcrumbJsonld trả chuỗi ĐÃ escape `<` (lib/pdp).
+  const breadcrumbLd = breadcrumbJsonld(
+    [
+      { name: t(locale, 'pdp.home'), path: localePath('/', locale) },
+      ...(path ?? []).map((node) => ({
+        name: node.name,
+        path: localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale),
+      })),
+      { name: product.name, path: localePath(`/p/${product.slug}`, locale) },
+    ],
+    siteUrl(),
+  );
+
   return (
     <div className="container pdp">
       {/* JSON-LD Product schema — stringify + escape `<` → `<` để `</script>`
@@ -166,6 +180,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} />
 
       {/* SF-13 A6a: ghi "đã xem gần đây" (localStorage, max 12) */}
       <RecentlyViewedTracker
@@ -206,9 +221,6 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
             <a className="pdp-meta-count" href="#tab-reviews">
               {product.ratingCount} {t(locale, 'pdp.reviewsUnit')}
             </a>
-            <span className="pdp-meta-sold">
-              {t(locale, 'pdp.sold')} {product.ratingCount}
-            </span>
             {/* SF-8: wishlist heart — guest → /account (đăng nhập shell) */}
             <WishlistHeart productId={product.id} locale={locale} variant="pdp" />
           </div>

@@ -18,6 +18,8 @@ import {
   resolveCategoryPath,
   type RawSearchParams,
 } from '../../../../lib/plp-params';
+import { breadcrumbJsonld } from '../../../../lib/pdp';
+import { siteUrl } from '../../../../lib/site';
 
 /**
  * PLP SSR (plan Task 12) — URL params = state (SEO friendly, server-rendered,
@@ -129,8 +131,23 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const name = node?.name ?? params.slug;
   const totalPages = Math.max(1, Math.ceil(data.total / PLP_PAGE_SIZE));
 
+  // T14: BreadcrumbList JSON-LD khớp breadcrumb hiển thị (Trang chủ → danh mục).
+  // URL item cuối theo slug-resolve như canonical (node slugEn khi en; tree lệch
+  // → fallback params.slug). breadcrumbJsonld trả chuỗi ĐÃ escape `<` (lib/pdp).
+  const breadcrumbLd = breadcrumbJsonld(
+    [
+      { name: t(locale, 'plp.home'), path: localePath('/', locale) },
+      {
+        name,
+        path: node ? localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale) : basePath,
+      },
+    ],
+    siteUrl(),
+  );
+
   return (
     <div className="container plp">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} />
       <Breadcrumb locale={locale} name={name} homeLabel={t(locale, 'plp.home')} />
 
       <div className="plp-head">

@@ -86,8 +86,6 @@ export const dictionaries = {
   },
   pdp: {
     home: { vi: 'Trang chủ', en: 'Home' },
-    /** T14 sẽ xóa key `sold` cùng span .pdp-meta-sold (honesty fix). */
-    sold: { vi: 'Đã bán', en: 'Sold' },
     reviewsUnit: { vi: 'đánh giá', en: 'reviews' },
     perkAuth: { vi: 'Hàng chính hãng 100%', en: '100% authentic' },
     perkShip: { vi: 'Miễn phí vận chuyển', en: 'Free shipping' },

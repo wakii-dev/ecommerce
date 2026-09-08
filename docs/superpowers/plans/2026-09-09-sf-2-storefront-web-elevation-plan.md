@@ -306,10 +306,10 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `lib/pdp.ts`, `app/[locale]/p/[slug]/page.tsx`, `app/[locale]/c/[slug]/page.tsx`, `tests/pdp.test.ts` (thêm case).
 
-- [ ] **Step 1:** `lib/pdp.ts` thêm `breadcrumbJsonld(...)`: BreadcrumbList schema (ListItem vị trí 1..n: Trang chủ → categories path → product/category hiện tại), URL absolute `siteUrl() + localePath(...)`; `JSON.stringify(...).replace(/</g, '\\u003c')` — escape breakout script tag (PATTERN BẮT BUỘC, security-P2 precedent FI-391).
-- [ ] **Step 2:** Nhúng `<script type="application/ld+json">` PDP (sau Product JSON-LD) + PLP category (breadcrumb Trang chủ → path danh mục).
-- [ ] **Step 3:** Fix nói dối "Đã bán": sau T8b, meta đã có link `{N} đánh giá` (span count biến thành link) → **XÓA hẳn span `.pdp-meta-sold` "Đã bán {ratingCount}"** (L241-243 — element nói dối biến mất = hết nói dối; không thay bằng bản sao thứ 2 của "N đánh giá"); bỏ key `sold` khỏi COPY/i18n nếu không còn dùng.
-- [ ] **Step 4:** Test: breadcrumbJsonld escape `<` + cấu trúc ListItem; vitest + lint xanh → commit `feat(storefront): BreadcrumbList JSON-LD + honest rating count label (FI-392)`.
+- [x] **Step 1:** `lib/pdp.ts` thêm `breadcrumbJsonld(...)`: BreadcrumbList schema (ListItem vị trí 1..n: Trang chủ → categories path → product/category hiện tại), URL absolute `siteUrl() + localePath(...)`; `JSON.stringify(...).replace(/</g, '\\u003c')` — escape breakout script tag (PATTERN BẮT BUỘC, security-P2 precedent FI-391).
+- [x] **Step 2:** Nhúng `<script type="application/ld+json">` PDP (sau Product JSON-LD) + PLP category (breadcrumb Trang chủ → path danh mục).
+- [x] **Step 3:** Fix nói dối "Đã bán": sau T8b, meta đã có link `{N} đánh giá` (span count biến thành link) → **XÓA hẳn span `.pdp-meta-sold` "Đã bán {ratingCount}"** (L241-243 — element nói dối biến mất = hết nói dối; không thay bằng bản sao thứ 2 của "N đánh giá"); bỏ key `sold` khỏi COPY/i18n nếu không còn dùng.
+- [x] **Step 4:** Test: breadcrumbJsonld escape `<` + cấu trúc ListItem; vitest + lint xanh → commit `feat(storefront): BreadcrumbList JSON-LD + honest rating count label (FI-392)`.
 
 ### Task 15: walkthrough-screenshots-e2e-golden-nav-green (nhóm D — coordinator chủ trì)
 

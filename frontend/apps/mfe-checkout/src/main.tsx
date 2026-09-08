@@ -4,6 +4,7 @@ import { configureAuth } from '@ecommerce/auth';
 import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
+import '@ecommerce/ui-kit/fonts';
 import './page.css';
 
 // Standalone dev page (:5175) — remote chạy riêng để debug các module khi shell

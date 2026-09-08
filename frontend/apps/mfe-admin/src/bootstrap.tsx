@@ -4,6 +4,7 @@ import { configureAuth } from '@ecommerce/auth';
 // bootstrap không chạy main.tsx; dưới shell dedupe vô hại với import của host).
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
+import '@ecommerce/ui-kit/fonts';
 
 export type SlotKey = 'left' | 'center' | 'right';
 

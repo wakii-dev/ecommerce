@@ -4,6 +4,7 @@ import { configureAuth } from '@ecommerce/auth';
 import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
+import '@ecommerce/ui-kit/fonts';
 import LoginPage from './pages/LoginPage';
 import './page.css';
 

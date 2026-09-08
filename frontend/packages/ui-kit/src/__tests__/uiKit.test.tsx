@@ -303,7 +303,10 @@ describe('Breadcrumbs', () => {
   });
 
   it('breadcrumbJsonld — JSON hợp lệ BreadcrumbList, Position 1-based', () => {
-    const parsed = JSON.parse(breadcrumbJsonld(items)) as {
+    const jsonld = breadcrumbJsonld(items);
+    // FI-391 security-P2: chuỗi nhúng vào <script> không được chứa '<' raw
+    expect(jsonld).not.toContain('<');
+    const parsed = JSON.parse(jsonld) as {
       '@context': string;
       '@type': string;
       itemListElement: { '@type': string; position: number; name: string; item?: string }[];
@@ -323,6 +326,19 @@ describe('Breadcrumbs', () => {
       position: 3,
       name: 'Áo thun'
     });
+  });
+
+  it('breadcrumbJsonld escape < — label chứa </script> không breakout script tag', () => {
+    const malicious = '</script><img src=x onerror=alert(1)>';
+    const jsonld = breadcrumbJsonld([
+      { label: malicious, href: '/x' },
+      { label: 'An toàn' }
+    ]);
+    // không còn '<' raw nào trong output → an toàn nhúng <script type="application/ld+json">
+    expect(jsonld).not.toContain('<');
+    // JSON.parse khôi phục đúng chuỗi gốc — dữ liệu không mất mát
+    const parsed = JSON.parse(jsonld) as { itemListElement: { name: string }[] };
+    expect(parsed.itemListElement[0]?.name).toBe(malicious);
   });
 });
 

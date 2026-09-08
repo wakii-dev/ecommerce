@@ -77,6 +77,9 @@ export function Breadcrumbs({
 
 /** JSON-LD schema.org BreadcrumbList — chuỗi thuần, consumer tự bọc <script type="application/ld+json">. */
 export function breadcrumbJsonld(items: BreadcrumbItem[]): string {
+  // Escape '<' → '\u003c' (JSON.parse khôi phục nguyên bản): label chứa
+  // '</script>' không được phép xuất raw trong <script type="application/ld+json">
+  // — breakout khỏi script tag = XSS. JSON.stringify không escape '<'.
   return JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -86,5 +89,5 @@ export function breadcrumbJsonld(items: BreadcrumbItem[]): string {
       name: item.label,
       ...(item.href ? { item: item.href } : {})
     }))
-  });
+  }).replace(/</g, '\\u003c');
 }

@@ -48,7 +48,6 @@ const COPY = {
     tabDesc: 'Mô tả',
     tabInfo: 'Thông tin',
     tabReviews: 'Đánh giá',
-    reviewsSoon: 'Sắp ra mắt',
     infoBrand: 'Thương hiệu',
     infoSku: 'Mã sản phẩm',
     infoCat: 'Danh mục',
@@ -66,7 +65,6 @@ const COPY = {
     tabDesc: 'Description',
     tabInfo: 'Specifications',
     tabReviews: 'Reviews',
-    reviewsSoon: 'Coming soon',
     infoBrand: 'Brand',
     infoSku: 'SKU',
     infoCat: 'Category',
@@ -304,7 +302,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
         </section>
 
         <section id="tab-reviews" className="pdp-panel">
-          {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay "Sắp ra mắt" SF-4 */}
+          {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay placeholder reviews SF-4; dead i18n key đã xoá (SF-3) */}
           <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
           {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
           <MyPendingReviewPanel productId={product.id} locale={locale} />

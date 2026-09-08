@@ -7,8 +7,8 @@ import { appNavigate } from '../bootstrap';
 import { orderingApi } from '../lib/api';
 import { downloadAdminInvoice } from '../lib/invoice';
 import { formatDateTime, formatVnd } from '../lib/format';
-import { canCancel, canDeliver, canShip } from '../lib/adminStub';
-import type { StubOrder } from '../lib/types';
+import { canCancel, canDeliver, canShip } from '../lib/orderRules';
+import type { AdminOrder } from '../lib/types';
 import { statusBadge } from './OrdersPage';
 
 export interface OrderDetailPageProps {
@@ -23,7 +23,7 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
 
   const orderQuery = useQuery({
     queryKey: ['admin-orders', 'detail', id],
-    queryFn: async () => (await orderingApi().adminGetOrder({ id })) as unknown as StubOrder
+    queryFn: async () => (await orderingApi().adminGetOrder({ id })) as unknown as AdminOrder
   });
 
   const invalidate = (): void => {

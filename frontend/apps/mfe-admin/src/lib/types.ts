@@ -1,32 +1,13 @@
-// lib/types.ts — shapes cho domain MOCK (SF-7). Bám chặt contract:
-// - Coupon: PublicCoupon (ordering.yaml — KHÔNG có coupon admin CRUD, GAP
-//   chấp nhận theo pack) + usageLimit/usedCount/active nội bộ.
+// lib/types.ts — shapes DTO admin-facing (đổi tên từ Stub* ở SF-3 honesty-pass
+// FI-372: dữ liệu đã LIVE qua clients contracts từ SF-10 — tên "Stub" nói dối
+// nguồn dữ liệu; shape bám chặt contract giữ nguyên):
 // - Review: ReviewAdmin (catalog.yaml) — UGC không i18n (D17).
 // - Order: Order/OrderSummary/Address/Timeline (ordering.yaml §3.6).
-// SF-10 wire live thay stub bằng orderingApi — shape giữ nguyên khả dĩ.
-
-export type CouponType = 'PERCENT' | 'FIXED';
-
-export interface StubCoupon {
-  id: string;
-  code: string;
-  type: CouponType;
-  value: number;
-  minOrderValue?: number;
-  startsAt?: string;
-  endsAt?: string;
-  usageLimit: number;
-  usedCount: number;
-  active: boolean;
-  description: string;
-}
-
-/** Payload create/edit coupon (form → stub; id/usedCount do store quản). */
-export type StubCouponInput = Omit<StubCoupon, 'id' | 'usedCount'>;
+// - Summary/RevenueDay/TopProduct: mirror (ordering.yaml).
 
 export type ModerationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
-export interface StubReview {
+export interface AdminReview {
   id: string;
   productId: string;
   userId: string;
@@ -48,7 +29,7 @@ export type OrderStatusValue =
   | 'CANCELLED'
   | 'FAILED';
 
-export interface StubOrderLine {
+export interface AdminOrderLine {
   id: string;
   productId: string;
   variantId: string;
@@ -58,7 +39,7 @@ export interface StubOrderLine {
   lineTotal: number;
 }
 
-export interface StubAddress {
+export interface AdminAddress {
   fullName: string;
   phone: string;
   line1: string;
@@ -69,17 +50,17 @@ export interface StubAddress {
 }
 
 /** SF-10: timeline contract (ordering.yaml) = {status, at} — KHÔNG description. */
-export interface StubOrderEvent {
+export interface AdminOrderEvent {
   status: OrderStatusValue;
   at: string;
   description?: string;
 }
 
-export interface StubOrder {
+export interface AdminOrder {
   id: string;
   userId: string;
   status: OrderStatusValue;
-  items: StubOrderLine[];
+  items: AdminOrderLine[];
   subtotal: number;
   discount: number;
   shippingFee: number;
@@ -88,14 +69,14 @@ export interface StubOrder {
   affiliateCode?: string;
   paymentMethod: 'stripe' | 'cod';
   shippingMethod: string;
-  address: StubAddress;
-  timeline: StubOrderEvent[];
+  address: AdminAddress;
+  timeline: AdminOrderEvent[];
   createdAt: string;
   updatedAt: string;
 }
 
 /** Mirror OrdersSummary (ordering.yaml). */
-export interface StubSummary {
+export interface AdminSummary {
   pending: number;
   paid: number;
   confirmed: number;
@@ -109,14 +90,14 @@ export interface StubSummary {
 }
 
 /** Mirror RevenueByDay (ordering.yaml). */
-export interface StubRevenueDay {
+export interface AdminRevenueDay {
   date: string;
   revenue: number;
   orders: number;
 }
 
 /** Mirror TopProduct (ordering.yaml). */
-export interface StubTopProduct {
+export interface AdminTopProduct {
   productId: string;
   name: string;
   qty: number;

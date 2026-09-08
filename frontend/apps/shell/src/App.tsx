@@ -170,7 +170,10 @@ export default function App(): ReactElement {
         </Suspense>
       </ErrorBoundary>
     );
-  } else if (path === '/ui-kit') {
+  } else if (path === '/ui-kit' && import.meta.env.VITE_UIKIT_DEV === '1') {
+    // SF-3 honesty-pass (FI-372 T8): design-system demo — CHỈ dev opt-in qua
+    // env VITE_UIKIT_DEV=1 (Vite chỉ bake prefix VITE_*; unset prod → route
+    // rơi vào Home, không lộ trang nội bộ ra ngoài).
     page = <UiKitDemoPage />;
   } else if (path === '/login/oauth/callback') {
     // SF-15: identity 302 về đây kèm ?code một-lần — route TRƯỚC /login.

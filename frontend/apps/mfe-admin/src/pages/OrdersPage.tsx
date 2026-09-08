@@ -7,7 +7,7 @@ import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
 import { orderingApi } from '../lib/api';
 import { dayKeyOf, formatDateTime, formatVnd } from '../lib/format';
-import type { OrderStatusValue, StubOrder } from '../lib/types';
+import type { OrderStatusValue, AdminOrder } from '../lib/types';
 
 const STATUSES: ReadonlyArray<OrderStatusValue> = [
   'PENDING',
@@ -52,7 +52,7 @@ export default function OrdersPage(): ReactElement {
         page,
         size: PAGE_SIZE
       });
-      return res as { items: StubOrder[]; page: number; size: number; total: number };
+      return res as { items: AdminOrder[]; page: number; size: number; total: number };
     }
   });
 
@@ -75,7 +75,7 @@ export default function OrdersPage(): ReactElement {
     {
       key: 'id',
       header: t('admin.orders.order'),
-      render: (row: StubOrder) => (
+      render: (row: AdminOrder) => (
         <div>
           <div className='admin-order-code'>#{row.id.slice(0, 8)}</div>
           <div className='admin-hint'>{formatDateTime(row.createdAt)}</div>
@@ -85,7 +85,7 @@ export default function OrdersPage(): ReactElement {
     {
       key: 'customer',
       header: t('admin.orders.customer'),
-      render: (row: StubOrder) => (
+      render: (row: AdminOrder) => (
         <div>
           <div>{row.address.fullName}</div>
           <div className='admin-hint'>{row.address.phone}</div>
@@ -96,18 +96,18 @@ export default function OrdersPage(): ReactElement {
       key: 'items',
       header: t('admin.orders.itemsCount'),
       align: 'right' as const,
-      render: (row: StubOrder) => row.items.reduce((sum, l) => sum + l.qty, 0)
+      render: (row: AdminOrder) => row.items.reduce((sum, l) => sum + l.qty, 0)
     },
     {
       key: 'total',
       header: t('admin.orders.total'),
       align: 'right' as const,
-      render: (row: StubOrder) => <strong className='admin-money'>{formatVnd(row.total)}</strong>
+      render: (row: AdminOrder) => <strong className='admin-money'>{formatVnd(row.total)}</strong>
     },
     {
       key: 'payment',
       header: t('admin.orders.payment'),
-      render: (row: StubOrder) =>
+      render: (row: AdminOrder) =>
         row.paymentMethod === 'cod' ? (
           <Badge variant='neutral'>{t('admin.orders.paymentCod')}</Badge>
         ) : (
@@ -117,12 +117,12 @@ export default function OrdersPage(): ReactElement {
     {
       key: 'status',
       header: t('admin.common.status'),
-      render: (row: StubOrder) => statusBadge(row.status, t)
+      render: (row: AdminOrder) => statusBadge(row.status, t)
     },
     {
       key: 'actions',
       header: t('admin.common.actions'),
-      render: (row: StubOrder) => (
+      render: (row: AdminOrder) => (
         <Button size='sm' variant='secondary' onClick={() => appNavigate(`/admin/orders/${row.id}`)}>
           {t('admin.orders.detail')}
         </Button>

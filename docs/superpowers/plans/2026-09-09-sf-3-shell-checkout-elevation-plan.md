@@ -244,28 +244,28 @@ Ghi chú critic-P2: Slot wrapper `[data-slot='center']` hiện không grow — h
 - [x] **Step 2:** Status timeline polish: pill status tint (giữ tint-success ok / tint-new pending / cancelled-danger) + note đã có — polish pill + spacing; KHÔNG đụng polling/gtag.
 - [x] **Step 3:** CTA "Tiếp tục mua sắm" → `window.location.assign(storefrontUrl())` — trang chủ **STOREFRONT** (context pack item 8: "về trang chủ storefront"; cross-origin nên full navigation, không appNavigate).
 - [x] **Step 4:** i18n hóa strings (keys Task 1). Verify browser: hero renders 2 trạng thái (CONFIRMED/FAILED — COD + saga-fail path), CTA về `/`.
-- [ ] **Step 5:** Commit `feat(checkout): confirmation hero gradient + Icon SVG + CTA về trang chủ (FI-393 T9)`.
+- [x] **Step 5:** Commit `feat(checkout): confirmation hero gradient + Icon SVG + CTA về trang chủ (FI-393 T9)`.
 
 ### Task 10: page.css elevation — hex sweep + motion + dark fix (2 app)
 
 **Files:** `frontend/apps/mfe-checkout/src/page.css`, `frontend/apps/shell/src/header.css` (nếu còn hex sót)
 
-- [ ] **Step 1:** Sweep checkout page.css: `#fff7e6/#ffd591/#874d00` (pay-warning) → `var(--tint-new-bg)/var(--tint-new-border)/var(--tint-new-text)`; mọi hex còn lại trong fallback var() → bỏ fallback hex hoặc giữ fallback CHỈ khi var có thể undefined (kiểm tokens đã declare — nếu có, bỏ fallback). `#fff` stepper cũ đã xóa cùng Task 6. `color: #fff` chỗ khác → `var(--c-surface)`/token trắng phù hợp.
-- [ ] **Step 2:** Motion: hover/press dùng `--dur-fast/base` + `--ease-out/pop`; card lift hover translateY(−3px) shadow-1→3 cho cart-line/summary panel (shadow cascade §3.1 — panel resting shadow-1); nút CTA `--shadow-cta(-hover)`; focus ring tint.
-- [ ] **Step 3:** Surface keyframes ĐƯỢC PHÉP ở page.css (không copy keyframes primitive): chỉ thêm nếu cần (drawer slide đã có uk-drawer-in; skeleton shimmer đã có uk-skeleton) — ưu tiên reuse; keyframes mới phải gate `@media (prefers-reduced-motion: reduce)` (ui-kit global đã chặn — verify không cần duplicate).
-- [ ] **Step 4:** Sweep shell header.css — tokens-only (Task 2 viết chuẩn từ đầu, check lại).
-- [ ] **Step 4b:** Checkout grid theo direction §2.4: `1fr + 380px` (hiện 320px — critic P2) — sửa `.checkout-grid` + `.cart-layout` (cart summary 320→340 tùy balance, giữ responsive 800px collapse).
-- [ ] **Step 5:** Verify: `grep -nE '#[0-9a-fA-F]{3,8}' page.css header.css` → 0 hit (trừ hex trong gradient tokens đã declare ở tokens.css — không được xuất hiện ở page.css). Dark mode: bật data-theme=dark → toàn flow không ô lệch.
-- [ ] **Step 6:** Commit `feat(checkout): page.css hex sweep + motion tokens + dark fix (FI-393 T10)`.
+- [x] **Step 1:** Sweep checkout page.css: `#fff7e6/#ffd591/#874d00` (pay-warning) → `var(--tint-new-bg)/var(--tint-new-border)/var(--tint-new-text)`; mọi hex còn lại trong fallback var() → bỏ fallback hex hoặc giữ fallback CHỈ khi var có thể undefined (kiểm tokens đã declare — nếu có, bỏ fallback). `#fff` stepper cũ đã xóa cùng Task 6. `color: #fff` chỗ khác → `var(--c-surface)`/token trắng phù hợp.
+- [x] **Step 2:** Motion: hover/press dùng `--dur-fast/base` + `--ease-out/pop`; card lift hover translateY(−3px) shadow-1→3 cho cart-line/summary panel (shadow cascade §3.1 — panel resting shadow-1); nút CTA `--shadow-cta(-hover)`; focus ring tint.
+- [x] **Step 3:** Surface keyframes ĐƯỢC PHÉP ở page.css (không copy keyframes primitive): chỉ thêm nếu cần (drawer slide đã có uk-drawer-in; skeleton shimmer đã có uk-skeleton) — ưu tiên reuse; keyframes mới phải gate `@media (prefers-reduced-motion: reduce)` (ui-kit global đã chặn — verify không cần duplicate).
+- [x] **Step 4:** Sweep shell header.css — tokens-only (Task 2 viết chuẩn từ đầu, check lại).
+- [x] **Step 4b:** Checkout grid theo direction §2.4: `1fr + 380px` (hiện 320px — critic P2) — sửa `.checkout-grid` + `.cart-layout` (cart summary 320→340 tùy balance, giữ responsive 800px collapse).
+- [x] **Step 5:** Verify: `grep -nE '#[0-9a-fA-F]{3,8}' page.css header.css` → 0 hit (trừ hex trong gradient tokens đã declare ở tokens.css — không được xuất hiện ở page.css). Dark mode: bật data-theme=dark → toàn flow không ô lệch.
+- [x] **Step 6:** Commit `feat(checkout): page.css hex sweep + motion tokens + dark fix (FI-393 T10)`.
 
 ### Task 11: Walkthrough + tests + e2e subset xanh
 
 **Files:** tests mới (mfe-checkout lib tests), không sửa specs
 
-- [ ] **Step 1:** Unit: mfe-checkout `pnpm test` (mới: couponCarry logic test; SSR smoke MiniCartDrawer/CheckoutPage skeleton); i18n suite; ui-kit suite (không đụng — chạy confirm không vỡ).
-- [ ] **Step 2:** Browser walkthrough 3 tầng (Rule 0) full flow: guest thêm hàng (storefront) → shell cart → drawer (ESC/overlay/CTA) → checkout guest-gate → login → checkout 3 bước (keyboard stepper, realtime lỗi SĐT blur, inputMode, coupon từ cart, summary ảnh, shipping card) → đặt COD → confirmation → CTA về `/`. Dark mode toàn flow + screenshots mỗi màn. Lưu ảnh `docs/superpowers/walkthroughs/fi393/`.
-- [ ] **Step 3:** E2e subset: golden-path, cod-checkout, saga-fail — XANH trên stack sống. **Prerequisite (P0 critic): Stripe webhook path** — golden-path test 0 hard-assert `hasStripe()` + test 5 cần webhook-only PAID→CONFIRMED: (a) keys thật trong `.env` (`STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`); (b) `make stripe-listen` ĐANG CHẠY (Makefile target riêng — `make dev` KHÔNG bật forwarding; whsec ổn định theo recipe FI-310). Thiếu (a) → specs tự skip `[PENDING-STRIPE-KEYS]` (không phải fail — ghi rõ trong report); thiếu (b) khi CÓ keys → deterministic false-fail, KHÔNG chạy. Port war → alt-ports +100 recipe (rig của session này: shell 5283, checkout 5275, account 5276 + `E2E_SHELL_URL`/`E2E_STOREFRONT_URL` override); docker chết → nói THẬT, mock-gateway chỉ đủ nav-asserts.
-- [ ] **Step 4:** Commit `test(checkout): unit coupon-carry + walkthrough evidence (FI-393 T11)`.
+- [x] **Step 1:** Unit: mfe-checkout `pnpm test` (mới: couponCarry logic test; SSR smoke MiniCartDrawer/CheckoutPage skeleton); i18n suite; ui-kit suite (không đụng — chạy confirm không vỡ).
+- [x] **Step 2:** Browser walkthrough 3 tầng (Rule 0) full flow: guest thêm hàng (storefront) → shell cart → drawer (ESC/overlay/CTA) → checkout guest-gate → login → checkout 3 bước (keyboard stepper, realtime lỗi SĐT blur, inputMode, coupon từ cart, summary ảnh, shipping card) → đặt COD → confirmation → CTA về `/`. Dark mode toàn flow + screenshots mỗi màn. Lưu ảnh `docs/superpowers/walkthroughs/fi393/`.
+- [x] **Step 3:** E2e subset: golden-path, cod-checkout, saga-fail — XANH trên stack sống. **Prerequisite (P0 critic): Stripe webhook path** — golden-path test 0 hard-assert `hasStripe()` + test 5 cần webhook-only PAID→CONFIRMED: (a) keys thật trong `.env` (`STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`); (b) `make stripe-listen` ĐANG CHẠY (Makefile target riêng — `make dev` KHÔNG bật forwarding; whsec ổn định theo recipe FI-310). Thiếu (a) → specs tự skip `[PENDING-STRIPE-KEYS]` (không phải fail — ghi rõ trong report); thiếu (b) khi CÓ keys → deterministic false-fail, KHÔNG chạy. Port war → alt-ports +100 recipe (rig của session này: shell 5283, checkout 5275, account 5276 + `E2E_SHELL_URL`/`E2E_STOREFRONT_URL` override); docker chết → nói THẬT, mock-gateway chỉ đủ nav-asserts.
+- [x] **Step 4:** Commit `test(checkout): unit coupon-carry + walkthrough evidence (FI-393 T11)`.
 
 ---
 

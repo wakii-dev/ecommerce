@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { categoryGradient, type Category } from '../../lib/catalog-api';
 import { localePath, type Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 
 /**
  * Category tiles (direction §2.2.3) — grid 6 cột (≤900px: 3), tile gradient
@@ -57,7 +58,7 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
         {/* Trang "tất cả danh mục" chưa có → /search là surface duyệt chung
             (empty-q có gợi ý từ khóa, không phải dead end). */}
         <Link className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
-          {locale === 'en' ? 'See more →' : 'Xem thêm →'}
+          {t(locale, 'home.seeMoreTile')}
         </Link>
       </div>
     </section>

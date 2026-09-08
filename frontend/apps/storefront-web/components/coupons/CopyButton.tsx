@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '../ui-kit';
 import type { Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 
 /**
  * Nút "Copy" mã coupon (Task 14): navigator.clipboard + fallback execCommand
@@ -54,14 +55,14 @@ export default function CopyButton({ code, locale }: { code: string; locale: Loc
       return; // clipboard chặn — không hiện "Đã copy" nói dối user.
     }
     setCopied(true);
-    toast(locale === 'en' ? 'Copied!' : 'Đã copy', { variant: 'success' });
+    toast(t(locale, 'coupons.copied'), { variant: 'success' });
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setCopied(false), 1500);
   }
 
   return (
     <button type="button" className="coupon-copy" onClick={onCopy}>
-      {copied ? (locale === 'en' ? 'Copied!' : 'Đã copy') : locale === 'en' ? 'Copy' : 'Sao chép'}
+      {copied ? t(locale, 'coupons.copied') : t(locale, 'coupons.copy')}
     </button>
   );
 }

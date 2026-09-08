@@ -5,9 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import type { Locale } from '../lib/format';
 import { switchLocalePath } from '../lib/format';
-
-/** Nhãn = locale ĐÍCH (UX chuẩn): trang vi hiện "EN", trang en hiện "VI". */
-const TARGET_LABEL: Record<Locale, string> = { vi: 'EN', en: 'VI' };
+import { t } from '../lib/i18n';
 
 /**
  * Locale switcher header (Task 10): link mảnh sang locale còn lại, giữ nguyên
@@ -24,7 +22,7 @@ export default function LocaleSwitcher({ locale }: { locale: Locale }) {
       href={switchLocalePath(pathname, target)}
       aria-label="Switch language / Chuyển ngôn ngữ"
     >
-      {TARGET_LABEL[locale]}
+      {t(locale, 'common.langShort')}
     </Link>
   );
 }

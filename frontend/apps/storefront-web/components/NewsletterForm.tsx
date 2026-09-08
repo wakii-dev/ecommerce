@@ -3,28 +3,8 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 
-const COPY = {
-  vi: {
-    title: 'Đăng ký nhận tin',
-    desc: 'Nhận khuyến mãi và flash deal mới nhất.',
-    placeholder: 'Email của bạn',
-    submit: 'Đăng ký',
-    loading: 'Đang gửi…',
-    ok: 'Đã đăng ký! Kiểm tra email chào mừng nhé.',
-    already: 'Email này đã được đăng ký từ trước.',
-    error: 'Có lỗi xảy ra — thử lại.'
-  },
-  en: {
-    title: 'Newsletter',
-    desc: 'Get the latest promos and flash deals.',
-    placeholder: 'Your email',
-    submit: 'Subscribe',
-    loading: 'Sending…',
-    ok: 'Subscribed! Check your welcome email.',
-    already: 'This email is already subscribed.',
-    error: 'Something went wrong — try again.'
-  }
-} as const;
+import type { Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,10 +13,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * `/api/identity/newsletter` qua Next rewrite. status subscribed/already
  * → thông báo tương ứng (dup KHÔNG double email — backend no-op).
  * FI-392 T11: style qua class `.nl-*` (app.css) — màu chỉ qua var(--*)
- * (§5 Cấm: cấm hex trực tiếp trong css).
+ * (§5 Cấm: cấm hex trực tiếp trong css). T12: copy trong lib/i18n
+ * (miền `newsletter`).
  */
-export default function NewsletterForm({ locale }: { locale: string }): ReactElement {
-  const copy = COPY[locale === 'en' ? 'en' : 'vi'];
+export default function NewsletterForm({ locale }: { locale: Locale }): ReactElement {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'already' | 'error'>('idle');
 
@@ -59,18 +39,18 @@ export default function NewsletterForm({ locale }: { locale: string }): ReactEle
 
   return (
     <div>
-      <h3 className="footer-heading">{copy.title}</h3>
-      <p className="nl-desc">{copy.desc}</p>
+      <h3 className="footer-heading">{t(locale, 'newsletter.title')}</h3>
+      <p className="nl-desc">{t(locale, 'newsletter.desc')}</p>
       {state === 'ok' || state === 'already' ? (
         <div role="status" data-testid="newsletter-msg" className="nl-msg nl-msg--ok">
-          {state === 'ok' ? copy.ok : copy.already}
+          {state === 'ok' ? t(locale, 'newsletter.ok') : t(locale, 'newsletter.already')}
         </div>
       ) : (
         <form onSubmit={onSubmit} noValidate className="nl-form">
           <input
             type="email"
             name="newsletter-email"
-            placeholder={copy.placeholder}
+            placeholder={t(locale, 'newsletter.placeholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             data-testid="newsletter-email"
@@ -82,12 +62,12 @@ export default function NewsletterForm({ locale }: { locale: string }): ReactEle
             data-testid="newsletter-submit"
             className="nl-submit"
           >
-            {state === 'loading' ? copy.loading : copy.submit}
+            {state === 'loading' ? t(locale, 'newsletter.loading') : t(locale, 'newsletter.submit')}
           </button>
         </form>
       )}
       {state === 'error' ? (
-        <div role="alert" className="nl-msg nl-msg--error">{copy.error}</div>
+        <div role="alert" className="nl-msg nl-msg--error">{t(locale, 'newsletter.error')}</div>
       ) : null}
     </div>
   );

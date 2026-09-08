@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { discountPercent, type ProductCard } from '../../lib/catalog-api';
 import { formatVnd, localePath, type Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { earliestFlashEndsAt } from '../../lib/home-composition';
 import { productGradient } from '../ProductCardView';
 
@@ -53,7 +54,7 @@ export default function FlashDealSection({ items, locale }: { items: ProductCard
           href={localePath('/c/dien-tu?sort=discount', locale)}
           prefetch={false}
         >
-          {locale === 'en' ? 'See all' : 'Xem tất cả'}
+          {t(locale, 'home.seeAll')}
         </Link>
       </div>
       <div className="flash-row">

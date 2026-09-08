@@ -5,21 +5,18 @@ import type { ReactElement } from 'react';
 import { Price } from '@ecommerce/ui-kit';
 import Link from 'next/link';
 import { categoryGradient } from '../lib/catalog-api';
+import type { Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 import { readRecentlyViewed, type RecentlyViewedItem } from '../lib/recently-viewed';
-
-const COPY = {
-  vi: { title: 'Đã xem gần đây' },
-  en: { title: 'Recently viewed' }
-} as const;
 
 /**
  * Section "Đã xem gần đây" ở home (SF-13 A6a) — client island đọc
  * localStorage (PDP ghi qua RecentlyViewedTracker); ẩn khi trống.
  * FI-392 T11: card dùng anatomy `.p-card` như ProductCardView (thumb
  * gradient qua categoryGradient(slug) → token `--grad-cat-*`, Price
- * primitive); 0 inline-style, 0 hex.
+ * primitive); 0 inline-style, 0 hex. T12: copy trong lib/i18n (miền `home`).
  */
-export default function RecentlyViewed({ locale }: { locale: string }): ReactElement | null {
+export default function RecentlyViewed({ locale }: { locale: Locale }): ReactElement | null {
   const [items, setItems] = useState<RecentlyViewedItem[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -31,14 +28,14 @@ export default function RecentlyViewed({ locale }: { locale: string }): ReactEle
   // SSR + lần render đầu client trống → null (tránh hydration mismatch)
   if (!mounted || items.length === 0) return null;
 
-  const copy = COPY[locale === 'en' ? 'en' : 'vi'];
+  const title = t(locale, 'home.recentlyViewed');
 
   return (
-    <section className="featured" aria-label={copy.title} data-testid="recently-viewed">
+    <section className="featured" aria-label={title} data-testid="recently-viewed">
       <div className="featured-head">
         <div className="featured-head-left">
           <span className="section-bar" aria-hidden="true" />
-          <h3 className="section-title">{copy.title}</h3>
+          <h3 className="section-title">{title}</h3>
         </div>
       </div>
       <div className="featured-grid">

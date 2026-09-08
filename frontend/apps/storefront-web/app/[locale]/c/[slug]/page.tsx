@@ -9,6 +9,7 @@ import ProductCardView from '../../../../components/ProductCardView';
 import { EmptyState } from '../../../../components/ui-kit';
 import { catalogApi, CatalogUnavailableError, type Category, type ProductCardPage } from '../../../../lib/catalog-api';
 import { localePath, resolveLocale, type Locale } from '../../../../lib/format';
+import { t, tParams } from '../../../../lib/i18n';
 import { buildAlternates } from '../../../../lib/seo';
 import {
   filtersToApiParams,
@@ -104,20 +105,18 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   if (catalogDown) {
+    // Title giữ nguyên văn hiện có (cả 2 locale đang render chuỗi vi — khớp
+    // home degraded; không đổi output trong T12).
     return (
       <div className="container plp">
-        <Breadcrumb locale={locale} name={params.slug} homeLabel={locale === 'en' ? 'Home' : 'Trang chủ'} />
+        <Breadcrumb locale={locale} name={params.slug} homeLabel={t(locale, 'plp.home')} />
         <div className="plp-head">
           <h1 className="plp-title">{params.slug}</h1>
         </div>
         <EmptyState
           icon="🛠️"
           title="Catalog tạm thời không khả dụng"
-          description={
-            locale === 'en'
-              ? 'The catalog is temporarily unavailable — please try again in a few minutes.'
-              : 'Hệ thống đang bận — vui lòng thử lại sau ít phút.'
-          }
+          description={t(locale, 'common.busy')}
         />
       </div>
     );
@@ -132,12 +131,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   return (
     <div className="container plp">
-      <Breadcrumb locale={locale} name={name} homeLabel={locale === 'en' ? 'Home' : 'Trang chủ'} />
+      <Breadcrumb locale={locale} name={name} homeLabel={t(locale, 'plp.home')} />
 
       <div className="plp-head">
         <h1 className="plp-title">{name}</h1>
         <span className="plp-count">
-          {locale === 'en' ? `${data.total} products` : `${data.total} sản phẩm`}
+          {tParams(locale, 'plp.productsCount', { n: data.total })}
         </span>
       </div>
 
@@ -154,15 +153,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           {data.items.length === 0 ? (
             <EmptyState
               icon="🔍"
-              title={locale === 'en' ? 'No matching products found' : 'Không tìm thấy sản phẩm phù hợp'}
-              description={
-                locale === 'en'
-                  ? 'Try removing some filters or browsing another category.'
-                  : 'Thử bỏ một vài bộ lọc hoặc xem danh mục khác nhé.'
-              }
+              title={t(locale, 'plp.emptyTitle')}
+              description={t(locale, 'plp.emptyDesc')}
               action={
                 <Link className="plp-clear-all" href={basePath}>
-                  {locale === 'en' ? 'Clear all' : 'Xóa tất cả'}
+                  {t(locale, 'plp.clearAll')}
                 </Link>
               }
             />

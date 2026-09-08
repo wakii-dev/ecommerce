@@ -3,25 +3,19 @@
 import { usePathname } from 'next/navigation';
 
 import { Icon } from '../../../../components/ui-kit';
+import { t, type I18nKey } from '../../../../lib/i18n';
 
 /**
  * Route error boundary (FI-392 T2) — thay crash screen mặc định của Next.
  * Locale không có params ở error.tsx → parse segment đầu từ usePathname
  * (vi|en); không resolve được → bilingual fallback (pattern not-found).
  * "Thử lại" gọi reset() để Next render lại segment — không reload trang.
+ * T12: copy trong lib/i18n (miền `common.error*`).
  */
-const COPY = {
-  vi: {
-    title: 'Đã có lỗi xảy ra',
-    desc: 'Không tải được nội dung — vui lòng thử lại.',
-    retry: 'Thử lại'
-  },
-  en: {
-    title: 'Something went wrong',
-    desc: "We couldn't load this page — please try again.",
-    retry: 'Try again'
-  }
-} as const;
+
+function errorCopy(locale: 'vi' | 'en' | null, key: I18nKey): string {
+  return locale ? t(locale, key) : `${t('vi', key)} / ${t('en', key)}`;
+}
 
 export default function RouteError({
   reset
@@ -33,9 +27,9 @@ export default function RouteError({
   const segment = pathname.split('/')[1];
   const locale = segment === 'vi' || segment === 'en' ? segment : null;
 
-  const title = locale ? COPY[locale].title : `${COPY.vi.title} / ${COPY.en.title}`;
-  const desc = locale ? COPY[locale].desc : `${COPY.vi.desc} ${COPY.en.desc}`;
-  const retry = locale ? COPY[locale].retry : `${COPY.vi.retry} / ${COPY.en.retry}`;
+  const title = errorCopy(locale, 'common.errorTitle');
+  const desc = errorCopy(locale, 'common.errorDesc');
+  const retry = errorCopy(locale, 'common.errorRetry');
 
   return (
     <div className="container route-error" role="alert">

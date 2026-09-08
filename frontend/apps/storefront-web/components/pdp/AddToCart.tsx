@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Locale } from '../../lib/format';
+import { COPY } from '../../lib/i18n';
 import { shellUrl } from '../../lib/site';
 
 /**
@@ -31,27 +32,12 @@ import { shellUrl } from '../../lib/site';
  *  code-review P1: '/cart' relative 404 trên mọi dev topology). Next app dùng
  *  process.env.NEXT_PUBLIC_* (KHÔNG import.meta.env — Vite-only, crash PDP). */
 
-/** Copy PDP CTA — export cho unit test honesty (SF-3: toastFail là lỗi thật). */
-export const COPY = {
-  vi: {
-    add: 'THÊM VÀO GIỎ',
-    buy: 'MUA NGAY',
-    toastFail: 'Không thêm được vào giỏ — thử lại',
-    toastOk: 'Đã thêm vào giỏ ✓',
-    inStock: 'Còn hàng',
-    outStock: 'Hết hàng',
-    qty: 'Số lượng',
-  },
-  en: {
-    add: 'ADD TO CART',
-    buy: 'BUY NOW',
-    toastFail: "Couldn't add to cart — please try again",
-    toastOk: 'Added to cart ✓',
-    inStock: 'In stock',
-    outStock: 'Out of stock',
-    qty: 'Quantity',
-  },
-} as const;
+/**
+ * Copy PDP CTA — T12: source of truth trong lib/i18n (miền `pdp.atc*`);
+ * re-export GIỮ shape + import path cũ cho unit test honesty (SF-3:
+ * toastFail là lỗi thật — tests/addtocart.test.ts).
+ */
+export { COPY };
 
 /**
  * Payload AddItemRequest (contracts/generated/cartSchema.d.ts — POST /items):

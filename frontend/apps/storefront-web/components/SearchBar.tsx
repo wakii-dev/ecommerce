@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { formatVnd, localePath, type Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 import { moveActive, suggestUrl } from '../lib/search';
 
 /**
@@ -17,16 +18,6 @@ import { moveActive, suggestUrl } from '../lib/search';
  * (aria-activedescendant). Form GET cùng path (no-JS fallback). Item suggest
  * là next/link (T3 — SPA nav, role="option" giữ nguyên, href thật cho no-JS).
  */
-
-const PLACEHOLDER: Record<Locale, string> = {
-  vi: 'Tìm sản phẩm, thương hiệu...',
-  en: 'Search products, brands...',
-};
-
-const COPY: Record<Locale, { products: string; categories: string; hot: string; search: string }> = {
-  vi: { products: 'Sản phẩm', categories: 'Danh mục', hot: 'ĐANG HOT', search: 'Tìm kiếm' },
-  en: { products: 'Products', categories: 'Categories', hot: 'HOT', search: 'Search' },
-};
 
 /** Subset ProductCard + SuggestResponse của contracts (mà dropdown cần). */
 interface SuggestProduct {
@@ -57,8 +48,7 @@ interface FlatItem {
 
 export default function SearchBar({ locale }: { locale: Locale }) {
   const router = useRouter();
-  const placeholder = PLACEHOLDER[locale];
-  const copy = COPY[locale];
+  const placeholder = t(locale, 'search.placeholder');
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -170,7 +160,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
           aria-activedescendant={shown && active >= 0 ? `${listId}-${active}` : undefined}
           aria-autocomplete="list"
         />
-        <button className="search-btn" type="submit" aria-label={copy.search}>
+        <button className="search-btn" type="submit" aria-label={t(locale, 'search.submit')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -180,8 +170,8 @@ export default function SearchBar({ locale }: { locale: Locale }) {
 
       {shown ? (
         <div className="search-suggest">
-          <ul id={listId} role="listbox" aria-label={copy.products}>
-            {productCount > 0 ? <li className="search-group-title">{copy.products}</li> : null}
+          <ul id={listId} role="listbox" aria-label={t(locale, 'search.products')}>
+            {productCount > 0 ? <li className="search-group-title">{t(locale, 'search.products')}</li> : null}
             {suggest.products.map((product, index) => (
               <li key={product.id} role="none">
                 <Link
@@ -193,12 +183,12 @@ export default function SearchBar({ locale }: { locale: Locale }) {
                   onMouseEnter={() => setActive(index)}
                 >
                   <span className="search-item-name">{product.name}</span>
-                  {product.flashSaleEndsAt ? <span className="search-item-hot">{copy.hot}</span> : null}
+                  {product.flashSaleEndsAt ? <span className="search-item-hot">{t(locale, 'search.hot')}</span> : null}
                   <span className="search-item-price">{formatVnd(product.price)}</span>
                 </Link>
               </li>
             ))}
-            {suggest.categories.length > 0 ? <li className="search-group-title">{copy.categories}</li> : null}
+            {suggest.categories.length > 0 ? <li className="search-group-title">{t(locale, 'search.categories')}</li> : null}
             {suggest.categories.map((category, index) => {
               const flatIndex = productCount + index;
               return (

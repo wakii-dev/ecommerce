@@ -9,6 +9,7 @@ import { buildReviewPayload } from '../../lib/reviews-api';
 import { authedFetch, ensureSession } from '../../lib/account-session';
 import { shellUrl } from '../../lib/site';
 import type { Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 
 /**
  * Write-review modal (SF-8, spec Q14 — pack: write modal client component).
@@ -17,47 +18,9 @@ import type { Locale } from '../../lib/format';
  * useOverlay chỉ trap/ESC. StarRating interactive local (ui-kit StarRating là
  * readOnly — KHÔNG sửa ui-kit, file slice). Submit 202 no-body → toast "đang
  * chờ duyệt" (client side — spec-critic P0). 409 → message "đã đánh giá".
- * Guest → CTA link `/account` (shell đăng nhập — pack).
+ * Guest → CTA link `/account` (shell đăng nhập — pack). T12: copy trong
+ * lib/i18n (miền `reviews`) — title 'Viết đánh giá' KHÔNG đổi (e2e dialog name).
  */
-
-const COPY = {
-  vi: {
-    title: 'Viết đánh giá',
-    editTitle: 'Sửa đánh giá của bạn',
-    guestTitle: 'Đăng nhập để đánh giá',
-    guestDesc: 'Bạn cần đăng nhập tài khoản để viết đánh giá sản phẩm.',
-    guestCta: 'Đăng nhập',
-    yourRating: 'Đánh giá của bạn',
-    nameLabel: 'Tiêu đề (không bắt buộc)',
-    contentLabel: 'Nội dung',
-    contentPlaceholder: 'Chia sẻ trải nghiệm của bạn về sản phẩm…',
-    submit: 'Gửi đánh giá',
-    saving: 'Đang gửi…',
-    toast: 'Đã gửi đánh giá — đang chờ duyệt',
-    toastEdit: 'Đã cập nhật đánh giá — vẫn đang chờ duyệt',
-    duplicate: 'Bạn đã đánh giá sản phẩm này rồi',
-    error: 'Gửi đánh giá thất bại — thử lại sau ít phút',
-    ratingRequired: 'Hãy chọn số sao',
-  },
-  en: {
-    title: 'Write a review',
-    editTitle: 'Edit your review',
-    guestTitle: 'Sign in to review',
-    guestDesc: 'You need an account to review this product.',
-    guestCta: 'Sign in',
-    yourRating: 'Your rating',
-    nameLabel: 'Title (optional)',
-    contentLabel: 'Review',
-    contentPlaceholder: 'Share your experience with this product…',
-    submit: 'Submit review',
-    saving: 'Sending…',
-    toast: 'Review submitted — pending moderation',
-    toastEdit: 'Review updated — still pending moderation',
-    duplicate: 'You already reviewed this product',
-    error: 'Failed to submit — please try again later',
-    ratingRequired: 'Pick a star rating',
-  },
-} as const;
 
 export interface WriteReviewModalProps {
   slug: string;
@@ -81,7 +44,6 @@ export default function WriteReviewModal({
   onClose,
   onSubmitted,
 }: WriteReviewModalProps): ReactElement {
-  const copy = COPY[locale];
   const [guest, setGuest] = useState<boolean | null>(null); // null = đang check
   const [rating, setRating] = useState<number>(initial?.rating ?? 0);
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -102,7 +64,7 @@ export default function WriteReviewModal({
   if (guest === null) {
     ensureSession().then((ok) => setGuest(!ok));
     return (
-      <Modal open onClose={onClose} title={copy.title} size="md">
+      <Modal open onClose={onClose} title={t(locale, 'reviews.write')} size="md">
         <p className="rv-modal-loading">…</p>
       </Modal>
     );
@@ -112,7 +74,7 @@ export default function WriteReviewModal({
     event.preventDefault();
     setError(null);
     if (rating < 1) {
-      setError(copy.ratingRequired);
+      setError(t(locale, 'reviews.ratingRequired'));
       return;
     }
     setSending(true);
@@ -134,12 +96,12 @@ export default function WriteReviewModal({
         return;
       }
       if (res.status === 409) {
-        setError(copy.duplicate);
+        setError(t(locale, 'reviews.duplicate'));
       } else {
-        setError(copy.error);
+        setError(t(locale, 'reviews.submitError'));
       }
     } catch {
-      setError(copy.error);
+      setError(t(locale, 'reviews.submitError'));
     } finally {
       setSending(false);
     }
@@ -149,20 +111,20 @@ export default function WriteReviewModal({
     <Modal
       open
       onClose={onClose}
-      title={mode === 'edit' ? copy.editTitle : copy.title}
+      title={mode === 'edit' ? t(locale, 'reviews.editTitle') : t(locale, 'reviews.write')}
       size="md"
     >
       {guest ? (
         <div className="rv-guest">
-          <h3>{copy.guestTitle}</h3>
-          <p>{copy.guestDesc}</p>
+          <h3>{t(locale, 'reviews.guestTitle')}</h3>
+          <p>{t(locale, 'reviews.guestDesc')}</p>
           <a className="rv-cta" href={`${shellUrl()}/account`}>
-            {copy.guestCta}
+            {t(locale, 'reviews.guestCta')}
           </a>
         </div>
       ) : (
         <form className="rv-form" onSubmit={onSubmit}>
-          <div className="rv-stars-input" role="radiogroup" aria-label={copy.yourRating}>
+          <div className="rv-stars-input" role="radiogroup" aria-label={t(locale, 'reviews.yourRating')}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
@@ -179,7 +141,7 @@ export default function WriteReviewModal({
           </div>
 
           <label className="rv-label">
-            {copy.nameLabel}
+            {t(locale, 'reviews.nameLabel')}
             <input
               className="rv-input"
               value={title}
@@ -189,13 +151,13 @@ export default function WriteReviewModal({
           </label>
 
           <label className="rv-label">
-            {copy.contentLabel}
+            {t(locale, 'reviews.contentLabel')}
             <textarea
               className="rv-input rv-textarea"
               value={content}
               required
               rows={4}
-              placeholder={copy.contentPlaceholder}
+              placeholder={t(locale, 'reviews.contentPlaceholder')}
               onChange={(e) => setContent(e.target.value)}
             />
           </label>
@@ -207,7 +169,7 @@ export default function WriteReviewModal({
           ) : null}
 
           <button type="submit" className="rv-cta" disabled={sending}>
-            {sending ? copy.saving : copy.submit}
+            {sending ? t(locale, 'reviews.saving') : t(locale, 'reviews.submit')}
           </button>
         </form>
       )}

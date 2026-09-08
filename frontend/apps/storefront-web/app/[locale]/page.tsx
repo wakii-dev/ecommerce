@@ -11,6 +11,7 @@ import RecentlyViewed from '../../components/RecentlyViewed';
 import { EmptyState } from '../../components/ui-kit';
 import { catalogApi, CatalogUnavailableError, type Category, type ProductCard } from '../../lib/catalog-api';
 import { localePath, resolveLocale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { rootCategories, splitFlashAndFeatured } from '../../lib/home-composition';
 import { homeMetadata } from '../../lib/seo';
 
@@ -52,17 +53,15 @@ export default async function HomePage({ params }: { params: { locale: string } 
   if (catalogDown) {
     // Hero vẫn render (content tĩnh, không cần catalog); các section cần data
     // → EmptyState degraded thay vì crash/blank (Task 10 convention).
+    // Title giữ nguyên văn hiện có (cả 2 locale đang render chuỗi vi — không
+    // đổi output trong T12; unify en là fix riêng nếu muốn).
     return (
       <div className="container home">
         <HeroCarousel locale={locale} />
         <EmptyState
           icon="🛠️"
           title="Catalog tạm thời không khả dụng"
-          description={
-            locale === 'en'
-              ? 'The catalog is temporarily unavailable — please try again in a few minutes.'
-              : 'Hệ thống đang bận — vui lòng thử lại sau ít phút.'
-          }
+          description={t(locale, 'common.busy')}
         />
       </div>
     );
@@ -92,7 +91,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
           <Reveal className="featured-head">
             <div className="featured-head-left">
               <span className="section-bar" aria-hidden="true" />
-              <h3 className="section-title">{locale === 'en' ? 'Picked for today' : 'Gợi ý hôm nay'}</h3>
+              <h3 className="section-title">{t(locale, 'home.featuredTitle')}</h3>
             </div>
             {/* E7d: "Xem thêm" → PLP danh mục gốc đầu theo sort=discount (đúng
                 ngôn ngữ "gợi ý giảm giá"; route thật, slug từ API categories). */}
@@ -102,7 +101,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
                 href={localePath(`/c/${categories[0]?.slug}?sort=discount`, locale)}
                 prefetch={false}
               >
-                {locale === 'en' ? 'See more ›' : 'Xem thêm ›'}
+                {t(locale, 'home.seeMore')}
               </Link>
             ) : null}
           </Reveal>

@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 
 import { Pagination as PaginationPrimitive } from '@ecommerce/ui-kit';
 
+import type { Locale } from '../../lib/format';
+import { t, tParams } from '../../lib/i18n';
 import { buildPlpUrl, type PlpQuery } from '../../lib/plp-params';
 
 /**
@@ -18,8 +20,7 @@ import { buildPlpUrl, type PlpQuery } from '../../lib/plp-params';
  * sort/page/filters (§5.3 — URL vẫn là state duy nhất).
  *
  * GIỮ interface cũ (basePath/query/totalPages/extraParams) — 2 page caller
- * không đổi. Locale suy ra từ basePath (en có prefix `/en` — localePath);
- * labels vi/en tạm inline ở đây, Task 12 i18n gom về lib/i18n.
+ * không đổi. Locale suy ra từ basePath (en có prefix `/en` — localePath).
  */
 export interface PaginationProps {
   basePath: string;
@@ -34,7 +35,7 @@ export default function Pagination({ basePath, query, totalPages, extraParams }:
 
   if (totalPages <= 1) return null;
 
-  const en = basePath.startsWith('/en');
+  const locale: Locale = basePath.startsWith('/en') ? 'en' : 'vi';
   const pageHref = (page: number) => buildPlpUrl(basePath, { ...query, page }, extraParams);
 
   function handleClick(event: React.MouseEvent<HTMLDivElement>) {
@@ -53,10 +54,10 @@ export default function Pagination({ basePath, query, totalPages, extraParams }:
         page={query.page}
         totalPages={totalPages}
         pageHref={pageHref}
-        label={en ? 'Pagination' : 'Phân trang'}
-        prevLabel={en ? 'Previous page' : 'Trang trước'}
-        nextLabel={en ? 'Next page' : 'Trang sau'}
-        pageLabel={(page) => (en ? `Page ${page}` : `Trang ${page}`)}
+        label={t(locale, 'plp.pagination')}
+        prevLabel={t(locale, 'plp.prevPage')}
+        nextLabel={t(locale, 'plp.nextPage')}
+        pageLabel={(page) => tParams(locale, 'plp.pageN', { n: page })}
       />
     </div>
   );

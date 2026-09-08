@@ -22,6 +22,7 @@ import {
   type ProductDetail,
 } from '../../../../lib/catalog-api';
 import { localePath, resolveLocale } from '../../../../lib/format';
+import { t } from '../../../../lib/i18n';
 import { categoryPathById, jsonLdFor } from '../../../../lib/pdp';
 import { pdpMetadata } from '../../../../lib/seo';
 import { siteUrl } from '../../../../lib/site';
@@ -31,7 +32,8 @@ import { siteUrl } from '../../../../lib/site';
  * variant/buy-box client (vẫn SSR HTML lần đầu). Distinguish 404 (ApiError
  * status) vs catalog down qua `.status` của CatalogUnavailableError (lib doc).
  * Related (SF-13 A6b): SSR fetch `/related` (ES MLT — ADR 0005) → section
- * ProductCardView sau reviews; rỗng/fail → ẩn.
+ * ProductCardView sau reviews; rỗng/fail → ẩn. T12: copy trong lib/i18n
+ * (miền `pdp`).
  */
 
 interface PdpPageProps {
@@ -39,43 +41,6 @@ interface PdpPageProps {
   /** SF-8: `?reviewPage=N` — pagination reviews section (server-rendered links). */
   searchParams?: { reviewPage?: string };
 }
-
-const COPY = {
-  vi: {
-    home: 'Trang chủ',
-    sold: 'Đã bán',
-    reviews: 'đánh giá',
-    perkAuth: 'Hàng chính hãng 100%',
-    perkShip: 'Miễn phí vận chuyển',
-    tabDesc: 'Mô tả',
-    tabInfo: 'Thông tin',
-    tabReviews: 'Đánh giá',
-    infoBrand: 'Thương hiệu',
-    infoSku: 'Mã sản phẩm',
-    infoCat: 'Danh mục',
-    infoRating: 'Đánh giá',
-    related: 'Sản phẩm tương tự',
-    unavailable: 'Sản phẩm tạm thời không khả dụng',
-    unavailableDesc: 'Hệ thống đang bận — vui lòng thử lại sau ít phút.',
-  },
-  en: {
-    home: 'Home',
-    sold: 'Sold',
-    reviews: 'reviews',
-    perkAuth: '100% authentic',
-    perkShip: 'Free shipping',
-    tabDesc: 'Description',
-    tabInfo: 'Specifications',
-    tabReviews: 'Reviews',
-    infoBrand: 'Brand',
-    infoSku: 'SKU',
-    infoCat: 'Category',
-    infoRating: 'Rating',
-    related: 'Similar products',
-    unavailable: 'Product temporarily unavailable',
-    unavailableDesc: 'The system is busy — please try again in a few minutes.',
-  },
-} as const;
 
 /** Metadata PDP: seoTitle/seoDescription priority + OG + alternates + noindex-en-fallback. */
 export async function generateMetadata({ params }: PdpPageProps): Promise<Metadata> {
@@ -135,7 +100,6 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
 export default async function ProductPage({ params, searchParams }: PdpPageProps) {
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
-  const copy = COPY[locale];
   const reviewPage = Math.max(1, Number.parseInt(searchParams?.reviewPage ?? '1', 10) || 1);
 
   let product: ProductDetail | null = null;
@@ -161,9 +125,9 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     return (
       <div className="container pdp">
         <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-          <Link href={localePath('/', locale)}>{copy.home}</Link>
+          <Link href={localePath('/', locale)}>{t(locale, 'pdp.home')}</Link>
         </nav>
-        <EmptyState icon="🛠️" title={copy.unavailable} description={copy.unavailableDesc} />
+        <EmptyState icon="🛠️" title={t(locale, 'pdp.unavailable')} description={t(locale, 'pdp.unavailableDesc')} />
       </div>
     );
   }
@@ -215,7 +179,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-        <Link href={localePath('/', locale)}>{copy.home}</Link>
+        <Link href={localePath('/', locale)}>{t(locale, 'pdp.home')}</Link>
         {(path ?? []).map((node) => (
           <span key={node.id} className="plp-breadcrumb-item">
             <span className="plp-breadcrumb-sep" aria-hidden="true">
@@ -240,10 +204,10 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
             {/* T8b (P0-2): count là link anchor #tab-reviews — click → hash →
                 PdpTabs activate panel reviews (e2e review-flow click link này) */}
             <a className="pdp-meta-count" href="#tab-reviews">
-              {product.ratingCount} {copy.reviews}
+              {product.ratingCount} {t(locale, 'pdp.reviewsUnit')}
             </a>
             <span className="pdp-meta-sold">
-              {copy.sold} {product.ratingCount}
+              {t(locale, 'pdp.sold')} {product.ratingCount}
             </span>
             {/* SF-8: wishlist heart — guest → /account (đăng nhập shell) */}
             <WishlistHeart productId={product.id} locale={locale} variant="pdp" />
@@ -259,7 +223,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
               <span className="pdp-perk-icon" aria-hidden="true">
                 <Icon name="check" size={16} />
               </span>
-              {copy.perkAuth}
+              {t(locale, 'pdp.perkAuth')}
             </span>
             <span className="pdp-perk">
               <span className="pdp-perk-icon" aria-hidden="true">
@@ -280,7 +244,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
                   <circle cx="18.5" cy="18.5" r="2.5" />
                 </svg>
               </span>
-              {copy.perkShip}
+              {t(locale, 'pdp.perkShip')}
             </span>
           </div>
         </div>
@@ -289,27 +253,27 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       {/* Tabs thật (T8b): primitive Tabs keyboard ←→ + hashchange deep-link;
           panels vẫn SSR sẵn trong HTML, ẩn/hiện qua hidden attribute. */}
       <PdpTabs
-        labels={{ desc: copy.tabDesc, info: copy.tabInfo, reviews: copy.tabReviews }}
+        labels={{ desc: t(locale, 'pdp.tabDesc'), info: t(locale, 'pdp.tabInfo'), reviews: t(locale, 'pdp.tabReviews') }}
         desc={<p className="pdp-desc">{product.description || product.name}</p>}
         info={
           <table className="pdp-spec">
             <tbody>
               <tr>
-                <th scope="row">{copy.infoBrand}</th>
+                <th scope="row">{t(locale, 'pdp.infoBrand')}</th>
                 <td>{product.brand || '—'}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoSku}</th>
+                <th scope="row">{t(locale, 'pdp.infoSku')}</th>
                 <td>{locale === 'en' ? product.slugEn : product.slug}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoCat}</th>
+                <th scope="row">{t(locale, 'pdp.infoCat')}</th>
                 <td>{path?.[path.length - 1]?.name ?? '—'}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoRating}</th>
+                <th scope="row">{t(locale, 'pdp.infoRating')}</th>
                 <td>
-                  {product.ratingAvg}/5 — {product.ratingCount} {copy.reviews}
+                  {product.ratingAvg}/5 — {product.ratingCount} {t(locale, 'pdp.reviewsUnit')}
                 </td>
               </tr>
             </tbody>
@@ -326,11 +290,11 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       />
 
       {related && related.items.length > 0 ? (
-        <section className="featured" aria-label={copy.related} data-testid="related-products">
+        <section className="featured" aria-label={t(locale, 'pdp.related')} data-testid="related-products">
           <div className="featured-head">
             <div className="featured-head-left">
               <span className="section-bar" aria-hidden="true" />
-              <h2 className="section-title">{copy.related}</h2>
+              <h2 className="section-title">{t(locale, 'pdp.related')}</h2>
             </div>
           </div>
           <div className="featured-grid">

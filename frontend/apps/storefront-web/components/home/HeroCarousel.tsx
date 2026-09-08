@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { localePath, type Locale } from '../../lib/format';
+import { HERO_SLIDES, t } from '../../lib/i18n';
 
 /**
  * Hero carousel (direction §2.2.1) — 3 slide gradient 120deg §1.8 (ken-burns
@@ -16,34 +17,13 @@ import { localePath, type Locale } from '../../lib/format';
  * (clear interval, resume khi rời) + nút pause/play thật (aria-label vi/en +
  * aria-pressed = autoplay đang tạm dừng bởi user). prefers-reduced-motion →
  * KHÔNG auto-rotate vĩnh viễn (chỉ arrows/dots; nút play disabled).
+ * T12: slides + copy hero nằm trong lib/i18n (HERO_SLIDES + miền `hero`).
  */
 
-interface HeroSlide {
-  gradient: string;
-  kicker: string;
-  title: string;
-  ribbon: string;
-}
-
-const SLIDES: Record<Locale, HeroSlide[]> = {
-  vi: [
-    { gradient: 'var(--grad-hero-1)', kicker: 'Siêu sale cuối tuần', title: 'Giảm đến 50% Điện Tử', ribbon: '50% OFF' },
-    { gradient: 'var(--grad-hero-2)', kicker: 'Chính hãng 100%', title: 'Công nghệ giá tốt mỗi ngày', ribbon: 'HOT' },
-    { gradient: 'var(--grad-hero-3)', kicker: 'Freeship toàn quốc', title: 'Thời trang & Làm đẹp', ribbon: 'NEW' },
-  ],
-  en: [
-    { gradient: 'var(--grad-hero-1)', kicker: 'Weekend mega sale', title: 'Up to 50% off Electronics', ribbon: '50% OFF' },
-    { gradient: 'var(--grad-hero-2)', kicker: '100% official', title: 'Great tech deals every day', ribbon: 'HOT' },
-    { gradient: 'var(--grad-hero-3)', kicker: 'Free shipping nationwide', title: 'Fashion & Beauty', ribbon: 'NEW' },
-  ],
-};
-
-const CTA_LABEL: Record<Locale, string> = { vi: 'Mua ngay', en: 'Shop now' };
-const PAUSE_LABEL: Record<Locale, string> = { vi: 'Tạm dừng tự động chuyển slide', en: 'Pause auto-rotate' };
 const ROTATE_MS = 6000;
 
 export default function HeroCarousel({ locale }: { locale: Locale }) {
-  const slides = SLIDES[locale];
+  const slides = HERO_SLIDES[locale];
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -89,7 +69,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
             <p className="hero-kicker">{slide.kicker}</p>
             <h2 className="hero-title">{slide.title}</h2>
             <Link className="hero-cta" href={ctaHref} tabIndex={slideIndex === index ? undefined : -1}>
-              {CTA_LABEL[locale]}
+              {t(locale, 'hero.cta')}
             </Link>
             <span className="hero-ribbon" aria-hidden="true">
               {slide.ribbon}
@@ -128,7 +108,7 @@ export default function HeroCarousel({ locale }: { locale: Locale }) {
       <button
         type="button"
         className="hero-pause"
-        aria-label={PAUSE_LABEL[locale]}
+        aria-label={t(locale, 'hero.pause')}
         aria-pressed={paused}
         disabled={motionReduced}
         onClick={() => setPaused((current) => !current)}

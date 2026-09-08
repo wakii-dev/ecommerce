@@ -338,3 +338,198 @@
   font-weight: 600;
   font-size: 13px;
 }
+
+/* ── Mini-cart drawer (FI-393 T3) — override instance ui-kit Drawer ────
+   Drawer portal ra document.body → wrapper css không cascade; scope bằng
+   modifier `.uk-overlay--drawer` (CHỈ Drawer đặt class này — Modal dùng
+   .uk-overlay trần, không bị dính). Specificity 2 class để thắng shorthand
+   `.uk-drawer`/`.uk-overlay` của ui-kit.css bất kể import order
+   (bootstrap.tsx import page.css TRƯỚC styles.css). mfe-checkout không có
+   Drawer khác → override theo modifier an toàn theo plan. */
+.uk-overlay.uk-overlay--drawer {
+  background: rgba(0, 0, 0, 0.45);
+  animation-duration: var(--dur-slow, 260ms);
+}
+
+.uk-overlay--drawer .uk-drawer {
+  width: min(390px, 92vw);
+  animation-duration: var(--dur-slow, 260ms);
+  animation-timing-function: var(--ease-drawer, cubic-bezier(.32, .72, .3, 1.08));
+}
+
+.uk-overlay--drawer .uk-drawer__header {
+  background: var(--c-primary);
+  border-bottom: none;
+}
+
+.uk-overlay--drawer .uk-drawer__title {
+  color: var(--c-surface);
+  font-weight: 800;
+}
+
+.uk-overlay--drawer .uk-modal__close {
+  color: var(--c-surface);
+}
+
+.uk-overlay--drawer .uk-modal__close:hover {
+  /* nền primary — hover wash xám của primitive sẽ lệch tông, giữ trong họ primary */
+  background: transparent;
+  color: var(--c-primary-hover);
+}
+
+/* ── Mini-cart drawer — nội dung line items + footer (FI-393 T3) ─────── */
+.mini-cart__count {
+  margin-left: var(--space-2, 8px);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font-size: 13px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.mini-cart-line {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: flex-start;
+  padding: var(--space-3, 12px) 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.mini-cart-line:last-child {
+  border-bottom: none;
+}
+
+.mini-cart-line__thumb {
+  position: relative;
+  flex: none;
+}
+
+.mini-cart-line__thumb img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 2px);
+  border: 1px solid var(--c-border);
+  background: var(--wash-hover);
+}
+
+.mini-cart-line__qty {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--c-surface);
+  border-radius: var(--radius-full);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.mini-cart-line__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mini-cart-line__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mini-cart-line__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-danger);
+}
+
+.mini-cart__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  width: 100%;
+}
+
+.mini-cart__freeship {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 2px);
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.mini-cart__subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mini-cart__subtotal-row > span {
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.mini-cart__subtotal {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--c-danger);
+}
+
+.mini-cart__ctas {
+  display: flex;
+  gap: var(--space-2, 8px);
+}
+
+.mini-cart__btn {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--radius-sm, 2px);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mini-cart__btn--outline {
+  border: 2px solid var(--c-primary);
+  background: var(--c-surface);
+  color: var(--c-primary);
+}
+
+.mini-cart__btn--outline:hover {
+  background: var(--tint-primary-bg);
+}
+
+.mini-cart__btn--solid {
+  border: none;
+  background: var(--grad-cta);
+  color: var(--c-surface);
+  box-shadow: var(--shadow-cta);
+}
+
+.mini-cart__btn--solid:hover {
+  box-shadow: var(--shadow-cta-hover);
+}
+
+.mini-cart__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}

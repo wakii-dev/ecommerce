@@ -65,7 +65,8 @@ export default function ThemeToggle({ locale }: { locale: Locale }): ReactElemen
           <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" strokeLinejoin="round" />
         )}
       </svg>
-      {stateLabel}
+      {/* Label bọc span để T13 ẩn icon-only <600px (sr-only — aria-label giữ name) */}
+      <span className="header-action-label">{stateLabel}</span>
     </button>
   );
 }

@@ -38,14 +38,15 @@ export default function Header({ locale }: { locale: Locale }) {
               <circle cx="9.5" cy="19.5" r="1.5" />
               <circle cx="16.5" cy="19.5" r="1.5" />
             </svg>
-            {t(locale, 'header.cart')}
+            {/* Label bọc span để T13 ẩn icon-only <600px (sr-only — giữ a11y name) */}
+            <span className="header-action-label">{t(locale, 'header.cart')}</span>
           </a>
           <a className="header-action" href={`${shellUrl()}/account`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <circle cx="12" cy="8" r="4" />
               <path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" strokeLinecap="round" />
             </svg>
-            {t(locale, 'header.account')}
+            <span className="header-action-label">{t(locale, 'header.account')}</span>
           </a>
         </div>
       </div>

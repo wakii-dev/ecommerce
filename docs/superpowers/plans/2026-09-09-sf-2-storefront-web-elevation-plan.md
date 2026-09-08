@@ -295,12 +295,12 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** css responsive (<600px media queries, dùng `--bp-sm` value 600px — @media không đọc var nên hardcode 600px + comment tham chiếu token), `components/Header.tsx` markup nếu cần.
 
-- [ ] **Step 1:** Header <600px: mini-nav scroll-x (đã T3 — hoàn thiện swipe), actions icon-only (ẩn text label), search full-width hàng riêng nếu cần.
-- [ ] **Step 2:** Hero cao co giãn (min ~240px), title scale xuống.
-- [ ] **Step 3:** Featured/PLP grid 2-col; flash rail giữ scroll-x; cat-grid 3-col (media ≤900 hiện có — kiểm).
-- [ ] **Step 4:** PDP: sticky ATC (T8b đã làm — kiểm lại), gallery/pdp-layout 1-col.
-- [ ] **Step 5:** Footer/newsletter stack dọc.
-- [ ] **Step 6:** vitest + lint xanh → commit `feat(storefront): responsive <600px mobile pass per spec item 13 (FI-392)`.
+- [x] **Step 1:** Header <600px: mini-nav scroll-x (đã T3 — hoàn thiện swipe), actions icon-only (ẩn text label), search full-width hàng riêng nếu cần.
+- [x] **Step 2:** Hero cao co giãn (min ~240px), title scale xuống.
+- [x] **Step 3:** Featured/PLP grid 2-col; flash rail giữ scroll-x; cat-grid 3-col (media ≤900 hiện có — kiểm).
+- [x] **Step 4:** PDP: sticky ATC (T8b đã làm — kiểm lại), gallery/pdp-layout 1-col.
+- [x] **Step 5:** Footer/newsletter stack dọc.
+- [x] **Step 6:** vitest + lint xanh → commit `feat(storefront): responsive <600px mobile pass per spec item 13 (FI-392)`.
 
 ### Task 14: breadcrumb-jsonld-sold-count-placeholder-fix (nhóm D)
 

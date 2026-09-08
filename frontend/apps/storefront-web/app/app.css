@@ -2761,3 +2761,102 @@ img {
 [data-theme='storefront'] {
   --hot-tag-text: #ffffff;
 }
+
+/* ═══ Mobile pass <600px (FI-392 T13 — spec item 13; direction §6 "chi tiết
+   responsive <600px beyond buy-sticky do SF-2 sở hữu") ═════════════════════
+   600px = giá trị token --bp-sm (tham chiếu — @media không đọc được var).
+   ≤900px đã xử lý phía trên: search full-width hàng riêng, mini-nav scroll-x,
+   footer 2 cột, cat 3 / featured 2 / plp 2 / coupons 1 cột, pdp 1 cột,
+   hero title 32 — block này chỉ bổ sung phần <600px còn thiếu. */
+@media (max-width: 600px) {
+  /* Header: logo co vừa (ticker ẩn), actions icon-only — label dùng mẫu
+     visually-hidden GIỮ tên a11y (display:none sẽ mất accessible name),
+     nút icon 40px + gap hẹp để logo + EN + 3 nút vừa hàng đầu 375px. */
+  .header-main {
+    gap: var(--space-3);
+  }
+
+  .logo-word {
+    font-size: 20px;
+  }
+
+  .logo-ticker {
+    display: none;
+  }
+
+  .header-actions {
+    gap: var(--space-2);
+  }
+
+  .locale-switch {
+    padding-left: var(--space-2);
+  }
+
+  .header-action {
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .header-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Mini-nav: rail swipe trơn — link không co, không wrap text; tràn thì
+     scroll-x (scrollbar ẩn sẵn ở .mini-nav-inner toàn cục). */
+  .mini-nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Hero cao co giãn 380→260 (đồng bộ mirror .uk-skeleton.sk-hero — comment
+     .hero bắt buộc sync); slide padding ngang giảm; ribbon nhỏ xuống;
+     arrows 34px vừa 375px, dots giữ — vẫn usable. Title 32px kế thừa
+     block ≤900 (spec ~30-32). */
+  .hero,
+  .uk-skeleton.sk-hero {
+    height: 260px;
+  }
+
+  .hero-slide {
+    padding: 0 var(--space-5);
+  }
+
+  .hero-ribbon {
+    top: var(--space-3);
+    font-size: 14px;
+    padding: 4px 10px;
+  }
+
+  .hero-arrow {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Flash head co vừa 375px: title giảm, pill "Xem tất cả" wrap xuống
+     thay vì tràn ngang. Rail fcard giữ scroll-x (không đổi). */
+  .flash-head {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .flash-title {
+    font-size: 18px;
+  }
+
+  /* Footer: cột stack dọc 1 cột, newsletter full-width. */
+  .site-footer-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .nl-form {
+    max-width: 100%;
+  }
+}

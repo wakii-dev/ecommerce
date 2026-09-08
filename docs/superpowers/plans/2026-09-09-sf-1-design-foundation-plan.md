@@ -95,6 +95,8 @@ Consumers/regression: `tokens.test.ts` (7 exact-count assertion — cập nhật
 
 Giá trị NGUỒN: hand-off §1.2–§1.5 (đã liệt kê đủ dưới đây — không sáng tạo thêm).
 
+- [ ] **Step 0: Pre-flight môi trường** — worktree chưa có node_modules: `cd frontend && pnpm install` (mỗi lần đầu). Verify `pnpm vitest run packages/ui-kit` chạy được (suite cũ xanh) TRƯỚC khi sửa bất cứ gì.
+
 - [ ] **Step 1: Thêm motion + z-index + breakpoints vào block `:root, [data-theme='storefront']`** (sau section Elevation, comment `/* ── Tokens v2 (SF-1 FI-391) — hand-off §1.2 */`):
 
 ```css
@@ -165,7 +167,7 @@ Gradient/swatch: giữ nguyên hex lowercase như hand-off viết (chỉ dùng t
 
 - [ ] **Step 6: Cập nhật `tokens.test.ts` CÙNG COMMIT** — sửa 7 exact-count vỡ + thêm assertion mới:
   - Số count thay đổi do admin-dark: `--c-warning #FE9C08` 3→4 · `--c-accent #FFD839` 3→4 · `--c-on-accent #212121` 3→4 · `--c-link #FF6B54` 1→2 · `--c-text-muted #9E9E9E` 1→2 · `--c-border #2C2C2C` 1→2 · `--c-danger #FF5A5A` 1→2.
-  - THÊM: `countDef('--c-bg', '#0F0F0F')` = 1 (admin-dark duy nhất); dark shadows `0 1px 2px rgba(0, 0, 0, 0.4)` = 1 (tương tự 0.5/0.6); `--dur-fast: 140ms` = 1, `--dur-base: 180ms` = 1, `--dur-slow: 260ms` = 1; `--ease-pop` = 1; `--z-toast: 400` = 1; `--bp-md: 960px` = 1; `--grad-cta` contains `#F53D2D` (substring assert trên css); `--shadow-cta: 0 4px 12px rgba(245, 61, 45, 0.35)` = 1. describe mới `'tokens v2 — SF-1 FI-391 (hand-off §1.2-§1.5)'`.
+  - THÊM: `countDef('--c-bg', '#0F0F0F')` = 1 (admin-dark duy nhất); dark shadows `0 1px 2px rgba(0, 0, 0, 0.4)` = **2** (dark + admin-dark — `admin-dark` KHÔNG cascade từ `dark` vì khác attribute value, hand-off §1.5 ghi "shadow = bộ dark §1.4" = re-declare trong block; tương tự 0.5/0.6 = 2); `--dur-fast: 140ms` = 1, `--dur-base: 180ms` = 1, `--dur-slow: 260ms` = 1; `--ease-pop` = 1; `--z-toast: 400` = 1; `--bp-md: 960px` = 1; `--grad-cta` contains `#F53D2D` (substring assert trên css); `--shadow-cta: 0 4px 12px rgba(245, 61, 45, 0.35)` = 1. describe mới `'tokens v2 — SF-1 FI-391 (hand-off §1.2-§1.5)'`.
 
 - [ ] **Step 7: Run** `cd frontend && pnpm vitest run packages/ui-kit` → PASS. Commit:
 ```bash
@@ -179,7 +181,7 @@ git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-3
 - Create: `frontend/packages/ui-kit/src/assets/fonts/be-vietnam-pro-{400,500,600,700,800}-{latin,vietnamese}.woff2` (10 file, ~106KB tổng — OFL)
 - Modify: `frontend/packages/ui-kit/src/styles/tokens.css` (đầu file, trước `:root`)
 
-- [ ] **Step 1: Copy woff2 vào repo** — staging có sẵn `/tmp/bvp-fonts/files/*.woff2` (`cp /tmp/bvp-fonts/files/*.woff2 frontend/packages/ui-kit/src/assets/fonts/`; nếu staging mất: `curl -s -A "Mozilla/5.0 ... Chrome/120"` GET `https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap`, parse 10 URL khối `/* vietnamese */` + `/* latin */`, tải về đặt tên `be-vietnam-pro-<weight>-<subset>.woff2`). Verify: `file *.woff2` = "Web Open Font Format (Version 2)". KHÔNG commit file NON-woff2.
+- [ ] **Step 1: Copy woff2 vào repo** — staging có sẵn `/tmp/bvp-fonts/files/*.woff2` (`mkdir -p frontend/packages/ui-kit/src/assets/fonts && cp /tmp/bvp-fonts/files/*.woff2 frontend/packages/ui-kit/src/assets/fonts/`; nếu staging mất: `curl -s -A "Mozilla/5.0 ... Chrome/120"` GET `https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap`, parse 10 URL khối `/* vietnamese */` + `/* latin */`, tải về đặt tên `be-vietnam-pro-<weight>-<subset>.woff2`). Verify: `file *.woff2` = "Web Open Font Format (Version 2)". KHÔNG commit file NON-woff2.
 
 - [ ] **Step 2: Thêm 10 @font-face block ĐẦU tokens.css** — template (lặp 5 weights × 2 subsets; unicode-range giống hệt nhau giữa các weight):
 
@@ -383,7 +385,7 @@ export interface PaginationProps {
 ```
 Window ±2 có đầu/cuối + ellipsis (logic tự chứa trong file — không import từ storefront-web): pages = [1, page-1, page, page+1, totalPages] unique 1..totalPages sort; chèn `…` khi gap >1. totalPages ≤1 → null. prev hiện khi page>1 (rel="prev", aria-label prevLabel), next khi page<totalPages (rel="next"). URL mode: `<a>` class `uk-page` + `uk-page--active` + `aria-current="page"`. Client mode: `<button type="button">`. Nav: `<nav className="uk-pagination" aria-label={label}>`.
 
-- [ ] **Step 2: CSS** — `.uk-pagination` flex gap 4; `.uk-page` 32×32 radius-md border 1px `--c-border` nền surface `--text-sm`; hover nền `--wash-hover` `--dur-fast`; active: nền `--c-primary` chữ trắng border transparent; ellipsis `.uk-page--dots` borderless.
+- [ ] **Step 2: CSS** — `.uk-pagination` flex gap 4; `.uk-page` 32×32 radius-md border 1px `--c-border` nền surface `--text-sm`; hover nền `--wash-hover` `--dur-fast`; active: nền `--c-primary` chữ trắng border transparent; ellipsis `.uk-page--dots` borderless. (32×32 là size primitive mặc định — hand-off §2.5 admin dùng nút 30×30: SF-5 override qua css riêng nếu cần khớp anatomy admin; size nằm ngoài §1.2-§1.5 nên là dev latitude.)
 
 - [ ] **Step 3: Barrel + demo** — demo section client-mode (useState page, totalPages 12, reset scroll không cần); render kèm text "Trang N/12" để verify.
 
@@ -430,6 +432,7 @@ export interface AlertProps {
   children?: ReactNode;
   icon?: ReactNode;   // optional trái; KHÔNG default (giữ server-safe thuần)
   dismissible?: boolean; onClose?: () => void;   // dismiss → null (client-tiny: useState — thêm 'use client')
+  dismissLabel?: string;  // default 'Đóng thông báo' (ui.alert.dismiss) — aria cho nút ×
   className?: string;
 }
 ```
@@ -493,7 +496,7 @@ Markup: `<ol className="uk-stepper" aria-label={label}>` — mỗi `<li classNam
 
 - [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): primitive Stepper keyboard a11y (FI-391 T10)`.
 
-### Task 11: Icon set — Icon component + catalog 21 icons
+### Task 11: Icon set — Icon component + catalog 22 icons
 
 **Files:**
 - Create: `frontend/packages/ui-kit/src/components/Icon.tsx` (component + `ICON_PATHS` catalog cùng file — catalog là data, tách file không cần)
@@ -521,7 +524,7 @@ Render `<svg width height viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 - [ ] **Step 4: Test SSR** — đủ 22 name render không throw (loop IconName); default aria-hidden="true"; với title → role="img" + <title>; size prop → width/height attr.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): Icon set 21+ stroke-based server-safe (FI-391 T11)`.
+- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): Icon set 22 stroke-based server-safe (FI-391 T11)`.
 
 ### Task 12: Skeleton compositions + shimmer upgrade
 
@@ -585,7 +588,7 @@ Hành vi: (1) nếu `typeof IntersectionObserver === 'undefined'` → no-op (con
 ### Task 14: Tabs keyboard test + consolidation full-suite
 
 **Files:**
-- Modify: `frontend/packages/ui-kit/src/components/__tests__/overlay.test.tsx` (thêm describe Tabs keyboard vào file jsdom — hoặc file mới `tabs.test.tsx` cạnh nó nếu hợp tổ chức hơn)
+- Create: `frontend/packages/ui-kit/src/components/__tests__/tabs.test.tsx` (file jsdom test mới — pattern overlay.test.tsx)
 
 - [ ] **Step 1: Tabs keyboard test KHÓA hành vi hiện có** (Tabs.tsx:40-80 — KHÔNG sửa logic): render 3 tabs jsdom; focus tab đầu; `fireEvent.keyDown(list, { key: 'ArrowRight' })` → tab 2 `aria-selected=true` + `document.activeElement` = nút tab 2; ArrowLeft từ tab 2 → về tab 1; wrap: ArrowLeft tại tab 1 → tab CUỐI (enabled); disabled item bị skip qua; Home/End KHÔNG được handle hiện tại → test chỉ khóa Arrow behavior (không assert Home/End — không định nghĩa behavior mới).
 

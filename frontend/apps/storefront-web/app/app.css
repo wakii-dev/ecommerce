@@ -339,7 +339,9 @@ img {
 
 .site-footer-inner {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* SF-3 honesty-pass: 2 cột link (danh mục + tài khoản) + newsletter —
+     trim từ 4 cột, KHÔNG tạo trang content mới (N5). */
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-6);
   padding-top: var(--space-6);
   padding-bottom: var(--space-6);

@@ -4,8 +4,8 @@ import { localePath, type Locale } from '../../lib/format';
 /**
  * Category tiles (direction §2.2.3) — grid 6 cột (≤900px: 3), tile gradient
  * nhạt theo danh mục (§1.8 qua categoryGradient) + emoji + tên, hover
- * translateY(-2px); tile "Xem thêm" viền dashed (placeholder '#' — PLP tất
- * cả sản phẩm chưa tồn tại đến Task 12).
+ * translateY(-2px); tile "Xem thêm" viền dashed → /search (surface duyệt
+ * chung thật — trang "tất cả danh mục" chưa có, SF-3 đã probe routes).
  *
  * Public CategoryDto KHÔNG có icon (seed backend có nhưng không expose) →
  * emoji map theo slug gốc (khớp icon seed), thiếu → cycle theo vị trí.

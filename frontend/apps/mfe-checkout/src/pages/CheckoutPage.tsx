@@ -636,7 +636,9 @@ export default function CheckoutPage(): ReactElement {
             </div>
           )}
           <div className="summary-row">
-            <span>Phí vận chuyển</span>
+            {/* SF-3 honesty-pass (ADR 0006 D15-3): phí phẳng — nhãn trung thực,
+                không giả vờ báo giá GHN thời gian thực. */}
+            <span>Phí vận chuyển (phí tiêu chuẩn)</span>
             <span>{formatPrice(selectedFee)}</span>
           </div>
           <hr className="summary-divider" />

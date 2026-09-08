@@ -5,7 +5,7 @@ import { useT } from '@ecommerce/i18n';
 import { Badge, Button, Card, Select, Skeleton, StarRating, useToast } from '@ecommerce/ui-kit';
 import { catalogApi } from '../lib/api';
 import { formatDateTime } from '../lib/format';
-import type { ModerationStatus, StubReview } from '../lib/types';
+import type { ModerationStatus, AdminReview } from '../lib/types';
 
 // SF-10: reviews LIVE — productId resolve tên qua adminListProducts 1 lần
 // (map id→name); review shape khớp ReviewAdmin (catalog.yaml).
@@ -23,7 +23,7 @@ export default function ReviewsPage(): ReactElement {
         ...(status ? { status } : {}),
         page: 1,
         size: 100
-      })) as { items: StubReview[]; total: number };
+      })) as { items: AdminReview[]; total: number };
       return res.items;
     }
   });
@@ -94,7 +94,7 @@ export default function ReviewsPage(): ReactElement {
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {rows.map((review: StubReview) => (
+          {rows.map((review: AdminReview) => (
             <Card key={review.id} data-testid='review-row'>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>

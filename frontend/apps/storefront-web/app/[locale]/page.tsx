@@ -81,9 +81,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
               <span className="section-bar" aria-hidden="true" />
               <h2 className="section-title">{locale === 'en' ? 'Picked for today' : 'Gợi ý hôm nay'}</h2>
             </div>
-            {/* E7d: dead link '#' → PLP danh mục gốc đầu theo sort=discount (đúng
-                ngôn ngữ "gợi ý giảm giá"). Route toàn sàn chưa có — khi có thì
-                trỏ đó thay thế. */}
+            {/* E7d: "Xem thêm" → PLP danh mục gốc đầu theo sort=discount (đúng
+                ngôn ngữ "gợi ý giảm giá"; route thật, slug từ API categories). */}
             {categories.length > 0 ? (
               <a
                 className="featured-more"

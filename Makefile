@@ -6,7 +6,7 @@
 
 COMPOSE ?= docker compose
 
-.PHONY: help infra down keys full full-stop dev dev-stop dev-fe seed e2e
+.PHONY: help infra down keys stripe-listen full full-stop dev dev-stop dev-fe seed e2e
 
 help: ## Liệt kê targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -25,6 +25,30 @@ keys: ## Sinh RSA keypair JWT → infra/keys/ (gitignored, SF-3 identity dùng)
 	openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out infra/keys/jwt-private.pem
 	openssl rsa -in infra/keys/jwt-private.pem -pubout -out infra/keys/jwt-public.pem 2>/dev/null
 	@echo "→ Đã sinh infra/keys/jwt-{private,public}.pem"
+
+stripe-listen: ## (SF-1) `stripe listen` (compose stripe-cli) forward webhook → payment :8086 — in whsec để điền .env
+	@test -f .env || { echo "✗ thiếu .env — cần STRIPE_SECRET_KEY (sk_test_*)"; exit 1; }
+	@bash -c '\
+		SK=$$(grep -E "^STRIPE_SECRET_KEY=sk_test_" .env | head -1 | cut -d= -f2-); \
+		test -n "$$SK" || { echo "✗ .env thiếu STRIPE_SECRET_KEY (sk_test_*)"; exit 1; }; \
+		mkdir -p .run; \
+		docker rm -f ecommerce-stripe-cli-listen >/dev/null 2>&1 || true; \
+		docker compose --profile stripe run --rm -d --name ecommerce-stripe-cli-listen stripe-cli \
+		  listen --api-key "$$SK" \
+		  --forward-to host.docker.internal:8086/payment/webhook >/dev/null 2>&1; \
+		echo "→ forwarding → http://host.docker.internal:8086/payment/webhook (log: docker logs ecommerce-stripe-cli-listen)"; \
+		W=""; \
+		for i in $$(seq 1 30); do \
+		  W=$$(docker logs ecommerce-stripe-cli-listen 2>&1 | grep -o "whsec_[A-Za-z0-9]*" | head -1); \
+		  [ -n "$$W" ] && break; \
+		  sleep 1; \
+		done; \
+		if [ -n "$$W" ]; then \
+		  echo "→ STRIPE_WEBHOOK_SECRET=$$W"; \
+		  echo "  (điền vào .env rồi restart payment: make dev svc=payment)"; \
+		else \
+		  echo "✗ chưa thấy whsec sau 30s:"; tail -5 .run/stripe-listen.log; exit 1; \
+		fi'
 
 db-ensure: ## (SF-10) Tạo DB thiếu trên volume cũ (init script chỉ chạy volume rỗng)
 	@for db in db_identity db_catalog db_ordering db_payment db_inventory db_template db_notification db_partner db_affiliate; do \

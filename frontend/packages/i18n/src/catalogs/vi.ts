@@ -225,7 +225,15 @@ export const vi = {
       created: 'Đã tạo mã giảm giá',
       updated: 'Đã cập nhật mã giảm giá',
       toggled: 'Đã đổi trạng thái mã',
-      empty: 'Chưa có mã giảm giá nào'
+      empty: 'Chưa có mã giảm giá nào',
+      inactive: 'Tắt',
+      deleteBlocked: 'Không xóa được mã',
+      codeLocked: 'Mã không đổi khi sửa',
+      errCode: 'Mã 1-64 ký tự [A-Za-z0-9_-]',
+      errValue: 'Giá trị không hợp lệ (PERCENT 1-100, FIXED > 0)',
+      errMinOrder: 'Đơn tối thiểu phải ≥ 0',
+      errWindow: 'Kết thúc phải sau bắt đầu',
+      errLimit: 'Giới hạn lượt phải ≥ 1 (trống = không giới hạn)'
     },
     affiliates: {
       title: 'Affiliate',

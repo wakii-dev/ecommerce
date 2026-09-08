@@ -35,4 +35,11 @@ public interface CouponReservationRepository extends JpaRepository<CouponReserva
     @Query("SELECT COUNT(r) FROM CouponReservation r WHERE r.couponCode = :code "
         + "AND r.status = com.ecommerce.ordering.domain.CouponReservationStatus.RESERVED")
     long countReservedForCoupon(@Param("code") String code);
+
+    /**
+     * FI-369 SF-2 (N4) — đếm MỌI reservation (cả RELEASED/FINALIZED): xóa cứng
+     * coupon có lịch sử sẽ vỡ FK coupon_reservations_coupon_code_fkey (row
+     * reservation là audit trail, không xóa kèm) → admin dùng toggle off.
+     */
+    long countByCouponCode(String code);
 }

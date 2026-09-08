@@ -224,7 +224,15 @@ export const en = {
       created: 'Coupon created',
       updated: 'Coupon updated',
       toggled: 'Coupon status toggled',
-      empty: 'No coupons yet'
+      empty: 'No coupons yet',
+      inactive: 'Off',
+      deleteBlocked: 'Cannot delete coupon',
+      codeLocked: 'Code is immutable when editing',
+      errCode: 'Code: 1-64 chars [A-Za-z0-9_-]',
+      errValue: 'Invalid value (PERCENT 1-100, FIXED > 0)',
+      errMinOrder: 'Min order must be ≥ 0',
+      errWindow: 'Ends at must be after starts at',
+      errLimit: 'Usage limit must be ≥ 1 (empty = unlimited)'
     },
     affiliates: {
       title: 'Affiliates',

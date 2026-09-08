@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,11 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Admin coupon CRUD (FI-366 SF-1 T11 — spec §4.10 shape: %, fixed, window,
- * usage limit + validation). Audit E7a: admin coupons CRUD THIẾU backend —
- * contracts amendment A2 PENDING coordinator (REQUIREMENT-GAP FI-366); shape
- * đóng băng theo epic spec, reconcile khi A2 land.
+ * usage limit + validation) + FI-369 SF-2 bổ sung GET list + toggle active
+ * (contracts amendment A3 — proposal theo baseline shape này, coordinator
+ * apply). KHÔNG đụng create/update/delete đã đúng từ baseline.
  *
  * <p>2 lớp guard như AdminOrderController: gateway prefix
  * {@code /api/ordering/admin/**} (403 trước route) + {@code @PreAuthorize}
@@ -39,6 +42,12 @@ public class AdminCouponController {
         this.couponService = couponService;
     }
 
+    /** GET list (FI-369 SF-2 A3) — toàn bộ coupon, admin view đủ usageLimit/usedCount/active. */
+    @GetMapping
+    public List<AdminCouponDto> list() {
+        return couponService.adminList().stream().map(AdminCouponController::toDto).toList();
+    }
+
     @PostMapping
     public ResponseEntity<AdminCouponDto> create(@RequestBody AdminCouponRequest request) {
         Coupon saved = couponService.adminCreate(request);
@@ -54,6 +63,15 @@ public class AdminCouponController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String code) {
         couponService.adminDelete(code);
+    }
+
+    /**
+     * Toggle active (FI-369 SF-2 A3 — POST /toggle, flip, không body — contract
+     * a205cbf). Off: mã mới từ chối, in-flight RESERVED vẫn honor (N4).
+     */
+    @PostMapping("/{code}/toggle")
+    public AdminCouponDto toggle(@PathVariable String code) {
+        return toDto(couponService.adminToggle(code));
     }
 
     static AdminCouponDto toDto(Coupon c) {

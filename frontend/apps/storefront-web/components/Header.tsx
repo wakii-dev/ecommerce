@@ -32,8 +32,9 @@ const LABELS: Record<
 /**
  * Header sticky 2 hàng (direction §2.1): logo wordmark 26px/800 primary +
  * chấm đỏ 9px + ticker primary-tint → SearchBar (flex trung tâm) → actions.
- * Hàng 2 mini-nav nền primary; Hàng mới/Bán chạy màu accent. Links Danh mục
- * placeholder '#' tới khi Task 12 wiring categories.
+ * Hàng 2 mini-nav nền primary; Hàng mới/Bán chạy màu accent. Mini-nav → PLP
+ * /c/dien-tu — slug seed thật (SeedData "Điện Tử", probe SF-3); sort
+ * newest/rating là values PlpSort thật (lib/plp-params).
  */
 export default function Header({ locale }: { locale: Locale }) {
   const t = LABELS[locale];
@@ -69,9 +70,9 @@ export default function Header({ locale }: { locale: Locale }) {
           </a>
         </div>
       </div>
-      {/* Dead link '#' → PLP flagship (khớp convention hero CTA /c/dien-tu).
-          Sort mới/rating proxy Hàng mới/Bán chạy (API chưa có sort bestseller);
-          route danh mục riêng + toàn sàn chưa có — khi có thì thay. */}
+      {/* Mini-nav → PLP flagship /c/dien-tu (khớp convention hero CTA; slug
+          seed thật). Sort newest/rating proxy Hàng mới/Bán chạy (API chưa có
+          sort bestseller); route "toàn sàn" chưa có — khi có thì trỏ đó. */}
       <nav className="mini-nav" aria-label="Danh mục nhanh">
         <div className="container mini-nav-inner">
           <a href={localePath('/c/dien-tu', locale)}>{t.categories}</a>

@@ -1,4 +1,5 @@
 import type { Locale } from '../../lib/format';
+import { tParams } from '../../lib/i18n';
 import type { PlpQuery } from '../../lib/plp-params';
 import SortSelect from './SortSelect';
 
@@ -19,7 +20,7 @@ export default function Toolbar({ total, locale, query }: ToolbarProps) {
   return (
     <div className="plp-toolbar">
       <span className="plp-results">
-        {locale === 'en' ? `${total} products` : `${total} sản phẩm`}
+        {tParams(locale, 'plp.productsCount', { n: total })}
       </span>
       <SortSelect value={query.sort} locale={locale} />
     </div>

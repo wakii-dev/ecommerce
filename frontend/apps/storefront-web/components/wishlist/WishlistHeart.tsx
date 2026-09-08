@@ -6,6 +6,7 @@ import type { ReactElement, MouseEvent } from 'react';
 import { ensureSession } from '../../lib/account-session';
 import { shellUrl } from '../../lib/site';
 import type { Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { applyToggle, bustWishlistIdsCache, fetchWishlistIds, toggleWishlist } from './wishlist-api';
 
 /**
@@ -14,13 +15,8 @@ import { applyToggle, bustWishlistIdsCache, fetchWishlistIds, toggleWishlist } f
  * → fetch ids (cache dùng chung mọi heart trong page) → filled khi đã heart.
  * Click: preventDefault + stopPropagation (card là <a> — KHÔNG điều hướng);
  * guest → `/account` (shell đăng nhập — pack); authed → PUT/DELETE optimistic,
- * lỗi revert.
+ * lỗi revert. T12: copy trong lib/i18n (miền `wishlist`).
  */
-
-const COPY = {
-  vi: { add: 'Thêm vào yêu thích', remove: 'Bỏ yêu thích', guest: 'Đăng nhập để lưu yêu thích' },
-  en: { add: 'Add to wishlist', remove: 'Remove from wishlist', guest: 'Sign in to save to wishlist' },
-} as const;
 
 export default function WishlistHeart({
   productId,
@@ -31,7 +27,6 @@ export default function WishlistHeart({
   locale: Locale;
   variant?: 'card' | 'pdp';
 }): ReactElement {
-  const copy = COPY[locale];
   const [authed, setAuthed] = useState<boolean | null>(null); // null = đang boot
   const [active, setActive] = useState(false);
   const idsRef = useRef<string[]>([]); // state thật — update qua applyToggle (reducer đã test)
@@ -97,8 +92,8 @@ export default function WishlistHeart({
       type="button"
       className={className}
       aria-pressed={active}
-      aria-label={authed === false ? copy.guest : active ? copy.remove : copy.add}
-      title={authed === false ? copy.guest : active ? copy.remove : copy.add}
+      aria-label={authed === false ? t(locale, 'wishlist.guest') : active ? t(locale, 'wishlist.remove') : t(locale, 'wishlist.add')}
+      title={authed === false ? t(locale, 'wishlist.guest') : active ? t(locale, 'wishlist.remove') : t(locale, 'wishlist.add')}
       onClick={onClick}
     >
       {active ? '♥' : '♡'}

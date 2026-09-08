@@ -4,25 +4,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 
 import type { Locale } from '../../lib/format';
-
-const COPY = {
-  vi: {
-    title: 'Hết hàng — nhắn tôi khi có hàng',
-    email: 'Email của bạn',
-    submit: 'Nhắn tôi khi có hàng',
-    ok: 'Đã đăng ký ✓ Sẽ nhắn bạn ngay khi hàng về.',
-    fail: 'Không đăng ký được — thử lại sau.',
-    invalidEmail: 'Email không hợp lệ',
-  },
-  en: {
-    title: 'Out of stock — notify me when back',
-    email: 'Your email',
-    submit: 'Notify me when available',
-    ok: 'Subscribed ✓ We will email you when it is back.',
-    fail: 'Could not subscribe — try again later.',
-    invalidEmail: 'Invalid email',
-  },
-} as const;
+import { t } from '../../lib/i18n';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,13 +14,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * stock-alert (public, 202). Pattern AddToCart: fetch availability qua Next
  * rewrite; fetch lỗi/không xác định (null) → ẨN form (không hiện khi không
  * biết trạng thái — guest vẫn đọc được qua public-paths inventory availability).
+ * T12: copy trong lib/i18n (miền `pdp.stock*`).
  */
 export default function StockAlertInput({ variantId, slug, locale }: {
   variantId: string | null;
   slug: string;
   locale: Locale;
 }): ReactElement | null {
-  const copy = COPY[locale];
   const [available, setAvailable] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +63,7 @@ export default function StockAlertInput({ variantId, slug, locale }: {
     event.preventDefault();
     setError(null);
     if (!EMAIL_RE.test(email.trim())) {
-      setError(copy.invalidEmail);
+      setError(t(locale, 'pdp.stockInvalidEmail'));
       return;
     }
     setPending(true);
@@ -95,7 +77,7 @@ export default function StockAlertInput({ variantId, slug, locale }: {
       if (!res.ok) throw new Error(`stock-alert ${res.status}`);
       setDone(true);
     } catch {
-      setError(copy.fail);
+      setError(t(locale, 'pdp.stockFail'));
     } finally {
       setPending(false);
     }
@@ -104,23 +86,23 @@ export default function StockAlertInput({ variantId, slug, locale }: {
   return (
     <div className="pdp-stock-alert" data-testid="stock-alert">
       {done ? (
-        <p className="pdp-stock-alert-ok" role="status">{copy.ok}</p>
+        <p className="pdp-stock-alert-ok" role="status">{t(locale, 'pdp.stockOk')}</p>
       ) : (
         <>
-          <p className="pdp-stock-alert-title">{copy.title}</p>
+          <p className="pdp-stock-alert-title">{t(locale, 'pdp.stockTitle')}</p>
           <form onSubmit={(e) => void submit(e)} noValidate className="pdp-stock-alert-form">
             <input
               type="email"
               name="email"
               className="pdp-stock-alert-input"
-              placeholder={copy.email}
+              placeholder={t(locale, 'pdp.stockEmail')}
               autoComplete="email"
-              aria-label={copy.email}
+              aria-label={t(locale, 'pdp.stockEmail')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <button type="submit" className="pdp-stock-alert-btn" disabled={pending}>
-              {copy.submit}
+              {t(locale, 'pdp.stockSubmit')}
             </button>
           </form>
           {error ? <p className="pdp-stock-alert-error" role="alert">{error}</p> : null}

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+import type { Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
+
 /**
  * Countdown flash sale (direction §3) — format hh:mm:ss, hộp 36×36 nền
  * #212121 (token --c-text) chữ --c-accent, tabular-nums 18px/800, tick 1s.
@@ -9,6 +12,7 @@ import { useEffect, useState } from 'react';
  * Hydration-safe: render placeholder `--` đến khi mounted rồi mới tick
  * (SSR render Date.now() khác client hydration render → tránh mismatch text);
  * hết hạn (hoặc endsAt parse NaN) → return null — block ẩn.
+ * T12: aria-label vi/en (trước đây hardcode vi cả 2 locale).
  */
 
 function pad2(value: number): string {
@@ -27,7 +31,7 @@ function remaining(endsAt: string, now: number): { h: string; m: string; s: stri
   };
 }
 
-export default function Countdown({ endsAt }: { endsAt: string }) {
+export default function Countdown({ endsAt, locale }: { endsAt: string; locale: Locale }) {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export default function Countdown({ endsAt }: { endsAt: string }) {
   // Chưa mounted (SSR + lần hydrate đầu) → placeholder, không đoán mốc.
   if (now === null) {
     return (
-      <span className="countdown" role="timer" aria-label="Đếm ngược flash sale">
+      <span className="countdown" role="timer" aria-label={t(locale, 'home.countdown')}>
         <span className="countdown-box">--</span>
         <span className="countdown-sep" aria-hidden="true">
           :
@@ -57,7 +61,7 @@ export default function Countdown({ endsAt }: { endsAt: string }) {
   if (!parts) return null;
 
   return (
-    <span className="countdown" role="timer" aria-label="Đếm ngược flash sale">
+    <span className="countdown" role="timer" aria-label={t(locale, 'home.countdown')}>
       <span className="countdown-box">{parts.h}</span>
       <span className="countdown-sep" aria-hidden="true">
         :

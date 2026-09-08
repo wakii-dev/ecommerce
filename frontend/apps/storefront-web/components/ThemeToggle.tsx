@@ -3,12 +3,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
+import type { Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 import { resolveTheme, storedValueFor, type Theme } from '../lib/theme';
-
-const COPY = {
-  vi: { toDark: 'Chuyển giao diện tối', toLight: 'Chuyển giao diện sáng' },
-  en: { toDark: 'Switch to dark mode', toLight: 'Switch to light mode' },
-} as const;
 
 export const THEME_STORAGE_KEY = 'ecommerce.theme';
 
@@ -20,7 +17,7 @@ export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${
  * persist localStorage['ecommerce.theme'] — chỉ ghi khi user đi NGƯỢC
  * system (storedValueFor) → reload giữ nguyên ✓, lần đầu theo system ✓.
  */
-export default function ThemeToggle({ locale }: { locale: 'vi' | 'en' }): ReactElement {
+export default function ThemeToggle({ locale }: { locale: Locale }): ReactElement {
   const [theme, setTheme] = useState<Theme>('storefront');
   const [mounted, setMounted] = useState(false);
 
@@ -44,14 +41,15 @@ export default function ThemeToggle({ locale }: { locale: 'vi' | 'en' }): ReactE
     setTheme(next);
   };
 
-  const copy = COPY[locale];
+  const label = t(locale, theme === 'dark' ? 'common.themeToLight' : 'common.themeToDark');
+  const stateLabel = t(locale, theme === 'dark' ? 'common.themeLight' : 'common.themeDark');
   return (
     <button
       type="button"
       className="header-action theme-toggle"
-      aria-label={theme === 'dark' ? copy.toLight : copy.toDark}
+      aria-label={label}
       aria-pressed={theme === 'dark'}
-      title={theme === 'dark' ? copy.toLight : copy.toDark}
+      title={label}
       onClick={toggle}
       data-mounted={mounted}
     >
@@ -67,7 +65,8 @@ export default function ThemeToggle({ locale }: { locale: 'vi' | 'en' }): ReactE
           <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" strokeLinejoin="round" />
         )}
       </svg>
-      {locale === 'vi' ? (theme === 'dark' ? 'Sáng' : 'Tối') : theme === 'dark' ? 'Light' : 'Dark'}
+      {/* Label bọc span để T13 ẩn icon-only <600px (sr-only — aria-label giữ name) */}
+      <span className="header-action-label">{stateLabel}</span>
     </button>
   );
 }

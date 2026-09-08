@@ -4,6 +4,24 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, defineMfeConfig } from '@ecommerce/config/vite';
 
+// SPA fallback: serve index.html tại mọi route (MF plugin override appType)
+const spaFallback = {
+  appType: 'spa' as const,
+  plugins: [
+    {
+      name: 'spa-fallback',
+      configureServer(server: import('vite').ViteDevServer) {
+        server.middlewares.use((req, _res, next) => {
+          if (req.method === 'GET' && !req.url?.includes('.') && !req.url?.startsWith('/@')) {
+            req.url = '/';
+          }
+          next();
+        });
+      }
+    }
+  ]
+};
+
 const mfeConfig = defineMfeConfig({
   name: 'shell_host',
   remotes: {
@@ -44,6 +62,7 @@ const mfeConfig = defineMfeConfig({
 });
 
 export default defineConfig({
+  ...spaFallback,
   ...mfeConfig,
   plugins: [react(), ...(mfeConfig.plugins ?? [])],
   server: {

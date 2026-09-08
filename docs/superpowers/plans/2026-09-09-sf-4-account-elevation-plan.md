@@ -205,22 +205,22 @@ git commit -m "feat(account): AccountLayout side-nav 6 mục + active + collapse
 - Modify: `pages/wishlist/WishlistPage.tsx`, `src/page.css`, `catalogs/{vi,en}.ts`
 - Create test: `src/__tests__/wishlistPage.test.tsx`
 
-- [ ] **Step 1: Grid anatomy** — wl-card elevation theo product-card direction §2.2 (shadow-1 radius-md border, hover translateY(-3px) + shadow-3 `--dur-base` — wishlist card là product card = điểm nhấn thương mại được lên 3); thumb 190 cao fallback gradient `--c-bg` + emoji→`<Icon name="package" size={44}>` muted; tên clamp 2 13/600 hover `--c-link`; giá 17/800 `--c-danger` (GIỮ formatVnd local — no import chéo app); sao `--c-warning` / track `--star-track` (StarRating primitive? — ratingAvg hiển thị tĩnh: dùng text ★ hiện có key hóa aria, hoặc StarRating — chốt: StarRating primitive read-only value + count, khớp storefront anatomy); nút Xóa → IconButton outline sm aria-label + Icon trash, hover `--c-danger`.
-- [ ] **Step 2: Confirm delete** — click Xóa → ui-kit Modal confirm (title/desc key + tên SP, footer: Hủy secondary + Xóa danger loading) → mới gọi removeWishlistItem. GIỮ removingId state + error path.
-- [ ] **Step 3: Skeleton + empty** — loading → grid 4 ProductCardSkeleton (`.wl-grid` skeleton variant); empty → EmptyState icon heart + eyebrow key (direction §4 Wishlist: empty card border dashed + 'Chưa có sản phẩm yêu thích'); error giữ.
-- [ ] **Step 4: i18n** — `account.wishlist.*`: title, emptyTitle/emptyDesc, delete, deleteConfirmTitle/Desc, cancel, deleting, errorLoad, errorRemove.
-- [ ] **Step 5: Unit test** — render items → link PDP đúng slug; click Xóa → modal mở, KHÔNG gọi remove ngay (mock contracts client); confirm → remove gọi; empty → EmptyState; loading → skeletons.
-- [ ] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): wishlist grid product-card anatomy + confirm delete + skeleton (FI-394 T7)`.
+- [x] **Step 1: Grid anatomy** — wl-card elevation theo product-card direction §2.2 (shadow-1 radius-md border, hover translateY(-3px) + shadow-3 `--dur-base` — wishlist card là product card = điểm nhấn thương mại được lên 3); thumb 190 cao fallback gradient `--c-bg` + emoji→`<Icon name="package" size={44}>` muted; tên clamp 2 13/600 hover `--c-link`; giá 17/800 `--c-danger` (GIỮ formatVnd local — no import chéo app); sao `--c-warning` / track `--star-track` (StarRating primitive? — ratingAvg hiển thị tĩnh: dùng text ★ hiện có key hóa aria, hoặc StarRating — chốt: StarRating primitive read-only value + count, khớp storefront anatomy); nút Xóa → IconButton outline sm aria-label + Icon trash, hover `--c-danger`.
+- [x] **Step 2: Confirm delete** — click Xóa → ui-kit Modal confirm (title/desc key + tên SP, footer: Hủy secondary + Xóa danger loading) → mới gọi removeWishlistItem. GIỮ removingId state + error path.
+- [x] **Step 3: Skeleton + empty** — loading → grid 4 ProductCardSkeleton (`.wl-grid` skeleton variant); empty → EmptyState icon heart + eyebrow key (direction §4 Wishlist: empty card border dashed + 'Chưa có sản phẩm yêu thích'); error giữ.
+- [x] **Step 4: i18n** — `account.wishlist.*`: title, emptyTitle/emptyDesc, delete, deleteConfirmTitle/Desc, cancel, deleting, errorLoad, errorRemove.
+- [x] **Step 5: Unit test** — render items → link PDP đúng slug; click Xóa → modal mở, KHÔNG gọi remove ngay (mock contracts client); confirm → remove gọi; empty → EmptyState; loading → skeletons.
+- [x] **Step 6: Run** vitest + tsc + parity → PASS. Commit: `feat(account): wishlist grid product-card anatomy + confirm delete + skeleton (FI-394 T7)`.
 
 ### Task 8: MyReviewsPage — badges + polish
 
 **Files:**
 - Modify: `pages/my-reviews/MyReviewsPage.tsx`, `src/page.css`, `catalogs/{vi,en}.ts`
 
-- [ ] **Step 1: Badge tints** — STATUS_BADGE giữ Badge primitive variant tints (PENDING warning/APPROVED success/REJECTED danger — đã đúng) + labels → keys; verified '✓ Mua đã xác nhận' → class + Icon check 14 + key; stars color giữ `--c-warning` letter-spacing 2 (không StarRating — tĩnh text đủ, list không cần interactive).
-- [ ] **Step 2: Polish + skeleton** — card shadow-1 radius-md hover yên tĩnh (review list không cascade — không phải commerce card); loading → ListSkeleton thay 'Đang tải…'; empty → EmptyState icon star + keys; date format giữ.
-- [ ] **Step 3: i18n** — `account.reviews.*`: title, statusPending/statusApproved/statusRejected, verified, emptyTitle/emptyDesc, loading, errorLoad, productFallback.
-- [ ] **Step 4: Run** vitest + tsc + parity → PASS. Commit: `feat(account): my-reviews badge keys + skeleton + empty Icon (FI-394 T8)`.
+- [x] **Step 1: Badge tints** — STATUS_BADGE giữ Badge primitive variant tints (PENDING warning/APPROVED success/REJECTED danger — đã đúng) + labels → keys; verified '✓ Mua đã xác nhận' → class + Icon check 14 + key; stars color giữ `--c-warning` letter-spacing 2 (không StarRating — tĩnh text đủ, list không cần interactive).
+- [x] **Step 2: Polish + skeleton** — card shadow-1 radius-md hover yên tĩnh (review list không cascade — không phải commerce card); loading → ListSkeleton thay 'Đang tải…'; empty → EmptyState icon star + keys; date format giữ.
+- [x] **Step 3: i18n** — `account.reviews.*`: title, statusPending/statusApproved/statusRejected, verified, emptyTitle/emptyDesc, loading, errorLoad, productFallback.
+- [x] **Step 4: Run** vitest + tsc + parity → PASS. Commit: `feat(account): my-reviews badge keys + skeleton + empty Icon (FI-394 T8)`.
 
 ### Task 9: Affiliate + Loyalty KPI polish + ledger Table + anchor
 

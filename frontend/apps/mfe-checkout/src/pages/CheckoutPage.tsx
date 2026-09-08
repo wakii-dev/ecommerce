@@ -21,6 +21,7 @@ import {
 } from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
 import { readAffiliateRef } from '../lib/affiliateRef';
+import { clearCarryCoupon, getCarryCoupon, setCarryCoupon } from '../lib/couponCarry';
 import '../page.css';
 
 /**
@@ -151,14 +152,22 @@ export default function CheckoutPage(): ReactElement {
     mountedRef.current = null;
   }, []);
 
-  const applyCoupon = async (): Promise<void> => {
-    if (!couponCode.trim() || couponChecking) return;
+  /** FI-393 T5 — apply coupon (nút "Áp dụng" step-3 KHÔNG đổi, hoặc auto-apply
+   *  mã carry từ cart). Trả true khi áp OK để caller (carry) biết đường clear.
+   *  Success → setCarryCoupon luôn (giữ carry fresh khi user cart↔checkout). */
+  const applyCoupon = useCallback(async (rawCode?: string): Promise<boolean> => {
+    const code = (rawCode ?? couponCode).trim();
+    if (!code || couponChecking) return false;
     setCouponChecking(true);
+    let ok = false;
     try {
-      const result = await validateCoupon(couponCode, subtotal);
+      const result = await validateCoupon(code, subtotal);
       if (result.valid) {
         setCouponDiscount(result.discount);
+        setCouponCode(code);
         setCouponError(null);
+        setCarryCoupon(code);
+        ok = true;
       } else {
         setCouponDiscount(null);
         setCouponError(result.message ?? 'Mã không hợp lệ');
@@ -169,7 +178,24 @@ export default function CheckoutPage(): ReactElement {
     } finally {
       setCouponChecking(false);
     }
-  };
+    return ok;
+  }, [couponCode, couponChecking, subtotal]);
+
+  // FI-393 T5 — coupon carry từ cart: khi cart ĐÃ LOAD (subtotal thật —
+  // validate với subtotal 0 sẽ sai minOrder) và chưa có coupon nào áp → tự
+  // apply mã carry đúng 1 LẦN (ref — cart đổi tiếp không apply lại). Fail
+  // (hết hạn/minOrder) → couponError hiển thị như apply thủ công + clear
+  // carry NGAY (stale code không re-error mỗi lần vào checkout).
+  const carryTriedRef = useRef(false);
+  useEffect(() => {
+    if (carryTriedRef.current || !cart) return;
+    carryTriedRef.current = true;
+    const carried = getCarryCoupon();
+    if (!carried || couponDiscount !== null) return;
+    void applyCoupon(carried).then((ok) => {
+      if (!ok) clearCarryCoupon();
+    });
+  }, [cart, couponDiscount, applyCoupon]);
 
   const clearCartAfterSuccess = useCallback(async (): Promise<void> => {
     // Stub chưa có server persist giỏ sau order — xóa line khả dụng (contract
@@ -191,6 +217,7 @@ export default function CheckoutPage(): ReactElement {
     } catch {
       // storage full — confirmation page sẽ hiện empty state
     }
+    clearCarryCoupon(); // FI-393 T5 — đơn xong: mã đã tiêu thụ, carry hết hiệu lực
     await clearCartAfterSuccess();
     appNavigate('/order/confirmation');
   }, [clearCartAfterSuccess]);
@@ -456,6 +483,7 @@ export default function CheckoutPage(): ReactElement {
                     onClick={() => {
                       setCouponDiscount(null);
                       setCouponCode('');
+                      clearCarryCoupon(); // FI-393 T5 — gỡ thủ công → carry cũng hết
                     }}
                   >
                     Gỡ

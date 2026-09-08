@@ -253,6 +253,43 @@
   font-size: 13px;
 }
 
+/* FI-393 T5 — coupon áp từ cart: input dashed + nút tint (direction §2.4) */
+.cart-coupon__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px dashed var(--c-border);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.cart-coupon__input:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+
+.cart-coupon__apply {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-sm, 2px);
+  background: var(--tint-primary-bg);
+  color: var(--tint-primary-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-coupon__apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* ── Payment ─────────────────────────────────────────────────────────── */
 .pay-panel {
   display: flex;

@@ -7,6 +7,8 @@ import { useT } from '@ecommerce/i18n';
 import { useCart } from '../lib/useCart';
 import { cartCount, type CartItem } from '../lib/cartApi';
 import { storefrontUrl } from '../lib/appUrls';
+import { validateCoupon } from '../lib/orderingApi';
+import { clearCarryCoupon, setCarryCoupon } from '../lib/couponCarry';
 import '../page.css';
 
 /**
@@ -93,11 +95,50 @@ export default function CartPage(): ReactElement {
   const availableCount = cart ? cart.items.filter((item) => !item.unavailable).length : 0;
   const [pendingRemove, setPendingRemove] = useState<CartItem | null>(null);
 
+  // FI-393 T5 — coupon áp TỪ cart, carry sang checkout qua sessionStorage.
+  // Server-authoritative: validateCoupon(code, cart.subtotal) thật (cùng API
+  // checkout dùng); áp OK → setCarryCoupon, gỡ → clearCarryCoupon.
+  const [couponInput, setCouponInput] = useState('');
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   const confirmRemove = async (): Promise<void> => {
     if (!pendingRemove) return;
     const itemId = pendingRemove.id;
     setPendingRemove(null);
     await remove(itemId);
+  };
+
+  const applyCartCoupon = async (): Promise<void> => {
+    const code = couponInput.trim();
+    if (!code || couponChecking || !cart) return;
+    setCouponChecking(true);
+    setCouponError(null);
+    try {
+      const result = await validateCoupon(code, cart.subtotal);
+      if (result.valid) {
+        setCouponApplied({ code, discount: result.discount });
+        setCarryCoupon(code);
+      } else {
+        setCouponApplied(null);
+        clearCarryCoupon();
+        setCouponError(result.message ?? t('checkout.coupon.invalid'));
+      }
+    } catch (err) {
+      setCouponApplied(null);
+      clearCarryCoupon();
+      setCouponError(err instanceof Error ? err.message : t('checkout.coupon.invalid'));
+    } finally {
+      setCouponChecking(false);
+    }
+  };
+
+  const removeCartCoupon = (): void => {
+    setCouponApplied(null);
+    setCouponInput('');
+    setCouponError(null);
+    clearCarryCoupon();
   };
 
   if (loading) {
@@ -172,6 +213,50 @@ export default function CartPage(): ReactElement {
             <strong>{formatPrice(cart.subtotal)}</strong>
           </div>
           <div className="summary-note">{t('checkout.cart.summary.note')}</div>
+
+          {couponApplied ? (
+            <div className="coupon-applied">
+              <span>
+                <strong>{couponApplied.code.toUpperCase()}</strong> —{' '}
+                {t('checkout.coupon.applied', { amount: formatPrice(couponApplied.discount) })}
+              </span>
+              <button type="button" className="cart-line-remove" onClick={removeCartCoupon}>
+                {t('checkout.coupon.remove')}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="coupon-box">
+                <input
+                  className="cart-coupon__input"
+                  aria-label={t('checkout.coupon.label')}
+                  placeholder="WELCOME10"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void applyCartCoupon();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="cart-coupon__apply"
+                  disabled={couponChecking}
+                  onClick={() => void applyCartCoupon()}
+                >
+                  {couponChecking ? t('checkout.coupon.checking') : t('checkout.coupon.apply')}
+                </button>
+              </div>
+              {couponError ? (
+                <div className="coupon-error" role="alert">
+                  {couponError}
+                </div>
+              ) : null}
+            </>
+          )}
+
           <hr className="summary-divider" />
           <Button
             variant="primary"

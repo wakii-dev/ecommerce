@@ -3,6 +3,8 @@
 // cancel modal Escape đóng (useOverlay document keydown), tracking-block +
 // timeline dot class (event primary / mốc terminal success). Mock ordersApi +
 // bootstrap (globals:false → cleanup afterEach — pattern ordersPage.test.tsx).
+// review-G2 (FI-394): RMA error-routing (0 món / thiếu lý do / API reject) +
+// cancel confirm flow + dot CANCELLED/FAILED nền danger.
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
@@ -199,5 +201,115 @@ describe('OrderDetailPage', () => {
     // Timeline đơn: mốc DELIVERED (terminal) → dot --c-success; entry cũ → dot default
     expect(document.querySelectorAll('.od-timeline .od-timeline__item--success .od-timeline__dot').length).toBe(1);
     expect(document.querySelectorAll('.od-timeline__dot').length).toBe(5); // 2 events + 3 mốc đơn
+  });
+
+  // ── review-G2 (FI-394): RMA error-routing 3 nhánh + cancel confirm flow ──
+
+  it('RMA submit 0 món chọn → lỗi qua block role=alert, Textarea KHÔNG có error prop', async () => {
+    vi.mocked(fetchMyOrder).mockResolvedValue(orderFixture());
+    vi.mocked(fetchMyRmas).mockResolvedValue(EMPTY_RMA_PAGE);
+    vi.mocked(fetchOrderTracking).mockResolvedValue(TRACKING);
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+    await screen.findByText('Đơn #A1B2C3D4');
+
+    fireEvent.click(screen.getByTestId('rma-create'));
+    const dialogEl = await screen.findByRole('dialog');
+    const dialog = within(dialogEl);
+
+    // qty mặc định 0 cho mọi món (openRmaModal init 0) → nhánh lines.length === 0
+    fireEvent.click(dialog.getByTestId('rma-submit'));
+
+    // Lỗi rmaErrorEmpty !== rmaErrorReason → block .od-rma-error (alert duy nhất)
+    expect(dialog.getByRole('alert').textContent).toBe('Chọn ít nhất 1 sản phẩm muốn trả');
+    // error prop Textarea chỉ nhận rmaErrorReason → .uk-error KHÔNG render
+    expect(dialogEl.querySelectorAll('.uk-error').length).toBe(0);
+    expect(vi.mocked(createRma)).not.toHaveBeenCalled();
+  });
+
+  it('RMA submit có món nhưng reason rỗng → Textarea error prop (.uk-error), KHÔNG block alert', async () => {
+    vi.mocked(fetchMyOrder).mockResolvedValue(orderFixture());
+    vi.mocked(fetchMyRmas).mockResolvedValue(EMPTY_RMA_PAGE);
+    vi.mocked(fetchOrderTracking).mockResolvedValue(TRACKING);
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+    await screen.findByText('Đơn #A1B2C3D4');
+
+    fireEvent.click(screen.getByTestId('rma-create'));
+    const dialogEl = await screen.findByRole('dialog');
+    const dialog = within(dialogEl);
+
+    // Chọn 1 món (stepper 0 → 1) nhưng bỏ trống lý do
+    const row = dialog.getByText('Áo thun cotton').closest('.od-rma-item') as HTMLElement;
+    const qtyInput = within(row)
+      .getAllByLabelText('Số lượng trả Áo thun cotton')
+      .find((el) => el.tagName === 'INPUT') as HTMLInputElement;
+    fireEvent.change(qtyInput, { target: { value: '1' } });
+    fireEvent.click(dialog.getByTestId('rma-submit'));
+
+    // rmaErrorReason → error prop Textarea → .uk-error trong dialog
+    expect(dialogEl.querySelectorAll('.uk-error').length).toBe(1);
+    expect(dialog.getByText('Nhập lý do trả hàng')).toBeTruthy();
+    expect(dialogEl.querySelectorAll('.od-rma-error').length).toBe(0);
+    expect(vi.mocked(createRma)).not.toHaveBeenCalled();
+  });
+
+  it('createRma reject → lỗi API qua block role=alert (KHÔNG vào error prop Textarea), modal giữ mở', async () => {
+    vi.mocked(fetchMyOrder).mockResolvedValue(orderFixture());
+    vi.mocked(fetchMyRmas).mockResolvedValue(EMPTY_RMA_PAGE);
+    vi.mocked(fetchOrderTracking).mockResolvedValue(TRACKING);
+    vi.mocked(createRma).mockRejectedValue(new Error('Lỗi máy chủ RMA'));
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+    await screen.findByText('Đơn #A1B2C3D4');
+
+    fireEvent.click(screen.getByTestId('rma-create'));
+    const dialogEl = await screen.findByRole('dialog');
+    const dialog = within(dialogEl);
+    const row = dialog.getByText('Áo thun cotton').closest('.od-rma-item') as HTMLElement;
+    const qtyInput = within(row)
+      .getAllByLabelText('Số lượng trả Áo thun cotton')
+      .find((el) => el.tagName === 'INPUT') as HTMLInputElement;
+    fireEvent.change(qtyInput, { target: { value: '1' } });
+    fireEvent.change(dialog.getByLabelText('Lý do trả hàng'), { target: { value: 'Sai mẫu' } });
+    fireEvent.click(dialog.getByTestId('rma-submit'));
+
+    // API error ≠ rmaErrorReason → khối alert, text = message gốc
+    expect((await dialog.findByRole('alert')).textContent).toBe('Lỗi máy chủ RMA');
+    expect(dialogEl.querySelectorAll('.uk-error').length).toBe(0);
+    expect(dialogEl.querySelectorAll('.od-rma-error').length).toBe(1);
+    expect(vi.mocked(createRma)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(createRma)).toHaveBeenCalledWith('a1b2c3d4e5f6g7h8', [{ lineId: 'line-1', qty: 1 }], 'Sai mẫu');
+    // Modal KHÔNG đóng khi lỗi
+    expect(dialog.getByTestId('rma-submit')).toBeTruthy();
+  });
+
+  it('cancel flow: confirm → cancelMyOrder đúng 1 lần + banner Đã hủy đơn + dot CANCELLED nền danger', async () => {
+    vi.mocked(fetchMyOrder).mockResolvedValue(orderFixture({ status: 'PENDING', trackingCode: null }));
+    vi.mocked(fetchMyRmas).mockResolvedValue(EMPTY_RMA_PAGE);
+    vi.mocked(cancelMyOrder).mockResolvedValue(
+      orderFixture({
+        status: 'CANCELLED',
+        trackingCode: null,
+        timeline: [
+          { status: 'PENDING', at: '2026-09-01T10:00:00Z' },
+          { status: 'CANCELLED', at: '2026-09-02T08:00:00Z' }
+        ]
+      })
+    );
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+    await screen.findByText('Đơn #A1B2C3D4');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy đơn' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    // Nút action 'Hủy đơn' vẫn tồn tại sau overlay → confirm phải scope trong dialog
+    fireEvent.click(dialog.getByRole('button', { name: 'Hủy đơn' }));
+
+    await screen.findByText('Đã hủy đơn — tồn kho và mã giảm giá (nếu có) sẽ được hoàn lại.');
+    expect(vi.mocked(cancelMyOrder)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(cancelMyOrder)).toHaveBeenCalledWith('a1b2c3d4e5f6g7h8');
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    // Timeline đơn CANCELLED: mốc cuối CANCELLED → dot --c-danger (KHÔNG success)
+    expect(document.querySelectorAll('.od-timeline__dot').length).toBe(2);
+    expect(document.querySelectorAll('.od-timeline .od-timeline__item--danger .od-timeline__dot').length).toBe(1);
+    expect(document.querySelectorAll('.od-timeline .od-timeline__item--success .od-timeline__dot').length).toBe(0);
   });
 });

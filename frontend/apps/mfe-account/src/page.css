@@ -616,6 +616,14 @@
   .um-menu {
     animation: none;
   }
+
+  /* Hover-lift card (T5 order-card / T7 wl-card) — tắt cả transition lẫn
+     transform để người dùng reduce-motion không thấy lift. */
+  .order-card,
+  .wl-card {
+    transition: none;
+    transform: none;
+  }
 }
 
 .um-menu__item {
@@ -742,7 +750,7 @@
 
 .order-card__meta {
   font-size: var(--text-sm, 13px);
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-muted, #757575);
 }
 
 .order-card__side {
@@ -783,7 +791,7 @@
 }
 
 .od-banner__text {
-  color: var(--c-text-secondary, #555);
+  color: var(--c-text-muted, #757575);
 }
 
 .od-grid {
@@ -799,7 +807,7 @@
 }
 
 .od-meta-detail {
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-muted, #757575);
   font-size: var(--text-sm, 13px);
 }
 
@@ -843,7 +851,7 @@
 }
 
 .od-address {
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-muted, #757575);
 }
 
 .od-rma-list {
@@ -866,7 +874,8 @@
 
 /* Timeline — ol li: dot 10px absolute-center + đường nối li+li::before 1px
    chạy từ tâm dot trước tới dot hiện tại (dot z-1 đè line tại điểm gặp).
-   Variant: --success = mốc hoàn thành (terminal/cuối), --primary = event GHN. */
+   Variant: --success = mốc hoàn thành (terminal/cuối), --primary = event GHN,
+   --danger = mốc CANCELLED/FAILED (nền đỏ — đúng ngữ nghĩa). */
 .od-timeline {
   list-style: none;
   margin: var(--space-2, 8px) 0 0;
@@ -905,6 +914,10 @@
 
 .od-timeline .od-timeline__item--success .od-timeline__dot {
   background: var(--c-success, #26AA99);
+}
+
+.od-timeline .od-timeline__item--danger .od-timeline__dot {
+  background: var(--c-danger, #D0011B);
 }
 
 .od-timeline .od-timeline__item--primary .od-timeline__dot {
@@ -946,7 +959,7 @@
 }
 
 .od-rma-item__qty {
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-muted, #757575);
 }
 
 /* Lỗi chọn-số-lượng / lỗi API — role=alert block riêng (KHÔNG vào error prop
@@ -967,5 +980,5 @@
 
 .od-loading {
   margin: 0;
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-muted, #757575);
 }

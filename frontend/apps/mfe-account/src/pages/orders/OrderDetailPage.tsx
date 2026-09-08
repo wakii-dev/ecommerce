@@ -235,7 +235,7 @@ function OrderDetailContent({ id }: { id: string }): ReactElement {
           <Table
             columns={[
               { key: 'name', header: t('account.order.items') },
-              { key: 'qty', header: t('account.order.qty'), align: 'center', render: (item) => `×${item.qty}` },
+              { key: 'qty', header: t('account.order.qty'), render: (item) => `×${item.qty}` },
               {
                 key: 'lineTotal',
                 header: t('account.order.lineTotal'),
@@ -343,10 +343,16 @@ function OrderDetailContent({ id }: { id: string }): ReactElement {
             {order.timeline.map((entry, index) => {
               // Mốc hoàn thành: trạng thái terminal (DELIVERED/CANCELLED) hoặc
               // entry cuối cùng (mới nhất) → dot --c-success; còn lại --c-border.
+              // Ngoại lệ: CANCELLED/FAILED → dot --c-danger (đỏ — đúng ngữ nghĩa),
+              // CANCELLED tuy terminal nhưng KHÔNG phải "hoàn thành tốt đẹp".
+              const danger = entry.status === 'CANCELLED' || entry.status === 'FAILED';
               const terminal = entry.status === 'DELIVERED' || entry.status === 'CANCELLED';
               const done = terminal || index === order.timeline.length - 1;
               return (
-                <li key={`${entry.status}-${index}`} className={done ? 'od-timeline__item--success' : undefined}>
+                <li
+                  key={`${entry.status}-${index}`}
+                  className={danger ? 'od-timeline__item--danger' : done ? 'od-timeline__item--success' : undefined}
+                >
                   <span className="od-timeline__dot" aria-hidden="true" />
                   <span className="od-timeline__time">{formatDateTime(entry.at)}</span>
                   <StatusBadge status={entry.status} />

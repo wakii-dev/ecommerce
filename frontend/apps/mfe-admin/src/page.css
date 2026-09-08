@@ -323,6 +323,54 @@
   font-size: 15px;
 }
 
+/* ── Order timeline (SF-5 FI-395) — direction §4: chấm tròn 10px + đường
+   1px --c-border, mốc hoàn thành (event mới nhất) nền --c-success ────── */
+.admin-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-timeline__item {
+  position: relative;
+  display: flex;
+  gap: var(--space-3, 12px);
+  padding-bottom: var(--space-4, 16px);
+}
+
+.admin-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+/* Đường nối dọc tâm dot (5px) trừ nửa stroke (0.5px) — chỉ giữa 2 item */
+.admin-timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 14px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--c-border);
+}
+
+.admin-timeline__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 4px; /* căn dòng status 13px/600 */
+  border-radius: var(--radius-full);
+  background: var(--c-border);
+}
+
+.admin-timeline__item--latest .admin-timeline__dot {
+  background: var(--c-success);
+}
+
+.admin-timeline__status {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ── Dashboard KPI + charts ──────────────────────────────────────────── */
 /* §2.6 khối dữ liệu admin: bo --radius-md (uk-card mặc định --radius-lg) */
 .admin-body .uk-card {
@@ -382,7 +430,7 @@
   display: inline-block;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em; /* §2.5 pill 11/800 ls .05 padding 3×9 */
   padding: 3px 9px;
   border-radius: var(--radius-full, 999px);
   vertical-align: middle;

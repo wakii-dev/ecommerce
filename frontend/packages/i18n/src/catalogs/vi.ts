@@ -84,6 +84,42 @@ export const vi = {
       orders: 'Đơn hàng của tôi',
       logout: 'Đăng xuất',
       displayNameFallback: 'Tài khoản'
+    },
+    // ── T4 — profile form + 2FA (chuỗi vi GIỮ NGUYÊN text đang có) ──
+    profile: {
+      title: 'Tài khoản',
+      personalInfo: 'Thông tin cá nhân',
+      email: 'Email',
+      role: 'Vai trò',
+      fullName: 'Họ tên',
+      phone: 'Số điện thoại',
+      phonePlaceholder: '0901234567',
+      phoneInvalid: 'Số điện thoại không hợp lệ',
+      fullNameRequired: 'Vui lòng nhập họ tên',
+      save: 'Lưu',
+      saved: 'Đã lưu',
+      roleCustomer: 'Khách hàng',
+      roleAdmin: 'Quản trị',
+      errorGeneric: 'Có lỗi xảy ra — thử lại'
+    },
+    twofa: {
+      title: 'Bảo mật hai lớp',
+      enabled: 'Đang bật',
+      disabled: 'Đang tắt',
+      enable: 'Bật 2FA',
+      disable: 'Tắt 2FA',
+      noteIdle: 'Chống truy cập trái phép — mỗi lần đăng nhập sẽ hỏi mã từ app authenticator.',
+      noteQr: 'Quét mã bằng Google Authenticator / Authy, rồi nhập mã 6 số hiện tại.',
+      noteCodes: 'Lưu lại mã dự phòng — mỗi mã dùng được 1 lần khi mất điện thoại. Không hiện lại lần nữa.',
+      codeLabel: 'Mã 6 số trong app',
+      activate: 'Kích hoạt',
+      codesSaved: 'Tôi đã lưu mã dự phòng',
+      disableNote: 'Cần mật khẩu + một mã 2FA (app hoặc mã dự phòng) để tắt.',
+      disablePassword: 'Mật khẩu',
+      disableCode: 'Mã 2FA',
+      confirmDisable: 'Xác nhận tắt',
+      cancel: 'Hủy',
+      qrAlt: 'Mã QR đăng ký 2FA'
     }
   },
   auth: {

@@ -82,6 +82,42 @@ export const en = {
       orders: 'My orders',
       logout: 'Log out',
       displayNameFallback: 'Account'
+    },
+    // ── T4 — profile form + 2FA — mirrors vi 1:1 ──
+    profile: {
+      title: 'Account',
+      personalInfo: 'Personal information',
+      email: 'Email',
+      role: 'Role',
+      fullName: 'Full name',
+      phone: 'Phone number',
+      phonePlaceholder: '0901234567',
+      phoneInvalid: 'Invalid phone number',
+      fullNameRequired: 'Please enter your full name',
+      save: 'Save',
+      saved: 'Saved',
+      roleCustomer: 'Customer',
+      roleAdmin: 'Admin',
+      errorGeneric: 'Something went wrong — try again'
+    },
+    twofa: {
+      title: 'Two-factor authentication',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      enable: 'Enable 2FA',
+      disable: 'Disable 2FA',
+      noteIdle: 'Protection against unauthorized access — every sign-in will ask for a code from your authenticator app.',
+      noteQr: 'Scan the code with Google Authenticator / Authy, then enter the current 6-digit code.',
+      noteCodes: 'Save your backup codes — each code works once if you lose your phone. They will not be shown again.',
+      codeLabel: '6-digit code from the app',
+      activate: 'Activate',
+      codesSaved: 'I have saved my backup codes',
+      disableNote: 'Your password + a 2FA code (app or backup code) are required to disable.',
+      disablePassword: 'Password',
+      disableCode: '2FA code',
+      confirmDisable: 'Confirm disable',
+      cancel: 'Cancel',
+      qrAlt: '2FA enrollment QR code'
     }
   },
   auth: {

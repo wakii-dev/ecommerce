@@ -356,6 +356,20 @@
   gap: 8px;
 }
 
+/* ── SF-4 (FI-394 T4) — profile + 2FA polish ─────────────────────────────── */
+/* h2 2FA chứa Badge "Đang bật/Đang tắt" — flex để badge thẳng hàng tâm tiêu
+   đề, wrap khi card hẹp (<720px 1 cột). Màu badge qua uk-badge (token sẵn). */
+.twofa-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+}
+
+.twofa-title .uk-badge {
+  flex: none;
+}
+
 /* ── SF-4 (FI-394) account side-nav ──────────────────────────────────────── */
 /* Pattern admin sidebar direction §2.5/§4 — border-left 3px active tint,
    rộng 240, icon 18. Mọi màu qua var(--*); <600px collapse nav ngang scroll-x. */

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
-import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { Button, Card, Input, Stepper } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate } from '../bootstrap';
 import { useCart } from '../lib/useCart';
 import { removeCartItem } from '../lib/cartApi';
@@ -68,6 +69,7 @@ function validateAddress(a: Address): Partial<Record<keyof Address, string>> {
 export default function CheckoutPage(): ReactElement {
   const authed = useAuthState();
   const { cart } = useCart();
+  const { t } = useT();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [address, setAddress] = useState<Address>(EMPTY_ADDRESS);
@@ -370,25 +372,20 @@ export default function CheckoutPage(): ReactElement {
     <div className="cart-page">
       <h1 className="page-title">Thanh toán</h1>
 
-      <ol className="stepper" aria-label="Các bước thanh toán">
-        {([1, 2, 3] as const).map((num) => {
-          const labels = { 1: 'Địa chỉ', 2: 'Vận chuyển', 3: 'Thanh toán' } as const;
-          const state =
-            step === num ? ' stepper-item--active' : step > num ? ' stepper-item--done' : '';
-          return (
-            <li
-              key={num}
-              className={`stepper-item${state}`}
-              role={step > num ? 'button' : undefined}
-              tabIndex={step > num ? 0 : undefined}
-              onClick={step > num ? () => setStep(num) : undefined}
-            >
-              <span className="stepper-num">{step > num ? '✓' : num}</span>
-              {labels[num]}
-            </li>
-          );
-        })}
-      </ol>
+      {/* FI-393 T6 — Stepper primitive (ui-kit): nút thật keyboard/roving,
+          disable future steps; click chỉ quay lại bước TRƯỚC (i+1 < step). */}
+      <Stepper
+        steps={[
+          { key: 'address', label: t('checkout.stepper.address') },
+          { key: 'shipping', label: t('checkout.stepper.shipping') },
+          { key: 'payment', label: t('checkout.stepper.payment') }
+        ]}
+        current={step - 1}
+        onStepClick={(i) => {
+          if (i + 1 < step) setStep((i + 1) as 1 | 2 | 3);
+        }}
+        label={t('checkout.title')}
+      />
 
       <div className="checkout-grid">
         <Card>

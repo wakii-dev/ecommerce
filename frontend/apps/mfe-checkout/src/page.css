@@ -156,60 +156,7 @@
   margin: 0;
 }
 
-/* ── Checkout stepper ────────────────────────────────────────────────── */
-.stepper {
-  display: flex;
-  gap: 0;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.stepper-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 8px;
-  border-bottom: 2px solid var(--c-border, #e5e7eb);
-  color: var(--c-text-muted, #787878);
-  font-size: 14px;
-  cursor: default;
-}
-
-.stepper-item--active {
-  border-bottom-color: var(--c-primary, #F53D2D);
-  color: var(--c-primary, #F53D2D);
-  font-weight: 700;
-}
-
-.stepper-item--done {
-  border-bottom-color: var(--c-success);
-  color: var(--c-success);
-  cursor: pointer;
-}
-
-.stepper-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--wash-hover);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.stepper-item--active .stepper-num {
-  background: var(--c-primary, #F53D2D);
-  color: #fff;
-}
-
-.stepper-item--done .stepper-num {
-  background: var(--c-success);
-  color: var(--c-on-accent);
-}
+/* FI-393 T6 — stepper hand-roll đã bỏ: dùng primitive .uk-stepper (ui-kit.css). */
 
 .checkout-grid {
   display: grid;

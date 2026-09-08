@@ -228,10 +228,10 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/plp/{Pagination,Sidebar,Toolbar,SortSelect}.tsx`, css plp.
 
-- [ ] **Step 1:** Thay body `components/plp/Pagination.tsx` bằng primitive ui-kit `Pagination` (mode URL-driven: `pageHref` trả `buildPlpUrl(...)`, `page`, `totalPages`, labels locale). SPA nav: bọc client delegation — `'use client'` wrapper `onClick` bắt `<a>` con → `e.preventDefault()` + `router.push(href)` (giữ `<a>` href thật → no-JS vẫn load trang qua GET href). `Pagination.tsx` hiện là server component — chuyển thành file client wrapper export cùng interface (basePath/query/totalPages/extraParams) để caller (2 page) không đổi.
-- [ ] **Step 2:** Sidebar expose state cho AT: link `.plp-check` thêm `aria-pressed={checked}` (giữ nguyên markup link URL-driven — checkbox thật input sẽ vỡ no-JS GET flow); kiểm css `.plp-check-box` giữ ✓ visual.
-- [ ] **Step 3:** Toolbar/SortSelect polish theo §2.4/§4 (select style token, focus ring tint).
-- [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): PLP pagination primitive SPA + filter aria-pressed (FI-392)`.
+- [x] **Step 1:** Thay body `components/plp/Pagination.tsx` bằng primitive ui-kit `Pagination` (mode URL-driven: `pageHref` trả `buildPlpUrl(...)`, `page`, `totalPages`, labels locale). SPA nav: bọc client delegation — `'use client'` wrapper `onClick` bắt `<a>` con → `e.preventDefault()` + `router.push(href)` (giữ `<a>` href thật → no-JS vẫn load trang qua GET href). `Pagination.tsx` hiện là server component — chuyển thành file client wrapper export cùng interface (basePath/query/totalPages/extraParams) để caller (2 page) không đổi.
+- [x] **Step 2:** Sidebar expose state cho AT: link `.plp-check` thêm `aria-pressed={checked}` (giữ nguyên markup link URL-driven — checkbox thật input sẽ vỡ no-JS GET flow); kiểm css `.plp-check-box` giữ ✓ visual.
+- [x] **Step 3:** Toolbar/SortSelect polish theo §2.4/§4 (select style token, focus ring tint).
+- [x] **Step 4:** vitest + lint xanh → commit `feat(storefront): PLP pagination primitive SPA + filter aria-pressed (FI-392)`.
 
 ### Task 8a: pdp-gallery-zoom (nhóm B)
 

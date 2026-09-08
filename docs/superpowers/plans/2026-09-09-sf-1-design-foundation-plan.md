@@ -399,7 +399,7 @@ Window ±2 có đầu/cuối + ellipsis (logic tự chứa trong file — không
 - Create: `frontend/packages/ui-kit/src/components/Breadcrumbs.tsx`, `IconButton.tsx`, `Alert.tsx`
 - Modify: ui-kit.css, components/index.ts, UiKitDemo.tsx, uiKit.test.tsx
 
-- [ ] **Step 1: Breadcrumbs** — API:
+- [x] **Step 1: Breadcrumbs** — API:
 ```tsx
 export interface BreadcrumbItem { label: string; href?: string }
 export interface BreadcrumbsProps {
@@ -412,7 +412,7 @@ export function breadcrumbJsonld(items: BreadcrumbItem[]): string  // JSON.strin
 ```
 Render: `<nav className="uk-breadcrumbs" aria-label={label}><ol>` — item cuối `aria-current="page"` (span, không link); item giữa: href có → `<a>`, không → `<span>`; separator `<li aria-hidden="true" className="uk-breadcrumbs__sep">` giữa các item. JSON-LD helper thuần (string), dùng trong script tag do consumer render.
 
-- [ ] **Step 2: IconButton** — API:
+- [x] **Step 2: IconButton** — API:
 ```tsx
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** BẮT BUỘC — aria-label; thiếu → dev-warn console.error (không crash) */
@@ -424,7 +424,7 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 ```
 Class `uk-icon-btn uk-icon-btn--sm/md uk-icon-btn--ghost/outline`. CSS: vuông, radius-md, hover nền `--wash-hover` chữ `--c-link` `--dur-fast`, active scale .92 `--ease-pop`; outline variant border 1px `--c-border`. focus-visible outline có sẵn global `--c-focus` (verify rule `:focus-visible` tồn tại trong ui-kit.css — nếu chỉ ở .uk-btn thì thêm cho .uk-icon-btn).
 
-- [ ] **Step 3: Alert** — API:
+- [x] **Step 3: Alert** — API:
 ```tsx
 export interface AlertProps {
   variant?: 'info' | 'success' | 'warning' | 'danger';  // default info
@@ -438,9 +438,9 @@ export interface AlertProps {
 ```
 Tint map (QUYẾT ĐỊNH CHỐT — chỉ token, trong brand lock): info = `--tint-primary-bg` nền + `--tint-primary-text` chữ + `--tint-primary-border` viền · success = `--tint-success-bg/text/border` · warning = `--tint-new-bg` nền + `--tint-new-text` chữ + `--tint-new-border` viền · danger = `--pill-cancelled-bg` nền + `--pill-cancelled-text` chữ + `--pill-cancelled-bg` viền. Role: `role="alert"` khi variant danger, ngược lại `role="status"`. CSS `.uk-alert` radius-md border 1px padding 12 16, text `--text-sm`.
 
-- [ ] **Step 4: Barrel + demo (3 section) + test SSR** — Breadcrumbs: aria-label, aria-current cuối, JSON-LD string valid JSON chứa "BreadcrumbList"; IconButton: aria-label bắt buộc render, warn khi thiếu (spy console.error); Alert: 4 variant class + role đúng.
+- [x] **Step 4: Barrel + demo (3 section) + test SSR** — Breadcrumbs: aria-label, aria-current cuối, JSON-LD string valid JSON chứa "BreadcrumbList"; IconButton: aria-label bắt buộc render, warn khi thiếu (spy console.error); Alert: 4 variant class + role đúng.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): primitives Breadcrumbs/IconButton/Alert (FI-391 T8)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): primitives Breadcrumbs/IconButton/Alert (FI-391 T8)`.
 
 ### Task 9: Form controls — Checkbox, Radio/RadioGroup, Textarea
 
@@ -448,9 +448,9 @@ Tint map (QUYẾT ĐỊNH CHỐT — chỉ token, trong brand lock): info = `--t
 - Create: `frontend/packages/ui-kit/src/components/Checkbox.tsx`, `Radio.tsx` (Radio + RadioGroup cùng file), `Textarea.tsx`
 - Modify: ui-kit.css, components/index.ts, UiKitDemo.tsx, uiKit.test.tsx
 
-- [ ] **Step 1: Checkbox** — API `{ label?: string; error?: string; hint?: string; id?: string; className?: string } & InputHTMLAttributes<HTMLInputElement>` — pattern Input.tsx (`useId`, `aria-invalid`, `aria-describedby` error>hint, `.uk-error` role=alert / `.uk-hint`). Markup `.uk-check`: `<input type="checkbox" className="uk-check__input">` + custom box `.uk-check__box` (aria-hidden) + label text. Custom box: 18×18 border 1.5px `--c-border` radius-sm; `:checked + .uk-check__box` nền `--c-primary` border `--c-primary` + checkmark `::after` (border-right/bottom trắng rotate 45deg — KHÔNG svg); `:focus-visible + .uk-check__box` ring `0 0 0 3px --tint-primary-bg`. Input visually-hidden (position absolute opacity 0 — GIỮ focusable, không display:none).
+- [x] **Step 1: Checkbox** — API `{ label?: string; error?: string; hint?: string; id?: string; className?: string } & InputHTMLAttributes<HTMLInputElement>` — pattern Input.tsx (`useId`, `aria-invalid`, `aria-describedby` error>hint, `.uk-error` role=alert / `.uk-hint`). Markup `.uk-check`: `<input type="checkbox" className="uk-check__input">` + custom box `.uk-check__box` (aria-hidden) + label text. Custom box: 18×18 border 1.5px `--c-border` radius-sm; `:checked + .uk-check__box` nền `--c-primary` border `--c-primary` + checkmark `::after` (border-right/bottom trắng rotate 45deg — KHÔNG svg); `:focus-visible + .uk-check__box` ring `0 0 0 3px --tint-primary-bg`. Input visually-hidden (position absolute opacity 0 — GIỮ focusable, không display:none).
 
-- [ ] **Step 2: Radio + RadioGroup** — Radio: pattern Checkbox (`.uk-radio`, custom box tròn, `:checked + box` chấm tròn trắng `::after`). RadioGroup:
+- [x] **Step 2: Radio + RadioGroup** — Radio: pattern Checkbox (`.uk-radio`, custom box tròn, `:checked + box` chấm tròn trắng `::after`). RadioGroup:
 ```tsx
 export interface RadioGroupProps {
   label?: string;
@@ -463,11 +463,11 @@ export interface RadioGroupProps {
 ```
 RadioGroup render `role="radiogroup"` + `aria-labelledby` label; provide name qua Context (radio trong group không cần prop name riêng); error/hint id describedby như Input.
 
-- [ ] **Step 3: Textarea** — copy pattern Input.tsx: `{ label?, error?, hint?, id?, className? } & TextareaHTMLAttributes<HTMLTextAreaElement>`, class `uk-textarea` (CSS: giống .uk-input + min-height 80, resize vertical), `.uk-field` wrapper.
+- [x] **Step 3: Textarea** — copy pattern Input.tsx: `{ label?, error?, hint?, id?, className? } & TextareaHTMLAttributes<HTMLTextAreaElement>`, class `uk-textarea` (CSS: giống .uk-input + min-height 80, resize vertical), `.uk-field` wrapper.
 
-- [ ] **Step 4: Barrel + demo (3 section) + test SSR** — label/id/for khớp, aria-describedby khi error, radio group name xuyên suối, checked state render.
+- [x] **Step 4: Barrel + demo (3 section) + test SSR** — label/id/for khớp, aria-describedby khi error, radio group name xuyên suối, checked state render.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): form controls Checkbox/Radio/RadioGroup/Textarea (FI-391 T9)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): form controls Checkbox/Radio/RadioGroup/Textarea (FI-391 T9)`.
 
 ### Task 10: Primitive Stepper (keyboard-OK)
 
@@ -475,7 +475,7 @@ RadioGroup render `role="radiogroup"` + `aria-labelledby` label; provide name qu
 - Create: `frontend/packages/ui-kit/src/components/Stepper.tsx`
 - Modify: ui-kit.css, components/index.ts, UiKitDemo.tsx, uiKit.test.tsx (thêm jsdom keyboard test cho Stepper)
 
-- [ ] **Step 1: Component** — API:
+- [x] **Step 1: Component** — API:
 ```tsx
 export interface StepperStep { key: string; label: string }
 export interface StepperProps {
@@ -488,13 +488,13 @@ export interface StepperProps {
 ```
 Markup: `<ol className="uk-stepper" aria-label={label}>` — mỗi `<li className="uk-stepper__step">` chứa `<button type="button" className="uk-stepper__dot" aria-current={i===current?'step':undefined} aria-label={\`${i+1}. ${label}\`} disabled={i>current || !onStepClick} onKeyDown>`; state class: `--done` (i<current), `--current`, future. onKeyDown: ArrowRight/Left di chuyển "focus candidate" giữa các nút done/current (roving-lite: move focus, KHÔNG đổi current — đổi current qua click/Enter; Enter/Space = click mặc định của button, không cần handler thêm). Connector: `.uk-stepper__connector` fill scaleX khi done (css `::before/::after` trên li). ĐÂY là sửa nguyên nhân stepper cũ (`role=button` không onKeyDown — pattern nút thật có keyboard miễn phí).
 
-- [ ] **Step 2: CSS** (hand-off §2.4): dot 34px tròn border 2px; done: nền `--c-success` trắng + tick `✓` (::after border rotate); current: nền `--c-primary` trắng + ring `0 0 0 5px --tint-primary-bg` + scale 1.08 transition `--dur-base` `--ease-pop`; future: surface border `--c-border` chữ `--c-text-muted`; connector 3px `--radius-full` đoạn xong fill `--c-success` scaleX transition 350ms.
+- [x] **Step 2: CSS** (hand-off §2.4): dot 34px tròn border 2px; done: nền `--c-success` trắng + tick `✓` (::after border rotate); current: nền `--c-primary` trắng + ring `0 0 0 5px --tint-primary-bg` + scale 1.08 transition `--dur-base` `--ease-pop`; future: surface border `--c-border` chữ `--c-text-muted`; connector 3px `--radius-full` đoạn xong fill `--c-success` scaleX transition 350ms.
 
-- [ ] **Step 3: Demo** — stepper 3 bước ("Giỏ hàng/Thanh toán/Xác nhận") + useState current + nút Lùi/Tiếp để đổi (demo-only controls).
+- [x] **Step 3: Demo** — stepper 3 bước ("Giỏ hàng/Thanh toán/Xác nhận") + useState current + nút Lùi/Tiếp để đổi (demo-only controls).
 
-- [ ] **Step 4: Test** — SSR: aria-current="step" đúng vị trí, done class; jsdom keyboard: render 3 bước current=1, onStepClick spy — click nút step 0 → spy(0); ArrowRight trên dot 0 → focus dot 1 (assert document.activeElement).
+- [x] **Step 4: Test** — SSR: aria-current="step" đúng vị trí, done class; jsdom keyboard: render 3 bước current=1, onStepClick spy — click nút step 0 → spy(0); ArrowRight trên dot 0 → focus dot 1 (assert document.activeElement).
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): primitive Stepper keyboard a11y (FI-391 T10)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): primitive Stepper keyboard a11y (FI-391 T10)`.
 
 ### Task 11: Icon set — Icon component + catalog 22 icons
 

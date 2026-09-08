@@ -136,7 +136,6 @@ paths:
                   $ref: '#/components/schemas/AdminCoupon'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/ordering/admin/coupons:
     post:
       tags: [admin, coupons]
       operationId: createAdminCoupon
@@ -225,9 +224,6 @@ paths:
                 $ref: '#/components/schemas/AdminCoupon'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/ordering/me/orders:
-    get:
-      tags: [orders]
   /api/ordering/me/orders:
     get:
       tags: [orders]
@@ -899,6 +895,12 @@ components:
             $ref: '#/components/schemas/ApiError'
     NotFound:
       description: Khong tim thay tai nguyen.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Xung dot trang thai.
       content:
         application/problem+json:
           schema:

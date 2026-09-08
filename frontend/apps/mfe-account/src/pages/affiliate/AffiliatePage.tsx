@@ -5,6 +5,7 @@ import { ApiErrorClient } from '@ecommerce/contracts';
 import { Badge, Button, Card, Input } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
 
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import '../../page.css';
 import {
@@ -23,7 +24,7 @@ import LoyaltyPointsSection from './LoyaltyPointsSection'; // SF-14 (FI-324) ch�
  * + bảng ledger. Guard authReady như AccountPage — guest → /login.
  * Contract affiliate.yaml (frozen): /me trả code null khi chưa APPROVED.
  */
-export default function AffiliatePage(): ReactElement {
+function AffiliatePageContent(): ReactElement {
   const [profile, setProfile] = useState<AffiliateProfile | null>(null);
   const [ledger, setLedger] = useState<LedgerPage | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -121,7 +122,7 @@ export default function AffiliatePage(): ReactElement {
 
   if (!loaded) {
     return (
-      <div className="auth-page">
+      <div className="acc-content">
         <Card>
           <p>Đang tải...</p>
         </Card>
@@ -133,7 +134,7 @@ export default function AffiliatePage(): ReactElement {
   const showForm = notFound || profile?.status === 'REJECTED';
 
   return (
-    <div className="auth-page">
+    <div className="acc-content">
       <h1 className="auth-title">Affiliate</h1>
       {error ? (
         <div className="auth-error" role="alert">
@@ -292,6 +293,15 @@ export default function AffiliatePage(): ReactElement {
         </>
       ) : null}
     </div>
+  );
+}
+
+/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page; T9 nâng active theo hash #loyalty. */
+export default function AffiliatePage(): ReactElement {
+  return (
+    <AccountLayout active="affiliate">
+      <AffiliatePageContent />
+    </AccountLayout>
   );
 }
 

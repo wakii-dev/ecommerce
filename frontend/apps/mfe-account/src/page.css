@@ -316,3 +316,114 @@
   display: flex;
   gap: 8px;
 }
+
+/* ── SF-4 (FI-394) account side-nav ──────────────────────────────────────── */
+/* Pattern admin sidebar direction §2.5/§4 — border-left 3px active tint,
+   rộng 240, icon 18. Mọi màu qua var(--*); <600px collapse nav ngang scroll-x. */
+.acc-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-5, 24px);
+  align-items: start;
+  padding: var(--space-5, 24px) var(--space-4, 16px);
+}
+
+/* Chống grid blowout từ bảng/link dài ở cột content (min-width auto mặc định). */
+.acc-shell > * {
+  min-width: 0;
+}
+
+.acc-nav {
+  background: var(--c-surface, #ffffff);
+  border: 1px solid var(--c-border, #eeeeee);
+  border-radius: var(--radius-lg, 8px);
+  padding: var(--space-2, 8px);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, 0.06));
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acc-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 4px);
+  border-left: 3px solid transparent;
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  color: var(--c-text, #212121);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.acc-nav__link svg {
+  color: var(--c-text-muted, #757575);
+  flex: none;
+}
+
+.acc-nav__link:hover {
+  background: var(--wash-hover, #f5f5f5);
+  color: var(--c-link, #f53d2d);
+}
+
+.acc-nav__link--active,
+.acc-nav__link--active:hover {
+  color: var(--c-link, #f53d2d);
+  background: var(--tint-primary-bg, #fdeeee);
+  border-left: 3px solid var(--c-primary, #f53d2d);
+}
+
+.acc-nav__link--active svg,
+.acc-nav__link--active:hover svg {
+  color: inherit;
+}
+
+/* Cột content của affiliate page (thay wrapper auth-page — page này render
+   h1 + section + các card nối tiếp nhau, cần gap dọc đều). */
+.acc-content {
+  display: grid;
+  gap: var(--space-4, 16px);
+  align-content: start;
+}
+
+/* h1 trang (OrdersPage T1 — các page khác nâng cấp ở task của chúng). */
+.acc-page-title {
+  margin: 0 0 16px;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--c-text, #212121);
+}
+
+@media (max-width: 600px) {
+  .acc-shell {
+    grid-template-columns: 1fr;
+    padding: var(--space-4, 16px);
+  }
+
+  .acc-nav {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .acc-nav__link {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .acc-nav__link--active,
+  .acc-nav__link--active:hover {
+    border-left: none;
+    border-bottom: 2px solid var(--c-primary, #f53d2d);
+  }
+}

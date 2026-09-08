@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
 import { Badge, Card, EmptyState } from '@ecommerce/ui-kit';
 
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import '../../page.css';
 
@@ -56,8 +57,9 @@ export default function MyReviewsPage(): ReactElement {
   }, []);
 
   return (
-    <div className="account-page">
-      <h1 className="account-title">Đánh giá của tôi</h1>
+    <AccountLayout active="reviews">
+      <div className="account-page">
+        <h1 className="account-title">Đánh giá của tôi</h1>
       {error ? (
         <Card>
           <p role="alert">{error}</p>
@@ -92,7 +94,8 @@ export default function MyReviewsPage(): ReactElement {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </AccountLayout>
   );
 }
 

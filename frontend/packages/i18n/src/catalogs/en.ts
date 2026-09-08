@@ -10,6 +10,18 @@ export const en = {
     register: 'Sign up',
     logout: 'Log out'
   },
+  // ── SF-4 FI-394 — account surface (anchor: sau nav — merge sạch với SF-3/SF-5) — mirrors vi 1:1 ──
+  account: {
+    nav: {
+      label: 'Account navigation',
+      account: 'Account',
+      orders: 'Orders',
+      wishlist: 'Wishlist',
+      reviews: 'My reviews',
+      affiliate: 'Affiliate',
+      loyalty: 'Loyalty points'
+    }
+  },
   auth: {
     email: 'Email',
     password: 'Password',

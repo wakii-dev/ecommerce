@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Badge, Button, Card, EmptyState } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import { fetchMyOrders, type OrderStatus, type OrderSummary } from './ordersApi';
 
@@ -35,7 +36,7 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-export default function OrdersPage(): ReactElement {
+function OrdersPageContent(): ReactElement {
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,7 +94,7 @@ export default function OrdersPage(): ReactElement {
 
   return (
     <div data-testid="orders-page">
-      <h1 style={{ marginTop: 0 }}>Đơn hàng của tôi</h1>
+      <h1 className="acc-page-title">Đơn hàng của tôi</h1>
       <div style={{ display: 'grid', gap: 'var(--space-3, 12px)' }}>
         {orders.map((order) => (
           <Card key={order.id}>
@@ -127,5 +128,14 @@ export default function OrdersPage(): ReactElement {
         ))}
       </div>
     </div>
+  );
+}
+
+/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page (kể cả loading/error). */
+export default function OrdersPage(): ReactElement {
+  return (
+    <AccountLayout active="orders">
+      <OrdersPageContent />
+    </AccountLayout>
   );
 }

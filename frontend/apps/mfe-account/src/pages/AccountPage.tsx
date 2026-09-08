@@ -5,6 +5,7 @@ import { authStore, useAuth } from '@ecommerce/auth';
 import { fetchProfile, updateProfile } from '../api';
 import type { MeProfile } from '../api';
 import TwoFactorSection from './twofa/TwoFactorSection';
+import { AccountLayout } from '../AccountLayout';
 import { appNavigate, authReady } from '../bootstrap';
 import '../page.css';
 
@@ -82,7 +83,7 @@ export default function AccountPage(): ReactElement {
   const role = profile?.roles?.[0] ?? user?.roles?.[0] ?? 'CUSTOMER';
 
   return (
-    <div className="auth-page">
+    <AccountLayout active="account">
       <div className="account-grid">
         <Card className="account-info">
           <h1 className="auth-title">Tài khoản</h1>
@@ -143,6 +144,6 @@ export default function AccountPage(): ReactElement {
           }}
         />
       </div>
-    </div>
+    </AccountLayout>
   );
 }

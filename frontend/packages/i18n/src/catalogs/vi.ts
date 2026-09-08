@@ -11,6 +11,18 @@ export const vi = {
     register: 'Đăng ký',
     logout: 'Đăng xuất'
   },
+  // ── SF-4 FI-394 — account surface (anchor: sau nav — merge sạch với SF-3/SF-5) ──
+  account: {
+    nav: {
+      label: 'Điều hướng tài khoản',
+      account: 'Tài khoản',
+      orders: 'Đơn hàng',
+      wishlist: 'Sản phẩm yêu thích',
+      reviews: 'Đánh giá của tôi',
+      affiliate: 'Affiliate',
+      loyalty: 'Điểm thưởng'
+    }
+  },
   auth: {
     email: 'Email',
     password: 'Mật khẩu',

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Badge, Button, Card, Modal } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import { StatusBadge, formatDateTime, formatVnd } from './OrdersPage';
 import {
@@ -28,7 +29,7 @@ const RMA_STATUS_LABEL: Record<string, string> = {
   REJECTED: 'Bị từ chối'
 };
 
-export default function OrderDetailPage({ id }: { id: string }): ReactElement {
+function OrderDetailContent({ id }: { id: string }): ReactElement {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -392,5 +393,14 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page (kể cả loading/error). */
+export default function OrderDetailPage({ id }: { id: string }): ReactElement {
+  return (
+    <AccountLayout active="orders">
+      <OrderDetailContent id={id} />
+    </AccountLayout>
   );
 }

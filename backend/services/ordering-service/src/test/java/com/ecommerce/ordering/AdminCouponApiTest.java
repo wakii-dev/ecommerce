@@ -192,9 +192,9 @@ class AdminCouponApiTest extends AbstractSagaTest {
         String code = "ITT" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         exchange("/admin/coupons", ADMIN, HttpMethod.POST, body(code, "PERCENT", 10, 5, null));
 
-        // OFF → 200 active:false; validate public fail (mã MỚI từ chối)
-        ResponseEntity<String> off = exchange("/admin/coupons/" + code + "/active", ADMIN,
-            HttpMethod.PUT, "{\"active\": false}");
+        // POST /toggle (flip — contract a205cbf): lần 1 → OFF; validate public fail
+        ResponseEntity<String> off = exchange("/admin/coupons/" + code + "/toggle", ADMIN,
+            HttpMethod.POST, null);
         assertThat(off.getStatusCode().value()).isEqualTo(200);
         assertThat(off.getBody()).contains("\"active\":false");
         ResponseEntity<String> validateOff = exchange("/orders/validate-coupon", CUSTOMER,
@@ -202,9 +202,9 @@ class AdminCouponApiTest extends AbstractSagaTest {
         assertThat(validateOff.getBody()).contains("\"valid\":false");
         assertThat(validateOff.getBody()).contains("không còn hiệu lực");
 
-        // ON → dùng được lại
-        ResponseEntity<String> on = exchange("/admin/coupons/" + code + "/active", ADMIN,
-            HttpMethod.PUT, "{\"active\": true}");
+        // lần 2 → ON, dùng được lại
+        ResponseEntity<String> on = exchange("/admin/coupons/" + code + "/toggle", ADMIN,
+            HttpMethod.POST, null);
         assertThat(on.getStatusCode().value()).isEqualTo(200);
         assertThat(on.getBody()).contains("\"active\":true");
         ResponseEntity<String> validateOn = exchange("/orders/validate-coupon", CUSTOMER,
@@ -215,14 +215,8 @@ class AdminCouponApiTest extends AbstractSagaTest {
     @Test
     void toggleMissing_404() {
         String ghost = "ITGHOST" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-        assertThat(exchange("/admin/coupons/" + ghost + "/active", ADMIN, HttpMethod.PUT,
-            "{\"active\": false}").getStatusCode().value()).isEqualTo(404);
-        // review P2.1: thiếu field active → 400 (không âm thầm tắt mã)
-        String code = "ITN" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        exchange("/admin/coupons", ADMIN, HttpMethod.POST, body(code, "PERCENT", 10, 5, null));
-        assertThat(exchange("/admin/coupons/" + code + "/active", ADMIN, HttpMethod.PUT,
-            "{}").getStatusCode().value()).isEqualTo(400);
-        assertThat(couponInList(code).get("active")).isEqualTo(true); // không đổi trạng thái
+        assertThat(exchange("/admin/coupons/" + ghost + "/toggle", ADMIN, HttpMethod.POST, null)
+            .getStatusCode().value()).isEqualTo(404);
     }
 
     @Test
@@ -236,8 +230,8 @@ class AdminCouponApiTest extends AbstractSagaTest {
         long discount = inTx(() -> couponService.reserve(orderId, code, 500000));
         assertThat(discount).isEqualTo(50_000);
 
-        assertThat(exchange("/admin/coupons/" + code + "/active", ADMIN, HttpMethod.PUT,
-            "{\"active\": false}").getStatusCode().value()).isEqualTo(200);
+        assertThat(exchange("/admin/coupons/" + code + "/toggle", ADMIN, HttpMethod.POST, null)
+            .getStatusCode().value()).isEqualTo(200);
 
         // in-flight finalize OK (không ném, không hoàn usedCount)
         inTx(() -> {

@@ -176,18 +176,16 @@ public class CouponService {
     }
 
     /**
-     * Toggle active (FI-369 SF-2 A3). N4: off giữa chừng → đơn in-flight đang
-     * RESERVED vẫn được finalize (finalize/release không check active), chỉ mã
-     * MỚI bị từ chối (validate/reserve qua {@code isRunning}). KHÔNG dùng
-     * delete+recreate — mất usedCount + vỡ reservation theo code.
+     * Toggle active — POST /{code}/toggle flip (contract A3 a205cbf). N4: off
+     * giữa chừng → đơn in-flight đang RESERVED vẫn được finalize
+     * (finalize/release không check active), chỉ mã MỚI bị từ chối
+     * (validate/reserve qua {@code isRunning}). KHÔNG dùng delete+recreate —
+     * mất usedCount + vỡ reservation theo code.
      */
-    public Coupon adminSetActive(String code, Boolean active) {
-        if (active == null) {
-            throw new IllegalArgumentException("active là bắt buộc (true/false)");
-        }
+    public Coupon adminToggle(String code) {
         Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
             .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
-        coupon.setActive(active);
+        coupon.setActive(!coupon.isActive());
         return coupons.save(coupon);
     }
 

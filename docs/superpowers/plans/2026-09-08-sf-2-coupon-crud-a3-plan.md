@@ -44,8 +44,8 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 - [x] i18n keys `admin.coupons.*` mới
 
 ### T7 fe-types-regen-unit-test (chờ A3)
-- [ ] merge A3 từ nhánh đích → `pnpm --filter @ecommerce/contracts gen`
-- [ ] `clients/ordering.ts` +5 routes admin coupon (typed `operations`)
+- [x] merge A3 từ nhánh đích → `pnpm --filter @ecommerce/contracts gen` (A3 = a205cbf trên master; + syntax repair 306da91: dedupe path keys ×2 + Conflict component — codegen fatal)
+- [x] `clients/ordering.ts` +5 routes admin coupon (typed `operations`) + swap `lib/adminCoupons.ts` sang orderingApi() generated (naming theo yaml: listAdminCoupons/createAdminCoupon/updateAdminCoupon/deleteAdminCoupon/toggleAdminCoupon; toggle = POST /{code}/toggle flip — BE + IT + e2e reconcile theo)
 - [x] `tests/couponForm.test.ts` — validation unit green
 - [x] typecheck + mfe-admin tests green
 

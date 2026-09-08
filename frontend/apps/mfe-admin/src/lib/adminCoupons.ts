@@ -1,53 +1,41 @@
-// lib/adminCoupons.ts — admin coupon API (FI-369 SF-2, amendment A3).
+// lib/adminCoupons.ts — admin coupon API (FI-369 SF-2, amendment A3 a205cbf).
 //
-// Đang gọi thẳng qua authStore.fetch (CÙNG plumbing identityBaseUrl +
-// single-flight refresh như contracts client) với types local đóng băng theo
-// A3 proposal trên FI-369. KHI coordinator apply A3 + regen contracts: thay
-// internals bằng orderingApi() (adminListCoupons/adminCreateCoupon/
-// adminUpdateCoupon/adminDeleteCoupon/adminSetCouponActive) — signature +
-// error surface (ApiErrorClient) giữ nguyên, CouponsPage không đổi.
+// Đã swap sang orderingApi() GENERATED (T7 — contracts A3 landed + regen).
+// Signature giữ nguyên từ thời adapter tay → CouponsPage không đổi.
 //
-// Lý do chưa thêm routes vào clients/ordering.ts: RouteMap đòi key
-// `operations[...]` từ generated schema — A3 chưa apply → TS break toàn app.
+// Cast notes (2 điểm có chủ đích, không phải lười type):
+// - Response: contract `AdminCoupon` thiếu minOrderValue/description nhưng BE
+//   baseline (89adcd9) trả đầy đủ (DTO 10 trường) — FE view dùng superset
+//   AdminCouponView. A3.1 candidate: coordinator mở rộng schema response.
+// - Request: FE gửi thêm minOrderValue/description ngoài `AdminCouponUpsert`
+//   (BE validateAdmin nhận) — cùng A3.1 candidate.
 
-import { authStore } from '@ecommerce/auth';
-import { ApiErrorClient, type ApiErrorShape } from '@ecommerce/contracts';
+import type { OrderingClient } from '@ecommerce/contracts';
+import { orderingApi } from './api';
 import type { AdminCouponView, CouponWriteBody } from './couponForm';
 
-const BASE = '/api/ordering/admin/coupons';
-
-async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const config = authStore.getConfig();
-  const res = await authStore.fetch(`${config.identityBaseUrl ?? ''}${BASE}${path}`, {
-    method,
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
-  if (!res.ok) {
-    // problem+json (RFC 7807) — parse lỗi như contracts client (client.ts:191)
-    const shape = (await res.json().catch(() => ({}))) as ApiErrorShape;
-    throw new ApiErrorClient(shape, res.status, res.statusText);
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
-}
+type UpsertArgs = Parameters<OrderingClient['createAdminCoupon']>[0];
 
 export function adminListCoupons(): Promise<AdminCouponView[]> {
-  return call<AdminCouponView[]>('GET', '');
+  return orderingApi().listAdminCoupons({}) as unknown as Promise<AdminCouponView[]>;
 }
 
 export function adminCreateCoupon(body: CouponWriteBody): Promise<AdminCouponView> {
-  return call<AdminCouponView>('POST', '', body);
+  return orderingApi().createAdminCoupon(body as UpsertArgs) as Promise<AdminCouponView>;
 }
 
 export function adminUpdateCoupon(code: string, body: CouponWriteBody): Promise<AdminCouponView> {
-  return call<AdminCouponView>('PUT', `/${encodeURIComponent(code)}`, body);
+  return orderingApi().updateAdminCoupon({
+    ...body,
+    code // path param thắng — BE dùng code đường dẫn, body code bỏ qua
+  } as UpsertArgs) as Promise<AdminCouponView>;
 }
 
 export function adminDeleteCoupon(code: string): Promise<void> {
-  return call<void>('DELETE', `/${encodeURIComponent(code)}`);
+  return orderingApi().deleteAdminCoupon({ code }) as unknown as Promise<void>;
 }
 
-export function adminSetCouponActive(code: string, active: boolean): Promise<AdminCouponView> {
-  return call<AdminCouponView>('PUT', `/${encodeURIComponent(code)}/active`, { active });
+/** POST /{code}/toggle — flip active (contract A3: không body). */
+export function adminToggleCoupon(code: string): Promise<AdminCouponView> {
+  return orderingApi().toggleAdminCoupon({ code }) as Promise<AdminCouponView>;
 }

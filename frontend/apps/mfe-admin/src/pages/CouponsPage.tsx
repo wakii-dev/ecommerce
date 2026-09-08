@@ -19,7 +19,7 @@ import {
   adminCreateCoupon,
   adminDeleteCoupon,
   adminListCoupons,
-  adminSetCouponActive,
+  adminToggleCoupon,
   adminUpdateCoupon
 } from '../lib/adminCoupons';
 import {
@@ -93,8 +93,7 @@ export default function CouponsPage(): ReactElement {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ code, active }: { code: string; active: boolean }) =>
-      adminSetCouponActive(code, active),
+    mutationFn: ({ code }: { code: string }) => adminToggleCoupon(code),
     onSuccess: () => {
       invalidate();
       toast.toast(t('admin.coupons.toggled'), { variant: 'success' });
@@ -204,7 +203,7 @@ export default function CouponsPage(): ReactElement {
           variant={row.active ? 'primary' : 'secondary'}
           disabled={toggleMutation.isPending}
           data-testid={`coupon-toggle-${row.code}`}
-          onClick={() => toggleMutation.mutate({ code: row.code, active: !row.active })}
+          onClick={() => toggleMutation.mutate({ code: row.code })}
         >
           {row.active ? t('admin.coupons.active') : t('admin.coupons.inactive')}
         </Button>

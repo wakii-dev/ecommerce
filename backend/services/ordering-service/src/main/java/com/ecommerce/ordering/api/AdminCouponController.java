@@ -1,6 +1,5 @@
 package com.ecommerce.ordering.api;
 
-import com.ecommerce.ordering.api.dto.CouponDtos.AdminCouponActiveRequest;
 import com.ecommerce.ordering.api.dto.CouponDtos.AdminCouponDto;
 import com.ecommerce.ordering.api.dto.CouponDtos.AdminCouponRequest;
 import com.ecommerce.ordering.domain.Coupon;
@@ -66,10 +65,13 @@ public class AdminCouponController {
         couponService.adminDelete(code);
     }
 
-    /** Toggle active (FI-369 SF-2 A3) — off: mã mới từ chối, in-flight RESERVED vẫn honor (N4). */
-    @PutMapping("/{code}/active")
-    public AdminCouponDto setActive(@PathVariable String code, @RequestBody AdminCouponActiveRequest request) {
-        return toDto(couponService.adminSetActive(code, request.active()));
+    /**
+     * Toggle active (FI-369 SF-2 A3 — POST /toggle, flip, không body — contract
+     * a205cbf). Off: mã mới từ chối, in-flight RESERVED vẫn honor (N4).
+     */
+    @PostMapping("/{code}/toggle")
+    public AdminCouponDto toggle(@PathVariable String code) {
+        return toDto(couponService.adminToggle(code));
     }
 
     static AdminCouponDto toDto(Coupon c) {

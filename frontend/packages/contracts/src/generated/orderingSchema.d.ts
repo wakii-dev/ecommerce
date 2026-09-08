@@ -68,6 +68,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ordering/admin/coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sach coupon toan bo (admin) — ke ca inactive */
+        get: operations["listAdminCoupons"];
+        put?: never;
+        /** Tao coupon moi */
+        post: operations["createAdminCoupon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ordering/admin/coupons/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Cap nhat coupon */
+        put: operations["updateAdminCoupon"];
+        post?: never;
+        /** Xoa coupon (chi khi chua co reservation) */
+        delete: operations["deleteAdminCoupon"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ordering/admin/coupons/{code}/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bat/tat coupon (active flip) */
+        post: operations["toggleAdminCoupon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ordering/me/orders": {
         parameters: {
             query?: never;
@@ -690,6 +743,32 @@ export interface components {
             /** @description Ly do khi invalid (vd "Don toi thieu 500.000d"). */
             message?: string;
         };
+        AdminCoupon: {
+            code: string;
+            /** @enum {string} */
+            type: "PERCENT" | "FIXED";
+            /** @description PERCENT → %; FIXED → so VND. */
+            value: number;
+            active: boolean;
+            usageLimit: number | null;
+            usedCount: number;
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+        };
+        AdminCouponUpsert: {
+            code: string;
+            /** @enum {string} */
+            type: "PERCENT" | "FIXED";
+            value: number;
+            active?: boolean;
+            usageLimit?: number | null;
+            /** Format: date-time */
+            startsAt?: string | null;
+            /** Format: date-time */
+            endsAt?: string | null;
+        };
         /** @description Coupon cho coupon center — KHONG lo usage-limit/used-count noi bo. */
         PublicCoupon: {
             code: string;
@@ -831,6 +910,15 @@ export interface components {
                 "application/problem+json": components["schemas"]["ApiError"];
             };
         };
+        /** @description Xung dot trang thai. */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ApiError"];
+            };
+        };
     };
     parameters: {
         /** @description So trang — 1-based. */
@@ -950,6 +1038,134 @@ export interface operations {
                     "application/json": components["schemas"]["PublicCoupon"][];
                 };
             };
+        };
+    };
+    listAdminCoupons: {
+        parameters: {
+            query?: {
+                /** @description So trang — 1-based. */
+                page?: components["parameters"]["Page"];
+                /** @description So item moi trang (mac dinh 20, toi da 100). */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sach coupon (AdminCouponDto). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoupon"][];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAdminCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCouponUpsert"];
+            };
+        };
+        responses: {
+            /** @description Coupon da tao. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoupon"];
+                };
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateAdminCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCouponUpsert"];
+            };
+        };
+        responses: {
+            /** @description Coupon da cap nhat. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoupon"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteAdminCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Da xoa. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Coupon da co reservation/used — deactivate thay vi xoa. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    toggleAdminCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trang thai active moi. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCoupon"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     listMyOrders: {

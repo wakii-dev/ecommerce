@@ -118,7 +118,7 @@ export interface components {
             id: string;
             productId: string;
             /** @description Level variant (pin §6.1). */
-            variantId: string;
+            variantId?: string;
             /** @description Slug san pham (resolve vi) de link sang PDP. */
             slug: string;
             /** @description Ten san pham DA resolve (vi). */
@@ -145,7 +145,8 @@ export interface components {
         };
         AddItemRequest: {
             productId: string;
-            variantId: string;
+            /** @description Bat buoc khi product co variant; OMIT khi product khong-variant (amendment A1 — GAP#5 FI-310). Line identity = productId + variantId. */
+            variantId?: string;
             /** @default 1 */
             qty: number;
             /**

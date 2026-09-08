@@ -174,8 +174,8 @@ test('toggle off → validate fail; toggle on → pass lại (N4)', async ({ pag
     return (await res.json()) as { valid: boolean; message?: string };
   };
 
-  // OFF qua API toggle (endpoint UI đang gọi)
-  const off = await adminCouponApi('PUT', `/${CODE}/active`, { active: false });
+  // OFF qua API toggle flip (POST /{code}/toggle — contract A3 a205cbf)
+  const off = await adminCouponApi('POST', `/${CODE}/toggle`);
   expect(off.status, 'toggle off phải 200').toBe(200);
   const invalid = await validate();
   expect(invalid.valid).toBe(false);
@@ -186,8 +186,8 @@ test('toggle off → validate fail; toggle on → pass lại (N4)', async ({ pag
   await page.goto(`${SHELL}/admin/coupons`);
   await expect(page.getByTestId(`coupon-toggle-${CODE}`)).toHaveText(/Tắt/i, { timeout: 10_000 });
 
-  // ON → dùng được lại
-  const on = await adminCouponApi('PUT', `/${CODE}/active`, { active: true });
+  // ON → flip lần 2, dùng được lại
+  const on = await adminCouponApi('POST', `/${CODE}/toggle`);
   expect(on.status).toBe(200);
   expect((await validate()).valid).toBe(true);
 });

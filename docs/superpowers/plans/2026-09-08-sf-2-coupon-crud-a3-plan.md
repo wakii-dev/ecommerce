@@ -14,29 +14,29 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 ## 1. Tasks
 
 ### T1 gap-a3-proposal-baseline-shape
-- [ ] A3 proposal (yaml exact: GET/POST `/api/ordering/admin/coupons`, PUT/DELETE `/{code}`, PUT `/{code}/active`; schemas `AdminCoupon` + `AdminCouponWrite` + `AdminCouponActiveRequest`; **PublicCoupon GIỮ NGUYÊN**) post lên FI-369 epic (REQUIREMENT-GAP format)
-- [ ] worktree comment set "A3 proposal posted, chờ coordinator apply"
+- [x] A3 proposal (yaml exact: GET/POST `/api/ordering/admin/coupons`, PUT/DELETE `/{code}`, PUT `/{code}/active`; schemas `AdminCoupon` + `AdminCouponWrite` + `AdminCouponActiveRequest`; **PublicCoupon GIỮ NGUYÊN**) post lên FI-369 epic (REQUIREMENT-GAP format)
+- [x] worktree comment set "A3 proposal posted, chờ coordinator apply"
 
 ### T2 probe-gateway-reservation-policy
 - [x] probe `gateway-auth.yml:53` — allow `/api/ordering/admin/**` sẵn (không sửa)
 - [x] đọc `CouponReservationRepository` + `CouponService.reserve/release/finalize` → policy N4 xác nhận đúng như spec
 
 ### T3 be-reconcile-controller-getlist-toggle
-- [ ] `AdminCouponController`: GET `` (list AdminCouponDto) + PUT `/{code}/active` (body `{active}`)
-- [ ] `CouponDtos`: + record `AdminCouponActiveRequest(boolean active)`
-- [ ] KHÔNG đụng create/update/DELETE + exception mapping hiện có
+- [x] `AdminCouponController`: GET `` (list AdminCouponDto) + PUT `/{code}/active` (body `{active}`)
+- [x] `CouponDtos`: + record `AdminCouponActiveRequest(boolean active)`
+- [x] KHÔNG đụng create/update/DELETE + exception mapping hiện có
 
 ### T4 be-couponservice-deactivate-policy
-- [ ] `CouponService.adminList()` — findAll sort code → map toDto
-- [ ] `CouponService.adminSetActive(code, active)` — 404 nếu thiếu; domain `Coupon.setActive` (javadoc N4: in-flight RESERVED honor, mã mới từ chối qua isRunning)
-- [ ] KHÔNG đụng reserve/release/finalize (đã đúng)
+- [x] `CouponService.adminList()` — findAll sort code → map toDto
+- [x] `CouponService.adminSetActive(code, active)` — 404 nếu thiếu; domain `Coupon.setActive` (javadoc N4: in-flight RESERVED honor, mã mới từ chối qua isRunning)
+- [x] KHÔNG đụng reserve/release/finalize (đã đúng)
 
 ### T5 be-it-contract-shape-toggle
-- [ ] IT GET list: tạo 2 coupon → list chứa cả 2, đủ usageLimit/usedCount/active
-- [ ] IT toggle round-trip: off → validate fail "không còn hiệu lực" → on → validate pass lại
-- [ ] IT toggle-in-flight (N4): reserve qua `CouponService` → toggle off → `finalizeForOrder` vẫn OK + usedCount giữ; validate mã mới fail
-- [ ] IT delete-with-reservation → 409 (assert policy có sẵn)
-- [ ] `mvn test` (AdminCouponApiTest + regression) green
+- [x] IT GET list: tạo 2 coupon → list chứa cả 2, đủ usageLimit/usedCount/active
+- [x] IT toggle round-trip: off → validate fail "không còn hiệu lực" → on → validate pass lại
+- [x] IT toggle-in-flight (N4): reserve qua `CouponService` → toggle off → `finalizeForOrder` vẫn OK + usedCount giữ; validate mã mới fail
+- [x] IT delete-with-reservation → 409 (assert policy có sẵn)
+- [x] `mvn test` (AdminCouponApiTest + regression) green
 
 ### T6 fe-couponspage-form-crud (chờ A3 + regen)
 - [ ] `lib/couponForm.ts` — form state + validate mirror BE §4.10 (code regex, PERCENT 1-100, FIXED>0, window, limit≥1, minOrder≥0) + `toRequest()`

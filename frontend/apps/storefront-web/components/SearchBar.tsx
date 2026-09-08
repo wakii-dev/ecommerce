@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { formatVnd, localePath, type Locale } from '../lib/format';
@@ -13,7 +14,8 @@ import { moveActive, suggestUrl } from '../lib/search';
  * không CORS); AbortController hủy request cũ mỗi keystroke. Dropdown đóng:
  * mousedown ngoài wrapper / blur ra ngoài / Escape. Enter (không chọn item)
  * → localePath('/search') + ?q= (giữ locale); ArrowUp/Down chọn item
- * (aria-activedescendant). Form GET cùng path (no-JS fallback).
+ * (aria-activedescendant). Form GET cùng path (no-JS fallback). Item suggest
+ * là next/link (T3 — SPA nav, role="option" giữ nguyên, href thật cho no-JS).
  */
 
 const PLACEHOLDER: Record<Locale, string> = {
@@ -182,7 +184,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
             {productCount > 0 ? <li className="search-group-title">{copy.products}</li> : null}
             {suggest.products.map((product, index) => (
               <li key={product.id} role="none">
-                <a
+                <Link
                   id={`${listId}-${index}`}
                   role="option"
                   aria-selected={index === active}
@@ -193,7 +195,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
                   <span className="search-item-name">{product.name}</span>
                   {product.flashSaleEndsAt ? <span className="search-item-hot">{copy.hot}</span> : null}
                   <span className="search-item-price">{formatVnd(product.price)}</span>
-                </a>
+                </Link>
               </li>
             ))}
             {suggest.categories.length > 0 ? <li className="search-group-title">{copy.categories}</li> : null}
@@ -201,7 +203,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
               const flatIndex = productCount + index;
               return (
                 <li key={category.slug} role="none">
-                  <a
+                  <Link
                     id={`${listId}-${flatIndex}`}
                     role="option"
                     aria-selected={flatIndex === active}
@@ -210,7 +212,7 @@ export default function SearchBar({ locale }: { locale: Locale }) {
                     onMouseEnter={() => setActive(flatIndex)}
                   >
                     <span className="search-item-name">{category.name}</span>
-                  </a>
+                  </Link>
                 </li>
               );
             })}

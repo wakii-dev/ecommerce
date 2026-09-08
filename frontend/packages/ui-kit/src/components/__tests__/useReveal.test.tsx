@@ -39,6 +39,13 @@ function renderHarness(delayMs?: number) {
   return container.firstElementChild as HTMLElement;
 }
 
+/** Observer instance vừa được hook tạo — fail rõ ràng nếu hook no-op */
+function firstObserver(): FakeIntersectionObserver {
+  const observer = FakeIntersectionObserver.instances[0];
+  if (!observer) throw new Error('useReveal đã không tạo IntersectionObserver');
+  return observer;
+}
+
 afterEach(() => {
   cleanup();
   FakeIntersectionObserver.instances = [];
@@ -54,7 +61,7 @@ describe('useReveal — progressive enhancement', () => {
     expect(el.classList.contains('uk-reveal')).toBe(true);
     expect(el.classList.contains('uk-reveal--pending')).toBe(true);
 
-    const observer = FakeIntersectionObserver.instances[0];
+    const observer = firstObserver();
     expect(observer.observe).toHaveBeenCalledTimes(1);
     expect(observer.observe).toHaveBeenCalledWith(el);
   });
@@ -64,7 +71,7 @@ describe('useReveal — progressive enhancement', () => {
     mockMatchMedia(false);
 
     const el = renderHarness();
-    const observer = FakeIntersectionObserver.instances[0];
+    const observer = firstObserver();
 
     // Chưa cuộn tới → pending còn nguyên
     observer.callback([{ isIntersecting: false }]);

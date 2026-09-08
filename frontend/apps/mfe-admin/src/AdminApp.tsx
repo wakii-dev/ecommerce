@@ -96,7 +96,10 @@ function AdminShell({ path }: { path: string }): ReactElement {
   // Active qua activeNavIndex giữ nguyên semantics (order-detail → Orders) —
   // map ngược index → `to` của ADMIN_NAV flat để so với item trong nhóm.
   const activeTo = ADMIN_NAV[activeNavIndex(path)]?.to;
-  const roleLabel = user?.roles?.[0]?.toUpperCase();
+  // Pill ưu tiên 'admin' khi có (case-insensitive — user ['customer','admin']
+  // phải hiện ADMIN, không phải CUSTOMER của role đầu tiên).
+  const roles = user?.roles ?? [];
+  const roleLabel = (roles.find((role) => role.toLowerCase() === 'admin') ?? roles[0])?.toUpperCase();
 
   const onNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, to: string): void => {
     // Giữ open-in-new-tab cho modifier click (giống pattern Link của shell).
@@ -206,20 +209,24 @@ export default function AdminApp(): ReactElement {
   const { t } = useT();
   const [state, setState] = useState<AdminGuardState | 'booting'>('booting');
   const [path, setPath] = useState<string>(() => window.location.pathname);
-  const prevTheme = useRef<string>('storefront');
+  // Giá trị data-theme TRƯỚC mount; null = attribute không tồn tại → unmount
+  // phải XÓA attribute (không bịa 'storefront' — review G1 P2).
+  const prevTheme = useRef<string | null>(null);
 
   // Theme map 4 trạng thái (FI-395 T1): theme shell light/dark được remap sang
   // admin/admin-dark khi admin mount. Shell ThemeToggle flip attribute
   // data-theme GIỮA phiên admin → MutationObserver theo ngay (KHÔNG matchMedia
   // — jsdom test an toàn). Unmount: disconnect + restore theme trước đó.
   useEffect(() => {
-    prevTheme.current = document.documentElement.dataset.theme ?? 'storefront';
-    // Mapping idempotent: gán lại cùng giá trị không đốt observer callback
-    // (attribute chỉ "mutate" khi giá trị thực sự đổi) → không loop.
+    prevTheme.current = document.documentElement.getAttribute('data-theme');
     const applyAdminTheme = (): void => {
-      const theme = document.documentElement.dataset.theme;
-      document.documentElement.dataset.theme =
-        theme === 'dark' || theme === 'admin-dark' ? 'admin-dark' : 'admin';
+      const theme = document.documentElement.getAttribute('data-theme');
+      const next = theme === 'dark' || theme === 'admin-dark' ? 'admin-dark' : 'admin';
+      // Chỉ ghi khi ĐỔI: same-value setAttribute vẫn queue mutation record
+      // (DOM spec) → callback tự kích chính nó = vòng lặp microtask vô hạn.
+      if (document.documentElement.getAttribute('data-theme') !== next) {
+        document.documentElement.setAttribute('data-theme', next);
+      }
     };
     applyAdminTheme();
     const observer = new MutationObserver(applyAdminTheme);
@@ -229,7 +236,11 @@ export default function AdminApp(): ReactElement {
     });
     return () => {
       observer.disconnect();
-      document.documentElement.dataset.theme = prevTheme.current;
+      if (prevTheme.current === null) {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', prevTheme.current);
+      }
     };
   }, []);
 

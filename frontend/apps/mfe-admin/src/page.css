@@ -49,9 +49,14 @@
   gap: 2px;
 }
 
+/* Nav item: icon 18 + label cùng hàng (icon kế thừa currentColor → active
+   theo --c-link của --active tự động) — MỘT block duy nhất (review G1 P2:
+   trước đây bị tách 2 nơi display:block/flex). */
 .admin-nav-link {
-  display: block;
-  padding: 11px 16px; /* §2.6 nav item 11px 16px, 14px/600 */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 10px 16px; /* §2.5 nav item 10px 16px, 14px/600 */
   border-left: 3px solid transparent;
   color: var(--c-text-muted, #757575);
   text-decoration: none;
@@ -395,6 +400,18 @@
     white-space: nowrap;
   }
 
+  /* User trong strip ngang: margin-top:auto pin dọc vô nghĩa + nowrap links
+     chèn ép — đổi thành item cuối hàng, đẩy phải bằng margin-left:auto
+     (review G1 P2). */
+  .admin-side__user {
+    margin-top: 0;
+    margin-left: auto;
+    white-space: nowrap;
+    border-top: none;
+    border-left: 1px solid var(--c-border);
+    padding-top: 0;
+  }
+
   .admin-side__nav {
     flex-direction: row;
     gap: var(--space-1, 4px);
@@ -453,14 +470,6 @@
 
 .admin-nav-group:first-child .admin-nav-group__label {
   margin-top: 0;
-}
-
-/* Nav item: icon 18 + label cùng hàng (icon kế thừa currentColor → active
-   theo --c-link của --active tự động) */
-.admin-nav-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
 }
 
 .admin-nav-link__icon {

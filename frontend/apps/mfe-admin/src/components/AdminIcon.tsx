@@ -64,15 +64,25 @@ export const ADMIN_ICON_PATHS: Record<AdminIconName, ReactElement> = {
   )
 };
 
-/** Danh sách tên — guard phân loại icon admin-local vs ui-kit ở callsite. */
-export const ADMIN_ICON_NAMES: ReadonlyArray<AdminIconName> = [
+/** Danh sách tên — guard phân loại icon admin-local vs ui-kit ở callsite.
+ *  Union AdminIconName là NGUỒN chân lý duy nhất: `satisfies` ép mọi phần tử
+ *  ∈ union, check bên dưới ép union ⊆ list (nhờ `as const` giữ literal type —
+ *  annotation thường sẽ widening `typeof[number]` thành union và vô hiệu check)
+ *  → cả hai chiều không thể drift. */
+export const ADMIN_ICON_NAMES = [
   'grid',
   'folder',
   'rotate-ccw',
   'mail',
   'award',
   'file-text'
-];
+] as const satisfies ReadonlyArray<AdminIconName>;
+
+/** Compile-time exhaustiveness: member union thiếu trong ADMIN_ICON_NAMES →
+ *  `[X] extends [never]` thành false → gán `true` lỗi type ngay đây. */
+type AdminIconNameMissing = Exclude<AdminIconName, (typeof ADMIN_ICON_NAMES)[number]>;
+export const ADMIN_ICON_NAMES_EXHAUSTIVE: [AdminIconNameMissing] extends [never] ? true : false =
+  true;
 
 /** Decorative-only (aria-hidden) — nav item đã có text label riêng. */
 export function AdminIcon({ name, size = 18, className }: AdminIconProps) {

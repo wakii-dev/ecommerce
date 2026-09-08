@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { authStore } from '@ecommerce/auth';
@@ -101,16 +101,19 @@ describe('AdminApp mount smoke (jsdom)', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
   });
 
-  it('admin token → render layout: sidebar 6 nav items + topbar user', async () => {
+  it('admin token → render layout: sidebar 11 nav links / 5 groups + topbar user', async () => {
     stubFetch();
     authStore.setToken(fakeJwt(['customer', 'admin']));
     render(<AdminApp />);
     await waitFor(() => {
       expect(screen.getByRole('navigation')).toBeTruthy();
     });
-    // 6 nav links (pack: Dashboard, Products, Categories, Coupons, Reviews, Orders)
-    const links = screen.getAllByRole('link', { name: /Tổng quan|Sản phẩm|Danh mục|Mã giảm giá|Đánh giá|Đơn hàng/ });
-    expect(links.length).toBe(6);
+    // 11 nav links / 5 groups (SF-5 FI-395 T2 sidebar nhóm: Dashboard,
+    // Products, Categories, Coupons, Orders, RMA, Reviews, Affiliates,
+    // Newsletter, Loyalty, Audit)
+    const nav = screen.getByRole('navigation');
+    expect(within(nav).getAllByRole('link').length).toBe(11);
+    expect(nav.querySelectorAll('.admin-nav-group').length).toBe(5);
     // Topbar có user info (decode từ JWT)
     expect(screen.getByTestId('admin-user').textContent).toContain('Quản Trị Viên');
     // Dashboard KPI tile render (label đầu tiên)
@@ -222,5 +225,97 @@ describe('AdminApp mount smoke (jsdom)', () => {
     expect(document.documentElement.dataset.theme).toBe('admin');
     unmount();
     expect(document.documentElement.dataset.theme).toBe('storefront');
+  });
+
+  it('theme live remap (MutationObserver): shell đổi theme giữa phiên admin → remap ngay; unmount restore', async () => {
+    stubFetch();
+    authStore.setToken(fakeJwt(['admin']));
+    document.documentElement.dataset.theme = 'dark';
+    const { unmount } = render(<AdminApp />);
+    await waitFor(() => {
+      expect(screen.getByRole('navigation')).toBeTruthy();
+    });
+    expect(document.documentElement.dataset.theme).toBe('admin-dark');
+    // Shell ThemeToggle flip dark→light GIỮA phiên admin → observer remap 'admin'
+    document.documentElement.dataset.theme = 'light';
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe('admin');
+    });
+    // Flip ngược light→dark → 'admin-dark'
+    document.documentElement.dataset.theme = 'dark';
+    await waitFor(() => {
+      expect(document.documentElement.dataset.theme).toBe('admin-dark');
+    });
+    unmount();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('theme pre-existing dark lúc mount → admin-dark; unmount restore dark', async () => {
+    stubFetch();
+    authStore.setToken(fakeJwt(['admin']));
+    document.documentElement.dataset.theme = 'dark';
+    const { unmount } = render(<AdminApp />);
+    await waitFor(() => {
+      expect(screen.getByRole('navigation')).toBeTruthy();
+    });
+    expect(document.documentElement.dataset.theme).toBe('admin-dark');
+    unmount();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('theme KHÔNG tồn tại lúc mount → unmount XÓA attribute (không bịa storefront)', async () => {
+    stubFetch();
+    authStore.setToken(fakeJwt(['admin']));
+    delete document.documentElement.dataset.theme;
+    const { unmount } = render(<AdminApp />);
+    await waitFor(() => {
+      expect(screen.getByRole('navigation')).toBeTruthy();
+    });
+    expect(document.documentElement.dataset.theme).toBe('admin');
+    unmount();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('active nav: /admin/orders/<id> → link Đơn hàng active; /admin/dashboard → link Tổng quan active', async () => {
+    // order-detail query trả 404 → trang detail render nhánh not-found an toàn,
+    // nav sidebar vẫn render đầy đủ (đủ để assert active-state).
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/auth/refresh')) return json({ accessToken: fakeJwt(['admin']) });
+        return {
+          ok: false,
+          status: 404,
+          headers: new Map() as unknown as Headers,
+          json: async () => ({}),
+          arrayBuffer: async () => new TextEncoder().encode('{}').buffer as ArrayBuffer
+        } as unknown as Response;
+      })
+    );
+    window.history.replaceState(null, '', '/admin/orders/0d9a2c5e-6b7f-4c1a-9e2d-3f4a5b6c7d8e');
+    const view = render(<AdminApp />);
+    await waitFor(() => {
+      expect(screen.getByRole('navigation')).toBeTruthy();
+    });
+    // order-detail map về Orders (activeNavIndex) — link nav phải active
+    const ordersLink = screen.getByRole('link', { name: 'Đơn hàng' });
+    expect(ordersLink.getAttribute('aria-current')).toBe('page');
+    expect(ordersLink.className).toContain('admin-nav-link--active');
+    view.unmount();
+
+    // Dashboard path → link Tổng quan active (các link khác KHÔNG)
+    stubFetch();
+    window.history.replaceState(null, '', '/admin/dashboard');
+    render(<AdminApp />);
+    await waitFor(() => {
+      expect(screen.getByRole('navigation')).toBeTruthy();
+    });
+    const dashLink = screen.getByRole('link', { name: 'Tổng quan' });
+    expect(dashLink.getAttribute('aria-current')).toBe('page');
+    expect(dashLink.className).toContain('admin-nav-link--active');
+    const ordersLinkAgain = screen.getByRole('link', { name: 'Đơn hàng' });
+    expect(ordersLinkAgain.getAttribute('aria-current')).toBeNull();
+    expect(ordersLinkAgain.className).not.toContain('admin-nav-link--active');
   });
 });

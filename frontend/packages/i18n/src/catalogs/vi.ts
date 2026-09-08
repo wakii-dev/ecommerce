@@ -76,6 +76,14 @@ export const vi = {
       providerError: 'Nhà cung cấp đăng nhập gặp lỗi — thử lại.',
       genericError: 'Đăng nhập không thành công.',
       exchangeError: 'Không hoàn tất được đăng nhập — thử lại.'
+    },
+    // ── T3 — UserMenu (chuỗi vi GIỮ NGUYÊN text đang có — e2e locate theo text;
+    // GuestLinks REUSE nav.login/nav.register) ──
+    menu: {
+      account: 'Tài khoản',
+      orders: 'Đơn hàng của tôi',
+      logout: 'Đăng xuất',
+      displayNameFallback: 'Tài khoản'
     }
   },
   auth: {

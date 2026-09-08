@@ -75,6 +75,13 @@ export const en = {
       providerError: 'The sign-in provider had an error — try again.',
       genericError: 'Sign-in failed.',
       exchangeError: 'Could not complete sign-in — try again.'
+    },
+    // ── T3 — UserMenu — mirrors vi 1:1 (GuestLinks reuse nav.login/nav.register) ──
+    menu: {
+      account: 'Account',
+      orders: 'My orders',
+      logout: 'Log out',
+      displayNameFallback: 'Account'
     }
   },
   auth: {

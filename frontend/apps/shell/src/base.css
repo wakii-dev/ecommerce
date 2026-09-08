@@ -1,0 +1,10 @@
+/* base.css — nền + màu chữ gốc cho shell (SF-3 FI-393).
+   Shell trước giờ không áp --c-bg lên canvas (trong suốt = trắng mặc định
+   trình duyệt) → dark mode lệch: card tối nổi trên nền trắng. Tokens-only. */
+html {
+  background: var(--c-bg);
+}
+
+body {
+  color: var(--c-text);
+}

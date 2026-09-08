@@ -267,10 +267,10 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `app/[locale]/search/page.tsx`, `app/[locale]/coupons/page.tsx`, `components/coupons/CopyButton.tsx`, css.
 
-- [ ] **Step 1:** Search §4: empty state emoji icon 48px muted + eyebrow + nút outline "Xóa bộ lọc"/chips gợi ý — chips hiện có polish (pill, hover wash); loading 6 ProductCardSkeleton (T2 đã làm loading.tsx — kiểm đủ).
-- [ ] **Step 2:** Coupons §4: card dùng product-card shell (shadow-1, hover −3px shadow-3); mã coupon khối border DASHED radius-md; CopyButton style cta-outline; badge hết hạn tint-new (nếu có dữ liệu expiry — hiện có HSD text; giữ text, thêm pill tint khi hết hạn chỉ khi parse được date).
-- [ ] **Step 3:** CopyButton i18n fix L59: vi "Sao chép" / en "Copy" (giữ nguyên giá trị copied hiện có: vi "Đã copy" / en "Copied!" — P2 critic: đừng đổi copy vô ích); copy thành công → toast pop qua useToast (§4: "bấm copy → toast pop") + GIỮ trạng thái inline (progressive).
-- [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): search/coupons polish + CopyButton i18n + toast (FI-392)`.
+- [x] **Step 1:** Search §4: empty state emoji icon 48px muted + eyebrow + nút outline "Xóa bộ lọc"/chips gợi ý — chips hiện có polish (pill, hover wash); loading 6 ProductCardSkeleton (T2 đã làm loading.tsx — kiểm đủ).
+- [x] **Step 2:** Coupons §4: card dùng product-card shell (shadow-1, hover −3px shadow-3); mã coupon khối border DASHED radius-md; CopyButton style cta-outline; badge hết hạn tint-new (nếu có dữ liệu expiry — hiện có HSD text; giữ text, thêm pill tint khi hết hạn chỉ khi parse được date).
+- [x] **Step 3:** CopyButton i18n fix L59: vi "Sao chép" / en "Copy" (giữ nguyên giá trị copied hiện có: vi "Đã copy" / en "Copied!" — P2 critic: đừng đổi copy vô ích); copy thành công → toast pop qua useToast (§4: "bấm copy → toast pop") + GIỮ trạng thái inline (progressive).
+- [x] **Step 4:** vitest + lint xanh → commit `feat(storefront): search/coupons polish + CopyButton i18n + toast (FI-392)`.
 
 ### Task 11: footer-newsletter-tokenize-recentlyviewed-decss (nhóm C)
 

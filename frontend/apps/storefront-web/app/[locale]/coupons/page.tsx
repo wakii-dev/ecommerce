@@ -18,7 +18,7 @@ const GATEWAY_URL = process.env.GATEWAY_URL || 'http://localhost:8080';
 
 const COPY: Record<
   Locale,
-  { title: string; empty: string; emptyDesc: string; minOrder: string; expires: string }
+  { title: string; empty: string; emptyDesc: string; minOrder: string; expires: string; expired: string }
 > = {
   vi: {
     title: 'Mã giảm giá',
@@ -26,6 +26,7 @@ const COPY: Record<
     emptyDesc: 'Ưu đãi mới sẽ xuất hiện tại đây khi có chương trình khuyến mãi.',
     minOrder: 'Đơn tối thiểu',
     expires: 'HSD',
+    expired: 'Hết hạn',
   },
   en: {
     title: 'Coupons',
@@ -33,6 +34,7 @@ const COPY: Record<
     emptyDesc: 'New deals will appear here when a promotion starts.',
     minOrder: 'Min. order',
     expires: 'Exp.',
+    expired: 'Expired',
   },
 };
 
@@ -53,6 +55,12 @@ function expiryLabel(endsAt: string, locale: Locale): string | null {
   const date = new Date(endsAt);
   if (Number.isNaN(date.getTime())) return null;
   return `${locale === 'en' ? 'Exp.' : 'HSD'} ${date.toLocaleDateString(locale === 'en' ? 'en-GB' : 'vi-VN')}`;
+}
+
+/** Pill "Hết hạn" chỉ khi endsAt parse được VÀ đã qua (direction §4 tint-new — không bịa khi thiếu/invalid). */
+function isExpired(endsAt: string): boolean {
+  const date = new Date(endsAt);
+  return !Number.isNaN(date.getTime()) && date.getTime() < Date.now();
 }
 
 export default async function CouponsPage({ params }: { params: { locale: string } }) {
@@ -90,6 +98,7 @@ export default async function CouponsPage({ params }: { params: { locale: string
         <div className="coupons-grid">
           {coupons.map((coupon) => {
             const expiry = coupon.endsAt !== undefined ? expiryLabel(coupon.endsAt, locale) : null;
+            const expired = coupon.endsAt !== undefined && isExpired(coupon.endsAt);
             return (
               <article key={coupon.code} className="coupon-card">
                 <span className="coupon-code">{coupon.code}</span>
@@ -101,6 +110,7 @@ export default async function CouponsPage({ params }: { params: { locale: string
                   </span>
                 ) : null}
                 {expiry !== null ? <span className="coupon-meta">{expiry}</span> : null}
+                {expired ? <span className="coupon-expired">{t.expired}</span> : null}
                 <CopyButton code={coupon.code} locale={locale} />
               </article>
             );

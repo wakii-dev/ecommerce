@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 
 import Pagination from '../../../components/plp/Pagination';
 import ProductCardView from '../../../components/ProductCardView';
-import { EmptyState } from '../../../components/ui-kit';
+import { EmptyState, Icon } from '../../../components/ui-kit';
 import { catalogApi, CatalogUnavailableError, type ProductCardPage } from '../../../lib/catalog-api';
 import { localePath, resolveLocale, type Locale } from '../../../lib/format';
 import { parseSearchPageParams, SEARCH_SUGGESTED_KEYWORDS } from '../../../lib/search';
@@ -71,7 +71,7 @@ export default async function SearchPage({ params, searchParams }: SearchPagePro
         <div className="plp-head">
           <h1 className="plp-title">{t.h1}</h1>
         </div>
-        <EmptyState icon="🔍" title={t.prompt} description={t.promptDesc} />
+        <EmptyState icon={<Icon name="search" size={48} />} title={t.prompt} description={t.promptDesc} />
       </div>
     );
   }
@@ -93,7 +93,7 @@ export default async function SearchPage({ params, searchParams }: SearchPagePro
           <h1 className="plp-title">{t.h1}</h1>
         </div>
         <EmptyState
-          icon="🛠️"
+          icon={<Icon name="alert" size={48} />}
           title={t.down}
           description={
             locale === 'en'

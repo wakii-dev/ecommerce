@@ -224,8 +224,8 @@ git commit -m "feat(ui-kit): @font-face Be Vietnam Pro self-host 400-800 vietnam
 **Files:**
 - Modify: `frontend/packages/ui-kit/src/components/Modal.tsx`, `Drawer.tsx`, `Tabs.tsx`, `Toast.tsx`, `Select.tsx` — thêm `'use client';` dòng 1 (trước import, sau không có gì).
 
-- [ ] **Step 1:** Thêm directive `'use client';` chính xác dòng đầu 5 file stateful. KHÔNG đụng StarRating/EmptyState/Badge/Price/Card/Skeleton/Price/Input/Button (server-safe — Input/Button là pure render, state do consumer giữ). KHÔNG đụng shim `apps/storefront-web/components/ui-kit.ts` (SF-2 own — comment shim tự stale, chấp nhận).
-- [ ] **Step 2: Run** `cd frontend/packages/ui-kit && pnpm vitest run` ('use client' là no-op trong vitest — chỉ bảo đảm không vỡ) → PASS. Commit:
+- [x] **Step 1:** Thêm directive `'use client';` chính xác dòng đầu 5 file stateful. KHÔNG đụng StarRating/EmptyState/Badge/Price/Card/Skeleton/Price/Input/Button (server-safe — Input/Button là pure render, state do consumer giữ). KHÔNG đụng shim `apps/storefront-web/components/ui-kit.ts` (SF-2 own — comment shim tự stale, chấp nhận).
+- [x] **Step 2: Run** `cd frontend/packages/ui-kit && pnpm vitest run` ('use client' là no-op trong vitest — chỉ bảo đảm không vỡ) → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/components/Modal.tsx frontend/packages/ui-kit/src/components/Drawer.tsx frontend/packages/ui-kit/src/components/Tabs.tsx frontend/packages/ui-kit/src/components/Toast.tsx frontend/packages/ui-kit/src/components/Select.tsx
 git commit -m "feat(ui-kit): 'use client' cho 5 primitive stateful — RSC-safe (FI-391 T3)"
@@ -236,14 +236,14 @@ git commit -m "feat(ui-kit): 'use client' cho 5 primitive stateful — RSC-safe 
 **Files:**
 - Modify: `frontend/apps/mfe-checkout/src/bootstrap.tsx`, `frontend/apps/mfe-account/src/bootstrap.tsx`, `frontend/apps/mfe-admin/src/bootstrap.tsx`
 
-- [ ] **Step 1:** Mỗi file thêm 2 dòng import cạnh `import './page.css'` (admin KHÔNG có page.css — thêm vào cụm import đầu):
+- [x] **Step 1:** Mỗi file thêm 2 dòng import cạnh `import './page.css'` (admin KHÔNG có page.css — thêm vào cụm import đầu):
 ```ts
 // SF-1 FI-391: ui-kit css cả 2 biên MF (FI-368 T11 — remote standalone qua
 // bootstrap không chạy main.tsx; dưới shell dedupe vô hại với import của host).
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
 ```
-- [ ] **Step 2: Verify typecheck** `pnpm -r --filter @ecommerce/mfe-checkout --filter @ecommerce/mfe-account --filter @ecommerce/mfe-admin exec tsc --noEmit` (hoặc build script tương đương hiện có) → sạch. Commit:
+- [x] **Step 2: Verify typecheck** `pnpm -r --filter @ecommerce/mfe-checkout --filter @ecommerce/mfe-account --filter @ecommerce/mfe-admin exec tsc --noEmit` (hoặc build script tương đương hiện có) → sạch. Commit:
 ```bash
 git add frontend/apps/mfe-checkout/src/bootstrap.tsx frontend/apps/mfe-account/src/bootstrap.tsx frontend/apps/mfe-admin/src/bootstrap.tsx
 git commit -m "feat(apps): ui-kit css import host-biên 3 bootstrap (FI-391 T4)"

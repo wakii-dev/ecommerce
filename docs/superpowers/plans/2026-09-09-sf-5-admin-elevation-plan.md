@@ -172,21 +172,21 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 **Files:**
 - Modify: OrdersPage.tsx (đã DataTable ở T3), OrderDetailPage.tsx, page.css
 
-- [ ] **Step 1:** OrderDetail: timeline thay `<ol>` thô → dot 10px + đường 1px c-border, mốc hoàn thành (event cuối) nền c-success (css `.admin-timeline`), GIỮ data/logic (chỉ JSX/CSS quanh nó).
-- [ ] **Step 2:** Action buttons ship/deliver/cancel: đổi emoji ('🚚','✓','✕','⬇') → Icon SF-1 (package/check/x/external) + Button variant nhất quán; confirm dialog cancel giữ Modal + copy.
-- [ ] **Step 3:** Status pill 6 màu đã đúng token — review padding/ls khớp §2.5 (11/800 ls .05 padding 3×9 full — css .admin-pill có 3px 9px; bổ sung letter-spacing 0.05em).
-- [ ] **Step 4:** Commit `feat(admin): order detail timeline + action buttons polish (FI-395 T7)`.
+- [x] **Step 1:** OrderDetail: timeline thay `<ol>` thô → dot 10px + đường 1px c-border, mốc hoàn thành (event cuối) nền c-success (css `.admin-timeline`), GIỮ data/logic (chỉ JSX/CSS quanh nó).
+- [x] **Step 2:** Action buttons ship/deliver/cancel: đổi emoji ('🚚','✓','✕','⬇') → Icon SF-1 (package/check/x/external) + Button variant nhất quán; confirm dialog cancel giữ Modal + copy.
+- [x] **Step 3:** Status pill 6 màu đã đúng token — review padding/ls khớp §2.5 (11/800 ls .05 padding 3×9 full — css .admin-pill có 3px 9px; bổ sung letter-spacing 0.05em).
+- [x] **Step 4:** Commit `feat(admin): order detail timeline + action buttons polish (FI-395 T7)`.
 
 ### Task 8: remaining-pages-visual-pass-8-man-hinh
 
 **Files:**
 - Modify: CategoriesPage, CouponsPage, AffiliatesPage, AuditPage, NewsletterPage, LoyaltyPage, ReviewsPage, RmaPage, page.css
 
-- [ ] **Step 1:** (2×4 nếu budget executor cạn — chia sub-commit) Mỗi page: page-head nhất quán (title + actions), pills/badges tint đúng, empty states EmptyState primitive (icon muted 48 + eyebrow), spacing/headers §2.5; KHÔNG đụng mutation/query logic.
-- [ ] **Step 2:** Coupons form modal-card: grid 2 cột thoáng; stats KPI Affiliates/Loyalty → pattern .admin-kpi (Task 5 style dùng lại).
-- [ ] **Step 3:** Audit/Newsletter: đã DataTable ở T3b — chỉ polish filter/empty ở đây.
-- [ ] **Step 4:** Commit gate: grep testid inventory (như T3b Step 2) — diff rỗng mới commit.
-- [ ] **Step 5:** Commit `feat(admin): visual pass 8 pages còn lại (FI-395 T8)`.
+- [x] **Step 1:** (2×4 nếu budget executor cạn — chia sub-commit) Mỗi page: page-head nhất quán (title + actions), pills/badges tint đúng, empty states EmptyState primitive (icon muted 48 + eyebrow), spacing/headers §2.5; KHÔNG đụng mutation/query logic.
+- [x] **Step 2:** Coupons form modal-card: grid 2 cột thoáng; stats KPI Affiliates/Loyalty → pattern .admin-kpi (Task 5 style dùng lại).
+- [x] **Step 3:** Audit/Newsletter: đã DataTable ở T3b — chỉ polish filter/empty ở đây.
+- [x] **Step 4:** Commit gate: grep testid inventory (như T3b Step 2) — diff rỗng mới commit.
+- [x] **Step 5:** Commit `feat(admin): visual pass 8 pages còn lại (FI-395 T8)`.
 
 ### Task 9: admin-badge-mock-cleanup-hex-tokenize
 

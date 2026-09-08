@@ -13,12 +13,18 @@ import { fetchMyLoyalty, type LoyaltyAccount } from './loyaltyApi';
  * dùng ở checkout để giảm tiền; hiển thị quy đổi VND (1 điểm = 100đ).
  * Tự fetch độc lập — khách không đăng ký affiliate vẫn thấy điểm.
  * SF-4 (FI-394 T9): `<section id="loyalty">` anchor — side-nav item
- * /account/affiliate#loyalty scrollIntoView sau loaded (tôn trọng
- * prefers-reduced-motion); stats → KPI pattern (value màu chuẩn, quy đổi
- * thành Badge tint-primary — KHÔNG tô value --c-primary); loading →
- * ListSkeleton; i18n `account.loyalty.*`.
+ * /account/affiliate#loyalty scrollIntoView (tôn trọng prefers-reduced-motion);
+ * stats → KPI pattern (value màu chuẩn, quy đổi thành Badge tint-primary —
+ * KHÔNG tô value --c-primary); loading → ListSkeleton; i18n
+ * `account.loyalty.*`. T9-fix: hash là PROP từ AffiliatePage (owner của hash
+ * state + popstate/hashchange listener) — effect phụ thuộc [hash, loaded] để
+ * scroll chạy cả khi SPA navigate pushState cùng pathname (không re-mount).
  */
-export default function LoyaltyPointsSection(): ReactElement {
+export default function LoyaltyPointsSection({
+  hash,
+}: {
+  hash: string;
+}): ReactElement {
   const { t } = useT();
   const [account, setAccount] = useState<LoyaltyAccount | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -46,16 +52,19 @@ export default function LoyaltyPointsSection(): ReactElement {
     };
   }, []);
 
-  // Anchor #loyalty — scroll SAU khi loaded (deps [loaded]; section đã mount).
+  // Anchor #loyalty — scroll khi (hash === '#loyalty' && loaded). Hash là prop
+  // (AffiliatePage đồng bộ popstate/hashchange) → click side-nav Điểm thưởng
+  // khi đang ở trang cũng scroll, không chỉ lúc mount. loaded đảm bảo section
+  // (hoặc skeleton của nó) đã mount trước khi đo vị trí.
   useEffect(() => {
     if (!loaded) return;
-    if (typeof window === 'undefined' || window.location.hash !== '#loyalty') return;
+    if (typeof window === 'undefined' || hash !== '#loyalty') return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     sectionRef.current?.scrollIntoView({
       behavior: reduced ? 'auto' : 'smooth',
       block: 'start',
     });
-  }, [loaded]);
+  }, [hash, loaded]);
 
   if (!loaded) {
     return (

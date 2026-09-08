@@ -1,11 +1,13 @@
-// SF-4 (FI-394 T9) — AffiliatePage: KPI stats testid đúng giá trị (clicks/
-// conversions/earnings formatPrice), affiliate-code + affiliate-link ?ref=,
-// ledger qua Table primitive (1 row + pill class map enum), LoyaltyPointsSection
-// mount trong page (loyalty-balance), PENDING → pendingTitle KHÔNG KPI,
-// loading → ListSkeleton (KHÔNG text "Đang tải"). Mock affiliateApi +
-// loyaltyApi + bootstrap (globals:false → cleanup afterEach, pattern
-// ordersPage.test.tsx). Copy clipboard KHÔNG test (navigator.clipboard).
-import { cleanup, render, screen } from '@testing-library/react';
+// SF-4 (FI-394 T9 + T9-fix) — AffiliatePage: KPI stats testid đúng giá trị
+// (clicks/conversions/earnings formatPrice), affiliate-code + affiliate-link
+// ?ref=, ledger qua Table primitive (1 row + pill class map enum),
+// LoyaltyPointsSection mount trong page (loyalty-balance), PENDING →
+// pendingTitle KHÔNG KPI, loading → ListSkeleton (KHÔNG text "Đang tải").
+// T9-fix: hash-aware — #loyalty lúc mount HOẶC qua popstate (appNavigate
+// pushState cùng pathname) → nav active đổi + scrollIntoView gọi. Mock
+// affiliateApi + loyaltyApi + bootstrap (globals:false → cleanup afterEach,
+// pattern ordersPage.test.tsx). Copy clipboard KHÔNG test (navigator.clipboard).
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
 import { formatPrice } from '@ecommerce/ui-kit';
@@ -132,5 +134,93 @@ describe('AffiliatePage', () => {
     expect(container.querySelector('.uk-sk-list')).toBeTruthy();
     expect(screen.queryByText(/Đang tải/)).toBeNull();
     expect(screen.queryByTestId('loyalty-section')).toBeNull();
+  });
+});
+
+describe('AffiliatePage hash-aware (T9-fix)', () => {
+  // jsdom (vitest env) thiếu cả scrollIntoView lẫn window.matchMedia —
+  // polyfill matchMedia (RTL standard, matches:false → behavior 'smooth') +
+  // spy scroll; dọn hash sau MỖI test để không nhiễm test khác.
+  function stubMatchMedia(): void {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false
+      })
+    });
+  }
+
+  function spyScrollIntoView() {
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = () => {};
+    }
+    return vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {});
+  }
+
+  afterEach(() => {
+    history.replaceState(null, '', '/account/affiliate');
+  });
+
+  it('#loyalty lúc mount → nav active "Điểm thưởng", scrollIntoView gọi SAU loaded', async () => {
+    history.replaceState(null, '', '/account/affiliate#loyalty');
+    stubMatchMedia();
+    const scrollSpy = spyScrollIntoView();
+    vi.mocked(fetchProfile).mockResolvedValue(profile());
+    vi.mocked(fetchLedger).mockResolvedValue(ledgerPage([ENTRY]));
+
+    render(<AffiliatePage />);
+
+    const loyaltyLink = screen.getByRole('link', { name: 'Điểm thưởng' });
+    expect(loyaltyLink.className).toContain('acc-nav__link--active');
+    expect(loyaltyLink.getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Affiliate' }).className).not.toContain(
+      'acc-nav__link--active'
+    );
+
+    // Chưa loaded → chưa scroll; loyalty fetch xong → scroll đúng 1 lần.
+    expect(scrollSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+    expect(scrollSpy.mock.calls[0]?.[0]).toEqual({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  });
+
+  it('SPA navigate sang #loyalty khi đang ở trang (popstate) → active đổi + scrollIntoView gọi', async () => {
+    stubMatchMedia();
+    const scrollSpy = spyScrollIntoView();
+    vi.mocked(fetchProfile).mockResolvedValue(profile());
+    vi.mocked(fetchLedger).mockResolvedValue(ledgerPage([ENTRY]));
+
+    render(<AffiliatePage />);
+    await screen.findByTestId('affiliate-clicks'); // page loaded
+
+    // Repro browser-verify: appNavigate('/account/affiliate#loyalty') =
+    // pushState + dispatch PopStateEvent — KHÔNG re-mount, KHÔNG hashchange.
+    expect(screen.getByRole('link', { name: 'Affiliate' }).className).toContain(
+      'acc-nav__link--active'
+    );
+    expect(scrollSpy).not.toHaveBeenCalled();
+
+    history.replaceState(null, '', '/account/affiliate#loyalty');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
+    expect(
+      screen.getByRole('link', { name: 'Điểm thưởng' }).className
+    ).toContain('acc-nav__link--active');
+    expect(
+      screen.getByRole('link', { name: 'Affiliate' }).className
+    ).not.toContain('acc-nav__link--active');
   });
 });

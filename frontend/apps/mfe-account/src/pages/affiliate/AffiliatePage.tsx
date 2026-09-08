@@ -38,7 +38,7 @@ const STATUS_PILL: Record<string, string> = {
   CONFIRMED: 'pill pill--confirmed',
 };
 
-function AffiliatePageContent(): ReactElement {
+function AffiliatePageContent({ hash }: { hash: string }): ReactElement {
   const { t } = useT();
   const [profile, setProfile] = useState<AffiliateProfile | null>(null);
   const [ledger, setLedger] = useState<LedgerPage | null>(null);
@@ -195,7 +195,7 @@ function AffiliatePageContent(): ReactElement {
       ) : null}
 
       {/* SF-14 (FI-324): block điểm thưởng — hiện cho mọi user đã đăng nhập */}
-      <LoyaltyPointsSection />
+      <LoyaltyPointsSection hash={hash} />
 
       {showForm ? (
         <Card>
@@ -318,15 +318,35 @@ function AffiliatePageContent(): ReactElement {
   );
 }
 
-/** SF-4 (FI-394 T1/T9): side-nav layout; active theo hash — #loyalty → item Điểm thưởng (plan §4: 2 item không active đồng thời). */
+/**
+ * SF-4 (FI-394 T1/T9/T9-fix): side-nav layout; active + scroll THEO HASH STATE,
+ * không đọc location lúc render một lần. appNavigate('/account/affiliate#loyalty')
+ * là pushState CÙNG pathname → shell usePath không re-render page → mount-only
+ * read không bao giờ thấy hash mới (browser-verify FAIL 2/11). Hash là state +
+ * listener 'popstate' (appNavigate dispatch PopStateEvent thủ công trong
+ * router.tsx navigate()) VÀ 'hashchange' (back/forward, edit URL) → active
+ * (plan §4: 2 item affiliate/loyalty không active đồng thời) + hash truyền
+ * xuống LoyaltyPointsSection cho scrollIntoView.
+ */
 export default function AffiliatePage(): ReactElement {
-  const active =
-    typeof window !== 'undefined' && window.location.hash === '#loyalty'
-      ? 'loyalty'
-      : 'affiliate';
+  const [hash, setHash] = useState(() =>
+    typeof window === 'undefined' ? '' : window.location.hash
+  );
+
+  useEffect(() => {
+    const syncHash = (): void => setHash(window.location.hash);
+    window.addEventListener('popstate', syncHash);
+    window.addEventListener('hashchange', syncHash);
+    return () => {
+      window.removeEventListener('popstate', syncHash);
+      window.removeEventListener('hashchange', syncHash);
+    };
+  }, []);
+
+  const active = hash === '#loyalty' ? 'loyalty' : 'affiliate';
   return (
     <AccountLayout active={active}>
-      <AffiliatePageContent />
+      <AffiliatePageContent hash={hash} />
     </AccountLayout>
   );
 }

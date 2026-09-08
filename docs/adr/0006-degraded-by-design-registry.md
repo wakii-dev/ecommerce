@@ -30,13 +30,22 @@ dòng seed mock, rename `Stub*` types → `Admin*` (dữ liệu LIVE từ SF-10 
 | D15-4 | **Catalog down → EmptyState degraded**: home/PDP SSR fetch fail → hero tĩnh + EmptyState "tạm thời không khả dụng", KHÔNG crash RSC, KHÔNG render content giả | storefront-web `app/[locale]/page.tsx`, `p/[slug]/page.tsx` | (1) Không nói dối — thông báo đúng sự thật; (2) không thay bằng data giả; (3) lỗi quan sát được, retry được | EmptyState icon 🛠️ + mô tả thử lại |
 | D15-5 | **PDP related ẩn khi fail**: `/related` (ES MLT) fail/rỗng → ẩn section, không vỡ PDP | storefront-web `p/[slug]/page.tsx` | (1) ẩn ≠ nói dối (không hiện sản phẩm giả); (2) không có đường giả; (3) fail im lặng ở mức SECTION (không phải page) — chấp nhận được vì section là best-effort | Không có section = không hứa gì |
 
-## Whitelist — match còn sống sau grep sweep cuối (SF-3 T10)
+## Whitelist — kết quả grep sweep cuối (SF-3 T10, chạy 2026-09-08)
 
-Sweep scope: `storefront-web`, `mfe-admin/src`, `shell/src`, `mfe-checkout` — patterns:
-`href="#"`, `Sắp ra mắt`, `coming soon`, `createStubApi`, `Stub[A-Z]`.
+Sweep scope: source `storefront-web`, `mfe-admin/src`, `shell/src`, `mfe-checkout` — 7 patterns:
+`href="#"` (2 biến thể quote), `Sắp ra mắt`, `coming soon`/`Coming Soon`, `createStubApi`,
+`Stub[A-Z]` → **0 file match** (sweep bằng `find … | xargs grep`, không dùng BSD-grep multi
+`--include` — đã bắt được false-negative khi thử phương pháp đó).
 
-_(phần này được T10 điền sau khi chạy sweep trên diff cuối — từng match sống kèm lý do; mỗi mục
-whitelist phải trả lời được: vì sao đây KHÔNG phải fallback-nói-dối theo N2.)_
+Match sống NGOÀI scope source, đăng ký để sweep sau không phải hỏi lại:
+
+| Match | Vị trí | Lý do KHÔNG phải fallback-nói-dối (N2) |
+|-------|--------|----------------------------------------|
+| `placeholder=` (attr) | NewsletterForm, SearchBar, CheckoutPage, LoyaltyPage, AuditPage | Attribute HTML hint của input — mô tả input đang có, không hứa tính năng tương lai |
+| `apps/_skeleton-remote` | infra module-federation demo (shell `remotes.d.ts` tham chiếu) | App hạ tầng demo remote loading — không phải surface user, không render content giả |
+| shell `/ui-kit` (UiKitDemoPage) | `shell/src/pages/UiKitDemoPage.tsx` | Design-system demo — ĐÃ env-gate `VITE_UIKIT_DEV=1` (T8), unset prod = route rơi Home; file demo 0 match banned patterns |
+| mock trong unit tests | `mfe-admin/tests/*`, `storefront-web/tests/*` | Mock/vi.fn là dụng cụ test — test giả lập dependency, không phải runtime fallback cho user |
+| `E7d`/SF-x nhãn lịch sử trong comments | các file FE | Comments mô tả quyết định hiện tại; đã reword bỏ literal pattern (sweep-pass) |
 
 ## Consequences
 

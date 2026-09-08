@@ -4,7 +4,7 @@ import { COPY } from '../components/pdp/AddToCart';
 
 /**
  * SF-3 honesty-pass (FI-372 T4): toastFail phải là LỖI THẬT — cấm quay lại
- * copy hứa hẹn giả ("Cart is coming soon" / "Giỏ hàng sẽ sớm khả dụng" cũ).
+ * copy hứa hẹn giả của bản cũ (hứa "sớm có" khi cart đã sống từ SF-6).
  * Hành vi toast (route.abort → toast hiển thị) assert ở E2E nav-honesty.spec.
  */
 describe('AddToCart COPY — honesty', () => {

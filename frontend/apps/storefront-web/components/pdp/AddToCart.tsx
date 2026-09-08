@@ -14,7 +14,7 @@ import { shellUrl } from '../../lib/site';
  * `ecommerce:cart-changed` (CartBadge của shell cùng window qua gateway tự
  * refresh) + nhớ cartToken (localStorage ecommerce.guest_cart_token) cho
  * merge-on-login. Lỗi MẠNG/cart-service chết → toast LỖI THẬT ("Không thêm
- * được vào giỏ — thử lại"), KHÔNG crash, KHÔNG nói dối "coming soon" (SF-3
+ * được vào giỏ — thử lại"), KHÔNG crash, KHÔNG hứa hẹn giả (SF-3
  * honesty-pass).
  * "MUA NGAY" → thêm xong điều hướng /cart (shell app pages, cùng cookie jar
  * localhost — cookie không phân biệt port).

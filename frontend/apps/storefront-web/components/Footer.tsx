@@ -9,7 +9,7 @@ import NewsletterForm from './NewsletterForm';
  * (5 slug root seed-verified: SeedData "Điện Tử"/"Thời Trang"/"Nhà Cửa"/"Sách"
  * /"Làm Đẹp") + cột Tài khoản (trang shell: cart/account/orders/wishlist/
  * reviews, origin shellUrl()) + newsletter. Cột care/about/social cũ XOÁ —
- * không có trang thật, `href="#"` là dead link nói dối (không tạo trang content
+ * không có trang thật, dead link là nói dối user (không tạo trang content
  * mới để lấp — N5).
  */
 

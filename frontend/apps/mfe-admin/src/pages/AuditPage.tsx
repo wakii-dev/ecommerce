@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, EmptyState, Input } from '@ecommerce/ui-kit';
+import { Button, Card, EmptyState, Input, Pagination } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
@@ -186,24 +186,19 @@ export default function AuditPage(): ReactElement {
                 {t('admin.common.pageOf', { page: data.page, total: totalPages })} — {data.total}{' '}
                 {t('admin.audit.events')}
               </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={data.page <= 1 || loading}
-                onClick={() => goPage(data.page - 1)}
-                data-testid="audit-prev"
-              >
-                ‹ {t('admin.common.prev')}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={data.page >= totalPages || loading}
-                onClick={() => goPage(data.page + 1)}
-                data-testid="audit-next"
-              >
-                {t('admin.common.next')} ›
-              </Button>
+              {/* Pagination primitive client mode (FI-395 T4) — testid
+                  audit-prev/audit-next chết cùng nút cũ (e2e subset không dùng,
+                  grep kiểm plan §0); guard !loading giữ hành vi cũ. */}
+              <Pagination
+                page={data.page}
+                totalPages={totalPages}
+                onPageChange={(p) => {
+                  if (!loading) goPage(p);
+                }}
+                label={t('admin.common.pagination')}
+                prevLabel={t('admin.common.prev')}
+                nextLabel={t('admin.common.next')}
+              />
             </div>
           </>
         )}

@@ -140,7 +140,8 @@ export const en = {
       to: 'To date',
       // SF-5 (FI-395) append
       pageSize: 'Rows',
-      sortLabel: 'Sort'
+      sortLabel: 'Sort',
+      pagination: 'Pagination'
     },
     guard: {
       checking: 'Checking permissions...',

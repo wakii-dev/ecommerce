@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Input, Modal, Select, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Input, Modal, Pagination, Select, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
 import { DataTable } from '../components/DataTable';
@@ -233,20 +233,19 @@ export default function ProductsListPage(): ReactElement {
       )}
 
       <div className='admin-pagination'>
-        <Button size='sm' variant='secondary' disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-          ← {t('admin.common.prev')}
-        </Button>
+        {/* Pagination primitive client mode (FI-395 T4) — thay nút Trước/Sau.
+            Tự ẩn khi totalPages ≤ 1; dòng pageOf giữ để hiện tổng bản ghi. */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p)}
+          label={t('admin.common.pagination')}
+          prevLabel={t('admin.common.prev')}
+          nextLabel={t('admin.common.next')}
+        />
         <span>
           {t('admin.common.pageOf', { page, total: totalPages })}
         </span>
-        <Button
-          size='sm'
-          variant='secondary'
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          {t('admin.common.next')} →
-        </Button>
       </div>
 
       <Modal

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, EmptyState } from '@ecommerce/ui-kit';
+import { Card, EmptyState, Pagination } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
@@ -107,14 +107,17 @@ export default function NewsletterPage(): ReactElement {
                 {t('admin.common.pageOf', { page: data.page, total: totalPages })} — {data.total}{' '}
                 {t('admin.newsletter.subscribers')}
               </span>
-              <Button size="sm" variant="secondary" disabled={data.page <= 1 || loading}
-                onClick={() => void load(data.page - 1, pageSize)}>
-                ‹ {t('admin.common.prev')}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={data.page >= totalPages || loading}
-                onClick={() => void load(data.page + 1, pageSize)}>
-                {t('admin.common.next')} ›
-              </Button>
+              {/* Pagination primitive client mode (FI-395 T4); guard !loading giữ hành vi cũ. */}
+              <Pagination
+                page={data.page}
+                totalPages={totalPages}
+                onPageChange={(p) => {
+                  if (!loading) void load(p, pageSize);
+                }}
+                label={t('admin.common.pagination')}
+                prevLabel={t('admin.common.prev')}
+                nextLabel={t('admin.common.next')}
+              />
             </div>
           </>
         )}

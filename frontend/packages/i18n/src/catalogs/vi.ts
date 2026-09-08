@@ -141,7 +141,8 @@ export const vi = {
       to: 'Đến ngày',
       // SF-5 (FI-395) append
       pageSize: 'Số dòng',
-      sortLabel: 'Sắp xếp'
+      sortLabel: 'Sắp xếp',
+      pagination: 'Phân trang'
     },
     guard: {
       checking: 'Đang kiểm tra quyền...',

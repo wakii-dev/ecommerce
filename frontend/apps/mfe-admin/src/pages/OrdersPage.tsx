@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Input, Select } from '@ecommerce/ui-kit';
+import { Badge, Button, Input, Pagination, Select } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
 import { DataTable } from '../components/DataTable';
@@ -217,18 +217,16 @@ export default function OrdersPage(): ReactElement {
       )}
 
       <div className='admin-pagination'>
-        <Button size='sm' variant='secondary' disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-          ← {t('admin.common.prev')}
-        </Button>
+        {/* Pagination primitive client mode (FI-395 T4) — tự ẩn totalPages ≤ 1. */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p)}
+          label={t('admin.common.pagination')}
+          prevLabel={t('admin.common.prev')}
+          nextLabel={t('admin.common.next')}
+        />
         <span>{t('admin.common.pageOf', { page, total: totalPages })}</span>
-        <Button
-          size='sm'
-          variant='secondary'
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          {t('admin.common.next')} →
-        </Button>
       </div>
     </div>
   );

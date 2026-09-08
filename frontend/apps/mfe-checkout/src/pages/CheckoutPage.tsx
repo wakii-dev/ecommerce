@@ -644,11 +644,13 @@ export default function CheckoutPage(): ReactElement {
               {payUnavailable ? (
                 <div className="pay-warning" role="status">
                   ⚠{' '}
-                  {/* catalog prefix nhúng {{id}} — testid bọc nguyên câu (id vẫn
-                      nằm trong textContent); i18n pkg READ-ONLY nên không tách key */}
-                  <strong data-testid="pending-order-id">
-                    {t('checkout.payUnavailable.prefix', { id: created?.order.id })}
-                  </strong>{' '}
+                  {/* catalog prefix nhúng {{id}} — testid bọc RIÊNG id qua
+                      visually-hidden (textContent = đúng id cho SF-6), câu hiển
+                      thị lấy từ key prefix; i18n pkg READ-ONLY nên không tách key */}
+                  <span className="visually-hidden" data-testid="pending-order-id">
+                    {created?.order.id}
+                  </span>
+                  {t('checkout.payUnavailable.prefix', { id: created?.order.id })}{' '}
                   <a
                     href="/account/orders"
                     onClick={(e) => {

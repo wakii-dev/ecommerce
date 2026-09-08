@@ -59,7 +59,7 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 - [x] `make seed` → GET `/admin/coupons` trả WELCOME10/GIAM50K đủ usageLimit/active/usedCount
 
 ### T10 gate-slice-java-fe-e2e-green
-- [ ] Java IT + FE unit + e2e admin-coupon green
+- [x] Java IT + FE unit + e2e admin-coupon green
 - [ ] story-diff-review (code-reviewer độc lập) → VERDICT APPROVED
 - [ ] merge về `story/fi369-nofallback-complete` + comment hash + story-verify sạch
 

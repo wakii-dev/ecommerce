@@ -158,32 +158,44 @@
 }
 
 
-/* ═══ SF-8: wishlist + my-reviews slices ═════════════════════════════════ */
+/* ═══ SF-8: wishlist + my-reviews slices (SF-4 FI-394 T7 — wishlist anatomy) ══ */
 
 .wl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  gap: var(--space-4, 16px);
 }
 
+/* Product-card anatomy direction §2.2 — wishlist card LÀ product card =
+   điểm nhấn thương mại: hover lift −3px + shadow-1→3 được phép lên 3
+   (§3.1 cascade), --dur-base --ease-out. Surface/border/radius/shadow-1
+   .uk-card có sẵn — chỉ thêm transition + hover ở đây. */
 .wl-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2, 8px);
+  transition:
+    transform var(--dur-base, 180ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-base, 180ms) var(--ease-out, ease-out);
+}
+
+.wl-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3, 0 8px 24px rgba(0, 0, 0, 0.16));
 }
 
 .wl-card-link {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2, 8px);
   text-decoration: none;
   color: inherit;
 }
 
 .wl-card-thumb {
   display: block;
-  height: 140px;
-  border-radius: 8px;
+  height: 190px;
+  border-radius: var(--radius-md, 4px);
   overflow: hidden;
   background: var(--c-bg, #F5F5F5);
   position: relative;
@@ -195,36 +207,71 @@
   object-fit: cover;
 }
 
+/* Fallback không ảnh — Icon package muted thay emoji (anatomy §2.2). */
 .wl-card-thumb-fallback {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  color: var(--c-text-muted, #757575);
 }
 
 .wl-card-name {
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* Tên hover --c-link qua link cha (anatomy fcard). */
+.wl-card-link:hover .wl-card-name {
+  color: var(--c-link, #f53d2d);
+}
+
 .wl-card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2, 8px);
 }
 
 .wl-card-price {
-  font-weight: 700;
-  color: var(--c-primary, #F53D2D);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--c-danger, #D0011B);
 }
 
+/* Sao text ★ giữ — fill --c-warning, track --star-track chỉ có vai trò khi
+   render star-fill (text đơn ★ không có phần rỗng); số + count muted 13px. */
 .wl-card-rating {
-  font-size: 12px;
+  font-size: 13px;
+  color: var(--c-text-muted, #757575);
+  white-space: nowrap;
+}
+
+.wl-card-stars {
+  color: var(--c-warning, #FE9C08);
+}
+
+/* Nút Xóa icon — hover nghiêm trọng hoá --c-danger (viền + icon). */
+.wl-card-remove:hover:not(:disabled) {
+  color: var(--c-danger, #D0011B);
+  border-color: var(--c-danger, #D0011B);
+}
+
+/* Empty state — card viền dashed (direction §4 Wishlist). */
+.wl-empty {
+  border: 1px dashed var(--c-border, #eeeeee);
+  border-radius: var(--radius-lg, 8px);
+  background: var(--c-surface, #ffffff);
+  padding: var(--space-7, 48px) var(--space-4, 16px);
+}
+
+.wl-empty .uk-empty__icon {
   color: var(--c-text-muted, #757575);
 }
 

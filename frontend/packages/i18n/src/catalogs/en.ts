@@ -206,6 +206,19 @@ export const en = {
         refunded: 'Refunded',
         rejected: 'Rejected'
       }
+    },
+    // ── T7 — Wishlist — mirrors vi 1:1 ──
+    wishlist: {
+      title: 'Wishlist',
+      emptyTitle: 'No favourites yet',
+      emptyDesc: 'Tap the heart on any product to save it here.',
+      delete: 'Remove',
+      deleteConfirmTitle: 'Remove from wishlist?',
+      deleteConfirmDesc: '“{{name}}” will be removed from your wishlist.',
+      cancel: 'Cancel',
+      deleting: 'Removing…',
+      errorLoad: 'Could not load your wishlist',
+      errorRemove: 'Removal failed — try again'
     }
   },
   auth: {

@@ -209,6 +209,20 @@ export const vi = {
         refunded: 'Đã hoàn tiền',
         rejected: 'Bị từ chối'
       }
+    },
+    // ── T7 — Wishlist (chuỗi vi GIỮ text đang có — e2e locate theo text;
+    // confirm modal + skeleton + empty thêm mới) ──
+    wishlist: {
+      title: 'Sản phẩm yêu thích',
+      emptyTitle: 'Chưa có sản phẩm yêu thích',
+      emptyDesc: 'Nhấn trái tim trên sản phẩm để lưu vào đây.',
+      delete: 'Xóa',
+      deleteConfirmTitle: 'Xóa sản phẩm yêu thích?',
+      deleteConfirmDesc: '“{{name}}” sẽ bị xóa khỏi danh sách yêu thích.',
+      cancel: 'Hủy',
+      deleting: 'Đang xóa…',
+      errorLoad: 'Không tải được wishlist',
+      errorRemove: 'Xóa thất bại — thử lại'
     }
   },
   auth: {

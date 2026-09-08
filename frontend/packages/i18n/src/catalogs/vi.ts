@@ -34,6 +34,33 @@ export const vi = {
     retry: 'Thử lại',
     currency: '₫'
   },
+  // ── SF-1 FI-391 — keys mặc định primitives ui-kit (surfaces truyền t('ui.*') vào props) ──
+  ui: {
+    pagination: {
+      label: 'Phân trang',
+      prev: 'Trang trước',
+      next: 'Trang sau',
+      page: 'Trang {{page}}',
+      pageOf: 'Trang {{page}}/{{total}}'
+    },
+    breadcrumbs: {
+      label: 'Bạn đang ở:',
+      home: 'Trang chủ'
+    },
+    quantityStepper: {
+      label: 'Số lượng',
+      increase: 'Tăng số lượng',
+      decrease: 'Giảm số lượng'
+    },
+    stepper: {
+      label: 'Tiến trình',
+      step: 'Bước {{current}}/{{total}}',
+      done: 'Hoàn thành'
+    },
+    alert: {
+      dismiss: 'Đóng thông báo'
+    }
+  },
   // ── SF-7 mfe-admin (FI-317) — labels khu vực quản trị ──────────────────
   admin: {
     nav: {

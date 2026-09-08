@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { initI18n } from '../init';
 import { getI18n } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
+import { vi as viCatalog } from '../catalogs/vi';
+import { en as enCatalog } from '../catalogs/en';
 
 // Instance là module-singleton nên các test trong file này chạy theo thứ tự
 // khai báo (vitest sequential trong 1 file) — test đổi ngôn ngữ tự reset lại.
@@ -51,5 +53,29 @@ describe('initI18n', () => {
     const resolved = getI18n();
     expect(resolved).toBe(i18n);
     expect(resolved.t('admin.guard.forbiddenTitle')).toBe('Không có quyền');
+  });
+});
+
+// So TẤT CẢ top-level namespace (không chỉ ui) — catalog lệch key chặn ở đây,
+// thay vì phát hiện qua key thô render ra màn (D17: fallback vi che lỗi ở en).
+function keyPaths(obj: Record<string, unknown>, prefix = ''): string[] {
+  return Object.entries(obj).flatMap(([k, v]) => {
+    const path = prefix ? `${prefix}.${k}` : k;
+    return v !== null && typeof v === 'object'
+      ? keyPaths(v as Record<string, unknown>, path)
+      : [path];
+  });
+}
+
+describe('catalog parity vi/en', () => {
+  it('vi và en có cùng bộ key tuyệt đối (mọi namespace)', () => {
+    const viPaths = keyPaths(viCatalog as Record<string, unknown>).sort();
+    const enPaths = keyPaths(enCatalog as Record<string, unknown>).sort();
+    const onlyInVi = viPaths.filter((p) => !enPaths.includes(p));
+    const onlyInEn = enPaths.filter((p) => !viPaths.includes(p));
+    const mismatch = onlyInVi[0] ?? onlyInEn[0];
+    const where = onlyInVi.length ? 'chỉ có ở vi' : 'chỉ có ở en';
+    expect(mismatch, `Catalog lệch key đầu tiên: '${mismatch}' (${where})`).toBeUndefined();
+    expect(enPaths).toEqual(viPaths);
   });
 });

@@ -33,6 +33,33 @@ export const en = {
     retry: 'Retry',
     currency: '₫'
   },
+  // ── SF-1 FI-391 — default keys for ui-kit primitives (surfaces pass t('ui.*') into props) — mirrors vi 1:1 ──
+  ui: {
+    pagination: {
+      label: 'Pagination',
+      prev: 'Previous page',
+      next: 'Next page',
+      page: 'Page {{page}}',
+      pageOf: 'Page {{page}} of {{total}}'
+    },
+    breadcrumbs: {
+      label: 'You are here:',
+      home: 'Home'
+    },
+    quantityStepper: {
+      label: 'Quantity',
+      increase: 'Increase quantity',
+      decrease: 'Decrease quantity'
+    },
+    stepper: {
+      label: 'Progress',
+      step: 'Step {{current}}/{{total}}',
+      done: 'Done'
+    },
+    alert: {
+      dismiss: 'Dismiss notification'
+    }
+  },
   // ── SF-7 mfe-admin (FI-317) — admin chrome, mirrors vi 1:1 ─────────────
   admin: {
     nav: {

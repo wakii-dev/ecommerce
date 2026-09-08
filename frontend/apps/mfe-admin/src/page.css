@@ -129,24 +129,64 @@
   margin: 0 auto;
 }
 
-.admin-booting,
-.admin-guard {
+/* ── Guard / error states (SF-5 FI-395) ─────────────────────────────── */
+.admin-booting {
   padding: var(--space-8, 64px) var(--space-4, 16px);
   color: var(--c-text-muted, #757575);
 }
 
+/* Guest/forbidden — card elevated 480px căn giữa (surface + border +
+   radius-lg + shadow-1), EmptyState bên trong tự center (uk-empty grid). */
+.admin-guard {
+  max-width: 480px;
+  margin: var(--space-8, 64px) auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #e5e7eb);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-1);
+}
+
+/* Icon 403 — tint circle thay emoji (size 28 trong vòng 56px) */
+.admin-guard__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
+  color: var(--tint-primary-text);
+}
+
+/* Elevation: title 18px/800 lớn hơn text-base/700 mặc định của uk-empty */
+.admin-guard .uk-empty__title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* Link sang shell login — Button-like tint-primary, hover nhấc nhẹ */
 .admin-guard__login {
   display: inline-block;
   margin-top: var(--space-4, 16px);
   padding: var(--space-2, 8px) var(--space-4, 16px);
-  border: 1px solid var(--c-border, #e0e0e0);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
   border-radius: var(--radius-md, 8px);
-  color: var(--c-text, #212121);
+  color: var(--tint-primary-text);
+  font-weight: 600;
   text-decoration: none;
+  transition:
+    background var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    transform var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-fast, 140ms) var(--ease-out, ease-out);
 }
 
 .admin-guard__login:hover {
   background: var(--wash-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
 }
 
 /* ── Page header pattern (title + actions) ───────────────────────────── */
@@ -206,7 +246,10 @@
   color: var(--c-text-muted, #757575);
 }
 
-.admin-error-text {
+/* Audit/Newsletter render role="alert" qua .admin-error — cùng typography
+   danger với .admin-error-text (T10 unify) */
+.admin-error-text,
+.admin-error {
   font-size: 12px;
   color: var(--c-danger, #d0011b);
 }

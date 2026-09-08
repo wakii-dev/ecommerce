@@ -587,6 +587,14 @@
   color: var(--c-link, #f53d2d);
 }
 
+/* Roving focus qua .focus() là programmatic — Safari không vẽ focus mặc định.
+   Offset âm để outline nằm trong item (.um-menu overflow:hidden sẽ cắt phần
+   lấn ra ngoài). Convention ui-kit .uk-btn:focus-visible. */
+.um-menu__item:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: -2px;
+}
+
 /* Item danger (Đăng xuất) — tint đỏ family cancelled. */
 .um-menu__item--danger {
   color: var(--c-danger, #D0011B);

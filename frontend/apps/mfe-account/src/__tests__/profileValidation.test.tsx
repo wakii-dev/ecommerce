@@ -97,6 +97,17 @@ describe('AccountPage — profile validate realtime on-blur', () => {
     expect(updateProfile).toHaveBeenCalledWith({ fullName: 'Nguyen Van A', phone: '0901234567' });
   });
 
+  it('phone data legacy "0901 234 567" (khoảng trắng) → hợp lệ + submit payload normalized', async () => {
+    vi.mocked(updateProfile).mockResolvedValue({ ...PROFILE });
+    await renderPrefilled();
+    const phone = screen.getByLabelText('Số điện thoại') as HTMLInputElement;
+    fireEvent.change(phone, { target: { value: '0901 234 567' } });
+    expect(screen.queryByText('Số điện thoại không hợp lệ')).toBeNull(); // không chặn data legacy
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(updateProfile).toHaveBeenCalledTimes(1));
+    expect(updateProfile).toHaveBeenCalledWith({ fullName: 'Nguyen Van A', phone: '0901234567' });
+  });
+
   it('submit hợp lệ (phone rỗng) → updateProfile payload phone: null', async () => {
     vi.mocked(updateProfile).mockResolvedValue({ ...PROFILE });
     await renderPrefilled();

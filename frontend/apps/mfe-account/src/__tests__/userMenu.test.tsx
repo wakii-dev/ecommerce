@@ -96,6 +96,25 @@ describe('UserMenu — keyboard + role=menu', () => {
     expect(document.activeElement).toBe(items[items.length - 1]);
   });
 
+  it('Enter trên trigger (đóng) → mở + focus item đầu (fireEvent.keyDown, KHÔNG click — synthetic click sẽ toggle lần 2)', () => {
+    render(<AuthWidget />);
+    const trigger = screen.getByRole('button');
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    const items = screen.getAllByRole('menuitem');
+    expect(items).toHaveLength(3);
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(items[0]);
+  });
+
+  it('Enter trên trigger khi menu đang mở → đóng + restore focus về trigger', () => {
+    render(<AuthWidget />);
+    const trigger = openWithArrowDown();
+    expect(screen.queryByRole('menu')).toBeTruthy();
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it('Escape từ item → menu đóng + focus RESTORE về trigger; Tab từ item → đóng (không giữ focus trong menu)', () => {
     render(<AuthWidget />);
     const trigger = openWithArrowDown();

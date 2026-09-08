@@ -11,7 +11,10 @@ import { appNavigate, authReady } from '../bootstrap';
 import '../page.css';
 
 // Định dạng phone vi: 0 hoặc +84, theo 8-10 chữ số. Optional field — rỗng hợp lệ.
+// Normalize trước validate lẫn submit: data legacy có khoảng trắng/chấm/gạch/
+// ngoặc ('0901 234 567') không bị chặn — lưu về dạng chữ số liền.
 const PHONE_RE = /^(0|\+84)\d{8,10}$/;
+const normalizePhone = (value: string): string => value.replace(/[\s.\-()]/g, '');
 
 export default function AccountPage(): ReactElement {
   const { t } = useT();
@@ -60,7 +63,7 @@ export default function AccountPage(): ReactElement {
   const validateField = (field: 'fullName' | 'phone', value: string): string | undefined => {
     if (field === 'fullName') return value.trim().length >= 1 ? undefined : t('account.profile.fullNameRequired');
     if (value.trim() === '') return undefined;
-    return PHONE_RE.test(value.trim()) ? undefined : t('account.profile.phoneInvalid');
+    return PHONE_RE.test(normalizePhone(value.trim())) ? undefined : t('account.profile.phoneInvalid');
   };
 
   const onBlurField = (field: 'fullName' | 'phone', value: string): void => {
@@ -88,7 +91,8 @@ export default function AccountPage(): ReactElement {
     if (errors.fullName || errors.phone) return;
 
     setLoading(true);
-    updateProfile({ fullName, phone: phone.trim() === '' ? null : phone.trim() })
+    const normalizedPhone = normalizePhone(phone.trim());
+    updateProfile({ fullName, phone: normalizedPhone === '' ? null : normalizedPhone })
       .then((me) => {
         // Profile claim trong JWT cũ không đổi — cập nhật state cục bộ;
         // tên trên header (đọc từ token) áp ở lần refresh sau.

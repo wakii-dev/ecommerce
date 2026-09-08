@@ -94,7 +94,19 @@ function UserMenu(): ReactElement {
   };
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'Enter' || event.key === ' ') {
+      // preventDefault TRƯỚC khi xử lý: browser tổng hợp click sau keydown —
+      // không chặn thì click đó toggle lần 2 làm menu vừa mở bị đóng ngay
+      // (Space còn cuộn trang). Đóng → mở + focus item đầu; đang mở → đóng
+      // + restore focus trigger (Safari không giữ focus nút sau click).
+      event.preventDefault();
+      if (open) {
+        setOpen(false);
+        triggerRef.current?.focus();
+      } else {
+        openWithFocus('first');
+      }
+    } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       openWithFocus('first');
     } else if (event.key === 'ArrowUp') {

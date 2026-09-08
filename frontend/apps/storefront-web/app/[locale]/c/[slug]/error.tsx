@@ -13,8 +13,10 @@ import { t, type I18nKey } from '../../../../lib/i18n';
  * T12: copy trong lib/i18n (miền `common.error*`).
  */
 
-function errorCopy(locale: 'vi' | 'en' | null, key: I18nKey): string {
-  return locale ? t(locale, key) : `${t('vi', key)} / ${t('en', key)}`;
+function errorCopy(locale: 'vi' | 'en' | null, key: I18nKey, sep = ' / '): string {
+  // fallback bilingual: nối bằng sep — desc dùng SPACE (giữ nguyên output
+  // trước T12: title/retry ' / ', desc space — review-D P0)
+  return locale ? t(locale, key) : `${t('vi', key)}${sep}${t('en', key)}`;
 }
 
 export default function RouteError({
@@ -28,7 +30,7 @@ export default function RouteError({
   const locale = segment === 'vi' || segment === 'en' ? segment : null;
 
   const title = errorCopy(locale, 'common.errorTitle');
-  const desc = errorCopy(locale, 'common.errorDesc');
+  const desc = errorCopy(locale, 'common.errorDesc', ' ');
   const retry = errorCopy(locale, 'common.errorRetry');
 
   return (

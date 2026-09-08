@@ -179,11 +179,27 @@ export default function AdminApp(): ReactElement {
   const [path, setPath] = useState<string>(() => window.location.pathname);
   const prevTheme = useRef<string>('storefront');
 
-  // Theme swap có restore — /admin dùng bảng màu admin, trang khác shell dùng storefront.
+  // Theme map 4 trạng thái (FI-395 T1): theme shell light/dark được remap sang
+  // admin/admin-dark khi admin mount. Shell ThemeToggle flip attribute
+  // data-theme GIỮA phiên admin → MutationObserver theo ngay (KHÔNG matchMedia
+  // — jsdom test an toàn). Unmount: disconnect + restore theme trước đó.
   useEffect(() => {
     prevTheme.current = document.documentElement.dataset.theme ?? 'storefront';
-    document.documentElement.dataset.theme = 'admin';
+    // Mapping idempotent: gán lại cùng giá trị không đốt observer callback
+    // (attribute chỉ "mutate" khi giá trị thực sự đổi) → không loop.
+    const applyAdminTheme = (): void => {
+      const theme = document.documentElement.dataset.theme;
+      document.documentElement.dataset.theme =
+        theme === 'dark' || theme === 'admin-dark' ? 'admin-dark' : 'admin';
+    };
+    applyAdminTheme();
+    const observer = new MutationObserver(applyAdminTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
     return () => {
+      observer.disconnect();
       document.documentElement.dataset.theme = prevTheme.current;
     };
   }, []);

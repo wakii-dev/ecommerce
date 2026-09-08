@@ -4,7 +4,7 @@ import { formatPrice } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
 import { appNavigate } from './bootstrap';
 import { useCart } from './lib/useCart';
-import { cartCount, type CartItem } from './lib/cartApi';
+import { cartCount, type Cart, type CartItem } from './lib/cartApi';
 
 /**
  * Mini-cart drawer (FI-393 T3) — ui-kit Drawer, mở từ CartBadge. Đọc giỏ qua
@@ -21,6 +21,27 @@ const FREESHIP_MIN = 500000;
 
 const IMG_FALLBACK =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="%23fafafa"/></svg>';
+
+/**
+ * Nhánh body của drawer — PURE để unit-test trực tiếp (FI-393 review-G2):
+ * open=true qua useOverlay có container (jsdom) → createPortal NÉM trong
+ * renderToStaticMarkup, nên không render-trực-tiếp được nhánh body.
+ * Thứ tự: loading → error (CHỈ khi !cart — guest 404 trả cart=null KHÔNG kèm
+ * error, là empty hợp lệ) → empty → items. Lỗi mutation giữ cart cũ
+ * (useCart changeQty/remove) → KHÔNG rơi vào error, vẫn items/empty.
+ */
+export type DrawerBodyState = 'loading' | 'error' | 'empty' | 'items';
+
+export function drawerBodyState(input: {
+  loading: boolean;
+  error: string | null;
+  cart: Cart | null;
+}): DrawerBodyState {
+  if (input.loading) return 'loading';
+  if (input.error && !input.cart) return 'error';
+  if (!input.cart || input.cart.items.length === 0) return 'empty';
+  return 'items';
+}
 
 function MiniCartLine({ item }: { item: CartItem }): ReactElement {
   const { t } = useT();
@@ -66,11 +87,12 @@ export default function MiniCartDrawer({
   onClose: () => void;
 }): ReactElement | null {
   const { t } = useT();
-  const { cart, loading } = useCart();
+  const { cart, loading, error, refresh } = useCart();
 
   const items = cart?.items ?? [];
   const availableCount = items.filter((item) => !item.unavailable).length;
   const count = cartCount(cart);
+  const bodyState = drawerBodyState({ loading, error, cart });
 
   const goCart = (): void => {
     onClose();
@@ -89,7 +111,14 @@ export default function MiniCartDrawer({
       title={
         <span>
           {t('checkout.drawer.title')}
-          {count > 0 ? <span className="mini-cart__count">{count}</span> : null}
+          {/* Space literal text + pill: accessible name đọc "…của bạn 1" —
+              margin CSS không tính vào accessible name (FI-393 review-G2) */}
+          {count > 0 ? (
+            <>
+              {' '}
+              <span className="mini-cart__count">{count}</span>
+            </>
+          ) : null}
         </span>
       }
       footer={
@@ -123,12 +152,25 @@ export default function MiniCartDrawer({
         ) : undefined
       }
     >
-      {loading ? (
+      {bodyState === 'loading' ? (
         <>
           <MiniCartSkeleton />
           <MiniCartSkeleton />
         </>
-      ) : items.length === 0 ? (
+      ) : bodyState === 'error' ? (
+        <div className="pay-error" role="alert">
+          {t('common.error')}
+          <div style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className="mini-cart__btn mini-cart__btn--outline"
+              onClick={refresh}
+            >
+              {t('common.retry')}
+            </button>
+          </div>
+        </div>
+      ) : bodyState === 'empty' ? (
         <EmptyState
           icon={<Icon name="cart" size={40} />}
           title={t('checkout.drawer.empty')}

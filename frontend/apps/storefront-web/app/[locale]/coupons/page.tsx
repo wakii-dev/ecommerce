@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import CopyButton from '../../../components/coupons/CopyButton';
+import { Icon } from '../../../components/ui-kit';
 import { couponValueLabel, type PublicCoupon } from '../../../lib/coupon';
 import { formatVnd, localePath, resolveLocale, type Locale } from '../../../lib/format';
 import { buildAlternates } from '../../../lib/seo';
@@ -89,7 +90,7 @@ export default async function CouponsPage({ params }: { params: { locale: string
       {coupons === null || coupons.length === 0 ? (
         <div className="coupons-empty">
           <span className="coupons-empty-icon" aria-hidden="true">
-            🎟️
+            <Icon name="ticket" size={48} />
           </span>
           <p className="coupons-empty-title">{t.empty}</p>
           <p className="coupons-empty-desc">{t.emptyDesc}</p>

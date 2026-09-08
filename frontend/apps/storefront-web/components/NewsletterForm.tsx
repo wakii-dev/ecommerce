@@ -32,6 +32,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Newsletter form (SF-13 A8) — client island trong Footer; POST
  * `/api/identity/newsletter` qua Next rewrite. status subscribed/already
  * → thông báo tương ứng (dup KHÔNG double email — backend no-op).
+ * FI-392 T11: style qua class `.nl-*` (app.css) — màu chỉ qua var(--*)
+ * (§5 Cấm: cấm hex trực tiếp trong css).
  */
 export default function NewsletterForm({ locale }: { locale: string }): ReactElement {
   const copy = COPY[locale === 'en' ? 'en' : 'vi'];
@@ -58,13 +60,13 @@ export default function NewsletterForm({ locale }: { locale: string }): ReactEle
   return (
     <div>
       <h3 className="footer-heading">{copy.title}</h3>
-      <p style={{ color: '#bbb', fontSize: 13 }}>{copy.desc}</p>
+      <p className="nl-desc">{copy.desc}</p>
       {state === 'ok' || state === 'already' ? (
-        <div role="status" data-testid="newsletter-msg" style={{ color: '#7ed957', fontSize: 13 }}>
+        <div role="status" data-testid="newsletter-msg" className="nl-msg nl-msg--ok">
           {state === 'ok' ? copy.ok : copy.already}
         </div>
       ) : (
-        <form onSubmit={onSubmit} noValidate style={{ display: 'flex', gap: 8, maxWidth: 320 }}>
+        <form onSubmit={onSubmit} noValidate className="nl-form">
           <input
             type="email"
             name="newsletter-email"
@@ -72,36 +74,20 @@ export default function NewsletterForm({ locale }: { locale: string }): ReactEle
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             data-testid="newsletter-email"
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: '1px solid #444',
-              background: '#222',
-              color: '#fff',
-              fontSize: 13
-            }}
+            className="nl-input"
           />
           <button
             type="submit"
             disabled={state === 'loading'}
             data-testid="newsletter-submit"
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: 'none',
-              background: '#F53D2D',
-              color: '#fff',
-              fontSize: 13,
-              cursor: 'pointer'
-            }}
+            className="nl-submit"
           >
             {state === 'loading' ? copy.loading : copy.submit}
           </button>
         </form>
       )}
       {state === 'error' ? (
-        <div role="alert" style={{ color: '#ff7b6b', fontSize: 13 }}>{copy.error}</div>
+        <div role="alert" className="nl-msg nl-msg--error">{copy.error}</div>
       ) : null}
     </div>
   );

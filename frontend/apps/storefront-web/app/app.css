@@ -1,20 +1,16 @@
 /*
  * storefront-web — app-level styles.
  *
- * Phần app: gradient §1.8 (map placeholder ảnh theo danh mục — KHÔNG có sẵn
- * trong ui-kit tokens), biến phụ (--footer-link), container + header/footer.
+ * Phần app: gradient surface §1.8 (hero/flash/buy — placeholder danh mục
+ * `--grad-cat-*` đã nằm trong @ecommerce/ui-kit tokens.css từ SF-1, FI-392
+ * T11 đã xóa bản duplicate chết), biến phụ (--footer-link/--footer-bg),
+ * container + header/footer.
  * Màu gốc (§1.1) + tints §1.6 đã là CSS vars trong
  * @ecommerce/ui-kit/tokens.css — import ở layout, KHÔNG hardcode lại hex
  * đã có token (Conventions #10).
  */
 
 :root {
-  /* Gradient placeholder ảnh theo danh mục (direction §1.8) */
-  --grad-electronics: linear-gradient(140deg, #EAF3FF, #D9E9FF);
-  --grad-fashion: linear-gradient(140deg, #FFEEE8, #FFDFD2);
-  --grad-home: linear-gradient(140deg, #E9F7EE, #D8F0E1);
-  --grad-books: linear-gradient(140deg, #FFF7DC, #FFEFBC);
-  --grad-beauty: linear-gradient(140deg, #F4EBFC, #EBDCF8);
   /* Hero carousel / flash / CTA (direction §1.8) */
   --grad-hero-1: linear-gradient(120deg, #F53D2D, #FF7A45);
   --grad-hero-2: linear-gradient(120deg, #CB1B00, #F53D2D);
@@ -396,7 +392,8 @@ img {
   padding-bottom: var(--space-6);
 }
 
-.site-footer h4 {
+.site-footer h4,
+.footer-heading {
   /* trắng trên footer #212121 — literal cả 2 theme */
   color: #ffffff;
   font-size: 13px;
@@ -417,10 +414,59 @@ img {
   font-size: 13px;
   text-decoration: none;
   line-height: 2;
+  /* §2.2.5: muted → accent hover, nhịp nhanh (direction §3.2) */
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .site-footer a:hover {
   color: var(--c-accent);
+}
+
+/* ── Newsletter (client island trong footer — SF-13 A8; tokenize FI-392 T11) ─ */
+
+.nl-desc {
+  color: var(--footer-link);
+  font-size: 13px;
+  margin: 0 0 var(--space-3);
+}
+
+.nl-form {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 320px;
+}
+
+.nl-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 13px;
+}
+
+.nl-submit {
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+  border: none;
+  background: var(--c-primary);
+  /* trắng trên primary — literal như .badge-off (không có token --c-on-primary) */
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nl-msg {
+  font-size: 13px;
+}
+
+.nl-msg--ok {
+  color: var(--c-success);
+}
+
+.nl-msg--error {
+  color: var(--c-danger);
 }
 
 @media (max-width: 900px) {

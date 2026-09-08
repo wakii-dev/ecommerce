@@ -276,10 +276,10 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/{Footer,NewsletterForm,RecentlyViewed}.tsx`, css.
 
-- [ ] **Step 1:** NewsletterForm: bỏ 6 chỗ hex inline (`#bbb/#7ed957/#222/#444/#F53D2D/#ff7b6b`) → css class mới qua tokens (`--c-text-muted`, `--c-success`, surface/border tokens, `--c-primary`, `--c-danger`); markup giữ nguyên (data-testid `newsletter-*` GIỮ — e2e engagement? platform-asserts? — grep trước).
-- [ ] **Step 2:** RecentlyViewed: bỏ inline-style toàn bộ (L44-82) → css class; card dùng `.p-card` anatomy (thumb/body/price) + gradient qua `categoryGradient(slug)` (không dùng GRADIENTS hex array tự vẽ); Link T1 đã migrate (kiểm).
-- [ ] **Step 3:** Footer polish §2.2.5: nền `--c-text`, link `--c-text-muted`... kiểm css hiện có theo direction, bổ sung gap/hover accent thiếu.
-- [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): newsletter/recently-viewed tokenize + deCSS + footer polish (FI-392)`.
+- [x] **Step 1:** NewsletterForm: bỏ 6 chỗ hex inline (`#bbb/#7ed957/#222/#444/#F53D2D/#ff7b6b`) → css class mới qua tokens (`--c-text-muted`, `--c-success`, surface/border tokens, `--c-primary`, `--c-danger`); markup giữ nguyên (data-testid `newsletter-*` GIỮ — e2e engagement? platform-asserts? — grep trước).
+- [x] **Step 2:** RecentlyViewed: bỏ inline-style toàn bộ (L44-82) → css class; card dùng `.p-card` anatomy (thumb/body/price) + gradient qua `categoryGradient(slug)` (không dùng GRADIENTS hex array tự vẽ); Link T1 đã migrate (kiểm).
+- [x] **Step 3:** Footer polish §2.2.5: nền `--c-text`, link `--c-text-muted`... kiểm css hiện có theo direction, bổ sung gap/hover accent thiếu.
+- [x] **Step 4:** vitest + lint xanh → commit `feat(storefront): newsletter/recently-viewed tokenize + deCSS + footer polish (FI-392)`.
 
 ### Task 12: i18n-consolidate-copy-objects-aria-labels (nhóm D)
 

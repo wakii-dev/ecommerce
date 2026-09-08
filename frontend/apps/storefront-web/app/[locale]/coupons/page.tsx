@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 
 import CopyButton from '../../../components/coupons/CopyButton';
 import { Icon } from '../../../components/ui-kit';
-import { couponValueLabel, type PublicCoupon } from '../../../lib/coupon';
+import { couponValueLabel, isExpired, type PublicCoupon } from '../../../lib/coupon';
 import { formatVnd, localePath, resolveLocale, type Locale } from '../../../lib/format';
 import { t } from '../../../lib/i18n';
 import { buildAlternates } from '../../../lib/seo';
@@ -35,12 +35,6 @@ function expiryLabel(endsAt: string, locale: Locale): string | null {
   const date = new Date(endsAt);
   if (Number.isNaN(date.getTime())) return null;
   return `${t(locale, 'coupons.expires')} ${date.toLocaleDateString(locale === 'en' ? 'en-GB' : 'vi-VN')}`;
-}
-
-/** Pill "Hết hạn" chỉ khi endsAt parse được VÀ đã qua (direction §4 tint-new — không bịa khi thiếu/invalid). */
-function isExpired(endsAt: string): boolean {
-  const date = new Date(endsAt);
-  return !Number.isNaN(date.getTime()) && date.getTime() < Date.now();
 }
 
 export default async function CouponsPage({ params }: { params: { locale: string } }) {

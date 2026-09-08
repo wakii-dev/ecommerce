@@ -15,7 +15,9 @@ import { Tabs } from '../ui-kit';
  * `#tab-desc|info|reviews` → activate tab đó (deep-link/meta "N đánh giá"
  * href=#tab-reviews đều vào được đúng tab); hash rỗng/không khớp → ignore
  * giữ state (browser back không nhảy tab). Scroll vào panel có
- * scroll-margin-top (css) để không bị sticky header che đỉnh.
+ * scroll-margin-top (css) để không bị sticky header che đỉnh — panel đích
+ * SSR đang `hidden` nên browser không scroll nổi lúc resolve hash; scroll
+ * diễn ra ở rAF sau khi panel unhide (FI-392 review nhóm C P1-1).
  *
  * aria: panel giữ id thật (tab-desc/info/reviews — anchor target) +
  * role=tabpanel + aria-labelledby trỏ id nút tab của primitive
@@ -28,7 +30,7 @@ import { Tabs } from '../ui-kit';
 const TAB_KEYS = ['tab-desc', 'tab-info', 'tab-reviews'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
-function isTabKey(value: string): value is TabKey {
+export function isTabKey(value: string): value is TabKey {
   return (TAB_KEYS as readonly string[]).includes(value);
 }
 
@@ -46,8 +48,14 @@ export default function PdpTabs({ labels, desc, info, reviews }: PdpTabsProps) {
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash.slice(1);
-      if (isTabKey(hash)) setActiveKey(hash);
-      // hash rỗng/không khớp → ignore (giữ tab hiện tại)
+      if (!isTabKey(hash)) return; // hash rỗng/không khớp → ignore (giữ tab hiện tại)
+      setActiveKey(hash);
+      // Deep-link: panel đích đang `hidden` (display:none) lúc browser resolve
+      // fragment → native scroll không có gì để tới; đợi frame sau khi panel
+      // unhide rồi mới scrollIntoView (scroll-margin-top 80px được tôn trọng).
+      requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView();
+      });
     };
     applyHash();
     window.addEventListener('hashchange', applyHash);

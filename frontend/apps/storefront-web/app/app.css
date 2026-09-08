@@ -465,8 +465,14 @@ img {
   color: var(--c-success);
 }
 
+/* Error msg contrast 2.9:1 trên nền footer tối (FI-392 review nhóm C P1-3)
+   → chip nền surface, chữ danger (≈5.6:1); .nl-msg--ok giữ nguyên. */
 .nl-msg--error {
+  display: inline-block;
+  background: var(--c-surface);
   color: var(--c-danger);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
 }
 
 @media (max-width: 900px) {
@@ -1825,18 +1831,28 @@ img {
   }
 }
 
-/* Sticky ATC mobile <600px (direction §2.3 buy-sticky): bar bám đáy viewport
-   khi cuộn qua buy-box. 600px = giá trị token --bp-sm (tham chiếu — @media
-   không đọc được var). */
+/* Sticky ATC mobile <600px (direction §2.3 buy-sticky): bar bám ĐÁY VIEWPORT
+   khi cuộn qua buy-box. `sticky` không đủ — .pdp-cta-row nằm trong parent
+   .pdp-buybox nên bar chỉ "dính" khi buybox còn trong viewport → dùng
+   `fixed` full-width, góc vuông, z ngang header (không có ancestor
+   transform/filter tạo containing block). 600px = giá trị token --bp-sm
+   (tham chiếu — @media không đọc được var). */
 @media (max-width: 600px) {
+  /* Đệm đáy trang đủ chiều cao bar (nút 50px + pad --space-2 ×2 + border-top
+     1px) — nội dung cuối không bị bar che khi cuộn hết. */
+  .pdp-layout {
+    padding-bottom: calc(50px + var(--space-2) * 2 + 1px);
+  }
   .pdp-cta-row {
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
-    z-index: 20;
+    z-index: var(--z-header);
     background: var(--c-surface);
     border-top: 1px solid var(--c-border);
     box-shadow: var(--shadow-2);
-    padding: var(--space-2) 0;
+    padding: var(--space-2) var(--space-4);
   }
 }
 

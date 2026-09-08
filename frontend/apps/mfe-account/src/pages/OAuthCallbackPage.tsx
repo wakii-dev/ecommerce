@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import { Button, Card } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { exchangeOauthCode } from '../api';
 import { appNavigate } from '../bootstrap';
 import '../page.css';
 
-/** Thông điệp lỗi từ callback ?error= (identity sanitize [a-zA-Z0-9_-]). */
-const ERRORS: Record<string, string> = {
-  access_denied: 'Bạn đã từ chối cấp quyền đăng nhập.',
-  state_mismatch: 'Phiên đăng nhập không hợp lệ — thử lại từ đầu.',
-  no_email: 'Tài khoản mạng xã hội chưa xác thực email — dùng cách đăng nhập khác.',
-  missing_code: 'Thiếu mã đăng nhập từ nhà cung cấp.',
-  provider_error: 'Nhà cung cấp đăng nhập gặp lỗi — thử lại.'
+/** Thông điệp lỗi từ callback ?error= (identity sanitize [a-zA-Z0-9_-]) → i18n keys. */
+const OAUTH_ERROR_KEYS: Record<string, string> = {
+  access_denied: 'account.oauth.accessDenied',
+  state_mismatch: 'account.oauth.stateMismatch',
+  no_email: 'account.oauth.noEmail',
+  missing_code: 'account.oauth.missingCode',
+  provider_error: 'account.oauth.providerError'
 };
 
 /**
@@ -20,7 +21,8 @@ const ERRORS: Record<string, string> = {
  * /login/oauth/callback (origin shell — cookie refresh set đúng chỗ).
  */
 export default function OAuthCallbackPage(): ReactElement {
-  const [message, setMessage] = useState('Đang hoàn tất đăng nhập…');
+  const { t } = useT();
+  const [message, setMessage] = useState(t('account.oauth.completing'));
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -29,12 +31,12 @@ export default function OAuthCallbackPage(): ReactElement {
     const error = params.get('error');
     const code = params.get('code');
     if (error) {
-      setMessage(ERRORS[error] ?? 'Đăng nhập không thành công.');
+      setMessage(t(OAUTH_ERROR_KEYS[error] ?? 'account.oauth.genericError'));
       setFailed(true);
       return;
     }
     if (!code) {
-      setMessage('Thiếu mã đăng nhập từ nhà cung cấp.');
+      setMessage(t('account.oauth.missingCode'));
       setFailed(true);
       return;
     }
@@ -47,7 +49,7 @@ export default function OAuthCallbackPage(): ReactElement {
         setMessage(
           err instanceof Error && err.name === 'ApiErrorClient'
             ? (err as Error & { detail?: string }).detail || err.message
-            : 'Không hoàn tất được đăng nhập — thử lại.'
+            : t('account.oauth.exchangeError')
         );
         setFailed(true);
       });
@@ -59,13 +61,13 @@ export default function OAuthCallbackPage(): ReactElement {
   return (
     <div className="auth-page">
       <Card className="auth-card">
-        <h1 className="auth-title">{failed ? 'Đăng nhập không thành công' : 'Đăng nhập'}</h1>
+        <h1 className="auth-title">{failed ? t('account.oauth.failedTitle') : t('account.auth.loginTitle')}</h1>
         <div className={failed ? 'auth-error' : 'auth-banner'} role={failed ? 'alert' : 'status'}>
           {message}
         </div>
         {failed ? (
           <Button variant="primary" fullWidth onClick={() => appNavigate('/login')}>
-            Về trang đăng nhập
+            {t('account.auth.backToLogin')}
           </Button>
         ) : null}
       </Card>

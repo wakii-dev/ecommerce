@@ -65,6 +65,45 @@
   text-decoration: none;
 }
 
+/* ── SF-4 (FI-394 T2) — banner success + password toggle ─────────────────── */
+
+/* Banner thành công Forgot/Reset — cùng nhịp .auth-error nhưng tint success
+   token (thay hex inline #eefcf0/#1b7a34 cũ). */
+.auth-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+  background: var(--tint-success-bg, #eefcf0);
+  color: var(--tint-success-text, #1b7a34);
+  border-radius: var(--radius-md, 4px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: var(--text-md, 14px);
+}
+
+.auth-ok svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Password visibility toggle — IconButton nằm NGOÀI .uk-input (không đụng
+   ui-kit primitive): .uk-field là grid label + input, icon absolute thẳng
+   hàng tâm input (label text-sm ~14px + gap 4px + nửa input ~16px − nửa
+   icon sm 14px). Input đẩy padding-right để text không chui dưới icon. */
+.pw-field {
+  position: relative;
+}
+
+.pw-field .uk-input {
+  padding-right: 44px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 20px;
+  right: 5px;
+  color: var(--c-text-muted, #757575);
+}
+
 /* Account — layout 2 cột: info card + form card (spec §4.5). */
 .account-grid {
   display: grid;

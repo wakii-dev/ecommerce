@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { Button, Card, Icon, Input } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate } from '../bootstrap';
 import '../page.css';
 
@@ -12,20 +13,35 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * banner thành công chung, không tiết lộ email có tài khoản hay không.
  */
 export default function ForgotPasswordPage(): ReactElement {
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [fieldError, setFieldError] = useState<string | undefined>();
+  const [touched, setTouched] = useState(false);
   const [sent, setSent] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // SF-4 T2: validate realtime on-blur (pattern per-page).
+  const validateEmail = (value: string): string | undefined =>
+    EMAIL_RE.test(value.trim()) ? undefined : t('account.auth.errInvalidEmail');
+
+  const onBlurEmail = (value: string): void => {
+    setTouched(true);
+    setFieldError(validateEmail(value));
+  };
+
+  const onChangeEmail = (value: string): void => {
+    setEmail(value);
+    if (touched) setFieldError(validateEmail(value));
+  };
+
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setBanner(null);
-    if (!EMAIL_RE.test(email.trim())) {
-      setFieldError('Email không hợp lệ');
-      return;
-    }
-    setFieldError(undefined);
+    setTouched(true);
+    const error = validateEmail(email);
+    setFieldError(error);
+    if (error) return;
     setLoading(true);
     fetch('/api/identity/password/forgot', {
       method: 'POST',
@@ -37,7 +53,7 @@ export default function ForgotPasswordPage(): ReactElement {
         setSent(true);
       })
       .catch(() => {
-        setBanner('Có lỗi xảy ra — thử lại');
+        setBanner(t('account.auth.errGeneric'));
       })
       .finally(() => setLoading(false));
   };
@@ -45,11 +61,12 @@ export default function ForgotPasswordPage(): ReactElement {
   return (
     <div className="auth-page">
       <Card className="auth-card">
-        <h1 className="auth-title">Quên mật khẩu</h1>
+        <h1 className="auth-title">{t('account.auth.forgotTitle')}</h1>
         {sent ? (
           <>
-            <div className="auth-error" role="status" data-testid="forgot-sent" style={{ background: '#eefcf0', color: '#1b7a34' }}>
-              Nếu email tồn tại trong hệ thống, chúng tôi đã gửi link đặt lại mật khẩu. Kiểm tra hộp thư (kể cả Spam).
+            <div className="auth-ok" role="status" data-testid="forgot-sent">
+              <Icon name="check" size={16} />
+              <span>{t('account.auth.forgotSent')}</span>
             </div>
             <p className="auth-switch">
               <a
@@ -59,7 +76,7 @@ export default function ForgotPasswordPage(): ReactElement {
                   appNavigate('/login');
                 }}
               >
-                Về trang đăng nhập
+                {t('account.auth.backToLogin')}
               </a>
             </p>
           </>
@@ -72,18 +89,19 @@ export default function ForgotPasswordPage(): ReactElement {
             ) : null}
             <form onSubmit={onSubmit} noValidate>
               <Input
-                label="Email"
+                label={t('account.auth.email')}
                 type="email"
                 name="email"
                 autoComplete="email"
-                placeholder="ban@example.com"
+                placeholder={t('account.auth.phEmail')}
                 value={email}
                 error={fieldError}
                 data-testid="forgot-email"
-                onChange={(e) => setEmail(e.target.value)}
+                onBlur={(e) => onBlurEmail(e.target.value)}
+                onChange={(e) => onChangeEmail(e.target.value)}
               />
               <Button type="submit" variant="primary" fullWidth loading={loading} data-testid="forgot-submit">
-                Gửi link đặt lại mật khẩu
+                {t('account.auth.sendResetLink')}
               </Button>
             </form>
             <p className="auth-switch">
@@ -94,7 +112,7 @@ export default function ForgotPasswordPage(): ReactElement {
                   appNavigate('/login');
                 }}
               >
-                Về trang đăng nhập
+                {t('account.auth.backToLogin')}
               </a>
             </p>
           </>

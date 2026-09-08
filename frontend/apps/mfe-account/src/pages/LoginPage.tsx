@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { Button, Card, IconButton, Input } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { login, oauthProviders } from '../api';
 import { appNavigate } from '../bootstrap';
 import { safeNextPath } from '../lib/nextPath';
+import { EyeIcon } from '../components/EyeIcon';
 import '../page.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Nút social ẩn/hiện theo identity env (well-known) — không key → không nút. */
 function OAuthButtons(): ReactElement | null {
+  const { t } = useT();
   const [providers, setProviders] = useState<{ google: boolean; facebook: boolean } | null>(null);
 
   useEffect(() => {
@@ -29,18 +32,18 @@ function OAuthButtons(): ReactElement | null {
   };
   return (
     <>
-      <div className="oauth-divider" role="separator" aria-label="hoặc">
-        <span>hoặc</span>
+      <div className="oauth-divider" role="separator" aria-label={t('account.oauth.or')}>
+        <span>{t('account.oauth.or')}</span>
       </div>
       <div className="oauth-buttons">
         {providers.google ? (
           <Button type="button" variant="secondary" fullWidth onClick={() => go('google')}>
-            <span className="oauth-btn-label">Đăng nhập với Google</span>
+            <span className="oauth-btn-label">{t('account.oauth.google')}</span>
           </Button>
         ) : null}
         {providers.facebook ? (
           <Button type="button" variant="secondary" fullWidth onClick={() => go('facebook')}>
-            <span className="oauth-btn-label">Đăng nhập với Facebook</span>
+            <span className="oauth-btn-label">{t('account.oauth.facebook')}</span>
           </Button>
         ) : null}
       </div>
@@ -49,21 +52,45 @@ function OAuthButtons(): ReactElement | null {
 }
 
 export default function LoginPage(): ReactElement {
+  const { t } = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // SF-4 T2: validate realtime on-blur — validateField thuần string, error
+  // hiện khi field đã chạm (blur/submit), onChange sau chạm re-validate.
+  const validateField = (field: 'email' | 'password', value: string): string | undefined => {
+    if (field === 'email') return EMAIL_RE.test(value.trim()) ? undefined : t('account.auth.errInvalidEmail');
+    return value.length >= 8 ? undefined : t('account.auth.errPasswordMin8');
+  };
+
+  const onBlurField = (field: 'email' | 'password', value: string): void => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  };
+
+  const onChangeField = (field: 'email' | 'password', value: string): void => {
+    if (field === 'email') setEmail(value);
+    else setPassword(value);
+    if (touched[field]) setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setBanner(null);
     // Validation client-side TRƯỚC submit — lỗi hiện dưới field, không gọi API.
-    const errors: { email?: string; password?: string } = {};
-    if (!EMAIL_RE.test(email.trim())) errors.email = 'Email không hợp lệ';
-    if (password.length < 8) errors.password = 'Mật khẩu tối thiểu 8 ký tự';
+    // Submit = validate tất cả + touch tất cả (SF-4 T2).
+    const errors: { email?: string; password?: string } = {
+      email: validateField('email', email),
+      password: validateField('password', password)
+    };
+    setTouched({ email: true, password: true });
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (errors.email || errors.password) return;
 
     setLoading(true);
     const nextPath = safeNextPath(window.location.search, '/account');
@@ -86,7 +113,7 @@ export default function LoginPage(): ReactElement {
         setBanner(
           err instanceof Error && err.name === 'ApiErrorClient'
             ? (err as Error & { detail?: string }).detail || err.message
-            : 'Có lỗi xảy ra — thử lại'
+            : t('account.auth.errGeneric')
         );
       })
       .finally(() => setLoading(false));
@@ -95,7 +122,7 @@ export default function LoginPage(): ReactElement {
   return (
     <div className="auth-page">
       <Card className="auth-card">
-        <h1 className="auth-title">Đăng nhập</h1>
+        <h1 className="auth-title">{t('account.auth.loginTitle')}</h1>
         {banner ? (
           <div className="auth-error" role="alert">
             {banner}
@@ -104,31 +131,46 @@ export default function LoginPage(): ReactElement {
         <OAuthButtons />
         <form onSubmit={onSubmit} noValidate>
           <Input
-            label="Email"
+            label={t('account.auth.email')}
             type="email"
             name="email"
             autoComplete="email"
-            placeholder="ban@example.com"
+            placeholder={t('account.auth.phEmail')}
             value={email}
             error={fieldErrors.email}
-            onChange={(e) => setEmail(e.target.value)}
+            onBlur={(e) => onBlurField('email', e.target.value)}
+            onChange={(e) => onChangeField('email', e.target.value)}
           />
-          <Input
-            label="Mật khẩu"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            error={fieldErrors.password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="pw-field">
+            <Input
+              label={t('account.auth.password')}
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              placeholder={t('account.auth.phPassword')}
+              value={password}
+              error={fieldErrors.password}
+              onBlur={(e) => onBlurField('password', e.target.value)}
+              onChange={(e) => onChangeField('password', e.target.value)}
+            />
+            <IconButton
+              className="pw-toggle"
+              aria-label={t(showPassword ? 'account.auth.hidePassword' : 'account.auth.showPassword')}
+              aria-pressed={showPassword}
+              size="sm"
+              variant="ghost"
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+            >
+              <EyeIcon off={showPassword} />
+            </IconButton>
+          </div>
           <Button type="submit" variant="primary" fullWidth loading={loading}>
-            Đăng nhập
+            {t('account.auth.login')}
           </Button>
         </form>
         <p className="auth-switch">
-          Chưa có tài khoản?{' '}
+          {t('account.auth.noAccount')}{' '}
           <a
             href="/register"
             onClick={(e) => {
@@ -136,7 +178,7 @@ export default function LoginPage(): ReactElement {
               appNavigate('/register');
             }}
           >
-            Đăng ký
+            {t('account.auth.register')}
           </a>
         </p>
       </Card>

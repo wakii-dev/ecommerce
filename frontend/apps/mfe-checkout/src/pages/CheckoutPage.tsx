@@ -55,16 +55,32 @@ const EMPTY_ADDRESS: Address = {
   city: ''
 };
 
-function validateAddress(a: Address): Partial<Record<keyof Address, string>> {
-  const errors: Partial<Record<keyof Address, string>> = {};
-  if (a.fullName.trim().length < 2) errors.fullName = 'Nhập họ tên người nhận';
-  if (!PHONE_RE.test(a.phone.trim())) errors.phone = 'Số điện thoại không hợp lệ';
-  if (a.line1.trim().length < 4) errors.line1 = 'Nhập số nhà + tên đường';
-  if (!a.ward.trim()) errors.ward = 'Nhập phường/xã';
-  if (!a.district.trim()) errors.district = 'Nhập quận/huyện';
-  if (!a.city.trim()) errors.city = 'Nhập tỉnh/thành phố';
-  return errors;
+// FI-393 T7 — rule từng field tách khỏi validateAddress (message lấy từ
+// catalog `checkout.step1.<name>.error` lúc render — component giữ i18n).
+const FIELD_NAMES = ['fullName', 'phone', 'line1', 'ward', 'district', 'city'] as const;
+
+function fieldInvalid(name: keyof Address, value: string): boolean {
+  switch (name) {
+    case 'fullName':
+      return value.trim().length < 2;
+    case 'phone':
+      return !PHONE_RE.test(value.trim());
+    case 'line1':
+      return value.trim().length < 4;
+    default:
+      return !value.trim(); // ward / district / city
+  }
 }
+
+// autoComplete chuẩn WHATWG (T7) — fullName→name, phone→tel, address-level*.
+const FIELD_AUTO_COMPLETE: Record<keyof Address, string> = {
+  fullName: 'name',
+  phone: 'tel',
+  line1: 'address-line1',
+  ward: 'address-level3',
+  district: 'address-level2',
+  city: 'address-level1'
+};
 
 export default function CheckoutPage(): ReactElement {
   const authed = useAuthState();
@@ -74,6 +90,9 @@ export default function CheckoutPage(): ReactElement {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [address, setAddress] = useState<Address>(EMPTY_ADDRESS);
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof Address, string>>>({});
+  // FI-393 T7 — touched per field: lỗi hiện ngay khi blur (hoặc sau submit),
+  // không đợi submit toàn form; onChange re-validate nếu field đã touched.
+  const [touched, setTouched] = useState<Partial<Record<keyof Address, boolean>>>({});
 
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
@@ -346,25 +365,43 @@ export default function CheckoutPage(): ReactElement {
     );
   }
 
+  // FI-393 T7 — message lỗi 1 field (catalog) — undefined khi field hợp lệ.
+  const validateField = (name: keyof Address, value: string): string | undefined =>
+    fieldInvalid(name, value) ? t(`checkout.step1.${name}.error`) : undefined;
+
   const onAddressSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const errors = validateAddress(address);
+    const errors: Partial<Record<keyof Address, string>> = {};
+    for (const name of FIELD_NAMES) {
+      const message = validateField(name, address[name]);
+      if (message) errors[name] = message;
+    }
     setAddressErrors(errors);
+    // submit = chạm tất cả field → toàn bộ lỗi hiện như trước (same error set)
+    setTouched({ fullName: true, phone: true, line1: true, ward: true, district: true, city: true });
     if (Object.keys(errors).length === 0) setStep(2);
   };
 
-  const field = (
-    name: keyof Address,
-    label: string,
-    placeholder: string
-  ): ReactElement => (
+  const field = (name: keyof Address): ReactElement => (
     <Input
-      label={label}
+      label={t(`checkout.step1.${name}.label`)}
       name={name}
       value={address[name]}
-      placeholder={placeholder}
-      error={addressErrors[name]}
-      onChange={(e) => setAddress((prev) => ({ ...prev, [name]: e.target.value }))}
+      placeholder={t(`checkout.step1.${name}.placeholder`)}
+      error={touched[name] ? addressErrors[name] : undefined}
+      inputMode={name === 'phone' ? 'tel' : undefined}
+      autoComplete={FIELD_AUTO_COMPLETE[name]}
+      onBlur={() => {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setAddressErrors((prev) => ({ ...prev, [name]: validateField(name, address[name]) }));
+      }}
+      onChange={(e) => {
+        const value = e.target.value;
+        setAddress((prev) => ({ ...prev, [name]: value }));
+        if (touched[name]) {
+          setAddressErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+        }
+      }}
     />
   );
 
@@ -391,15 +428,15 @@ export default function CheckoutPage(): ReactElement {
         <Card>
           {step === 1 && (
             <form onSubmit={onAddressSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Địa chỉ nhận hàng</h2>
-              {field('fullName', 'Họ tên người nhận', 'Nguyen Van A')}
-              {field('phone', 'Số điện thoại', '0901234567')}
-              {field('line1', 'Số nhà + đường', '12 Nguyen Hue')}
-              {field('ward', 'Phường/xã', 'Ben Nghe')}
-              {field('district', 'Quận/huyện', 'Quan 1')}
-              {field('city', 'Tỉnh/thành phố', 'TP. Hồ Chí Minh')}
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.step1.title')}</h2>
+              {field('fullName')}
+              {field('phone')}
+              {field('line1')}
+              {field('ward')}
+              {field('district')}
+              {field('city')}
               <Button type="submit" variant="primary">
-                Tiếp tục — chọn vận chuyển
+                {t('checkout.continueShipping')}
               </Button>
             </form>
           )}
@@ -513,7 +550,12 @@ export default function CheckoutPage(): ReactElement {
                 maxPoints > 0 ? (
                   <div className="coupon-box" data-testid="points-box">
                     <Input
-                      label={`Dùng điểm (có ${pointsBalance.toLocaleString('vi-VN')} điểm · tối đa ${maxPoints.toLocaleString('vi-VN')} ≈ ${formatPrice(maxPoints * POINT_VND)})`}
+                      // FI-393 T7 — label ngắn 1 dòng (key checkout.points.label);
+                      // chi tiết balance đã có trong pill "Dùng N điểm" phía dưới.
+                      label={t('checkout.points.label', {
+                        max: maxPoints.toLocaleString('vi-VN'),
+                        value: formatPrice(maxPoints * POINT_VND)
+                      })}
                       name="usePoints"
                       type="number"
                       min={0}

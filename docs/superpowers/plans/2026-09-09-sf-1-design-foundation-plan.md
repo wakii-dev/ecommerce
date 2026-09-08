@@ -557,14 +557,14 @@ Tất cả compose từ Skeleton primitive có sẵn (variant rect/text/circle) 
 - Create: `frontend/packages/ui-kit/src/components/useReveal.ts`
 - Modify: ui-kit.css (reveal classes + global reduced-motion), components/index.ts, UiKitDemo.tsx (reveal section + switcher 4-state)
 
-- [ ] **Step 1: useReveal** (progressive enhancement — KHÔNG CSS-default-hidden):
+- [x] **Step 1: useReveal** (progressive enhancement — KHÔNG CSS-default-hidden):
 ```tsx
 export interface RevealOptions { threshold?: number; delayMs?: number }  // threshold default 0.12 (hand-off §3.2)
 export function useReveal<T extends HTMLElement = HTMLDivElement>(options?: RevealOptions): RefObject<T>
 ```
 Hành vi: (1) nếu `typeof IntersectionObserver === 'undefined'` → no-op (content visible — SSR/no-JS an toàn); (2) nếu `matchMedia('(prefers-reduced-motion: reduce)').matches` → no-op; (3) else: trên ref element hiện tại mount — add class `uk-reveal uk-reveal--pending` (pending: opacity 0 + translateY(18px)), nếu delayMs → `el.style.transitionDelay = delayMs + 'ms'`; observe với threshold; intersect lần đầu → remove `--pending`, unobserve (1 lần). Return ref để consumer gắn `<div ref={useReveal()}>`. Cleanup disconnect khi unmount.
 
-- [ ] **Step 2: CSS** — `.uk-reveal { opacity: 1; transform: none; transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out); }` (transition sẵn, không đổi gì khi không pending) + `.uk-reveal--pending { opacity: 0; transform: translateY(18px); }`. Global reduced-motion CUỐI ui-kit.css:
+- [x] **Step 2: CSS** — `.uk-reveal { opacity: 1; transform: none; transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out); }` (transition sẵn, không đổi gì khi không pending) + `.uk-reveal--pending { opacity: 0; transform: translateY(18px); }`. Global reduced-motion CUỐI ui-kit.css:
 ```css
 /* ── prefers-reduced-motion global (SF-1 FI-391 — hand-off §3.3) */
 @media (prefers-reduced-motion: reduce) {
@@ -579,21 +579,21 @@ Hành vi: (1) nếu `typeof IntersectionObserver === 'undefined'` → no-op (con
 ```
 (câu cuối là belt-and-suspenders — hook đã no-op, css bảo đảm thêm.)
 
-- [ ] **Step 3: Demo completion** — (a) section "Scroll reveal": 3 thẻ uk-card dùng useReveal với delayMs 0/70/140 (stagger — cuộn xuống thấy tuần tự); (b) **switcher theme 4-state**: `ThemeName = 'storefront' | 'admin' | 'dark' | 'admin-dark'`, UI = 4 nút (radio group nhỏ) thay toggle đơn; `data-theme` set trên `<html>` như hiện. (Acceptance #4 verify tại đây.)
+- [x] **Step 3: Demo completion** — (a) section "Scroll reveal": 3 thẻ uk-card dùng useReveal với delayMs 0/70/140 (stagger — cuộn xuống thấy tuần tự); (b) **switcher theme 4-state**: `ThemeName = 'storefront' | 'admin' | 'dark' | 'admin-dark'`, UI = 4 nút (radio group nhỏ) thay toggle đơn; `data-theme` set trên `<html>` như hiện. (Acceptance #4 verify tại đây.)
 
-- [ ] **Step 4: Test jsdom useReveal** — mock global IntersectionObserver (class giả capture callback + observe/unobserve spies) + matchMedia mock returns matches:false: render hook qua component thử nghiệm → element có class `uk-reveal uk-reveal--pending`; trigger callback([{isIntersecting: true}]) → class pending biến mất; unobserve được gọi. matchMedia matches:true (reduced-motion) → KHÔNG có class pending. IO undefined (xóa tạm) → không class pending, không crash.
+- [x] **Step 4: Test jsdom useReveal** — mock global IntersectionObserver (class giả capture callback + observe/unobserve spies) + matchMedia mock returns matches:false: render hook qua component thử nghiệm → element có class `uk-reveal uk-reveal--pending`; trigger callback([{isIntersecting: true}]) → class pending biến mất; unobserve được gọi. matchMedia matches:true (reduced-motion) → KHÔNG có class pending. IO undefined (xóa tạm) → không class pending, không crash.
 
-- [ ] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): useReveal + reduced-motion global + demo 4-state (FI-391 T13)`.
+- [x] **Step 5: Run** vitest → PASS. Commit: `feat(ui-kit): useReveal + reduced-motion global + demo 4-state (FI-391 T13)`.
 
 ### Task 14: Tabs keyboard test + consolidation full-suite
 
 **Files:**
 - Create: `frontend/packages/ui-kit/src/components/__tests__/tabs.test.tsx` (file jsdom test mới — pattern overlay.test.tsx)
 
-- [ ] **Step 1: Tabs keyboard test KHÓA hành vi hiện có** (Tabs.tsx:40-80 — KHÔNG sửa logic): render 3 tabs jsdom; focus tab đầu; `fireEvent.keyDown(list, { key: 'ArrowRight' })` → tab 2 `aria-selected=true` + `document.activeElement` = nút tab 2; ArrowLeft từ tab 2 → về tab 1; wrap: ArrowLeft tại tab 1 → tab CUỐI (enabled); disabled item bị skip qua; Home/End KHÔNG được handle hiện tại → test chỉ khóa Arrow behavior (không assert Home/End — không định nghĩa behavior mới).
+- [x] **Step 1: Tabs keyboard test KHÓA hành vi hiện có** (Tabs.tsx:40-80 — KHÔNG sửa logic): render 3 tabs jsdom; focus tab đầu; `fireEvent.keyDown(list, { key: 'ArrowRight' })` → tab 2 `aria-selected=true` + `document.activeElement` = nút tab 2; ArrowLeft từ tab 2 → về tab 1; wrap: ArrowLeft tại tab 1 → tab CUỐI (enabled); disabled item bị skip qua; Home/End KHÔNG được handle hiện tại → test chỉ khóa Arrow behavior (không assert Home/End — không định nghĩa behavior mới).
 
-- [ ] **Step 2: Consolidation sweep** — chạy TOÀN BỘ: `pnpm vitest run` chạy TRONG từng package (`cd frontend/packages/ui-kit && pnpm vitest run`, `cd frontend/packages/i18n && pnpm vitest run` — chạy từ workspace root sẽ bỏ qua vitest.config.ts jsdom) → tất cả xanh (SSR + jsdom + tokens regression + i18n parity). `pnpm -r --filter @ecommerce/ui-kit --filter @ecommerce/i18n lint` (tsc --noEmit) sạch. Nếu test nào đỏ → fix root cause (KHÔNG skip test).
-- [ ] **Step 3: Commit:** `test(ui-kit): Tabs keyboard roving-tabindex lock + suite consolidation (FI-391 T14)`.
+- [x] **Step 2: Consolidation sweep** — chạy TOÀN BỘ: `pnpm vitest run` chạy TRONG từng package (`cd frontend/packages/ui-kit && pnpm vitest run`, `cd frontend/packages/i18n && pnpm vitest run` — chạy từ workspace root sẽ bỏ qua vitest.config.ts jsdom) → tất cả xanh (SSR + jsdom + tokens regression + i18n parity). `pnpm -r --filter @ecommerce/ui-kit --filter @ecommerce/i18n lint` (tsc --noEmit) sạch. Nếu test nào đỏ → fix root cause (KHÔNG skip test).
+- [x] **Step 3: Commit:** `test(ui-kit): Tabs keyboard roving-tabindex lock + suite consolidation (FI-391 T14)`.
 
 ---
 

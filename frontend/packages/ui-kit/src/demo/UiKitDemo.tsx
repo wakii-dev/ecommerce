@@ -8,6 +8,7 @@ import {
   Input,
   Modal,
   Price,
+  QuantityStepper,
   Select,
   Skeleton,
   StarRating,
@@ -70,6 +71,7 @@ function DemoInner() {
   const [modalOpen, setModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rating, setRating] = useState(4);
+  const [qty, setQty] = useState(1);
 
   return (
     <div className="uk-demo">
@@ -176,6 +178,15 @@ function DemoInner() {
           <StarRating value={rating} onInput={setRating} size="lg" ariaLabel="Chọn đánh giá của bạn" />
           <span>{rating} / 5</span>
           <StarRating value={3.5} ariaLabel="Ví dụ chỉ đọc" />
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">QuantityStepper</h2>
+        <div className="uk-demo__row">
+          <QuantityStepper value={qty} onChange={setQty} />
+          <span>Giá trị: {qty}</span>
+          <QuantityStepper value={2} onChange={() => {}} disabled />
         </div>
       </section>
 

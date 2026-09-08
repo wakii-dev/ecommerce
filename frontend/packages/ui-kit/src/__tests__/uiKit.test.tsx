@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { Tabs } from '../components/Tabs';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { QuantityStepper } from '../components/QuantityStepper';
 import { ToastProvider } from '../components/Toast';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
@@ -133,6 +134,43 @@ describe('Skeleton / EmptyState', () => {
     expect(html).toContain('Giỏ hàng trống');
     expect(html).toContain('Hãy mua sắm');
     expect(html).toContain('Mua ngay');
+  });
+});
+
+describe('QuantityStepper', () => {
+  it('role=group + aria-label mặc định đúng (group/input/2 nút) + input value + min/max', () => {
+    const html = renderToStaticMarkup(
+      <QuantityStepper value={3} onChange={() => {}} />
+    );
+    expect(html).toContain('role="group"');
+    expect(count(html, 'aria-label="Số lượng"')).toBe(2); // group + input
+    expect(html).toContain('aria-label="Tăng số lượng"');
+    expect(html).toContain('aria-label="Giảm số lượng"');
+    expect(html).toContain('value="3"');
+    expect(html).toContain('min="1"');
+    expect(html).toContain('max="99"');
+    // glyph − là &minus; (U+2212), không phải hyphen
+    expect(html).toContain('−');
+  });
+
+  it('clamp cận: value=1 → nút − disabled; value=99 → nút + disabled', () => {
+    const atMin = renderToStaticMarkup(
+      <QuantityStepper value={1} onChange={() => {}} />
+    );
+    expect(atMin).toContain('aria-label="Giảm số lượng" disabled');
+    expect(atMin).not.toContain('aria-label="Tăng số lượng" disabled');
+    const atMax = renderToStaticMarkup(
+      <QuantityStepper value={99} onChange={() => {}} />
+    );
+    expect(atMax).toContain('aria-label="Tăng số lượng" disabled');
+    expect(atMax).not.toContain('aria-label="Giảm số lượng" disabled');
+  });
+
+  it('prop disabled → cả 2 nút + input đều disabled', () => {
+    const html = renderToStaticMarkup(
+      <QuantityStepper value={2} onChange={() => {}} disabled />
+    );
+    expect(count(html, 'disabled')).toBe(3);
   });
 });
 

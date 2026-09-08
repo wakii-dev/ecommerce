@@ -31,3 +31,7 @@ export {
   type SkeletonVariant
 } from './Skeleton';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export {
+  QuantityStepper,
+  type QuantityStepperProps
+} from './QuantityStepper';

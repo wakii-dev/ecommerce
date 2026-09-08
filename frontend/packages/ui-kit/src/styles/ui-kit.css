@@ -798,6 +798,73 @@ button.uk-star {
   gap: var(--space-3);
 }
 
+/* ── QuantityStepper (SF-1 FI-391) ──────────────────────────────────── */
+/* 3 khối dính liền trong khung chung: .uk-qty giữ border + radius +
+ * overflow hidden; input chỉ có viền dọc phân cách với 2 nút. */
+
+.uk-qty {
+  display: inline-flex;
+  height: 36px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  overflow: hidden;
+}
+
+.uk-qty__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  padding: 0;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    transform var(--dur-fast) var(--ease-pop);
+}
+
+.uk-qty__btn:hover:not(:disabled) {
+  background: var(--wash-hover);
+}
+
+.uk-qty__btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.uk-qty__value {
+  width: 44px;
+  border: none;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+  padding: 0;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.uk-qty__value::-webkit-outer-spin-button,
+.uk-qty__value::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.uk-qty__btn:disabled,
+.uk-qty__value:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
  * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
  * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */

@@ -303,7 +303,7 @@ img {
   color: var(--c-on-accent);
   background: var(--c-accent);
   border: 2px solid var(--c-surface);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 /* Locale switcher (Task 10) — ghost: 13px/600, muted → primary hover,
@@ -637,7 +637,7 @@ img {
   border: 0;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.92);
-  color: #212121;
+  color: var(--c-on-accent);
   cursor: pointer;
   display: inline-flex;
   align-items: center;

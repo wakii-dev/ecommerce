@@ -1,7 +1,7 @@
 import { ProductCardSkeleton, Skeleton } from '../../../../components/ui-kit';
 
 /**
- * PLP loading (FI-392 T2) — 6 ProductCardSkeleton grid 4 col (direction §4
+ * PLP loading (FI-392 T2) — 6 ProductCardSkeleton grid 3 col (direction §4
  * "loading: 6 ProductCardSkeleton shimmer"). KHÔNG fetch — reserve CLS.
  */
 export default function PlpLoading() {
@@ -13,7 +13,7 @@ export default function PlpLoading() {
       <div className="sk-plp-head" aria-hidden="true">
         <Skeleton variant="text" width="40%" height={26} />
       </div>
-      <div className="sk-grid" aria-hidden="true">
+      <div className="sk-grid sk-grid--3" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
           <ProductCardSkeleton key={i} />
         ))}

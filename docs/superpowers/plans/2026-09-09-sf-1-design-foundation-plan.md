@@ -333,7 +333,7 @@ git commit -m "feat(i18n): ui.* keys vi/en + parity structural + ADR 0007 data-t
 - Create: `frontend/packages/ui-kit/src/components/QuantityStepper.tsx`
 - Modify: `frontend/packages/ui-kit/src/styles/ui-kit.css`, `frontend/packages/ui-kit/src/components/index.ts`, `frontend/packages/ui-kit/src/demo/UiKitDemo.tsx`, `frontend/packages/ui-kit/src/__tests__/uiKit.test.tsx`
 
-- [ ] **Step 1: Component** — API:
+- [x] **Step 1: Component** — API:
 ```tsx
 export interface QuantityStepperProps {
   value: number;
@@ -349,13 +349,13 @@ export interface QuantityStepperProps {
 ```
 Markup: `<div className="uk-qty" role="group" aria-label={label}>` + nút `−` (`aria-label={decreaseLabel}`, disabled khi value≤min || disabled, type="button", class `uk-qty__btn`) + `<input type="number" className="uk-qty__value" min max value aria-label={label} onChange>` (parse int, clamp [min,max], ignore NaN) + nút `+`. Controlled thuần (không state nội bộ — value/onChange). Glyph −/+ dùng ký tự &minus; / +.
 
-- [ ] **Step 2: CSS** `/* ── QuantityStepper (SF-1 FI-391) */` — `.uk-qty` inline-flex cao 36, nút 36×36 border 1px `--c-border` radius-md nền surface, hover nền `--wash-hover` `--dur-fast`, active scale 0.97 `--ease-pop`; input width 44 text-center border-y riêng (không viền quanh — 3 khối dính liền trong khung chung: `.uk-qty` border + overflow hidden), `appearance: none` ẩn spinner webkit/moz; disabled opacity 0.5. CẤM hex — chỉ var(--*).
+- [x] **Step 2: CSS** `/* ── QuantityStepper (SF-1 FI-391) */` — `.uk-qty` inline-flex cao 36, nút 36×36 border 1px `--c-border` radius-md nền surface, hover nền `--wash-hover` `--dur-fast`, active scale 0.97 `--ease-pop`; input width 44 text-center border-y riêng (không viền quanh — 3 khối dính liền trong khung chung: `.uk-qty` border + overflow hidden), `appearance: none` ẩn spinner webkit/moz; disabled opacity 0.5. CẤM hex — chỉ var(--*).
 
-- [ ] **Step 3: Barrel + demo** — export `QuantityStepper, type QuantityStepperProps`; section demo "QuantityStepper" với `useState(1)` + stepper 1..99 + hiển thị giá trị.
+- [x] **Step 3: Barrel + demo** — export `QuantityStepper, type QuantityStepperProps`; section demo "QuantityStepper" với `useState(1)` + stepper 1..99 + hiển thị giá trị.
 
-- [ ] **Step 4: Test SSR** (uiKit.test.tsx) — render markup chứa role=group, 2 nút aria-label default đúng, input value; test clamp: render value=1 → nút − disabled.
+- [x] **Step 4: Test SSR** (uiKit.test.tsx) — render markup chứa role=group, 2 nút aria-label default đúng, input value; test clamp: render value=1 → nút − disabled.
 
-- [ ] **Step 5: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
+- [x] **Step 5: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/components/QuantityStepper.tsx frontend/packages/ui-kit/src/styles/ui-kit.css frontend/packages/ui-kit/src/components/index.ts frontend/packages/ui-kit/src/demo/UiKitDemo.tsx frontend/packages/ui-kit/src/__tests__/uiKit.test.tsx
 git commit -m "feat(ui-kit): primitive QuantityStepper keyboard+aria (FI-391 T6)"
@@ -367,7 +367,7 @@ git commit -m "feat(ui-kit): primitive QuantityStepper keyboard+aria (FI-391 T6)
 - Create: `frontend/packages/ui-kit/src/components/Pagination.tsx`
 - Modify: ui-kit.css, components/index.ts, UiKitDemo.tsx, uiKit.test.tsx
 
-- [ ] **Step 1: Component** — API 1 component 2 chế độ:
+- [x] **Step 1: Component** — API 1 component 2 chế độ:
 ```tsx
 export interface PaginationProps {
   page: number;
@@ -385,13 +385,13 @@ export interface PaginationProps {
 ```
 Window ±2 có đầu/cuối + ellipsis (logic tự chứa trong file — không import từ storefront-web): pages = [1, page-1, page, page+1, totalPages] unique 1..totalPages sort; chèn `…` khi gap >1. totalPages ≤1 → null. prev hiện khi page>1 (rel="prev", aria-label prevLabel), next khi page<totalPages (rel="next"). URL mode: `<a>` class `uk-page` + `uk-page--active` + `aria-current="page"`. Client mode: `<button type="button">`. Nav: `<nav className="uk-pagination" aria-label={label}>`.
 
-- [ ] **Step 2: CSS** — `.uk-pagination` flex gap 4; `.uk-page` 32×32 radius-md border 1px `--c-border` nền surface `--text-sm`; hover nền `--wash-hover` `--dur-fast`; active: nền `--c-primary` chữ trắng border transparent; ellipsis `.uk-page--dots` borderless. (32×32 là size primitive mặc định — hand-off §2.5 admin dùng nút 30×30: SF-5 override qua css riêng nếu cần khớp anatomy admin; size nằm ngoài §1.2-§1.5 nên là dev latitude.)
+- [x] **Step 2: CSS** — `.uk-pagination` flex gap 4; `.uk-page` 32×32 radius-md border 1px `--c-border` nền surface `--text-sm`; hover nền `--wash-hover` `--dur-fast`; active: nền `--c-primary` chữ trắng border transparent; ellipsis `.uk-page--dots` borderless. (32×32 là size primitive mặc định — hand-off §2.5 admin dùng nút 30×30: SF-5 override qua css riêng nếu cần khớp anatomy admin; size nằm ngoài §1.2-§1.5 nên là dev latitude.)
 
-- [ ] **Step 3: Barrel + demo** — demo section client-mode (useState page, totalPages 12, reset scroll không cần); render kèm text "Trang N/12" để verify.
+- [x] **Step 3: Barrel + demo** — demo section client-mode (useState page, totalPages 12, reset scroll không cần); render kèm text "Trang N/12" để verify.
 
-- [ ] **Step 4: Test SSR** — cả 2 chế độ: URL mode render `<a href>` đúng pageHref(2) khi page=2 + aria-current; client mode render button + không có href; totalPages=1 → markup rỗng; window ellipsis xuất hiện khi totalPages>7 (assert ký tự `…` trong markup). Test jsdom nhỏ: click nút page 3 → onPageChange(3).
+- [x] **Step 4: Test SSR** — cả 2 chế độ: URL mode render `<a href>` đúng pageHref(2) khi page=2 + aria-current; client mode render button + không có href; totalPages=1 → markup rỗng; window ellipsis xuất hiện khi totalPages>7 (assert ký tự `…` trong markup). Test jsdom nhỏ: click nút page 3 → onPageChange(3).
 
-- [ ] **Step 5: Run** vitest → PASS. Commit tương tự (git add 5 file). Message: `feat(ui-kit): primitive Pagination URL+client dual-mode (FI-391 T7)`.
+- [x] **Step 5: Run** vitest → PASS. Commit tương tự (git add 5 file). Message: `feat(ui-kit): primitive Pagination URL+client dual-mode (FI-391 T7)`.
 
 ### Task 8: Primitives Breadcrumbs + IconButton + Alert
 

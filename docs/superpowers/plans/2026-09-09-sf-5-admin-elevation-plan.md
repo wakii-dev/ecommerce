@@ -142,30 +142,30 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 **Files:**
 - Modify: ProductsListPage, OrdersPage, AuditPage, NewsletterPage
 
-- [ ] **Step 1:** Thay khối `.admin-pagination` "← Trước/Sau" bằng `Pagination` primitive client mode (`onPageChange`, labels từ `admin.common.*` — `prev`='Trước' → dùng `prevLabel={t('admin.common.prev')}`...) + giữ dòng tổng `(pageOf + total)` cạnh; Audit/Newsletter GIỮ testid nav? (audit-prev/audit-next có trong e2e? — grep: KHÔNG spec nào bấm audit-prev/next; giữ testid bằng cách bọc span data-testid ngoài? → bỏ testid cũ an toàn vì e2e subset không dùng; ghi check grep trước khi xóa).
-- [ ] **Step 2:** page-size select đặt cạnh pagination (toolbar phải); đảm bảo page>totalPages sau page-size đổi → clamp trang.
-- [ ] **Step 3:** vitest mfe-admin xanh (mount.smoke render dashboard; pages khác không phủ — mount smoke vẫn pass vì không đụng).
-- [ ] **Step 4:** Commit `feat(admin): pagination primitive thay nút Trước/Sau (FI-395 T4)`.
+- [x] **Step 1:** Thay khối `.admin-pagination` "← Trước/Sau" bằng `Pagination` primitive client mode (`onPageChange`, labels từ `admin.common.*` — `prev`='Trước' → dùng `prevLabel={t('admin.common.prev')}`...) + giữ dòng tổng `(pageOf + total)` cạnh; Audit/Newsletter GIỮ testid nav? (audit-prev/audit-next có trong e2e? — grep: KHÔNG spec nào bấm audit-prev/next; giữ testid bằng cách bọc span data-testid ngoài? → bỏ testid cũ an toàn vì e2e subset không dùng; ghi check grep trước khi xóa).
+- [x] **Step 2:** page-size select đặt cạnh pagination (toolbar phải); đảm bảo page>totalPages sau page-size đổi → clamp trang.
+- [x] **Step 3:** vitest mfe-admin xanh (mount.smoke render dashboard; pages khác không phủ — mount smoke vẫn pass vì không đụng).
+- [x] **Step 4:** Commit `feat(admin): pagination primitive thay nút Trước/Sau (FI-395 T4)`.
 
 ### Task 5: dashboard-kpi-charts-polish
 
 **Files:**
 - Modify: DashboardPage.tsx, page.css
 
-- [ ] **Step 1:** KPI tile: shadow-1 + hover cascade nhẹ (−2px shadow-2, dur-base) + label/value đúng §2.5 (label 11/700 uppercase ls .08em; value 23/800 tabular — css có sẵn, bổ sung tint top-accent nhẹ theo direction tint-primary); KHÔNG chế delta data.
-- [ ] **Step 2:** Charts: giữ pattern override token page.css:349-360 (recharts colors qua var) — polish grid/toast; low-stock table qua DataTable (Task 3 đã rải? — low-stock dùng Table nội dòng; rải DataTable + skeleton luôn ở đây nếu chưa).
-- [ ] **Step 3:** Skeleton loading các khối → TableSkeleton/Skeleton composition hợp lý.
-- [ ] **Step 4:** Commit `feat(admin): dashboard KPI + charts polish (FI-395 T5)`.
+- [x] **Step 1:** KPI tile: shadow-1 + hover cascade nhẹ (−2px shadow-2, dur-base) + label/value đúng §2.5 (label 11/700 uppercase ls .08em; value 23/800 tabular — css có sẵn, bổ sung tint top-accent nhẹ theo direction tint-primary); KHÔNG chế delta data.
+- [x] **Step 2:** Charts: giữ pattern override token page.css:349-360 (recharts colors qua var) — polish grid/toast; low-stock table qua DataTable (Task 3 đã rải? — low-stock dùng Table nội dòng; rải DataTable + skeleton luôn ở đây nếu chưa).
+- [x] **Step 3:** Skeleton loading các khối → TableSkeleton/Skeleton composition hợp lý.
+- [x] **Step 4:** Commit `feat(admin): dashboard KPI + charts polish (FI-395 T5)`.
 
 ### Task 6: productslist-productform-polish-grid-upload-variants
 
 **Files:**
 - Modify: ProductsListPage.tsx, ProductFormPage.tsx, page.css
 
-- [ ] **Step 1:** ProductsList: filter bar polish (search/status/category giữ logic), density hàng (44px ảnh giữ), empty state EmptyState primitive thay text? (kiểm empty hiện là string qua Table empty — đổi EmptyState component).
-- [ ] **Step 2:** ProductForm: form grid gap thoáng (space-5), label/hint typography; **upload area dropzone-style visual** (border dashed tint + icon + hover — KHÔNG đổi logic input file; input[type=file] vẫn ẩn trong DOM — e2e setInputFiles cần nó); variants grid: hàng rõ ranh giới + cột đều (page.css §232-239 polish); tabs vi/en dùng Tabs primitive (đã dùng — polish khoảng cách).
-- [ ] **Step 3:** e2e constraints (commit gate — grep testid inventory như T3b Step 2 + `input[type=file]`, tab 'Ảnh' exact, `/Đăng bán/`, `/Sửa/`) — diff rỗng mới commit.
-- [ ] **Step 4:** Commit `feat(admin): products list + product form polish (FI-395 T6)`.
+- [x] **Step 1:** ProductsList: filter bar polish (search/status/category giữ logic), density hàng (44px ảnh giữ), empty state EmptyState primitive thay text? (kiểm empty hiện là string qua Table empty — đổi EmptyState component).
+- [x] **Step 2:** ProductForm: form grid gap thoáng (space-5), label/hint typography; **upload area dropzone-style visual** (border dashed tint + icon + hover — KHÔNG đổi logic input file; input[type=file] vẫn ẩn trong DOM — e2e setInputFiles cần nó); variants grid: hàng rõ ranh giới + cột đều (page.css §232-239 polish); tabs vi/en dùng Tabs primitive (đã dùng — polish khoảng cách).
+- [x] **Step 3:** e2e constraints (commit gate — grep testid inventory như T3b Step 2 + `input[type=file]`, tab 'Ảnh' exact, `/Đăng bán/`, `/Sửa/`) — diff rỗng mới commit.
+- [x] **Step 4:** Commit `feat(admin): products list + product form polish (FI-395 T6)`.
 
 ### Task 7: orders-orderdetail-pill-timeline-actions
 

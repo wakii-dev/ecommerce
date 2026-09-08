@@ -118,7 +118,7 @@ Consumers/regression: e2e subset 4 spec (selectors `data-testid="related-product
 | T6 | productcard-price-primitive-consolidate-hover | B | ProductCardView + catalog-api gradient |
 | T7 | plp-pagination-primitive-filter-a11y-real-checkbox | B | plp/* + css |
 | T8a | pdp-gallery-zoom | B | Gallery + css |
-| T8b | pdp-tabs-sticky-mobile (kèm toast→ui-kit) | C | PDP page/AddToCart/layout/shim |
+| T8b | pdp-tabs-sticky-mobile (tabs keyboard + toast §3.2 + sticky ATC + meta link đánh giá) | C | PDP page/AddToCart/layout/shim |
 | T9 | pdp-review-modal-uikit-focus-trap-esc | C | WriteReviewModal + shim |
 | T10 | search-coupons-polish-empty-copybutton | C | search/coupons + CopyButton |
 | T11 | footer-newsletter-tokenize-recentlyviewed-decss | C | Footer/Newsletter/RecentlyViewed |
@@ -132,6 +132,25 @@ Consumers/regression: e2e subset 4 spec (selectors `data-testid="related-product
 **Testing strategy:** `cd frontend/apps/storefront-web && pnpm vitest run` xanh sau MỖI task (10 test file hiện có không được vỡ: `addtocart` import COPY/buildAddItemPayload giữ nguyên export). Thêm test: T6 (productGradient map token mới), T8b (toast honesty copy — giữ test cũ xanh), T12 (i18n parity vi/en — mọi key đủ 2 locale), T14 (breadcrumbJsonld escape `<`). `pnpm lint` (tsc --noEmit) sạch trước mỗi commit. Browser verify (Rule 0) do coordinator thực hiện sau mỗi nhóm: mở tab → đi flow → screenshot → so direction.
 
 **e2e subset (T15):** `golden-path.spec.ts` + `nav-honesty.spec.ts` + `related-products.spec.ts` + `review-flow.spec.ts` — cần dev stack sống (gateway + catalog data). Port base +0 (không alt-ports). Nếu port war/docker chết → recipe fe-e2e-isolated (mock-gateway :9099 + GATEWAY_URL rewire cả SSR lẫn browser).
+
+**e2e selector contract (READ-ONLY specs — MỌI task phải giữ các selector sau sống):**
+
+| Selector (spec) | Nơi | Task không được vỡ |
+|---|---|---|
+| `nav.mini-nav a` nth(0/1/2) href `/c/dien-tu(?\sort=…)` exact, đúng thứ tự | Header | T3 |
+| `a[href="#"]` count 0 (home + footer) | toàn cục | T1, T11 |
+| `.cat-grid`, `.cat-tile`, `.cat-tile--more` (click → URL đúng) | home | T5 |
+| `a.featured-more` href `/c/{slug}?sort=discount` | home | T5 |
+| `.site-footer a` count ≥10, 0 href `#` | footer | T11 |
+| `.pdp-toast[role="status"]` + exact text lỗi cart | PDP AddToCart | T8b (GIỮ markup — chỉ restyle) |
+| `getByRole('link', {name: 'Đánh giá'})` (substring) click được → panel reviews mở | PDP meta link mới | T8b |
+| `getByRole('dialog', {name: /Viết đánh giá/})` | review modal | T9 |
+| `.rv-star`, button /Viết đánh giá/, /Gửi đánh giá/ | review form | T8b, T9 |
+| `.pdp-swatch`, `.pdp-chips button`, button 'THÊM VÀO GIỎ' | PDP buybox | T8b (không đổi VariantSelector/AddToCart copy) |
+| `input[type=search][name=q]`, link /Switch language/i | SearchBar/LocaleSwitcher | T3, T12 |
+| `getByTestId('related-products')` > `a` | PDP related | T14 (giữ section) |
+| `getByTestId('recently-viewed')` > `a` + href so | home | T11 |
+| link /uniqlo/i (search keyword chips) | search | T10 |
 
 ## 6. Risks & unknowns
 - **Must verify:** primitive APIs đọc trước khi wire (Modal: open/onClose/title/footer/size; Tabs: items/value/onInput + roving tabindex; Toast: ToastProvider + useToast; Price: value/comparePrice/size/locale; Pagination: pageHref → `<a>` mode; Icon: 21 names không có truck/zap → perk "🚚" dùng inline SVG storefront (precedent Header); useReveal: ref + threshold + delayMs).
@@ -151,7 +170,7 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 - [ ] **Step 1:** Migration `<a href>` thô → `next/link` `Link` CHO MỌI internal anchor (target `localePath(...)` hoặc path nội bộ `/`): logo + mini-nav (Header), footer cột Danh mục (cột Tài khoản là `shellUrl()` — GIỮ `<a>`), hero CTA, fcard, cat-tile, p-card (ProductCardView), breadcrumb PDP/PLP, search chips, not-found home link, WriteReviewModal guest CTA là `shellUrl()` (GIỮ `<a>`). Link render `<a>` thật — no-JS fallback giữ nguyên.
 - [ ] **Step 2:** `prefetch={false}` CHỈ cho links filter/sort tham số dài (sidebar tree/check links qua `buildPlpUrl`, featured-more `?sort=discount`); links thường prefetch mặc định.
 - [ ] **Step 3:** SortSelect: `window.location.assign` → `useRouter().push(url.toString(), { scroll: false })` (giữ logic reset page + build URL từ `window.location.href` — URL-driven không đổi). BuyNow `window.location.assign(shellUrl()/cart)` GIỮ nguyên (cross-origin shell).
-- [ ] **Step 4:** Grep kiểm: `grep -rn "<a " app components --include="*.tsx"` — còn lại CHỈ các chỗ cross-origin shell + Pagination (T7 xử lý) + hero arrows/dots (button). Không còn internal `<a href>`.
+- [ ] **Step 4:** Grep kiểm: `grep -rn "<a " app components --include="*.tsx"` — còn lại CHỈ các chỗ cross-origin shell (`shellUrl()`) + Pagination (T7 xử lý) + 3 anchor tab `#tab-*` (page.tsx:270-272 — T8b thay bằng Tabs primitive, KHÔNG migrate sang Link trong T1) + hero arrows/dots (button). Không còn internal `<a href>` khác.
 - [ ] **Step 5:** vitest + lint xanh → commit `feat(storefront): next/link migration 24 internal links + SortSelect router.push (FI-392)`.
 
 ### Task 2: loading-error-notfound-skeleton-compositions (nhóm A)
@@ -159,6 +178,7 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 **Files:** mới `app/[locale]/page/loading.tsx` + `error.tsx`, `app/[locale]/c/[slug]/{loading,error}.tsx`, `app/[locale]/p/[slug]/{loading,error}.tsx`, `app/[locale]/search/{loading,error}.tsx`; sửa `app/[locale]/not-found.tsx` + `app/not-found.tsx`; css.
 
 - [ ] **Step 1:** `loading.tsx` streaming SSR — skeleton compositions từ ui-kit (`ProductCardSkeleton` ×6 cho PLP/search; home: hero block tĩnh + flash rail + grid skeleton; PDP: gallery square + info lines) — reserve chiều cao chống CLS. Skeleton dùng shimmer có sẵn ui-kit (`--dur-shimmer`).
+- [ ] **Step 1b (P0-3 fix):** cặp home đặt ở `app/[locale]/loading.tsx` + `app/[locale]/error.tsx` (page.tsx nằm trực tiếp dưới `[locale]/` — KHÔNG có segment `page/`); thêm cả `app/[locale]/coupons/loading.tsx` (6 ProductCardSkeleton — coupons không có loading riêng sẽ fallback skeleton home).
 - [ ] **Step 2:** `error.tsx` (`'use client'`, nhận `{ error, reset }`): locale từ `usePathname()` segment (không resolve → bilingual fallback pattern not-found); text vi/en; nút "Thử lại" gọi `reset()`; KHÔNG crash Next mặc định.
 - [ ] **Step 3:** Elevate 2 `not-found.tsx`: design theo direction (icon SVG, code 404 lớn, title/desc, CTA outline về trang chủ) — giữ bilingual (không có params).
 - [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): loading skeleton + error + not-found elevation cho 4 route (FI-392)`.
@@ -199,7 +219,7 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 **Files:** `components/ProductCardView.tsx`, `lib/catalog-api.ts`, css p-card.
 
 - [ ] **Step 1:** Fix gradient token chết: `GRADIENT_BY_CATEGORY` + fallback trong `lib/catalog-api.ts` → token mới `--grad-cat-dientu/thoitrang/nhacua/sach/lamdep` (regex giữ nguyên); `GRADIENT_VARS` ProductCardView → 5 var mới.
-- [ ] **Step 2:** Giá + strikethrough (L100-105) → primitive `Price` (`value`, `comparePrice`, `size` sm/md, `locale` vi-VN/en? — Price locale prop là BCP47: 'vi-VN'|'en-US'? kiểm output khớp formatVnd trước; nếu en output lệch format hiện có → truyền 'vi-VN' luôn và giữ locale hiển thị đồng nhất, ghi commit note) trong `.p-price-row`; suppress badge Price trong card scope bằng css (badge -% nằm trên thumb rồi).
+- [ ] **Step 2:** Giá + strikethrough (L100-105) → primitive `Price` (`value`, `comparePrice`, `size` sm/md, `locale` vi-VN/en? — Price locale prop là BCP47: 'vi-VN'|'en-US'? kiểm output khớp formatVnd trước; nếu en output lệch format hiện có → truyền 'vi-VN' luôn và giữ locale hiển thị đồng nhất, ghi commit note) trong `.p-price-row`; suppress badge Price trong card scope bằng css — **đọc `Price.tsx` trước để lấy đúng class badge** (P2 critic: verify class name để selector `.p-card` scope chắc chắn ăn); badge -% nằm trên thumb rồi.
 - [ ] **Step 3:** Hover chuẩn §3.1: card hover translateY(−3px) + shadow-1→3 `--dur-base` `--ease-out`; tên hover `--c-link`.
 - [ ] **Step 4:** WishlistHeart polish: scale hover + reduced-motion (css `.wl-heart`), không đổi logic.
 - [ ] **Step 5:** Thêm/điều chỉnh unit test `tests/` (productGradient map token mới — không trả var chết); vitest + lint xanh → commit `feat(storefront): ProductCard Price primitive + gradient token mới + hover cascade (FI-392)`.
@@ -221,16 +241,18 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 - [ ] **Step 2:** Thumbs 72×72 active border primary — polish hiện có; keyboard giữ (button đã có role=tab).
 - [ ] **Step 3:** vitest + lint xanh → commit `feat(storefront): PDP gallery hover-zoom lens per direction §2.3 (FI-392)`.
 
-### Task 8b: pdp-tabs-sticky-mobile — tabs thật + toast ui-kit + sticky ATC (nhóm C)
+### Task 8b: pdp-tabs-sticky-mobile — tabs thật + toast direction + sticky ATC (nhóm C)
+
+> **P0 plan-critic resolved (2026-09-09):** e2e READ-ONLY chốt 2 selector contract — (1) `nav-honesty.spec.ts:102-105` assert `.pdp-toast[role="status"]` exact text lỗi cart → **toast AddToCart GIỮ markup `.pdp-toast[role="status"]`, chỉ restyle css theo direction §3.2** (REQUIREMENT-GAP đã post lên FI-390 — nếu epic duyệt sửa e2e thì swap ui-kit Toast ở vòng sau); (2) `review-flow.spec.ts:69-70` click `getByRole('link', {name: 'Đánh giá'})` → **Tabs primitive GIỮ (button/keyboard) + meta PDP thêm link `{N} đánh giá` `href="#tab-reviews"`** (direction §2.3 vốn định "link đánh giá" trong meta) — PdpTabs nghe `hashchange` để activate đúng tab khi link/URL hash trỏ vào.
 
 **Files:** `app/[locale]/p/[slug]/page.tsx`, `components/pdp/AddToCart.tsx`, `app/[locale]/layout.tsx`, `components/ui-kit.ts` (shim), css pdp. Client wrapper mới `components/pdp/PdpTabs.tsx`.
 
-- [ ] **Step 0 (pre):** grep `#tab-` toàn repo + e2e — nếu có reference hash → giữ id panel (đã định giữ).
-- [ ] **Step 1:** Toast nền tảng: shim thêm `Toast`, `ToastProvider`, `useToast` (deep import); `[locale]/layout.tsx` bọc children bằng `ToastProvider` (client boundary qua shim — layout server vẫn render được).
-- [ ] **Step 2:** AddToCart: bỏ `.pdp-toast` tự viết → `useToast().toast(copy.toastOk|copy.toastFail, { variant })` (auto-dismiss primitive); GIỮ NGUYÊN export `COPY` + `buildAddItemPayload` (unit test honesty import) + toàn bộ logic fetch/stock/double-submit (honesty logic không đụng — chỉ presentation toast).
-- [ ] **Step 3:** Tabs thật: client wrapper `PdpTabs` ('use client'): primitive `Tabs` (items 3 tab, controlled `value`/`onInput`, keyboard ←→ có sẵn) + panels truyền vào như children với `hidden={activeKey!==key}`; giữ id panel `tab-desc/info/reviews`; bỏ nav `:target` + toàn bộ css `:target`/`:has` block (app.css L1592-1650); không jump-scroll (button, không hash nav). PDP page (server) render `<PdpTabs items labels>{panels}</PdpTabs>`.
+- [ ] **Step 0 (pre):** shim `components/ui-kit.ts` thêm `Tabs`, `ToastProvider`, `useToast` (deep import) + cập nhật comment stale (đã nói "chưa 'use client'" — SF-1 đã đánh dấu đủ); `[locale]/layout.tsx` bọc children bằng `ToastProvider` (client boundary qua shim — layout server vẫn render được; consumer duy nhất hiện tại: CopyButton T10).
+- [ ] **Step 1 (P0-1 resolution):** AddToCart toast: GIỮ element `.pdp-toast[role="status"]` + copy exact ("Không thêm được vào giỏ — thử lại" / ok) — e2e nav-honesty assert exact; **restyle css theo direction §3.2**: nền `var(--c-text)` chữ `var(--c-bg)`, `--radius-full`, padding 10×18, 13/700, mở opacity + translateY(12px→0) `--dur-slow` `--ease-pop` (keyframes surface trong app.css, gate reduced-motion), auto-dismiss 2200ms (đổi 2500→2200). GIỮ NGUYÊN export `COPY` + `buildAddItemPayload` + toàn bộ logic fetch/stock/double-submit (honesty logic không đụng).
+- [ ] **Step 2 (P0-2 resolution):** Tabs thật: client wrapper `PdpTabs` ('use client'): primitive `Tabs` (items 3 tab, controlled `value`/`onInput`, keyboard ←→ roving tabindex có sẵn — role=tab button, không jump-scroll) + panels children với `hidden={activeKey!==key}`; giữ id panel `tab-desc/info/reviews`; mount + `hashchange` listener: `location.hash === '#tab-reviews'` (hoặc info/desc) → activate tab đó; bỏ nav `:target` + toàn bộ css `:target`/`:has` block (app.css L1592-1650). PDP page (server): meta đổi span "(N đánh giá)" → **link `<a href="#tab-reviews">{N} {copy.reviews}</a>`** (accessible name chứa "đánh giá" — e2e review-flow click được; no-JS fallback: anchor nhảy tới panel, panel mặc định mở nhờ css `:not(:has)` fallback bỏ — chấp nhận no-JS thấy tất cả panel xếp dọc… KHÔNG: giữ 1 dòng css không-JS fallback = panel đầu hiện; ghi commit note).
+- [ ] **Step 3 (P1 critic):** PDP perk emoji ✓/🚚 (page.tsx L252-262) → icon: `check` dùng Icon primitive; "ship" không có trong catalog 24 names → inline SVG storefront (precedent Header), icon tròn 30 nền `--tint-primary-bg` per §2.3.
 - [ ] **Step 4:** Sticky ATC mobile <600px: css `.pdp-cta-row { position: sticky; bottom: 0; background: var(--c-surface); border-top + --shadow-2 }` trong media query — 1 instance, cùng handler (approach đã chốt §4).
-- [ ] **Step 5:** vitest (addtocart.test giữ xanh) + lint → commit `feat(storefront): PDP tabs keyboard + ui-kit Toast + sticky ATC mobile (FI-392)`.
+- [ ] **Step 5 (P1 critic — exit criteria e2e-compat):** vitest (addtocart.test giữ xanh) + lint xanh; `grep -n "pdp-toast\|#tab-\|name: 'Đánh giá'" frontend/e2e/tests/nav-honesty.spec.ts frontend/e2e/tests/review-flow.spec.ts` — đối chiếu markup mới vẫn thỏa (`.pdp-toast[role="status"]` còn; link tên "Đánh giá" còn); nếu dev stack sống → chạy thử `pnpm -C frontend/e2e exec playwright test nav-honesty review-flow` trước commit. → commit `feat(storefront): PDP tabs keyboard + toast direction §3.2 + sticky ATC mobile (FI-392)`.
 
 ### Task 9: pdp-review-modal-uikit-focus-trap-esc (nhóm C)
 
@@ -238,8 +260,8 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 - [ ] **Step 1:** Bọc `rv-overlay`/`rv-modal` tự viết bằng primitive `Modal` (`open` luôn true khi mounted, `onClose`, `title`, size): focus-trap + ESC + restore focus có sẵn useOverlay; xóa overlay/modal css tự viết (giữ css form bên trong: stars/inputs/error).
 - [ ] **Step 2:** GIỮ logic: ensureSession boot + guest CTA (link shellUrl — `<a>`), 409 duplicate, 202 pending, error role=alert, interactive stars local (StarRating readOnly không dùng được input). Loading state khi guest===null → Modal với spinner text.
-- [ ] **Step 3:** Kiểm host (WriteReviewControl/MyPendingReviewPanel) lifecycle onClose/onSubmitted không đổi.
-- [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): review modal → ui-kit Modal focus-trap/ESC/restore (FI-392)`.
+- [ ] **Step 3:** Kiểm host (WriteReviewControl/MyPendingReviewPanel) lifecycle onClose/onSubmitted không đổi; Modal render `role="dialog"` + `aria-labelledby` từ `title` — accessible name phải khớp `/Viết đánh giá/` (e2e review-flow `getByRole('dialog', {name})`); giữ `.rv-star` buttons + button "Gửi đánh giá" (selector e2e).
+- [ ] **Step 4 (exit e2e-compat):** vitest + lint xanh; nếu dev stack sống → `pnpm -C frontend/e2e exec playwright test review-flow` thử trước commit → commit `feat(storefront): review modal → ui-kit Modal focus-trap/ESC/restore (FI-392)`.
 
 ### Task 10: search-coupons-polish-empty-copybutton (nhóm C)
 
@@ -247,7 +269,7 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 - [ ] **Step 1:** Search §4: empty state emoji icon 48px muted + eyebrow + nút outline "Xóa bộ lọc"/chips gợi ý — chips hiện có polish (pill, hover wash); loading 6 ProductCardSkeleton (T2 đã làm loading.tsx — kiểm đủ).
 - [ ] **Step 2:** Coupons §4: card dùng product-card shell (shadow-1, hover −3px shadow-3); mã coupon khối border DASHED radius-md; CopyButton style cta-outline; badge hết hạn tint-new (nếu có dữ liệu expiry — hiện có HSD text; giữ text, thêm pill tint khi hết hạn chỉ khi parse được date).
-- [ ] **Step 3:** CopyButton i18n fix L59: vi "Sao chép" / en "Copy"; copied: vi "Đã copy!" / en "Copied!"; copy thành công → toast pop qua useToast (§4: "bấm copy → toast pop") + GIỮ trạng thái inline (progressive).
+- [ ] **Step 3:** CopyButton i18n fix L59: vi "Sao chép" / en "Copy" (giữ nguyên giá trị copied hiện có: vi "Đã copy" / en "Copied!" — P2 critic: đừng đổi copy vô ích); copy thành công → toast pop qua useToast (§4: "bấm copy → toast pop") + GIỮ trạng thái inline (progressive).
 - [ ] **Step 4:** vitest + lint xanh → commit `feat(storefront): search/coupons polish + CopyButton i18n + toast (FI-392)`.
 
 ### Task 11: footer-newsletter-tokenize-recentlyviewed-decss (nhóm C)
@@ -267,7 +289,7 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 - [ ] **Step 2:** Migrate từng component COPY → import i18n (giữ hành vi; AddToCart `export const COPY` re-export từ i18n để test cũ không vỡ).
 - [ ] **Step 3:** ~17 aria-label hardcoded → keys vi/en (breadcrumb nav, pagination prev/next/page, countdown timer, carousel arrows/dots, qty stepper −/+, category sections, logo, locale switcher...). Grep `aria-label="` xác nhận 0 hardcoded vi còn lại (trừ label động product name).
 - [ ] **Step 4:** Test mới `tests/i18n.test.ts`: parity vi/en (mọi key đủ 2 locale, không rỗng) + spot-check vài key.
-- [ ] **Step 5:** vitest + lint xanh → commit `refactor(storefront): i18n consolidate COPY + aria-label keys vi/en (FI-392)`.
+- [ ] **Step 5:** vitest + lint xanh → **2 commit** (P2 critic — rollback unit gọn hơn): `refactor(storefront): COPY objects → lib/i18n module (FI-392)` + `refactor(storefront): aria-label hardcoded → i18n keys vi/en (FI-392)`.
 
 ### Task 13: responsive-600-mobile-nav-sticky-atc-grid (nhóm D)
 
@@ -286,14 +308,14 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 - [ ] **Step 1:** `lib/pdp.ts` thêm `breadcrumbJsonld(...)`: BreadcrumbList schema (ListItem vị trí 1..n: Trang chủ → categories path → product/category hiện tại), URL absolute `siteUrl() + localePath(...)`; `JSON.stringify(...).replace(/</g, '\\u003c')` — escape breakout script tag (PATTERN BẮT BUỘC, security-P2 precedent FI-391).
 - [ ] **Step 2:** Nhúng `<script type="application/ld+json">` PDP (sau Product JSON-LD) + PLP category (breadcrumb Trang chủ → path danh mục).
-- [ ] **Step 3:** Fix L241-243: `{copy.sold} {product.ratingCount}` → `{product.ratingCount} {copy.reviews}` ("N đánh giá" — dữ liệu thật; bỏ key `sold` khỏi COPY/i18n nếu không còn dùng).
+- [ ] **Step 3:** Fix nói dối "Đã bán": sau T8b, meta đã có link `{N} đánh giá` (span count biến thành link) → **XÓA hẳn span `.pdp-meta-sold` "Đã bán {ratingCount}"** (L241-243 — element nói dối biến mất = hết nói dối; không thay bằng bản sao thứ 2 của "N đánh giá"); bỏ key `sold` khỏi COPY/i18n nếu không còn dùng.
 - [ ] **Step 4:** Test: breadcrumbJsonld escape `<` + cấu trúc ListItem; vitest + lint xanh → commit `feat(storefront): BreadcrumbList JSON-LD + honest rating count label (FI-392)`.
 
 ### Task 15: walkthrough-screenshots-e2e-golden-nav-green (nhóm D — coordinator chủ trì)
 
 - [ ] **Step 1:** Boot dev stack (gateway + catalog data + storefront :3000; kiểm port trước).
 - [ ] **Step 2:** Browser walkthrough 5 màn (home/PLP/PDP/search/coupons) — Rule 0 3 tầng: DOM eval + screenshot mỗi màn + đi trọn flow golden-path (sort/filter/pagination/link KHÔNG trắng trang); mobile 375×667 sweep (sticky ATC, grid 2-col, nav scroll-x); reduced-motion emulation check; screenshot lưu `docs/superpowers/evidence/sf-2/`.
-- [ ] **Step 3:** e2e subset: `pnpm --filter e2e exec playwright test golden-path nav-honesty related-products review-flow` (lệnh đúng theo package e2e — kiểm scripts) — XANH.
+- [ ] **Step 3:** e2e subset: `pnpm -C frontend/e2e exec playwright test golden-path nav-honesty related-products review-flow` (package `@ecommerce/e2e`; P2 critic: filter-by-name không dùng). Storefront dev của worktree NÀY + `E2E_STOREFRONT_URL` override theo helpers/env (nav-honesty header ghi rõ pattern mock-gateway :9099 + storefront GATEWAY_URL trỏ mock) — KHÔNG test nhầm storefront :3000 của main checkout.
 - [ ] **Step 4:** Unit tests toàn app storefront xanh + lint xanh.
 - [ ] **Step 5:** Fix mọi phát hiện (fix nhỏ trong task; phát hiện lớn → report coordinator) → commit `test(storefront): SF-2 walkthrough evidence + e2e subset green (FI-392)` (chỉ khi có artifact/fix).
 

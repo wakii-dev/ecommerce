@@ -39,24 +39,24 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 - [x] `mvn test` (AdminCouponApiTest + regression) green
 
 ### T6 fe-couponspage-form-crud (chờ A3 + regen)
-- [ ] `lib/couponForm.ts` — form state + validate mirror BE §4.10 (code regex, PERCENT 1-100, FIXED>0, window, limit≥1, minOrder≥0) + `toRequest()`
-- [ ] `CouponsPage`: admin list thay public list; cột usage (usedCount/limit) + status; toggle switch; form create/edit; delete confirm; error surfaces 409/400/422 (problem+json detail); **XOÁ note read-only**
-- [ ] i18n keys `admin.coupons.*` mới
+- [x] `lib/couponForm.ts` — form state + validate mirror BE §4.10 (code regex, PERCENT 1-100, FIXED>0, window, limit≥1, minOrder≥0) + `toRequest()`
+- [x] `CouponsPage`: admin list thay public list; cột usage (usedCount/limit) + status; toggle switch; form create/edit; delete confirm; error surfaces 409/400/422 (problem+json detail); **XOÁ note read-only**
+- [x] i18n keys `admin.coupons.*` mới
 
 ### T7 fe-types-regen-unit-test (chờ A3)
 - [ ] merge A3 từ nhánh đích → `pnpm --filter @ecommerce/contracts gen`
 - [ ] `clients/ordering.ts` +5 routes admin coupon (typed `operations`)
-- [ ] `tests/couponForm.test.ts` — validation unit green
-- [ ] typecheck + mfe-admin tests green
+- [x] `tests/couponForm.test.ts` — validation unit green
+- [x] typecheck + mfe-admin tests green
 
 ### T8 e2e-admin-coupon-nokeys-reserved
-- [ ] `frontend/e2e/tests/admin-coupon.spec.ts`: tạo coupon qua UI form → list thấy (usedCount 0)
-- [ ] checkout dùng coupon (COD path — KHÔNG cần Stripe keys) → usedCount tăng
-- [ ] toggle off → validate-coupon fail → toggle on → pass lại
-- [ ] seed parity: GET admin list trả WELCOME10/GIAM50K đúng shape (T9 gộp assert)
+- [x] `frontend/e2e/tests/admin-coupon.spec.ts`: tạo coupon qua UI form → list thấy (usedCount 0)
+- [x] checkout dùng coupon (COD path — KHÔNG cần Stripe keys) → usedCount tăng
+- [x] toggle off → validate-coupon fail → toggle on → pass lại
+- [x] seed parity: GET admin list trả WELCOME10/GIAM50K đúng shape (T9 gộp assert)
 
 ### T9 seed-parity-list
-- [ ] `make seed` → GET `/admin/coupons` trả WELCOME10/GIAM50K đủ usageLimit/active/usedCount
+- [x] `make seed` → GET `/admin/coupons` trả WELCOME10/GIAM50K đủ usageLimit/active/usedCount
 
 ### T10 gate-slice-java-fe-e2e-green
 - [ ] Java IT + FE unit + e2e admin-coupon green

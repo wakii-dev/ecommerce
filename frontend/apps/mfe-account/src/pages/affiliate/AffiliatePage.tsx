@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
+import { useT } from '@ecommerce/i18n';
 import { ApiErrorClient } from '@ecommerce/contracts';
-import { Badge, Button, Card, Input } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, Input, ListSkeleton, Table } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
+import type { TableColumn } from '@ecommerce/ui-kit';
 
 import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
@@ -13,6 +15,7 @@ import {
   fetchProfile,
   registerAffiliate,
   type AffiliateProfile,
+  type LedgerEntry,
   type LedgerPage,
 } from './affiliateApi';
 import LoyaltyPointsSection from './LoyaltyPointsSection'; // SF-14 (FI-324) chắp section điểm
@@ -23,8 +26,20 @@ import LoyaltyPointsSection from './LoyaltyPointsSection'; // SF-14 (FI-324) ch�
  * (copy link sản phẩm kèm ?ref=) + stats cards (clicks/conversions/earnings)
  * + bảng ledger. Guard authReady như AccountPage — guest → /login.
  * Contract affiliate.yaml (frozen): /me trả code null khi chưa APPROVED.
+ * SF-4 (FI-394 T9): stats → KPI pattern (§2.5/§4), ledger → Table primitive
+ * (pill map ĐÚNG enum 2 giá trị PENDING|CONFIRMED, lạ → family cancelled),
+ * i18n `account.affiliate.*`. Trạng thái ledger render RAW enum (giống
+ * hiện trạng — server value, không có label vi chính thức).
  */
+
+/** Ledger status → pill class; enum CHỈ 2 giá trị — giá trị lạ fallback đỏ. */
+const STATUS_PILL: Record<string, string> = {
+  PENDING: 'pill pill--pending',
+  CONFIRMED: 'pill pill--confirmed',
+};
+
 function AffiliatePageContent(): ReactElement {
+  const { t } = useT();
   const [profile, setProfile] = useState<AffiliateProfile | null>(null);
   const [ledger, setLedger] = useState<LedgerPage | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -73,7 +88,9 @@ function AffiliatePageContent(): ReactElement {
         if (err instanceof ApiErrorClient && err.status === 404) {
           setNotFound(true); // chưa đăng ký — hiện form
         } else {
-          setError(err instanceof Error ? err.message : 'Không tải được hồ sơ affiliate');
+          setError(
+            err instanceof Error ? err.message : t('account.affiliate.errorLoad')
+          );
         }
       })
       .finally(() => {
@@ -97,7 +114,7 @@ function AffiliatePageContent(): ReactElement {
         setError(
           err instanceof ApiErrorClient
             ? err.detail || err.message
-            : 'Không gửi được hồ sơ — thử lại'
+            : t('account.affiliate.errorSubmit')
         );
       })
       .finally(() => setSubmitting(false));
@@ -123,19 +140,54 @@ function AffiliatePageContent(): ReactElement {
   if (!loaded) {
     return (
       <div className="acc-content">
-        <Card>
-          <p>Đang tải...</p>
-        </Card>
-    </div>
+        <ListSkeleton count={1} />
+      </div>
     );
   }
 
   // ── chưa đăng ký / bị từ chối → form đăng ký ───────────────────────────
   const showForm = notFound || profile?.status === 'REJECTED';
 
+  const ledgerColumns: TableColumn<LedgerEntry>[] = [
+    {
+      key: 'orderId',
+      header: t('account.affiliate.colOrder'),
+      render: (entry) => (
+        <span className="af-order-id">{entry.orderId.slice(0, 8)}…</span>
+      ),
+    },
+    {
+      key: 'orderTotal',
+      header: t('account.affiliate.colValue'),
+      align: 'right',
+      render: (entry) => formatPrice(entry.orderTotal),
+    },
+    {
+      key: 'rate',
+      header: t('account.affiliate.colRate'),
+    },
+    {
+      key: 'commission',
+      header: t('account.affiliate.colCommission'),
+      align: 'right',
+      render: (entry) => (
+        <span className="af-commission">{formatPrice(entry.commission)}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('account.affiliate.colStatus'),
+      render: (entry) => (
+        <span className={STATUS_PILL[entry.status] ?? 'pill pill--cancelled'}>
+          {entry.status}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="acc-content">
-      <h1 className="auth-title">Affiliate</h1>
+      <h1 className="acc-page-title">{t('account.affiliate.title')}</h1>
       {error ? (
         <div className="auth-error" role="alert">
           {error}
@@ -149,145 +201,115 @@ function AffiliatePageContent(): ReactElement {
         <Card>
           <h2 className="auth-subtitle">
             {profile?.status === 'REJECTED'
-              ? 'Hồ sơ trước bị từ chối — bạn có thể đăng ký lại'
-              : 'Đăng ký làm cộng tác viên (affiliate)'}
+              ? t('account.affiliate.rejectedRetry')
+              : t('account.affiliate.registerTitle')}
           </h2>
-          <p style={{ color: 'var(--c-text-secondary, #555)' }}>
-            Nhận link giới thiệu riêng — hoa hồng 5%/đơn (đổi theo quyết định của
-            admin) cho mỗi đơn phát sinh từ link của bạn.
-          </p>
+          <p className="af-desc">{t('account.affiliate.registerDesc')}</p>
           <form onSubmit={onRegister} noValidate>
             <Input
-              label="Link kênh giới thiệu (blog/social)"
+              label={t('account.affiliate.portfolioLabel')}
               type="url"
               name="portfolioUrl"
-              placeholder="https://youtube.com/@kenh-cua-ban"
+              placeholder={t('account.affiliate.portfolioPlaceholder')}
               value={portfolioUrl}
               onChange={(e) => setPortfolioUrl(e.target.value)}
             />
             <Input
-              label="Giới thiệu ngắn"
+              label={t('account.affiliate.noteLabel')}
               type="text"
               name="note"
-              placeholder="Bạn sẽ quảng bá qua kênh nào?"
+              placeholder={t('account.affiliate.notePlaceholder')}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
             <Button type="submit" variant="primary" loading={submitting}>
-              Gửi hồ sơ
+              {t('account.affiliate.submit')}
             </Button>
           </form>
         </Card>
       ) : profile?.status === 'PENDING' ? (
         <Card>
-          <h2 className="auth-subtitle">Hồ sơ đã gửi — chờ duyệt</h2>
-          <p style={{ color: 'var(--c-text-secondary, #555)' }}>
-            Admin sẽ duyệt hồ sơ của bạn. Khi được duyệt bạn nhận ref code + link
-            giới thiệu riêng tại trang này.
-          </p>
+          <h2 className="auth-subtitle">{t('account.affiliate.pendingTitle')}</h2>
+          <p className="af-desc">{t('account.affiliate.pendingDesc')}</p>
           <Badge variant="warning">PENDING</Badge>
         </Card>
       ) : profile?.status === 'SUSPENDED' ? (
         <Card>
-          <h2 className="auth-subtitle">Tài khoản affiliate tạm ngưng</h2>
-          <p style={{ color: 'var(--c-text-secondary, #555)' }}>
-            Link giới thiệu của bạn hiện không được theo dõi. Liên hệ admin để
-            biết thêm chi tiết.
-          </p>
+          <h2 className="auth-subtitle">{t('account.affiliate.suspendedTitle')}</h2>
+          <p className="af-desc">{t('account.affiliate.suspendedDesc')}</p>
           <Badge variant="danger">SUSPENDED</Badge>
         </Card>
       ) : profile?.status === 'APPROVED' && profile.code ? (
         <>
-          <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <div className="af-kpis">
             <Card>
-              <p style={{ margin: 0, color: 'var(--c-text-secondary, #555)' }}>Clicks</p>
-              <h2 style={{ margin: '4px 0 0' }} data-testid="affiliate-clicks">
+              <p className="af-kpi__label">{t('account.affiliate.statsClicks')}</p>
+              <p className="af-kpi__value" data-testid="affiliate-clicks">
                 {profile.stats.clicks}
-              </h2>
+              </p>
             </Card>
             <Card>
-              <p style={{ margin: 0, color: 'var(--c-text-secondary, #555)' }}>Conversions</p>
-              <h2 style={{ margin: '4px 0 0' }} data-testid="affiliate-conversions">
+              <p className="af-kpi__label">{t('account.affiliate.statsConversions')}</p>
+              <p className="af-kpi__value" data-testid="affiliate-conversions">
                 {profile.stats.conversions}
-              </h2>
+              </p>
             </Card>
             <Card>
-              <p style={{ margin: 0, color: 'var(--c-text-secondary, #555)' }}>Hoa hồng</p>
-              <h2 style={{ margin: '4px 0 0' }} data-testid="affiliate-earnings">
+              <p className="af-kpi__label">{t('account.affiliate.statsEarnings')}</p>
+              <p className="af-kpi__value" data-testid="affiliate-earnings">
                 {formatPrice(profile.stats.earnings)}
-              </h2>
+              </p>
             </Card>
           </div>
 
           <Card>
-            <h2 className="auth-subtitle">Ref code của bạn</h2>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <code
-                data-testid="affiliate-code"
-                style={{ fontSize: 24, letterSpacing: 4, fontWeight: 700 }}
-              >
+            <h2 className="auth-subtitle">{t('account.affiliate.refCode')}</h2>
+            <div className="af-code-row">
+              <code data-testid="affiliate-code" className="af-code">
                 {profile.code}
               </code>
-              <Badge variant="primary">hoa hồng {profile.rate}%</Badge>
+              <Badge variant="primary">
+                {t('account.affiliate.rateBadge', { rate: profile.rate })}
+              </Badge>
             </div>
           </Card>
 
           <Card>
-            <h2 className="auth-subtitle">Tạo link giới thiệu</h2>
+            <h2 className="auth-subtitle">{t('account.affiliate.linkTitle')}</h2>
             <Input
-              label="Link sản phẩm hoặc trang bất kỳ"
+              label={t('account.affiliate.linkLabel')}
               type="text"
               name="linkBase"
               placeholder={`${linkBase}/p/ten-san-pham`}
               value={linkBase}
               onChange={(e) => setLinkBase(e.target.value)}
             />
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <code
-                data-testid="affiliate-link"
-                style={{ wordBreak: 'break-all', flex: 1, minWidth: 240 }}
-              >
+            <div className="af-code-row">
+              <code data-testid="affiliate-link" className="af-link">
                 {profile.code ? affiliateLink(linkBase || '/') : ''}
               </code>
               <Button
                 variant="secondary"
                 onClick={() => void copyText(affiliateLink(linkBase || '/'), 'link')}
               >
-                {copied === 'link' ? 'Đã copy!' : 'Copy link'}
+                {copied === 'link'
+                  ? t('account.affiliate.copied')
+                  : t('account.affiliate.copyLink')}
               </Button>
             </div>
           </Card>
 
           <Card>
-            <h2 className="auth-subtitle">Sổ hoa hồng</h2>
+            <h2 className="auth-subtitle">{t('account.affiliate.ledger')}</h2>
             {ledger && ledger.items.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Đơn</th>
-                    <th style={thStyle}>Giá trị</th>
-                    <th style={thStyle}>Rate</th>
-                    <th style={thStyle}>Hoa hồng</th>
-                    <th style={thStyle}>Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledger.items.map((entry) => (
-                    <tr key={entry.id}>
-                      <td style={tdStyle}>{entry.orderId.slice(0, 8)}…</td>
-                      <td style={tdStyle}>{formatPrice(entry.orderTotal)}</td>
-                      <td style={tdStyle}>{entry.rate}%</td>
-                      <td style={tdStyle}>{formatPrice(entry.commission)}</td>
-                      <td style={tdStyle}>{entry.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Table
+                className="af-ledger"
+                columns={ledgerColumns}
+                rows={ledger.items}
+                rowKey={(entry) => entry.id}
+              />
             ) : (
-              <p style={{ color: 'var(--c-text-secondary, #555)' }}>
-                Chưa có hoa hồng nào — chia sẻ link và chờ đơn đầu tiên (hiện khi
-                đơn được xác nhận).
-              </p>
+              <p className="af-desc">{t('account.affiliate.ledgerEmpty')}</p>
             )}
           </Card>
         </>
@@ -296,14 +318,15 @@ function AffiliatePageContent(): ReactElement {
   );
 }
 
-/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page; T9 nâng active theo hash #loyalty. */
+/** SF-4 (FI-394 T1/T9): side-nav layout; active theo hash — #loyalty → item Điểm thưởng (plan §4: 2 item không active đồng thời). */
 export default function AffiliatePage(): ReactElement {
+  const active =
+    typeof window !== 'undefined' && window.location.hash === '#loyalty'
+      ? 'loyalty'
+      : 'affiliate';
   return (
-    <AccountLayout active="affiliate">
+    <AccountLayout active={active}>
       <AffiliatePageContent />
     </AccountLayout>
   );
 }
-
-const thStyle = { textAlign: 'left', padding: '6px 8px', borderBottom: '2px solid var(--c-border, #eee)' } as const;
-const tdStyle = { padding: '6px 8px', borderBottom: '1px solid var(--c-border, #eee)' } as const;

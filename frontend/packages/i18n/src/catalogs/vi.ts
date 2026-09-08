@@ -239,6 +239,51 @@ export const vi = {
       loading: 'Đang tải đánh giá…',
       errorLoad: 'Không tải được đánh giá của bạn',
       productFallback: 'Sản phẩm'
+    },
+    // ── T9 — affiliate + loyalty (chuỗi vi GIỮ NGUYÊN text đang có; status
+    // ledger render RAW enum — không key status) ──
+    affiliate: {
+      title: 'Affiliate',
+      registerTitle: 'Đăng ký làm cộng tác viên (affiliate)',
+      registerDesc: 'Nhận link giới thiệu riêng — hoa hồng 5%/đơn (đổi theo quyết định của admin) cho mỗi đơn phát sinh từ link của bạn.',
+      portfolioLabel: 'Link kênh giới thiệu (blog/social)',
+      portfolioPlaceholder: 'https://youtube.com/@kenh-cua-ban',
+      noteLabel: 'Giới thiệu ngắn',
+      notePlaceholder: 'Bạn sẽ quảng bá qua kênh nào?',
+      submit: 'Gửi hồ sơ',
+      pendingTitle: 'Hồ sơ đã gửi — chờ duyệt',
+      pendingDesc: 'Admin sẽ duyệt hồ sơ của bạn. Khi được duyệt bạn nhận ref code + link giới thiệu riêng tại trang này.',
+      suspendedTitle: 'Tài khoản affiliate tạm ngưng',
+      suspendedDesc: 'Link giới thiệu của bạn hiện không được theo dõi. Liên hệ admin để biết thêm chi tiết.',
+      rejectedRetry: 'Hồ sơ trước bị từ chối — bạn có thể đăng ký lại',
+      statsClicks: 'Clicks',
+      statsConversions: 'Conversions',
+      statsEarnings: 'Hoa hồng',
+      refCode: 'Ref code của bạn',
+      rateBadge: 'hoa hồng {{rate}}%',
+      linkTitle: 'Tạo link giới thiệu',
+      linkLabel: 'Link sản phẩm hoặc trang bất kỳ',
+      copyLink: 'Copy link',
+      copied: 'Đã copy!',
+      ledger: 'Sổ hoa hồng',
+      ledgerEmpty: 'Chưa có hoa hồng nào — chia sẻ link và chờ đơn đầu tiên (hiện khi đơn được xác nhận).',
+      colOrder: 'Đơn',
+      colValue: 'Giá trị',
+      colRate: 'Rate',
+      colCommission: 'Hoa hồng',
+      colStatus: 'Trạng thái',
+      errorLoad: 'Không tải được hồ sơ affiliate',
+      errorSubmit: 'Không gửi được hồ sơ — thử lại'
+    },
+    loyalty: {
+      title: 'Điểm thưởng',
+      balance: 'Điểm hiện có',
+      totalEarned: 'Tổng đã nhận',
+      convert: 'Quy đổi khi mua hàng',
+      convertRate: '≈ {{amount}} (1 điểm = 100đ)',
+      loading: 'Đang tải điểm thưởng…',
+      errorLoad: 'Không tải được điểm thưởng — thử tải lại trang.',
+      points: 'điểm'
     }
   },
   auth: {

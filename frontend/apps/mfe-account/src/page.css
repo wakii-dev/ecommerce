@@ -985,3 +985,102 @@
   margin: 0;
   color: var(--c-text-muted, #757575);
 }
+
+/* ── SF-4 (FI-394 T9) — affiliate KPI + ledger Table + loyalty anchor ────── */
+/* KPI pattern direction §2.5/§4: label 11/700 uppercase tracking .08em muted,
+   value 23/800 tabular. Grid auto-fit — dùng chung affiliate stats + loyalty
+   stats (minmax 180 giữ KPI 1 dòng desktop, stack tự nhiên <600px). */
+.af-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.af-kpi__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-muted, #757575);
+}
+
+.af-kpi__value {
+  margin: var(--space-1, 4px) 0 0;
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--c-text, #212121);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Đơn vị 'điểm' sau số — nhỏ + muted, không đè value (không đụng ui-kit). */
+.af-kpi__unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-muted, #757575);
+}
+
+/* Đoạn văn thân (register/pending/suspended/ledgerEmpty/error loyalty) —
+   muted thay token chết --c-text-secondary (review G2 hand-off — token
+   KHÔNG tồn tại trong tokens.css). */
+.af-desc {
+  margin: 0 0 var(--space-3, 12px);
+  color: var(--c-text-muted, #757575);
+  line-height: 1.55;
+}
+
+/* Ref code 24/700 letter-spacing 4 tabular + hàng code/badge, link/copy
+   (decss inline flex). */
+.af-code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.af-code-row {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.af-link {
+  word-break: break-all;
+  flex: 1;
+  min-width: 240px;
+}
+
+/* Ledger — Table primitive (.uk-table); thêm transition hover (uk-table có
+   nền hover sẵn nhưng không transition) + tabular-nums cột số + mã đơn
+   link-tint 700 (direction §2.5 table: mã đơn --c-link 700 tabular). */
+.af-ledger tbody td {
+  transition: background-color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.af-ledger tbody tr:hover td {
+  background: var(--wash-hover, #f5f5f5);
+}
+
+.af-ledger td {
+  font-variant-numeric: tabular-nums;
+}
+
+.af-order-id {
+  color: var(--c-link, #f53d2d);
+  font-weight: 700;
+}
+
+.af-commission {
+  font-weight: 700;
+}
+
+/* Loyalty section — anchor #loyalty (scrollIntoView từ side-nav item
+   /account/affiliate#loyalty); title h2 marginTop 0 cũ → margin rule. */
+.af-loyalty__title {
+  margin: 0 0 var(--space-3, 12px);
+}
+
+.af-loyalty__error {
+  margin: 0;
+}

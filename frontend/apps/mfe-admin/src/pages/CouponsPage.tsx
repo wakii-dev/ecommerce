@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, EmptyState, Input, Modal, Select, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Modal, Pagination, Select, useToast } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { useClientSort } from '../lib/tableSort';
@@ -400,6 +400,15 @@ export default function CouponsPage(): ReactElement {
               {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: rows.length })}
             </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
           </div>
         </>
       )}

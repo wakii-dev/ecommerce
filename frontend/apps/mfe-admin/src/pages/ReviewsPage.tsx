@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, EmptyState, Icon, Select, StarRating, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, EmptyState, Icon, Pagination, Select, StarRating, useToast } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { catalogApi } from '../lib/api';
@@ -219,6 +219,15 @@ export default function ReviewsPage(): ReactElement {
               {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: rows.length })}
             </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
           </div>
         </>
       )}

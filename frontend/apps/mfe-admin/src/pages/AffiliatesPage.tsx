@@ -10,7 +10,7 @@ import {
   type RouteDef,
 } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, EmptyState, Input, Select, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Pagination, Select, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { useClientSort } from '../lib/tableSort';
@@ -379,6 +379,15 @@ export default function AffiliatesPage(): ReactElement {
               {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: rows.length })}
             </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
           </div>
         </>
       )}

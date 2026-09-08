@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { authStore } from '@ecommerce/auth';
 import { executeRequest, type ApiClientOptions, type RouteDef } from '@ecommerce/contracts';
-import { Badge, Button, Card, EmptyState, Input, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Pagination, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
@@ -264,6 +264,15 @@ export default function LoyaltyPage(): ReactElement {
               {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
               {t('admin.common.total', { count: ledgerCount })}
             </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
           </div>
         </div>
       )}

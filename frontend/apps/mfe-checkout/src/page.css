@@ -1,6 +1,6 @@
 /* page.css — cart + checkout (SF-6, Tiki-inspired density).
-   Mọi màu/spacing QUA CSS vars ui-kit (tokens-only; không hex cứng trừ
-   fallback var()). */
+   Mọi màu/spacing QUA CSS vars ui-kit — tokens-only 100%, KHÔNG hex cứng
+   (FI-393 T10: hex + fallback var đã quét — mọi token declare ở tokens.css). */
 
 /* ── Khung trang ─────────────────────────────────────────────────────── */
 .cart-page {
@@ -13,7 +13,7 @@
   margin: 0;
   font-size: 24px;
   font-weight: 800;
-  color: var(--c-text, #212121);
+  color: var(--c-text);
 }
 
 .skeleton-line {
@@ -39,7 +39,9 @@
   gap: var(--space-3, 12px);
   align-items: flex-start;
   padding: var(--space-3, 12px) 0;
-  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  border-bottom: 1px solid var(--c-border);
+  /* row trong card — KHÔNG lift (direction §3.1 guard), chỉ wash mượt */
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 /* FI-393 T4 — line hover wash (direction §2.4 density) */
@@ -70,7 +72,7 @@
 }
 
 .cart-line-name {
-  color: var(--c-text, #212121);
+  color: var(--c-text);
   text-decoration: none;
   font-weight: 500;
   display: -webkit-box;
@@ -98,15 +100,16 @@
 .cart-line-remove {
   background: none;
   border: none;
-  color: var(--c-text-muted, #787878);
+  color: var(--c-text-muted);
   cursor: pointer;
   font-size: 13px;
   text-decoration: underline;
   padding: 0;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .cart-line-remove:hover {
-  color: var(--c-primary, #F53D2D);
+  color: var(--c-primary);
 }
 
 /* Badge "Không còn khả dụng" */
@@ -115,7 +118,7 @@
   padding: 2px 8px;
   border-radius: var(--radius-sm, 2px);
   background: var(--pill-cancelled-bg);
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 12px;
   font-weight: 600;
 }
@@ -126,18 +129,28 @@
   flex-direction: column;
   gap: var(--space-3, 12px);
   padding: var(--space-4, 16px);
+  /* Card lift (direction §3.1): resting shadow-1 từ primitive .uk-card;
+     hover 1→3. :hover specificity (0,2,0) thắng .uk-card bất kể import order. */
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.cart-summary:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .summary-note {
   font-size: 12px;
-  color: var(--c-text-muted, #787878);
+  color: var(--c-text-muted);
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: var(--c-text, #212121);
+  color: var(--c-text);
 }
 
 /* FI-393 T8 — Tổng cộng 26/800 danger + border-top 2px (direction §2.4) */
@@ -207,7 +220,7 @@
 
 .summary-divider {
   border: none;
-  border-top: 1px dashed var(--c-border, #e5e7eb);
+  border-top: 1px dashed var(--c-border);
   margin: 0;
 }
 
@@ -215,7 +228,7 @@
 
 .checkout-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--space-4, 16px);
   align-items: start;
 }
@@ -324,7 +337,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  /* tint-success (FI-368 P1 fix: #eef9f4 literal => dark unreadable) */
+  /* tint-success (FI-368 P1 fix: literal cũ => dark unreadable) */
   background: var(--tint-success-bg);
   border: 1px dashed var(--c-success);
   border-radius: var(--radius-sm, 2px);
@@ -332,7 +345,7 @@
 }
 
 .coupon-error {
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 13px;
 }
 
@@ -383,7 +396,17 @@
   border: 1.5px solid var(--c-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Payment card hover −2px + shadow-1 (direction §2.4) */
+.pay-method:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
 }
 
 .pay-method--selected {
@@ -431,19 +454,20 @@
 
 .pay-warning {
   padding: 12px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
+  /* tint-new (FI-393 T10: hex literal cũ => dark mode ô lệch — pending/warning family) */
+  background: var(--tint-new-bg);
+  border: 1px solid var(--tint-new-border);
   border-radius: var(--radius-sm, 2px);
-  color: #874d00;
+  color: var(--tint-new-text);
   font-size: 14px;
 }
 
 .pay-error {
   padding: 12px;
   background: var(--pill-cancelled-bg);
-  border: 1px solid var(--c-danger, #C0151F);
+  border: 1px solid var(--c-danger);
   border-radius: var(--radius-sm, 2px);
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 14px;
   white-space: pre-wrap;
 }
@@ -693,6 +717,9 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
 }
 
 .mini-cart__btn--outline {

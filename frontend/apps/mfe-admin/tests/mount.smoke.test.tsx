@@ -91,7 +91,8 @@ describe('AdminApp mount smoke (jsdom)', () => {
     );
     render(<AdminApp />);
     await waitFor(() => {
-      expect(screen.getByText('admin.guard.forbiddenTitle')).toBeTruthy();
+      // i18n phải dịch được (initI18n đăng ký initReactI18next) — không chấp nhận key thô
+      expect(screen.getByText('Không có quyền')).toBeTruthy();
     });
     // Không có sidebar nav
     expect(screen.queryByRole('navigation')).toBeNull();

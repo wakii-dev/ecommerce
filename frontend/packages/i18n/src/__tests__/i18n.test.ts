@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initI18n } from '../init';
+import { getI18n } from 'react-i18next';
 import type { i18n as I18nInstance } from 'i18next';
 
 // Instance là module-singleton nên các test trong file này chạy theo thứ tự
@@ -40,5 +41,15 @@ describe('initI18n', () => {
     await i18n.changeLanguage('en');
     expect(i18n.t('testOnly.onlyVi')).toBe('Chỉ có tiếng Việt');
     await i18n.changeLanguage('vi');
+  });
+
+  it('đăng ký initReactI18next — getI18n() là instance đã init (standalone useT ngoài I18nextProvider)', async () => {
+    const i18n = await initI18n();
+    // Standalone remote render useT() ở component TỰ render I18nextProvider —
+    // hook đọc context rỗng → react-i18next rơi về getI18n(). Nếu instance này
+    // không phải bản đã init, t() trả key thô (bug guard /admin standalone).
+    const resolved = getI18n();
+    expect(resolved).toBe(i18n);
+    expect(resolved.t('admin.guard.forbiddenTitle')).toBe('Không có quyền');
   });
 });

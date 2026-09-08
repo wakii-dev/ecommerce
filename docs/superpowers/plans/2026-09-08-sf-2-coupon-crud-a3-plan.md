@@ -61,7 +61,7 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 ### T10 gate-slice-java-fe-e2e-green
 - [x] Java IT + FE unit + e2e admin-coupon green
 - [x] story-diff-review (code-reviewer độc lập) → VERDICT APPROVED (verdict 1: 20def67 slice; delta verdict: 20def67..d9100ef yaml repair + toggle flip — cả hai APPROVED)
-- [ ] merge về `story/fi369-nofallback-complete` + comment hash + story-verify sạch
+- [x] merge về `story/fi369-nofallback-complete` (05ca127, push origin) + comment hash + story-verify sạch
 
 ## 2. Meta (plain list — theo dõi qua Linear comments)
 

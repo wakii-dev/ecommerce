@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Select, Skeleton, StarRating, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Select, StarRating, useToast } from '@ecommerce/ui-kit';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
 import { catalogApi } from '../lib/api';
+import { useClientSort } from '../lib/tableSort';
+import type { SortAccessor } from '../lib/tableSort';
 import { formatDateTime } from '../lib/format';
 import type { ModerationStatus, AdminReview } from '../lib/types';
 
@@ -68,6 +72,103 @@ export default function ReviewsPage(): ReactElement {
   // server đã lọc theo status; giữ shape mảng cho render
   const rows = reviewsQuery.data ?? [];
 
+  // Load-all (size 100) → sort client (useClientSort) rồi slice trang hiện tại
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { sort, sortedRows, toggleSort } = useClientSort<AdminReview>(rows);
+  const onSortToggle = (key: string, accessor: SortAccessor<AdminReview>): void => {
+    setPage(1);
+    toggleSort(key, accessor);
+  };
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const pagedRows = useMemo(
+    () => sortedRows.slice((page - 1) * pageSize, page * pageSize),
+    [sortedRows, page, pageSize]
+  );
+
+  const columns = [
+    {
+      key: 'rating',
+      header: t('admin.reviews.rating'),
+      sortValue: (row: AdminReview) => row.rating,
+      render: (row: AdminReview) => <StarRating value={row.rating} />
+    },
+    {
+      key: 'product',
+      header: t('admin.reviews.product'),
+      render: (row: AdminReview) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{productName(row.productId)}</div>
+          {row.verifiedPurchase && (
+            <Badge variant='success'>{t('admin.reviews.verified')}</Badge>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'user',
+      header: t('admin.reviews.user'),
+      render: (row: AdminReview) => (
+        <div>
+          <div>{row.userName}</div>
+          <div className='admin-hint'>{formatDateTime(row.createdAt)}</div>
+        </div>
+      )
+    },
+    {
+      key: 'content',
+      header: t('admin.reviews.content'),
+      render: (row: AdminReview) => (
+        <div style={{ minWidth: 200 }}>
+          {row.title !== undefined && row.title !== '' && (
+            <div style={{ fontWeight: 600 }}>{row.title}</div>
+          )}
+          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{row.content}</p>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      header: t('admin.common.status'),
+      render: (row: AdminReview) =>
+        row.status !== 'PENDING' ? (
+          <Badge variant={row.status === 'APPROVED' ? 'primary' : 'danger'}>
+            {t(`admin.status.${row.status}`)}
+          </Badge>
+        ) : null
+    },
+    {
+      key: 'createdAt',
+      header: t('admin.common.date'),
+      sortValue: (row: AdminReview) => row.createdAt,
+      render: (row: AdminReview) => formatDateTime(row.createdAt)
+    },
+    {
+      key: 'actions',
+      header: t('admin.common.actions'),
+      render: (row: AdminReview) =>
+        row.status === 'PENDING' ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button
+              size='sm'
+              onClick={() => moderate.mutate({ id: row.id, action: 'approve' })}
+              disabled={moderate.isPending}
+            >
+              ✓ {t('admin.reviews.approve')}
+            </Button>
+            <Button
+              size='sm'
+              variant='danger'
+              onClick={() => moderate.mutate({ id: row.id, action: 'reject' })}
+              disabled={moderate.isPending}
+            >
+              ✕ {t('admin.reviews.reject')}
+            </Button>
+          </div>
+        ) : null
+    }
+  ];
+
   return (
     <div>
       <div className='admin-page-head'>
@@ -87,58 +188,33 @@ export default function ReviewsPage(): ReactElement {
       </div>
 
       {reviewsQuery.isLoading ? (
-        <Skeleton variant='rect' height={200} />
-      ) : rows.length === 0 ? (
-        <Card>
-          <p className='admin-hint'>{t('admin.reviews.empty')}</p>
-        </Card>
+        <DataTable loading columns={columns} rows={[]} />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {rows.map((review: AdminReview) => (
-            <Card key={review.id} data-testid='review-row'>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <StarRating value={review.rating} />
-                    <strong>{productName(review.productId)}</strong>
-                    {review.verifiedPurchase && (
-                      <Badge variant='success'>{t('admin.reviews.verified')}</Badge>
-                    )}
-                    {review.status !== 'PENDING' && (
-                      <Badge variant={review.status === 'APPROVED' ? 'primary' : 'danger'}>
-                        {t(`admin.status.${review.status}`)}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className='admin-hint' style={{ margin: '4px 0' }}>
-                    {t('admin.reviews.user')}: {review.userName} · {formatDateTime(review.createdAt)}
-                  </div>
-                  {review.title !== undefined && review.title !== '' && (
-                    <div style={{ fontWeight: 600, margin: '4px 0' }}>{review.title}</div>
-                  )}
-                  <p style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap' }}>{review.content}</p>
-                </div>
-                {review.status === 'PENDING' && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <Button
-                      onClick={() => moderate.mutate({ id: review.id, action: 'approve' })}
-                      disabled={moderate.isPending}
-                    >
-                      ✓ {t('admin.reviews.approve')}
-                    </Button>
-                    <Button
-                      variant='danger'
-                      onClick={() => moderate.mutate({ id: review.id, action: 'reject' })}
-                      disabled={moderate.isPending}
-                    >
-                      ✕ {t('admin.reviews.reject')}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+        <>
+          <DataTable
+            columns={columns}
+            rows={pagedRows}
+            rowKey={(row) => row.id}
+            empty={t('admin.reviews.empty')}
+            sort={sort}
+            onSortToggle={onSortToggle}
+            rowProps={() => ({ 'data-testid': 'review-row' })}
+          />
+          <div className='admin-pagination'>
+            <PageSizeSelect
+              value={pageSize}
+              onChange={(n) => {
+                setPage(1);
+                setPageSize(n);
+              }}
+              label={t('admin.common.pageSize')}
+            />
+            <span>
+              {t('admin.common.pageOf', { page, total: totalPages })} —{' '}
+              {t('admin.common.total', { count: rows.length })}
+            </span>
+          </div>
+        </>
       )}
     </div>
   );

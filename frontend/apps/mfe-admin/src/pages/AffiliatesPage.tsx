@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@ecommerce/auth';
@@ -10,7 +10,11 @@ import {
   type RouteDef,
 } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Input, Select, Skeleton, Table, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, Input, Select, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
+import { useClientSort } from '../lib/tableSort';
+import type { SortAccessor } from '../lib/tableSort';
 
 /**
  * AffiliatesPage (SF-12 — D20): quản lý affiliate LIVE (affiliate-service có
@@ -143,6 +147,163 @@ export default function AffiliatesPage(): ReactElement {
 
   const rows = listQuery.data?.items ?? [];
 
+  // Load-all → sort client (useClientSort) rồi slice trang hiện tại
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { sort, sortedRows, toggleSort } = useClientSort<AffiliateProfileRow>(rows);
+  const onSortToggle = (key: string, accessor: SortAccessor<AffiliateProfileRow>): void => {
+    setPage(1);
+    toggleSort(key, accessor);
+  };
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const pagedRows = useMemo(
+    () => sortedRows.slice((page - 1) * pageSize, page * pageSize),
+    [sortedRows, page, pageSize]
+  );
+
+  const columns = [
+    {
+      key: 'code',
+      header: t('admin.affiliates.colCode'),
+      sortValue: (row: AffiliateProfileRow) => row.code,
+      render: (row: AffiliateProfileRow) =>
+        row.code ? (
+          <code style={{ fontWeight: 700, letterSpacing: 2 }}>{row.code}</code>
+        ) : (
+          <span className="admin-hint">—</span>
+        )
+    },
+    {
+      key: 'status',
+      header: t('admin.common.status'),
+      render: (row: AffiliateProfileRow) => (
+        <Badge
+          variant={
+            row.status === 'APPROVED'
+              ? 'success'
+              : row.status === 'PENDING'
+                ? 'warning'
+                : 'danger'
+          }
+        >
+          {t(`admin.status.${row.status}`)}
+        </Badge>
+      )
+    },
+    {
+      key: 'rate',
+      header: t('admin.affiliates.colRate'),
+      sortValue: (row: AffiliateProfileRow) => row.rate,
+      render: (row: AffiliateProfileRow) =>
+        editingRate === row.id ? (
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            <Input
+              type="number"
+              value={rateValue}
+              min={0.1}
+              max={50}
+              step={0.5}
+              onChange={(e) => setRateValue(e.target.value)}
+              aria-label={t('admin.affiliates.colRate')}
+            />
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                const rate = Number(rateValue);
+                if (rate > 0 && rate <= 50) {
+                  updateRate.mutate({ id: row.id, rate });
+                } else {
+                  toast.toast(t('admin.affiliates.rateInvalid'), { variant: 'danger' });
+                }
+              }}
+            >
+              {t('admin.common.save')}
+            </Button>
+          </span>
+        ) : (
+          <button
+            onClick={() => {
+              setEditingRate(row.id);
+              setRateValue(String(row.rate));
+            }}
+            title={t('admin.affiliates.rateEditHint')}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--c-primary, #ee2624)',
+              textDecoration: 'underline',
+              padding: 0,
+              font: 'inherit'
+            }}
+          >
+            {row.rate}%
+          </button>
+        )
+    },
+    {
+      key: 'clicks',
+      header: t('admin.affiliates.colClicks'),
+      sortValue: (row: AffiliateProfileRow) => row.stats.clicks,
+      render: (row: AffiliateProfileRow) => row.stats.clicks
+    },
+    {
+      key: 'conversions',
+      header: t('admin.affiliates.colConversions'),
+      sortValue: (row: AffiliateProfileRow) => row.stats.conversions,
+      render: (row: AffiliateProfileRow) => row.stats.conversions
+    },
+    {
+      key: 'earnings',
+      header: t('admin.affiliates.colEarnings'),
+      sortValue: (row: AffiliateProfileRow) => row.stats.earnings,
+      render: (row: AffiliateProfileRow) => formatPrice(row.stats.earnings)
+    },
+    {
+      key: 'actions',
+      header: t('admin.common.actions'),
+      render: (row: AffiliateProfileRow) => (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {row.status === 'PENDING' ? (
+            <>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => action.mutate({ id: row.id, act: 'approve' })}
+              >
+                {t('admin.affiliates.approve')}
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => action.mutate({ id: row.id, act: 'reject' })}
+              >
+                {t('admin.affiliates.reject')}
+              </Button>
+            </>
+          ) : row.status === 'APPROVED' ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => action.mutate({ id: row.id, act: 'suspend' })}
+            >
+              {t('admin.affiliates.suspend')}
+            </Button>
+          ) : row.status === 'SUSPENDED' ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => action.mutate({ id: row.id, act: 'reactivate' })}
+            >
+              {t('admin.affiliates.reactivate')}
+            </Button>
+          ) : null}
+        </div>
+      )
+    }
+  ];
+
   return (
     <div>
       <div className="admin-page-head">
@@ -194,149 +355,35 @@ export default function AffiliatesPage(): ReactElement {
       </div>
 
       {listQuery.isLoading ? (
-        <Skeleton variant="rect" height={220} />
+        <DataTable loading columns={columns} rows={[]} />
       ) : listQuery.isError ? (
         <p className="admin-error-text">{t('admin.common.loadFail')}</p>
       ) : (
-        <Table<AffiliateProfileRow>
-          columns={[
-            {
-              key: 'code',
-              header: t('admin.affiliates.colCode'),
-              render: (row) =>
-                row.code ? (
-                  <code style={{ fontWeight: 700, letterSpacing: 2 }}>{row.code}</code>
-                ) : (
-                  <span className="admin-hint">—</span>
-                )
-            },
-            {
-              key: 'status',
-              header: t('admin.common.status'),
-              render: (row) => (
-                <Badge
-                  variant={
-                    row.status === 'APPROVED'
-                      ? 'success'
-                      : row.status === 'PENDING'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
-                  {t(`admin.status.${row.status}`)}
-                </Badge>
-              )
-            },
-            {
-              key: 'rate',
-              header: t('admin.affiliates.colRate'),
-              render: (row) =>
-                editingRate === row.id ? (
-                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <Input
-                      type="number"
-                      value={rateValue}
-                      min={0.1}
-                      max={50}
-                      step={0.5}
-                      onChange={(e) => setRateValue(e.target.value)}
-                      aria-label={t('admin.affiliates.colRate')}
-                    />
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => {
-                        const rate = Number(rateValue);
-                        if (rate > 0 && rate <= 50) {
-                          updateRate.mutate({ id: row.id, rate });
-                        } else {
-                          toast.toast(t('admin.affiliates.rateInvalid'), { variant: 'danger' });
-                        }
-                      }}
-                    >
-                      {t('admin.common.save')}
-                    </Button>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setEditingRate(row.id);
-                      setRateValue(String(row.rate));
-                    }}
-                    title={t('admin.affiliates.rateEditHint')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--c-primary, #ee2624)',
-                      textDecoration: 'underline',
-                      padding: 0,
-                      font: 'inherit'
-                    }}
-                  >
-                    {row.rate}%
-                  </button>
-                )
-            },
-            { key: 'clicks', header: t('admin.affiliates.colClicks'), render: (row) => row.stats.clicks },
-            {
-              key: 'conversions',
-              header: t('admin.affiliates.colConversions'),
-              render: (row) => row.stats.conversions
-            },
-            {
-              key: 'earnings',
-              header: t('admin.affiliates.colEarnings'),
-              render: (row) => formatPrice(row.stats.earnings)
-            },
-            {
-              key: 'actions',
-              header: t('admin.common.actions'),
-              render: (row) => (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {row.status === 'PENDING' ? (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={() => action.mutate({ id: row.id, act: 'approve' })}
-                      >
-                        {t('admin.affiliates.approve')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => action.mutate({ id: row.id, act: 'reject' })}
-                      >
-                        {t('admin.affiliates.reject')}
-                      </Button>
-                    </>
-                  ) : row.status === 'APPROVED' ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => action.mutate({ id: row.id, act: 'suspend' })}
-                    >
-                      {t('admin.affiliates.suspend')}
-                    </Button>
-                  ) : row.status === 'SUSPENDED' ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => action.mutate({ id: row.id, act: 'reactivate' })}
-                    >
-                      {t('admin.affiliates.reactivate')}
-                    </Button>
-                  ) : null}
-                </div>
-              )
-            }
-          ]}
-          rows={rows}
-          rowKey={(row) => row.id}
-          empty={t('admin.affiliates.empty')}
-          caption={t('admin.common.total', { count: listQuery.data?.total ?? 0 })}
-        />
+        <>
+          <DataTable<AffiliateProfileRow>
+            columns={columns}
+            rows={pagedRows}
+            rowKey={(row) => row.id}
+            empty={t('admin.affiliates.empty')}
+            caption={t('admin.common.total', { count: listQuery.data?.total ?? 0 })}
+            sort={sort}
+            onSortToggle={onSortToggle}
+          />
+          <div className="admin-pagination">
+            <PageSizeSelect
+              value={pageSize}
+              onChange={(n) => {
+                setPage(1);
+                setPageSize(n);
+              }}
+              label={t('admin.common.pageSize')}
+            />
+            <span>
+              {t('admin.common.pageOf', { page, total: totalPages })} —{' '}
+              {t('admin.common.total', { count: rows.length })}
+            </span>
+          </div>
+        </>
       )}
     </div>
   );

@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { authStore } from '@ecommerce/auth';
 import { executeRequest, type ApiClientOptions, type RouteDef } from '@ecommerce/contracts';
-import { Badge, Button, Card, Input, Skeleton, Table, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, Input, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
+import { useClientSort } from '../lib/tableSort';
+import type { SortAccessor } from '../lib/tableSort';
 
 /**
  * LoyaltyPage (SF-14, FI-324, D22): tra cứu + chỉnh điểm thủ công LIVE.
@@ -101,6 +105,53 @@ export default function LoyaltyPage(): ReactElement {
 
   const data = lookup.data;
 
+  // Ledger load theo server page (size 10) — sort client + slice trang hiện tại
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { sort, sortedRows, toggleSort } = useClientSort<LedgerEntry>(data?.ledger ?? []);
+  const onSortToggle = (key: string, accessor: SortAccessor<LedgerEntry>): void => {
+    setPage(1);
+    toggleSort(key, accessor);
+  };
+  const ledgerCount = data?.ledger.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(ledgerCount / pageSize));
+  const pagedRows = useMemo(
+    () => sortedRows.slice((page - 1) * pageSize, page * pageSize),
+    [sortedRows, page, pageSize]
+  );
+
+  const columns = [
+    {
+      key: 'createdAt',
+      header: t('admin.common.date'),
+      sortValue: (row: LedgerEntry) => row.createdAt,
+      render: (row: LedgerEntry) => new Date(row.createdAt).toLocaleString('vi-VN')
+    },
+    {
+      key: 'type',
+      header: t('admin.common.status'),
+      sortValue: (row: LedgerEntry) => row.type,
+      render: (row: LedgerEntry) => (
+        <Badge variant={row.type === 'EARN' ? 'success' : row.type === 'REDEEM' ? 'warning' : 'neutral'}>
+          {row.type}
+        </Badge>
+      )
+    },
+    {
+      key: 'points',
+      header: t('admin.loyalty.adjustPoints'),
+      align: 'right' as const,
+      sortValue: (row: LedgerEntry) => row.points,
+      render: (row: LedgerEntry) => (
+        <span style={{ color: row.points >= 0 ? 'var(--c-success, #189e47)' : 'var(--c-danger, #d63a2f)', fontWeight: 700 }}>
+          {row.points >= 0 ? `+${row.points}` : row.points}
+        </span>
+      )
+    },
+    { key: 'orderId', header: t('admin.rma.colOrder'), render: (row: LedgerEntry) => (row.orderId ? `#${row.orderId.slice(0, 8).toUpperCase()}` : '—') },
+    { key: 'note', header: t('admin.loyalty.adjustNote'), render: (row: LedgerEntry) => row.note ?? '—' }
+  ];
+
   return (
     <div>
       <div className="admin-page-head">
@@ -182,35 +233,29 @@ export default function LoyaltyPage(): ReactElement {
             </form>
           </Card>
 
-          <Table<LedgerEntry>
-            columns={[
-              { key: 'createdAt', header: t('admin.common.date'), render: (row) => new Date(row.createdAt).toLocaleString('vi-VN') },
-              {
-                key: 'type',
-                header: t('admin.common.status'),
-                render: (row) => (
-                  <Badge variant={row.type === 'EARN' ? 'success' : row.type === 'REDEEM' ? 'warning' : 'neutral'}>
-                    {row.type}
-                  </Badge>
-                )
-              },
-              {
-                key: 'points',
-                header: t('admin.loyalty.adjustPoints'),
-                render: (row) => (
-                  <span style={{ color: row.points >= 0 ? 'var(--c-success, #189e47)' : 'var(--c-danger, #d63a2f)', fontWeight: 700 }}>
-                    {row.points >= 0 ? `+${row.points}` : row.points}
-                  </span>
-                )
-              },
-              { key: 'orderId', header: t('admin.rma.colOrder'), render: (row) => (row.orderId ? `#${row.orderId.slice(0, 8).toUpperCase()}` : '—') },
-              { key: 'note', header: t('admin.loyalty.adjustNote'), render: (row) => row.note ?? '—' }
-            ]}
-            rows={data.ledger}
+          <DataTable<LedgerEntry>
+            columns={columns}
+            rows={pagedRows}
             rowKey={(row) => row.id}
             empty={t('admin.loyalty.ledger')}
             caption={t('admin.common.total', { count: data.total })}
+            sort={sort}
+            onSortToggle={onSortToggle}
           />
+          <div className="admin-pagination">
+            <PageSizeSelect
+              value={pageSize}
+              onChange={(n) => {
+                setPage(1);
+                setPageSize(n);
+              }}
+              label={t('admin.common.pageSize')}
+            />
+            <span>
+              {t('admin.common.pageOf', { page, total: totalPages })} —{' '}
+              {t('admin.common.total', { count: ledgerCount })}
+            </span>
+          </div>
         </div>
       )}
     </div>

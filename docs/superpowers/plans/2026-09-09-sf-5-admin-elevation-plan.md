@@ -99,9 +99,9 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 **Files:**
 - Modify: `frontend/apps/mfe-admin/src/AdminApp.tsx` (CHỈ theme effect ~183-189)
 
-- [ ] **Step 1:** Thay effect theme: mount đọc `documentElement.dataset.theme ?? 'storefront'` → map `'admin' | 'admin-dark'` (dark/admin-dark → admin-dark); `MutationObserver` observe `documentElement` attr `data-theme` → remap live (shell toggle trong phiên admin phải flip ngay); unmount: disconnect + restore `prevTheme.current`.
-- [ ] **Step 2:** Unit: chạy `pnpm vitest run` mfe-admin — mount.smoke phải xanh (jsdom MutationObserver có sẵn; nếu test env thiếu → polyfill trong test setup, KHÔNG trong app code).
-- [ ] **Step 3:** Commit `feat(admin): map shell theme dark→admin-dark khi mount (FI-395 T1)`.
+- [x] **Step 1:** Thay effect theme: mount đọc `documentElement.dataset.theme ?? 'storefront'` → map `'admin' | 'admin-dark'` (dark/admin-dark → admin-dark); `MutationObserver` observe `documentElement` attr `data-theme` → remap live (shell toggle trong phiên admin phải flip ngay); unmount: disconnect + restore `prevTheme.current`.
+- [x] **Step 2:** Unit: chạy `pnpm vitest run` mfe-admin — mount.smoke phải xanh (jsdom MutationObserver có sẵn; nếu test env thiếu → polyfill trong test setup, KHÔNG trong app code).
+- [x] **Step 3:** Commit `feat(admin): map shell theme dark→admin-dark khi mount (FI-395 T1)`.
 
 ### Task 2: adminshell-sidebar-icons-active-groups
 
@@ -109,13 +109,13 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 - Modify: `frontend/apps/mfe-admin/src/lib/guard.ts` (ADMIN_NAV → nhóm + icon), `src/AdminApp.tsx` (AdminShell JSX), `src/page.css`, catalogs vi/en
 - Create: `frontend/apps/mfe-admin/src/components/AdminIcon.tsx`
 
-- [ ] **Step 1:** guard.ts: `ADMIN_NAV` giữ export cũ (backward-compat test) THÊM `ADMIN_NAV_GROUPS: {labelKey, items: {to,key,icon: IconName|AdminIconName}[]}[]` (groups per Design mục 4); `activeNavIndex` GIỮ NGUYÊN semantics (prefix match; order-detail → Orders).
-- [ ] **Step 2:** AdminIcon.tsx: chỉ icon THIẾU so catalog Icon.tsx (grid-dashboard, folder, mail, rotate-ccw, award, file-text… tùy map cuối) — 24×24 viewBox, copy ĐÚNG stroke attrs của Icon.tsx (đọc file trước khi viết), aria-hidden decorative.
-- [ ] **Step 3:** AdminShell JSX: group label (11px uppercase ls .12em muted) + item (icon 18 + label; active: tint bg + border-left primary + chữ c-link — style có sẵn .admin-nav-link--active, bổ sung .admin-nav-link__icon + group styles); user block cuối sidebar border-top (tên + pill ADMIN tint) — topbar GIỮ nguyên (logout/storefront).
-- [ ] **Step 4:** page.css: styles group/icon/user-block theo direction §2.5; responsive ≤900px strip ngang giữ hoạt động (group ẩn label? — group label thành separator đứng | đơn giản: mobile giữ flat scroll, group labels display:none).
-- [ ] **Step 5:** i18n `admin.nav.group.{overview,products,orders,engagement,system}` vi/en (additive cuối block, comment SF-5).
-- [ ] **Step 6:** Test: guard.test + mount.smoke xanh; vitest i18n parity xanh.
-- [ ] **Step 7:** Commit `feat(admin): sidebar groups + icons + active state (FI-395 T2)`.
+- [x] **Step 1:** guard.ts: `ADMIN_NAV` giữ export cũ (backward-compat test) THÊM `ADMIN_NAV_GROUPS: {labelKey, items: {to,key,icon: IconName|AdminIconName}[]}[]` (groups per Design mục 4); `activeNavIndex` GIỮ NGUYÊN semantics (prefix match; order-detail → Orders).
+- [x] **Step 2:** AdminIcon.tsx: chỉ icon THIẾU so catalog Icon.tsx (grid-dashboard, folder, mail, rotate-ccw, award, file-text… tùy map cuối) — 24×24 viewBox, copy ĐÚNG stroke attrs của Icon.tsx (đọc file trước khi viết), aria-hidden decorative.
+- [x] **Step 3:** AdminShell JSX: group label (11px uppercase ls .12em muted) + item (icon 18 + label; active: tint bg + border-left primary + chữ c-link — style có sẵn .admin-nav-link--active, bổ sung .admin-nav-link__icon + group styles); user block cuối sidebar border-top (tên + pill ADMIN tint) — topbar GIỮ nguyên (logout/storefront).
+- [x] **Step 4:** page.css: styles group/icon/user-block theo direction §2.5; responsive ≤900px strip ngang giữ hoạt động (group ẩn label? — group label thành separator đứng | đơn giản: mobile giữ flat scroll, group labels display:none).
+- [x] **Step 5:** i18n `admin.nav.group.{overview,products,orders,engagement,system}` vi/en (additive cuối block, comment SF-5).
+- [x] **Step 6:** Test: guard.test + mount.smoke xanh; vitest i18n parity xanh.
+- [x] **Step 7:** Commit `feat(admin): sidebar groups + icons + active state (FI-395 T2)`.
 
 ### Task 3a: tables-client-sort — INFRA (components + css + i18n + unit test)
 
@@ -193,32 +193,32 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 **Files:**
 - Modify: page.css; grep tsx nếu còn dùng class
 
-- [ ] **Step 1:** grep `admin-badge-mock` toàn src — xóa class (209-217) + mọi usage tsx còn sót (mock badge hiển thị 'MOCK' — nếu page nào còn render thì thay bằng pill tint thường).
-- [ ] **Step 2:** Hex sweep: verify KHÔNG hex ngoài var() fallback (script grep); mọi var() được tham chiếu phải tồn tại ở CẢ 4 theme blocks (script check tokens.css) — lệch → sửa fallback hoặc flag token thiếu.
-- [ ] **Step 3:** Commit `chore(admin): bỏ admin-badge-mock + verify hex tokenize (FI-395 T9)`.
+- [x] **Step 1:** grep `admin-badge-mock` toàn src — xóa class (209-217) + mọi usage tsx còn sót (mock badge hiển thị 'MOCK' — nếu page nào còn render thì thay bằng pill tint thường).
+- [x] **Step 2:** Hex sweep: verify KHÔNG hex ngoài var() fallback (script grep); mọi var() được tham chiếu phải tồn tại ở CẢ 4 theme blocks (script check tokens.css) — lệch → sửa fallback hoặc flag token thiếu.
+- [x] **Step 3:** Commit `chore(admin): bỏ admin-badge-mock + verify hex tokenize (FI-395 T9)`.
 
 ### Task 10: forbidden-error-states
 
 **Files:**
 - Modify: ForbiddenPage.tsx, AdminApp.tsx (guest/forbidden JSX — KHÔNG đụng guard logic), page.css
 
-- [ ] **Step 1:** ForbiddenPage: EmptyState polish (icon 🔒→Icon 'alert'? giữ emoji an toàn i18n — dùng EmptyState + action button về storefront), guest screen standalone polish card border tint.
-- [ ] **Step 2:** error/toast tint nhất quán: check `.admin-error-text`/`.admin-error` dùng tint-danger tokens; toast variant danger success đã qua ToastProvider — chỉ đảm bảo page-error dùng Alert primitive где phù hợp (nhẹ tay — không đụng mutation onError).
-- [ ] **Step 3:** Commit `feat(admin): forbidden + error states polish (FI-395 T10)`.
+- [x] **Step 1:** ForbiddenPage: EmptyState polish (icon 🔒→Icon 'alert'? giữ emoji an toàn i18n — dùng EmptyState + action button về storefront), guest screen standalone polish card border tint.
+- [x] **Step 2:** error/toast tint nhất quán: check `.admin-error-text`/`.admin-error` dùng tint-danger tokens; toast variant danger success đã qua ToastProvider — chỉ đảm bảo page-error dùng Alert primitive где phù hợp (nhẹ tay — không đụng mutation onError).
+- [x] **Step 3:** Commit `feat(admin): forbidden + error states polish (FI-395 T10)`.
 
 ### Task 11: walkthrough-4-state-theme-tests (verify gate — Rule 0)
 
 **Files:**
 - Không code mới (fix nhỏ nếu phát hiện vỡ — commit fix riêng)
 
-- [ ] **Step 1:** Unit xanh: mfe-admin vitest + i18n parity + ui-kit vitest (read-only check) + re-run hex/var sweep script (plan-critic P2 — T10 đã thêm css sau T9).
-- [ ] **Step 2:** Bật verify stack +300 (recipe mục 5); pre-check backend cap: curl `${GATEWAY}/api/catalog/admin/products?page=1&size=50` với admin token — nếu service cap < 50 → REQUIREMENT-GAP lên FI-390 trước khi claim ACCEPTANCE 2 (plan-critic P1); copy .env từ main checkout.
-- [ ] **Step 3:** orca browser mở `http://localhost:5473/admin` → login admin thật qua UI shell (admin@demo.vn / admin123 từ .env nếu seed mặc định).
-- [ ] **Step 4:** Walkthrough 14 màn: mỗi màn screenshot; sort click (asc/desc/none + aria), page-size 10/25/50 đổi số dòng, sticky header cuộn, skeleton thấy lúc load chậm. Forbidden-state recipe (plan-critic P2): đăng nhập user customer (đăng ký qua shell UI hoặc user demo từ seed) → mở /admin → thấy ForbiddenPage → screenshot → đăng xuất.
-- [ ] **Step 5:** 4 trạng thái theme: shell storefront light/dark + admin light/dark — toggle tại /admin → sidebar/table/KPI flip `admin`↔`admin-dark` live; screenshot đủ 4; check console sạch.
-- [ ] **Step 6:** e2e subset: `E2E_SHELL_URL=http://localhost:5473 pnpm --filter @ecommerce/e2e exec playwright test admin-coupon admin-crud upload-image rbac` — XANH.
-- [ ] **Step 7:** Teardown verify stack (+300) sau khi evidence đủ (port-squatting hygiene) — kill đúng PID mình spawn.
-- [ ] **Step 8:** Tổng hợp evidence screenshots + kết quả từng dòng ACCEPTANCE vào comment FI-395 (ghi rõ deviation count-badge đã duyệt ở plan §4).
+- [x] **Step 1:** Unit xanh: mfe-admin vitest + i18n parity + ui-kit vitest (read-only check) + re-run hex/var sweep script (plan-critic P2 — T10 đã thêm css sau T9).
+- [x] **Step 2:** Bật verify stack +300 (recipe mục 5); pre-check backend cap: curl `${GATEWAY}/api/catalog/admin/products?page=1&size=50` với admin token — nếu service cap < 50 → REQUIREMENT-GAP lên FI-390 trước khi claim ACCEPTANCE 2 (plan-critic P1); copy .env từ main checkout.
+- [x] **Step 3:** orca browser mở `http://localhost:5473/admin` → login admin thật qua UI shell (admin@demo.vn / admin123 từ .env nếu seed mặc định).
+- [x] **Step 4:** Walkthrough 14 màn: mỗi màn screenshot; sort click (asc/desc/none + aria), page-size 10/25/50 đổi số dòng, sticky header cuộn, skeleton thấy lúc load chậm. Forbidden-state recipe (plan-critic P2): đăng nhập user customer (đăng ký qua shell UI hoặc user demo từ seed) → mở /admin → thấy ForbiddenPage → screenshot → đăng xuất.
+- [x] **Step 5:** 4 trạng thái theme: shell storefront light/dark + admin light/dark — toggle tại /admin → sidebar/table/KPI flip `admin`↔`admin-dark` live; screenshot đủ 4; check console sạch.
+- [x] **Step 6:** e2e subset: `E2E_SHELL_URL=http://localhost:5473 pnpm --filter @ecommerce/e2e exec playwright test admin-coupon admin-crud upload-image rbac` — XANH.
+- [x] **Step 7:** Teardown verify stack (+300) sau khi evidence đủ (port-squatting hygiene) — kill đúng PID mình spawn.
+- [x] **Step 8:** Tổng hợp evidence screenshots + kết quả từng dòng ACCEPTANCE vào comment FI-395 (ghi rõ deviation count-badge đã duyệt ở plan §4).
 
 ---
 

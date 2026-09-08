@@ -45,27 +45,27 @@
 2. Tạo Stripe account qua Orca browser: signup (email toilahoi007@gmail.com + password mạnh + country Singapore/Vietnam-tùy-dropdown) → verify email (inbox Gmail — **escape hatch: user click link**) → skip business form (test mode) → Dashboard → API keys → copy `pk_test_/sk_test_`
 3. Tạo `.env` **repo-root** (gitignored — verify) + điền ĐÚNG 3 biến theo `e2e/helpers/env.ts:44-52` hard-require: `STRIPE_SECRET_KEY=sk_test_*`, `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_*`, `STRIPE_WEBHOOK_SECRET=whsec_*`; probe consumer pk (checkout UI Elements hay chỉ e2e helper) và ghi vào T5
 4. Makefile `stripe-listen`: **reuse compose service stripe-cli có sẵn** (profile stripe) + `stripe login` → whsec CLI in ra điền `STRIPE_WEBHOOK_SECRET`; verify payment-service nhận webhook → đơn PAID
-5. Un-skip + chạy golden-path E2E với keys: bước đầu **hard-assert `hasStripe() === true`** (fail-loud cấm skip âm thầm) → 2 test `[PENDING-STRIPE-KEYS]` PASS thật (4242 success + 4000...0002 declined)
+5. Un-skip + chạy golden-path E2E với keys: bước đầu **hard-assert `hasStripe() === true`** + **extend `e2e/helpers/env.ts:47-58` hasStripe() đòi thêm `whsec_` prefix** (hiện chỉ check sk+pk → whsec thiếu fail muộn ở webhook) → 2 test `[PENDING-STRIPE-KEYS]` PASS thật (4242 success + 4000...0002 declined)
 6. Saga-fail declined path + platform-asserts commission PASS thật
 7. Regression: không-keys → `payUnavailable` fail-loud giữ đúng (không fake confirm); payment 503 path giữ
 8. Evidence: screenshot dashboard keys (che giữa) + E2E green log + docs `[PENDING-STRIPE-KEYS]` → `[VERIFIED-STRIPE]`
 9. Webhook local runbook ghi vào README (stripe listen mỗi phiên dev)
 10. Gate slice: Java payment IT + E2E golden-path green
 
-**SF-B coupon-crud-a3 (10 tasks):**
-1. REQUIREMENT-GAP A3 proposal (endpoints + **`AdminCouponDto` riêng có `usageLimit/usedCount/active` — PublicCouponDto public KHÔNG lộ thống kê sử dụng**) — chờ coordinator duyệt + amend contracts + regen
-2. Probe gateway allowlist `/api/ordering/admin/**` + đọc `CouponReservationRepository` → chốt DELETE policy
-3. BE `AdminCouponController` (create/update/toggle/delete) + admin-role guard pattern `AdminOrderController`
-4. BE `CouponService` admin methods + validation (window/usageLimit) + deactivate policy
-5. BE IT contract-shape + validation test
+**SF-B coupon-crud-a3 (10 tasks) — BASELINE: `AdminCouponController` ĐÃ TỒN TẠI trên master (FI-366 SF-1 T11, commit 89adcd9: create/update/DELETE `/admin/coupons`, `@PreAuthorize ADMIN`, `AdminCouponDto` 10 trường, 409/400/404 mapping) — SF-B = RECONCILE + BỔ SUNG, KHÔNG build net-new:**
+1. REQUIREMENT-GAP A3 proposal **xuất phát từ shape hiện có**: endpoint THIẾU = `GET /admin/coupons` (list trả AdminCouponDto — public list chủ động KHÔNG lộ usedCount) + toggle `PUT /{code}/active`; DTO mở rộng nếu thiếu field — chờ coordinator duyệt + amend contracts + regen
+2. Probe gateway allowlist `/api/ordering/admin/**` (gateway-auth.yml:53 đã allow từ SF-9 — verify) + đọc `CouponReservationRepository` → chốt DELETE/deactivate policy
+3. BE **reconcile** AdminCouponController với A3: bổ sung GET list + toggle endpoint + khớp DTO — KHÔNG đụng create/update/DELETE đã đúng
+4. BE `CouponService` admin methods + deactivate policy (N4: reserve-guarded UPDATE đã có — toggle giữa chừng tôn trọng in-flight)
+5. BE IT contract-shape + validation test (bổ sung case GET list + toggle)
 6. FE `CouponsPage`: form create/edit + toggle + delete + error surfaces (409/422) — XOÁ note read-only
 7. FE types regen consume + unit test form validation
-8. E2E admin coupon: tạo → dùng ở checkout → usedCount tăng → toggle off → validate fail
+8. E2E admin coupon: tạo → dùng ở checkout → usedCount tăng → toggle off → validate fail — **KHÔNG cần Stripe keys (assert sau RESERVED, chưa PAID)**
 9. Seed parity: `make seed` coupons hiển thị đúng qua list mới
 10. Gate slice: Java + FE + E2E admin-coupon green
 
 **SF-C honesty-pass (11 tasks):**
-1. Header links (Header.tsx:74-76) → routes thật (probe PLP sort params `new`/`popular` tồn tại trước)
+1. Header mini-nav (Header.tsx:77-79 ĐÃ trỏ `/c/dien-tu?sort=newest|rating` — **probe slug `dien-tu` tồn tại trong seed/DB trước, không thấy → decision: hardcode slug có thật hoặc bỏ link**) + sort values code thật là `newest|rating` (không phải new/popular)
 2. CategoryTiles "more" + home "Xem thêm" (page.tsx:85) → PLP/category route thật
 3. Footer (Footer.tsx:34) — trim về routes có thật (N5)
 4. `AddToCart.tsx:36,45` toastFail "Cart is coming soon" → lỗi thật ("Không thêm được vào giỏ — thử lại"); **verify method: unit test error state + E2E route.abort assert toast**
@@ -97,9 +97,11 @@
 |---|---|---|---|---|
 | SF-A | stripe-live-e2e | 0 | FI-366 PR#8 merge (base sạch) | 10 |
 | SF-B | coupon-crud-a3 | 1 | SF-A (keys cho E2E slice + tránh đụng dev-stack) | 10 |
-| SF-C | honesty-pass | 1 | SF-A, SF-B (keys + coupon UI cho sweep cuối) | 11 |
+| SF-C | honesty-pass | 1 | SF-A, SF-B | 11 |
 
-**Nhánh đích:** `story/fi366...-v11` NO — **`story/fi331-nofallback-complete`** (epic mới FI-3xx, tạo lúc APPROVE). Launch order: SF-A → (SF-B ∥ SF-C).
+**Launch order CHỐT (sửa theo plan-critic — hàng trên chỉ SF-C depends cả 2 là SAI):** T0 = **SF-A ∥ SF-B song song** + SF-C T1-T9 cũng song song SF-B (file sets disjoint); **T1 = riêng SF-C T10-T11** (grep sweep cuối + integration gate slice) — chỉ chạy SAU khi SF-B merge + SF-A keys có mặt. Coordinator gate theo merge order: SF-B merge trước → SF-C T10-T11 → cả 3 Done |
+
+**Nhánh đích:** `story/fi366-qa-polish-v11` KHÔNG — epic mới dùng **`story/fi366-nofallback-complete`** (epic FI-366 đã bị chiếm bởi QA story; epic No-Fallback tạo riêng). Launch order CHỐT: T0 = SF-A ∥ SF-B song song + SF-C T1-T9; T1 = SF-C T10-T11 sau SF-B merge + keys.
 
 ## 7. Risks
 
@@ -112,6 +114,8 @@
 | R5 | Gateway allowlist admin coupons: **ĐÃ verify `gateway-auth.yml:53` allow `/api/ordering/admin/**` từ SF-9** — probe chỉ confirm; risk thật còn `@PreAuthorize` BE |
 | R6 | Footer trim làm mất link user muốn giữ | N5 mặc định trim; user list thêm nếu muốn |
 | R7 | ENOSPC tái diễn | Pre-check df ≥ 20G trước mvn/E2E batch |
+| R8 | AdminCouponController off-contract đang tồn tại (A2 pending) — reconcile risk | SF-B T3 baseline shape hiện có; A3 proposal xuất phát từ đó |
+| R9 | SF-B ∥ SF-C cùng đụng mfe-admin (CouponsPage+regen vs lib/types+pages) + e2e/ — disjoint nếu kỷ luật | Merge order: SF-B trước SF-C T10-T11; ghi §6/§7 |
 
 ## 8. Assumptions
 

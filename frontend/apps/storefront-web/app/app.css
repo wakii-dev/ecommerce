@@ -1406,6 +1406,39 @@ img {
   display: block;
 }
 
+/* Zoom-lens (direction §2.3): transform-origin theo con trỏ (--mx/--my do
+   Gallery mousemove set) + scale 1.18 + lens radial-gradient trắng — chỉ
+   transform (perf §3.2); gate hover + pointer:fine — touch/mobile không zoom,
+   placeholder (--zoom không có) cũng không. */
+@media (hover: hover) and (pointer: fine) {
+  .pdp-gallery-main--zoom img {
+    transition: transform 0.25s var(--ease-out);
+    transform-origin: var(--mx, 50%) var(--my, 50%);
+  }
+
+  .pdp-gallery-main--zoom:hover img {
+    transform: scale(1.18);
+  }
+
+  .pdp-gallery-main--zoom::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      160px at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.35),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .pdp-gallery-main--zoom:hover::after {
+    opacity: 1;
+  }
+}
+
 .pdp-gallery-emoji {
   font-size: 96px;
 }
@@ -1453,7 +1486,7 @@ img {
 }
 
 .pdp-thumb--active {
-  border-color: var(--c-link);
+  border-color: var(--c-primary);
 }
 
 /* Info: h1 23px/700/1.35 + meta (đã bán + sao) */

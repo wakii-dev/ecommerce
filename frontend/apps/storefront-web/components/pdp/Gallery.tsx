@@ -1,14 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import type { MouseEvent } from 'react';
 
 /**
  * Gallery PDP (direction §2.5, plan Task 13): ảnh chính aspect 1/1 (url rỗng
  * → gradient theo danh mục + emoji), flag -% góc trên-trái nền primary, thumbs
  * 72×72 active border primary. 1 ảnh → không render thumbs.
+ * Zoom-lens §2.3: chỉ khi ảnh thật — mousemove set --mx/--my (px trong ảnh),
+ * css scale 1.18 + lens (gate hover+pointer:fine — placeholder không zoom).
  * URL rỗng/ảnh placeholder seed /media/** → <img> thường (protocol SF-4,
  * <Image> khi ảnh thật — cùng quyết định ProductCardView).
  */
+
+/** Set --mx/--my (px trong ảnh) trên wrapper — transform-origin + lens theo con trỏ. */
+function handleMouseMove(event: MouseEvent<HTMLDivElement>) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  event.currentTarget.style.setProperty('--mx', `${Math.round(event.clientX - rect.left)}px`);
+  event.currentTarget.style.setProperty('--my', `${Math.round(event.clientY - rect.top)}px`);
+}
 
 export interface GalleryProps {
   images: ReadonlyArray<{ url?: string; alt?: string }>;
@@ -28,7 +38,11 @@ export default function Gallery({ images, name, gradient, emoji, percent }: Gall
 
   return (
     <div className="pdp-gallery">
-      <div className="pdp-gallery-main" style={hasImage ? undefined : { background: gradient }}>
+      <div
+        className={`pdp-gallery-main${hasImage ? ' pdp-gallery-main--zoom' : ''}`}
+        style={hasImage ? undefined : { background: gradient }}
+        onMouseMove={hasImage ? handleMouseMove : undefined}
+      >
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- placeholder seed /media/**, <Image> khi ảnh thật (SF-4 protocol)
           <img src={current?.url} alt={current?.alt ?? name} />

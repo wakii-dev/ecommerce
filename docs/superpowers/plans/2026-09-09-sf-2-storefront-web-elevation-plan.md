@@ -237,9 +237,9 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/pdp/Gallery.tsx`, css gallery.
 
-- [ ] **Step 1:** Hover-zoom §2.3: ảnh chính — mousemove set `--mx/--my` (transform-origin theo con trỏ) + scale 1.18, transition .25s `--ease-out`, chỉ transform; lens radial-gradient 160px trắng .35→transparent 70% hiện khi hover. Chỉ khi ảnh thật (placeholder gradient → không zoom). Touch/mobile: không zoom (pointer: fine media query).
-- [ ] **Step 2:** Thumbs 72×72 active border primary — polish hiện có; keyboard giữ (button đã có role=tab).
-- [ ] **Step 3:** vitest + lint xanh → commit `feat(storefront): PDP gallery hover-zoom lens per direction §2.3 (FI-392)`.
+- [x] **Step 1:** Hover-zoom §2.3: ảnh chính — mousemove set `--mx/--my` (transform-origin theo con trỏ) + scale 1.18, transition .25s `--ease-out`, chỉ transform; lens radial-gradient 160px trắng .35→transparent 70% hiện khi hover. Chỉ khi ảnh thật (placeholder gradient → không zoom). Touch/mobile: không zoom (pointer: fine media query).
+- [x] **Step 2:** Thumbs 72×72 active border primary — polish hiện có; keyboard giữ (button đã có role=tab).
+- [x] **Step 3:** vitest + lint xanh → commit `feat(storefront): PDP gallery hover-zoom lens per direction §2.3 (FI-392)`.
 
 ### Task 8b: pdp-tabs-sticky-mobile — tabs thật + toast direction + sticky ATC (nhóm C)
 

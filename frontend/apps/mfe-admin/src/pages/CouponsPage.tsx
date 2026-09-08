@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Input, Modal, Select, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Modal, Select, useToast } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { useClientSort } from '../lib/tableSort';
@@ -380,7 +380,7 @@ export default function CouponsPage(): ReactElement {
             columns={columns}
             rows={pagedRows}
             rowKey={(row) => row.code}
-            empty={t('admin.coupons.empty')}
+            empty={<EmptyState icon='🎫' title={t('admin.coupons.empty')} />}
             sort={sort}
             onSortToggle={onSortToggle}
           />

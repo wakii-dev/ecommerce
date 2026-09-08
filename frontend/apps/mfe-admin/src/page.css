@@ -518,6 +518,7 @@
   .admin-side__user {
     margin-top: 0;
     margin-left: auto;
+    flex-shrink: 0; /* reviewer P2 (FI-395): nav scroll-x chèn ép user — giữ nguyên khối */
     white-space: nowrap;
     border-top: none;
     border-left: 1px solid var(--c-border);

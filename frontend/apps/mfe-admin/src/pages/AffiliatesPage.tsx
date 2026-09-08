@@ -10,7 +10,7 @@ import {
   type RouteDef,
 } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Input, Select, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Select, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { useClientSort } from '../lib/tableSort';
@@ -323,34 +323,27 @@ export default function AffiliatesPage(): ReactElement {
         </div>
       </div>
 
-      {/* Stats mini (contract /admin/stats) */}
-      <div
-        style={{
-          display: 'grid',
-          gap: 12,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          marginBottom: 16
-        }}
-      >
-        <Card>
-          <p className="admin-hint">{t('admin.affiliates.statTotal')}</p>
-          <h2 style={{ margin: 0 }} data-testid="affiliates-stat-total">
+      {/* Stats mini (contract /admin/stats) — KPI pattern §2.5 (SF-5 FI-395) */}
+      <div className="admin-kpi-row">
+        <Card className="admin-kpi">
+          <div className="admin-kpi__label">{t('admin.affiliates.statTotal')}</div>
+          <div className="admin-kpi__value" data-testid="affiliates-stat-total">
             {statsQuery.data?.totalAffiliates ?? '—'}
-          </h2>
+          </div>
         </Card>
-        <Card>
-          <p className="admin-hint">{t('admin.affiliates.statClicks')}</p>
-          <h2 style={{ margin: 0 }}>{statsQuery.data?.activeClicks ?? '—'}</h2>
+        <Card className="admin-kpi">
+          <div className="admin-kpi__label">{t('admin.affiliates.statClicks')}</div>
+          <div className="admin-kpi__value">{statsQuery.data?.activeClicks ?? '—'}</div>
         </Card>
-        <Card>
-          <p className="admin-hint">{t('admin.affiliates.statConversions')}</p>
-          <h2 style={{ margin: 0 }}>{statsQuery.data?.conversions ?? '—'}</h2>
+        <Card className="admin-kpi">
+          <div className="admin-kpi__label">{t('admin.affiliates.statConversions')}</div>
+          <div className="admin-kpi__value">{statsQuery.data?.conversions ?? '—'}</div>
         </Card>
-        <Card>
-          <p className="admin-hint">{t('admin.affiliates.statCommission')}</p>
-          <h2 style={{ margin: 0 }}>
+        <Card className="admin-kpi">
+          <div className="admin-kpi__label">{t('admin.affiliates.statCommission')}</div>
+          <div className="admin-kpi__value">
             {statsQuery.data ? formatPrice(statsQuery.data.totalCommission) : '—'}
-          </h2>
+          </div>
         </Card>
       </div>
 
@@ -364,7 +357,7 @@ export default function AffiliatesPage(): ReactElement {
             columns={columns}
             rows={pagedRows}
             rowKey={(row) => row.id}
-            empty={t('admin.affiliates.empty')}
+            empty={<EmptyState icon="🤝" title={t('admin.affiliates.empty')} />}
             caption={t('admin.common.total', { count: listQuery.data?.total ?? 0 })}
             sort={sort}
             onSortToggle={onSortToggle}

@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { authStore } from '@ecommerce/auth';
 import { executeRequest, type ApiClientOptions, type RouteDef } from '@ecommerce/contracts';
-import { Badge, Button, Card, Input, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
@@ -185,22 +185,24 @@ export default function LoyaltyPage(): ReactElement {
 
       {data && (
         <div style={{ display: 'grid', gap: 16 }}>
+          {/* Balance tiles — KPI pattern §2.5 (SF-5 FI-395); 3 tile → giữ
+              auto-fit grid (admin-kpi-row cố định 4 cột sẽ hụt 1 ô) */}
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-            <Card>
-              <p className="admin-hint">{t('admin.loyalty.balance')}</p>
-              <h2 style={{ margin: 0 }} data-testid="loyalty-balance">
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">{t('admin.loyalty.balance')}</div>
+              <div className="admin-kpi__value" data-testid="loyalty-balance">
                 {data.account.balance.toLocaleString('vi-VN')} đ
-              </h2>
+              </div>
             </Card>
-            <Card>
-              <p className="admin-hint">{t('admin.loyalty.totalEarned')}</p>
-              <h2 style={{ margin: 0 }} data-testid="loyalty-total-earned">
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">{t('admin.loyalty.totalEarned')}</div>
+              <div className="admin-kpi__value" data-testid="loyalty-total-earned">
                 {data.account.totalEarned.toLocaleString('vi-VN')} đ
-              </h2>
+              </div>
             </Card>
-            <Card>
-              <p className="admin-hint">≈ VND</p>
-              <h2 style={{ margin: 0 }}>{formatPrice(data.account.balance * 100)}</h2>
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">≈ VND</div>
+              <div className="admin-kpi__value">{formatPrice(data.account.balance * 100)}</div>
             </Card>
           </div>
 
@@ -237,7 +239,7 @@ export default function LoyaltyPage(): ReactElement {
             columns={columns}
             rows={pagedRows}
             rowKey={(row) => row.id}
-            empty={t('admin.loyalty.ledger')}
+            empty={<EmptyState icon="⭐" title={t('admin.loyalty.ledger')} />}
             caption={t('admin.common.total', { count: data.total })}
             sort={sort}
             onSortToggle={onSortToggle}

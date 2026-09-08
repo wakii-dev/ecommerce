@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Select, StarRating, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, EmptyState, Icon, Select, StarRating, useToast } from '@ecommerce/ui-kit';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
 import { catalogApi } from '../lib/api';
@@ -154,7 +154,7 @@ export default function ReviewsPage(): ReactElement {
               onClick={() => moderate.mutate({ id: row.id, action: 'approve' })}
               disabled={moderate.isPending}
             >
-              ✓ {t('admin.reviews.approve')}
+              <Icon name='check' size={14} /> {t('admin.reviews.approve')}
             </Button>
             <Button
               size='sm'
@@ -162,7 +162,7 @@ export default function ReviewsPage(): ReactElement {
               onClick={() => moderate.mutate({ id: row.id, action: 'reject' })}
               disabled={moderate.isPending}
             >
-              ✕ {t('admin.reviews.reject')}
+              <Icon name='x' size={14} /> {t('admin.reviews.reject')}
             </Button>
           </div>
         ) : null
@@ -195,7 +195,7 @@ export default function ReviewsPage(): ReactElement {
             columns={columns}
             rows={pagedRows}
             rowKey={(row) => row.id}
-            empty={t('admin.reviews.empty')}
+            empty={<EmptyState icon='💬' title={t('admin.reviews.empty')} />}
             sort={sort}
             onSortToggle={onSortToggle}
             rowProps={() => ({ 'data-testid': 'review-row' })}

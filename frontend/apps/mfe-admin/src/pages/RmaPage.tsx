@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Select, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, EmptyState, Select, useToast } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
 import { DataTable } from '../components/DataTable';
 import { PageSizeSelect } from '../components/PageSizeSelect';
@@ -234,7 +234,7 @@ export default function RmaPage(): ReactElement {
             columns={columns}
             rows={pagedRows}
             rowKey={(row) => row.id}
-            empty={t('admin.rma.empty')}
+            empty={<EmptyState icon="📦" title={t('admin.rma.empty')} />}
             caption={t('admin.common.total', { count: listQuery.data?.total ?? 0 })}
             sort={sort}
             onSortToggle={onSortToggle}

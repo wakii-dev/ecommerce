@@ -258,10 +258,10 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/reviews/WriteReviewModal.tsx` (+ host `WriteReviewControl.tsx` nếu lifecycle cần), shim.
 
-- [ ] **Step 1:** Bọc `rv-overlay`/`rv-modal` tự viết bằng primitive `Modal` (`open` luôn true khi mounted, `onClose`, `title`, size): focus-trap + ESC + restore focus có sẵn useOverlay; xóa overlay/modal css tự viết (giữ css form bên trong: stars/inputs/error).
-- [ ] **Step 2:** GIỮ logic: ensureSession boot + guest CTA (link shellUrl — `<a>`), 409 duplicate, 202 pending, error role=alert, interactive stars local (StarRating readOnly không dùng được input). Loading state khi guest===null → Modal với spinner text.
-- [ ] **Step 3:** Kiểm host (WriteReviewControl/MyPendingReviewPanel) lifecycle onClose/onSubmitted không đổi; Modal render `role="dialog"` + `aria-labelledby` từ `title` — accessible name phải khớp `/Viết đánh giá/` (e2e review-flow `getByRole('dialog', {name})`); giữ `.rv-star` buttons + button "Gửi đánh giá" (selector e2e).
-- [ ] **Step 4 (exit e2e-compat):** vitest + lint xanh; nếu dev stack sống → `pnpm -C frontend/e2e exec playwright test review-flow` thử trước commit → commit `feat(storefront): review modal → ui-kit Modal focus-trap/ESC/restore (FI-392)`.
+- [x] **Step 1:** Bọc `rv-overlay`/`rv-modal` tự viết bằng primitive `Modal` (`open` luôn true khi mounted, `onClose`, `title`, size): focus-trap + ESC + restore focus có sẵn useOverlay; xóa overlay/modal css tự viết (giữ css form bên trong: stars/inputs/error).
+- [x] **Step 2:** GIỮ logic: ensureSession boot + guest CTA (link shellUrl — `<a>`), 409 duplicate, 202 pending, error role=alert, interactive stars local (StarRating readOnly không dùng được input). Loading state khi guest===null → Modal với spinner text.
+- [x] **Step 3:** Kiểm host (WriteReviewControl/MyPendingReviewPanel) lifecycle onClose/onSubmitted không đổi; Modal render `role="dialog"` + `aria-labelledby` từ `title` — accessible name phải khớp `/Viết đánh giá/` (e2e review-flow `getByRole('dialog', {name})`); giữ `.rv-star` buttons + button "Gửi đánh giá" (selector e2e).
+- [x] **Step 4 (exit e2e-compat):** vitest + lint xanh; nếu dev stack sống → `pnpm -C frontend/e2e exec playwright test review-flow` thử trước commit → commit `feat(storefront): review modal → ui-kit Modal focus-trap/ESC/restore (FI-392)`.
 
 ### Task 10: search-coupons-polish-empty-copybutton (nhóm C)
 

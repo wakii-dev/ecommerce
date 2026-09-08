@@ -7,7 +7,7 @@ import { appNavigate } from '../bootstrap';
 import { orderingApi } from '../lib/api';
 import { downloadAdminInvoice } from '../lib/invoice';
 import { formatDateTime, formatVnd } from '../lib/format';
-import { canCancel, canDeliver, canShip } from '../lib/adminStub';
+import { canCancel, canDeliver, canShip } from '../lib/orderRules';
 import type { StubOrder } from '../lib/types';
 import { statusBadge } from './OrdersPage';
 

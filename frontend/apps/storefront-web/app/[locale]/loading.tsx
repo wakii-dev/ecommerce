@@ -13,7 +13,7 @@ export default function HomeLoading() {
         Đang tải trang… / Loading…
       </p>
 
-      {/* Hero block tĩnh — cao khớp .hero (300px) chống CLS */}
+      {/* Hero block tĩnh — cao khớp .hero (380px, §2.2.1) chống CLS */}
       <div className="uk-skeleton sk-hero" aria-hidden="true" />
 
       {/* Flash rail — title + 5 card hẹp (khớp .flash-row flex 186px) */}

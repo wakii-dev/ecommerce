@@ -24,7 +24,7 @@ Spec: docs/superpowers/specs/2026-09-07-nofallback-feature-complete-design.md (�
 ### T3 be-reconcile-controller-getlist-toggle
 - [x] `AdminCouponController`: GET `` (list AdminCouponDto) + PUT `/{code}/active` (body `{active}`)
 - [x] `CouponDtos`: + record `AdminCouponActiveRequest(boolean active)`
-- [x] KHÔNG đụng create/update/DELETE + exception mapping hiện có
+- [x] KHÔNG đụng create/update + exception mapping hiện có (DELETE: mở rộng policy chặn reservation history — lộ IT, N4 "chưa reservation"; review P2.3 đã ghi)
 
 ### T4 be-couponservice-deactivate-policy
 - [x] `CouponService.adminList()` — findAll sort code → map toDto

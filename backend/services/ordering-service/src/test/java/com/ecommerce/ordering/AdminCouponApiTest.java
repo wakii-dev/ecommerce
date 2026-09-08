@@ -217,6 +217,12 @@ class AdminCouponApiTest extends AbstractSagaTest {
         String ghost = "ITGHOST" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         assertThat(exchange("/admin/coupons/" + ghost + "/active", ADMIN, HttpMethod.PUT,
             "{\"active\": false}").getStatusCode().value()).isEqualTo(404);
+        // review P2.1: thiếu field active → 400 (không âm thầm tắt mã)
+        String code = "ITN" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        exchange("/admin/coupons", ADMIN, HttpMethod.POST, body(code, "PERCENT", 10, 5, null));
+        assertThat(exchange("/admin/coupons/" + code + "/active", ADMIN, HttpMethod.PUT,
+            "{}").getStatusCode().value()).isEqualTo(400);
+        assertThat(couponInList(code).get("active")).isEqualTo(true); // không đổi trạng thái
     }
 
     @Test

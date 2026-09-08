@@ -181,7 +181,10 @@ public class CouponService {
      * MỚI bị từ chối (validate/reserve qua {@code isRunning}). KHÔNG dùng
      * delete+recreate — mất usedCount + vỡ reservation theo code.
      */
-    public Coupon adminSetActive(String code, boolean active) {
+    public Coupon adminSetActive(String code, Boolean active) {
+        if (active == null) {
+            throw new IllegalArgumentException("active là bắt buộc (true/false)");
+        }
         Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
             .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
         coupon.setActive(active);

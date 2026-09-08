@@ -65,7 +65,11 @@ public final class CouponDtos {
     ) {
     }
 
-    /** Body PUT /admin/coupons/{code}/active (FI-369 SF-2 A3 — toggle N4). */
-    public record AdminCouponActiveRequest(boolean active) {
+    /**
+     * Body PUT /admin/coupons/{code}/active (FI-369 SF-2 A3 — toggle N4).
+     * Boolean (không primitive) — thiếu field → service trả 400 thay vì âm
+     * thầm tắt mã (review P2.1; contract A3: required [active]).
+     */
+    public record AdminCouponActiveRequest(Boolean active) {
     }
 }

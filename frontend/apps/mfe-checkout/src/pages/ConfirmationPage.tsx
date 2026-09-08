@@ -195,7 +195,8 @@ export default function ConfirmationPage(): ReactElement {
           </div>
         )}
         <div className="summary-row">
-          <span>Phí vận chuyển</span>
+          {/* SF-3 honesty-pass (ADR 0006 D15-3): nhãn phí phẳng trung thực. */}
+          <span>Phí vận chuyển (phí tiêu chuẩn)</span>
           <span>{formatPrice(order.shippingFee)}</span>
         </div>
         <hr className="summary-divider" />

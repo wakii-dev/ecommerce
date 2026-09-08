@@ -75,6 +75,7 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
               className={`plp-check${checked ? ' is-checked' : ''}`}
               href={priceHref(checked ? undefined : preset.key)}
               prefetch={false}
+              aria-pressed={checked}
             >
               <span className="plp-check-box" aria-hidden="true">
                 {checked ? '✓' : ''}
@@ -95,6 +96,7 @@ export default function Sidebar({ locale, basePath, query, tree, activeIds }: Si
               className={`plp-check${checked ? ' is-checked' : ''}`}
               href={ratingHref(checked ? undefined : stars)}
               prefetch={false}
+              aria-pressed={checked}
             >
               <span className="plp-check-box" aria-hidden="true">
                 {checked ? '✓' : ''}

@@ -1311,18 +1311,25 @@ img {
 
 .plp-sort select {
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 7px 10px;
   font-size: 13px;
   font-family: inherit;
   color: var(--c-text);
   background: var(--c-surface);
   cursor: pointer;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 .plp-sort select:hover {
   border-color: var(--c-link);
   color: var(--c-link);
+}
+
+.plp-sort select:focus-visible {
+  outline: none;
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 3px var(--c-focus);
 }
 
 /* Grid kết quả 3 cột gap 16px, dùng chung .p-card (§2.4) */
@@ -1342,52 +1349,15 @@ img {
   margin-top: 0;
 }
 
-/* Pagination — nút 34×34, hover viền+chữ primary, active nền primary (§2.4) */
+/* Pagination — primitive ui-kit `Pagination` (uk-page 32×32, active nền
+ * primary — §2.4/§2.5, style trong ui-kit.css); app chỉ giữ layout
+ * center + margin qua class này (merge vào `uk-pagination`). */
 .plp-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
   margin-top: var(--space-5);
-}
-
-.plp-page-btn {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  color: var(--c-text);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.plp-page-btn--nav {
-  font-size: 16px;
-}
-
-.plp-page-btn:hover {
-  border-color: var(--c-link);
-  color: var(--c-link);
-}
-
-.plp-page-btn.is-active {
-  background: var(--c-primary);
-  border-color: var(--c-link);
-  color: #ffffff;
-  cursor: default;
-}
-
-.plp-page-dots {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--c-text-muted);
 }
 
 /* ≤900px: grid 2 cột, sidebar xuống dưới full-width (direction §4) */

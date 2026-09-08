@@ -255,7 +255,7 @@ git commit -m "feat(apps): ui-kit css import host-biên 3 bootstrap (FI-391 T4)"
 - Modify: `frontend/packages/i18n/src/catalogs/vi.ts`, `frontend/packages/i18n/src/catalogs/en.ts`, `frontend/packages/i18n/src/__tests__/i18n.test.ts`
 - Create: `docs/adr/0007-data-testid-convention.md` (repo root docs/adr — số tiếp sau file cao nhất hiện có, verify trước khi đặt tên)
 
-- [ ] **Step 1: Thêm namespace `ui` vào vi.ts** (top-level, additive — sau `common`, trước `admin`; comment `// ── SF-1 FI-391 — keys mặc định primitives ui-kit (surfaces truyền t('ui.*') vào props)`):
+- [x] **Step 1: Thêm namespace `ui` vào vi.ts** (top-level, additive — sau `common`, trước `admin`; comment `// ── SF-1 FI-391 — keys mặc định primitives ui-kit (surfaces truyền t('ui.*') vào props)`):
 
 ```ts
   ui: {
@@ -286,7 +286,7 @@ git commit -m "feat(apps): ui-kit css import host-biên 3 bootstrap (FI-391 T4)"
   },
 ```
 
-- [ ] **Step 2: Thêm `ui` ĐỒNG BỘ CẤU TRÚC vào en.ts**:
+- [x] **Step 2: Thêm `ui` ĐỒNG BỘ CẤU TRÚC vào en.ts**:
 
 ```ts
   ui: {
@@ -317,11 +317,11 @@ git commit -m "feat(apps): ui-kit css import host-biên 3 bootstrap (FI-391 T4)"
   },
 ```
 
-- [ ] **Step 3: Parity test structural** — thêm describe vào `i18n.test.ts`: walk đệ quy keys object vi vs en (so TẤT CẢ top-level namespace, không chỉ ui) → `expect(enKeys).toEqual(viKeys)` (set đường dẫn key tuyệt đối, sort trước khi so). Fail message in key lệch đầu tiên.
+- [x] **Step 3: Parity test structural** — thêm describe vào `i18n.test.ts`: walk đệ quy keys object vi vs en (so TẤT CẢ top-level namespace, không chỉ ui) → `expect(enKeys).toEqual(viKeys)` (set đường dẫn key tuyệt đối, sort trước khi so). Fail message in key lệch đầu tiên.
 
-- [ ] **Step 4: ADR `0007-data-testid-convention.md`** — nội dung: Context (e2e ~30 classname selector vỡ khi elevation đổi markup); Decision (semantic classname giữ là contract chính; `data-testid="<surface>-<element>"` chỉ khi rename bất khả kháng; testid theo surface prefix, không theo component — vd `data-testid="plp-pagination-next"`); Consequences (SF-2..5 thêm testid khi rename; SF-6 fix selector vỡ bằng testid fallback); status Accepted; ngày 2026-09-09; ref FI-391.
+- [x] **Step 4: ADR `0007-data-testid-convention.md`** — nội dung: Context (e2e ~30 classname selector vỡ khi elevation đổi markup); Decision (semantic classname giữ là contract chính; `data-testid="<surface>-<element>"` chỉ khi rename bất khả kháng; testid theo surface prefix, không theo component — vd `data-testid="plp-pagination-next"`); Consequences (SF-2..5 thêm testid khi rename; SF-6 fix selector vỡ bằng testid fallback); status Accepted; ngày 2026-09-09; ref FI-391.
 
-- [ ] **Step 5: Run** `cd frontend/packages/i18n && pnpm vitest run` → PASS. Commit:
+- [x] **Step 5: Run** `cd frontend/packages/i18n && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/i18n/src/catalogs/vi.ts frontend/packages/i18n/src/catalogs/en.ts frontend/packages/i18n/src/__tests__/i18n.test.ts docs/adr/0007-data-testid-convention.md
 git commit -m "feat(i18n): ui.* keys vi/en + parity structural + ADR 0007 data-testid (FI-391 T5)"

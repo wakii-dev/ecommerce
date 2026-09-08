@@ -159,6 +159,7 @@ export const vi = {
       noTracking: 'Chưa có mã vận đơn — hiển thị sau khi shop đóng gói.',
       invoice: 'Tải hóa đơn PDF',
       invoiceFail: 'Tải hóa đơn thất bại',
+      invoiceError: 'Tải hóa đơn lỗi (HTTP {{status}})',
       rmaCreate: 'Trả hàng / hoàn tiền',
       cancel: 'Hủy đơn',
       cancelSuccess: 'Đã hủy đơn — tồn kho và mã giảm giá (nếu có) sẽ được hoàn lại.',

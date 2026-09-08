@@ -5,6 +5,8 @@
 // bootstrap (globals:false → cleanup afterEach — pattern ordersPage.test.tsx).
 // review-G2 (FI-394): RMA error-routing (0 món / thiếu lý do / API reject) +
 // cancel confirm flow + dot CANCELLED/FAILED nền danger.
+// verifier P1 (FI-394): loading → ListSkeleton (nhất quán OrdersPage) +
+// downloadInvoicePdf reject InvoiceDownloadError → banner key hóa HTTP status.
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
@@ -13,6 +15,7 @@ import { appNavigate } from '../bootstrap';
 import {
   cancelMyOrder,
   createRma,
+  downloadInvoicePdf,
   fetchMyOrder,
   fetchMyRmas,
   fetchOrderTracking,
@@ -103,6 +106,7 @@ beforeEach(() => {
   vi.mocked(fetchOrderTracking).mockReset();
   vi.mocked(cancelMyOrder).mockReset();
   vi.mocked(createRma).mockReset();
+  vi.mocked(downloadInvoicePdf).mockReset();
   vi.mocked(appNavigate).mockClear();
 });
 
@@ -311,5 +315,33 @@ describe('OrderDetailPage', () => {
     expect(document.querySelectorAll('.od-timeline__dot').length).toBe(2);
     expect(document.querySelectorAll('.od-timeline .od-timeline__item--danger .od-timeline__dot').length).toBe(1);
     expect(document.querySelectorAll('.od-timeline .od-timeline__item--success .od-timeline__dot').length).toBe(0);
+  });
+
+  // ── verifier P1 (FI-394): loading skeleton + invoice banner key hóa ──
+
+  it('loading (chưa có order) → ListSkeleton role=status, KHÔNG text "Đang tải đơn hàng…"', async () => {
+    vi.mocked(fetchMyOrder).mockReturnValue(new Promise(() => undefined)); // chưa resolve
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+
+    // Skeleton nhất quán OrdersPage (T5): role=status + ListSkeleton (aria-busy) trong Card
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
+    expect(screen.queryByText('Đang tải đơn hàng…')).toBeNull();
+  });
+
+  it('downloadInvoicePdf reject InvoiceDownloadError → banner key hóa chứa HTTP 500', async () => {
+    vi.mocked(fetchMyOrder).mockResolvedValue(orderFixture());
+    vi.mocked(fetchMyRmas).mockResolvedValue(EMPTY_RMA_PAGE);
+    vi.mocked(fetchOrderTracking).mockResolvedValue(TRACKING);
+    const err = new Error('Tải hóa đơn lỗi (HTTP 500)');
+    err.name = 'InvoiceDownloadError';
+    (err as Error & { status?: number }).status = 500;
+    vi.mocked(downloadInvoicePdf).mockRejectedValue(err);
+    render(<OrderDetailPage id="a1b2c3d4e5f6g7h8" />);
+    await screen.findByText('Đơn #A1B2C3D4');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tải hóa đơn PDF' }));
+    // Banner key account.order.invoiceError nội suy status — KHÔNG phải message vi hard-code từ api
+    expect(await screen.findByText('Tải hóa đơn lỗi (HTTP 500)')).toBeTruthy();
   });
 });

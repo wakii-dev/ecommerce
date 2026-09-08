@@ -12,6 +12,7 @@ import {
   Card,
   Icon,
   IconButton,
+  ListSkeleton,
   Modal,
   QuantityStepper,
   Table,
@@ -110,8 +111,14 @@ function OrderDetailContent({ id }: { id: string }): ReactElement {
   const onDownloadInvoice = (): void => {
     if (!order) return;
     setBanner(null);
+    // FI-394 verifier P1-2: module ordersApi thuần (không hook được) → lỗi nhận
+    // diện qua err.name 'InvoiceDownloadError' + status → key hóa banner tại đây.
     downloadInvoicePdf(order).catch((err: unknown) => {
-      setBanner(err instanceof Error ? err.message : t('account.order.invoiceFail'));
+      if (err instanceof Error && err.name === 'InvoiceDownloadError') {
+        setBanner(t('account.order.invoiceError', { status: (err as Error & { status?: number }).status }));
+      } else {
+        setBanner(err instanceof Error ? err.message : t('account.order.invoiceFail'));
+      }
     });
   };
 
@@ -163,9 +170,13 @@ function OrderDetailContent({ id }: { id: string }): ReactElement {
   }
 
   if (!order) {
+    // FI-394 verifier P1-1: skeleton nhất quán OrdersPage (T5) — loading MỌI
+    // trang account; key account.order.loading giữ làm aria-label.
     return (
       <Card>
-        <p className="od-loading">{t('account.order.loading')}</p>
+        <div role="status" aria-label={t('account.order.loading')}>
+          <ListSkeleton count={3} />
+        </div>
       </Card>
     );
   }

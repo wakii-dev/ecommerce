@@ -982,11 +982,6 @@
   margin-top: var(--space-3, 12px);
 }
 
-.od-loading {
-  margin: 0;
-  color: var(--c-text-muted, #757575);
-}
-
 /* ── SF-4 (FI-394 T9) — affiliate KPI + ledger Table + loyalty anchor ────── */
 /* KPI pattern direction §2.5/§4: label 11/700 uppercase tracking .08em muted,
    value 23/800 tabular. Grid auto-fit — dùng chung affiliate stats + loyalty

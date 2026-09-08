@@ -156,6 +156,7 @@ export const en = {
       noTracking: 'No tracking code yet — it appears once the shop packs your order.',
       invoice: 'Download invoice PDF',
       invoiceFail: 'Invoice download failed',
+      invoiceError: 'Invoice download failed (HTTP {{status}})',
       rmaCreate: 'Return / refund',
       cancel: 'Cancel order',
       cancelSuccess: 'Order cancelled — stock and coupon (if any) will be restored.',

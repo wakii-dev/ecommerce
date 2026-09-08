@@ -12,6 +12,7 @@
  * import barrel lại như thường.
  */
 export { StarRating } from '../../../packages/ui-kit/src/components/StarRating';
+export { Price } from '../../../packages/ui-kit/src/components/Price';
 export { EmptyState } from '../../../packages/ui-kit/src/components/EmptyState';
 export { Icon } from '../../../packages/ui-kit/src/components/Icon';
 export { Skeleton } from '../../../packages/ui-kit/src/components/Skeleton';

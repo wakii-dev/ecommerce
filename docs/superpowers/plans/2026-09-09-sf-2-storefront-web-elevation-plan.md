@@ -218,11 +218,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/ProductCardView.tsx`, `lib/catalog-api.ts`, css p-card.
 
-- [ ] **Step 1:** Fix gradient token chết: `GRADIENT_BY_CATEGORY` + fallback trong `lib/catalog-api.ts` → token mới `--grad-cat-dientu/thoitrang/nhacua/sach/lamdep` (regex giữ nguyên); `GRADIENT_VARS` ProductCardView → 5 var mới.
-- [ ] **Step 2:** Giá + strikethrough (L100-105) → primitive `Price` (`value`, `comparePrice`, `size` sm/md, `locale` vi-VN/en? — Price locale prop là BCP47: 'vi-VN'|'en-US'? kiểm output khớp formatVnd trước; nếu en output lệch format hiện có → truyền 'vi-VN' luôn và giữ locale hiển thị đồng nhất, ghi commit note) trong `.p-price-row`; suppress badge Price trong card scope bằng css — **đọc `Price.tsx` trước để lấy đúng class badge** (P2 critic: verify class name để selector `.p-card` scope chắc chắn ăn); badge -% nằm trên thumb rồi.
-- [ ] **Step 3:** Hover chuẩn §3.1: card hover translateY(−3px) + shadow-1→3 `--dur-base` `--ease-out`; tên hover `--c-link`.
-- [ ] **Step 4:** WishlistHeart polish: scale hover + reduced-motion (css `.wl-heart`), không đổi logic.
-- [ ] **Step 5:** Thêm/điều chỉnh unit test `tests/` (productGradient map token mới — không trả var chết); vitest + lint xanh → commit `feat(storefront): ProductCard Price primitive + gradient token mới + hover cascade (FI-392)`.
+- [x] **Step 1:** Fix gradient token chết: `GRADIENT_BY_CATEGORY` + fallback trong `lib/catalog-api.ts` → token mới `--grad-cat-dientu/thoitrang/nhacua/sach/lamdep` (regex giữ nguyên); `GRADIENT_VARS` ProductCardView → 5 var mới.
+- [x] **Step 2:** Giá + strikethrough (L100-105) → primitive `Price` (`value`, `comparePrice`, `size` sm/md, `locale` vi-VN/en? — Price locale prop là BCP47: 'vi-VN'|'en-US'? kiểm output khớp formatVnd trước; nếu en output lệch format hiện có → truyền 'vi-VN' luôn và giữ locale hiển thị đồng nhất, ghi commit note) trong `.p-price-row`; suppress badge Price trong card scope bằng css — **đọc `Price.tsx` trước để lấy đúng class badge** (P2 critic: verify class name để selector `.p-card` scope chắc chắn ăn); badge -% nằm trên thumb rồi.
+- [x] **Step 3:** Hover chuẩn §3.1: card hover translateY(−3px) + shadow-1→3 `--dur-base` `--ease-out`; tên hover `--c-link`.
+- [x] **Step 4:** WishlistHeart polish: scale hover + reduced-motion (css `.wl-heart`), không đổi logic.
+- [x] **Step 5:** Thêm/điều chỉnh unit test `tests/` (productGradient map token mới — không trả var chết); vitest + lint xanh → commit `feat(storefront): ProductCard Price primitive + gradient token mới + hover cascade (FI-392)`.
 
 ### Task 7: plp-pagination-primitive-filter-a11y-real-checkbox (nhóm B)
 

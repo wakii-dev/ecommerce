@@ -3,8 +3,8 @@ import Link from 'next/link';
 import WishlistHeart from './wishlist/WishlistHeart';
 
 import { categoryGradient, discountPercent, type ProductCard } from '../lib/catalog-api';
-import { formatVnd, localePath, type Locale } from '../lib/format';
-import { StarRating } from './ui-kit';
+import { localePath, type Locale } from '../lib/format';
+import { Price, StarRating } from './ui-kit';
 
 /**
  * ProductCardView — anatomy §2.3, DÙNG CHUNG home/PLP/related (Task 11/12).
@@ -20,11 +20,11 @@ import { StarRating } from './ui-kit';
  * gradient đúng ngữ nghĩa (dùng categoryGradient()).
  */
 const GRADIENT_VARS = [
-  'var(--grad-electronics)',
-  'var(--grad-fashion)',
-  'var(--grad-home)',
-  'var(--grad-books)',
-  'var(--grad-beauty)',
+  'var(--grad-cat-dientu)',
+  'var(--grad-cat-thoitrang)',
+  'var(--grad-cat-nhacua)',
+  'var(--grad-cat-sach)',
+  'var(--grad-cat-lamdep)',
 ] as const;
 
 function hashKey(key: string): number {
@@ -98,10 +98,14 @@ export default function ProductCardView({ product, locale, gradientKey }: Produc
       <span className="p-body">
         <span className="p-name">{product.name}</span>
         <span className="p-price-row">
-          <span className="p-price">{formatVnd(product.price)}</span>
-          {product.comparePrice !== undefined && product.comparePrice > product.price ? (
-            <s className="p-price-compare">{formatVnd(product.comparePrice)}</s>
-          ) : null}
+          {/* locale 'vi-VN' cố định — giữ hiển thị đồng nhất format vi (formatVnd cũ);
+              Intl en-US ra "₫1,290,000" lệch hiển thị hiện có (i18n T12 xem lại) */}
+          <Price
+            value={product.price}
+            comparePrice={product.comparePrice}
+            locale="vi-VN"
+            className="p-price"
+          />
         </span>
         <span className="p-meta">
           <StarRating value={product.ratingAvg} size="sm" ariaLabel={`${product.name}: ${product.ratingAvg}/5`} />

@@ -915,12 +915,13 @@ img {
   overflow: hidden;
   text-decoration: none;
   color: var(--c-text);
-  transition: box-shadow 0.12s ease, transform 0.12s ease;
+  /* hover cascade §3.1: lift −3px + shadow-1→3 (điểm nhấn thương mại lên cấp 3) */
+  transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 .p-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .p-thumb {
@@ -1013,15 +1014,22 @@ img {
   gap: 6px;
 }
 
-.p-price {
+/* Giá qua primitive Price (ui-kit) — wrapper mang .p-price; ghép .uk-price
+   để thắng .uk-price--md (--text-lg 16px): card giữ 17/800 danger §2.2.5 */
+.p-price.uk-price {
   color: var(--c-danger);
   font-size: 17px;
   font-weight: 800;
 }
 
-.p-price-compare {
+.p-price .uk-price__compare {
   color: var(--c-text-muted);
   font-size: 12px;
+}
+
+/* badge -% của Price primitive đã có trên thumb (.badge-off) — suppress trong card */
+.p-card .uk-price__discount {
+  display: none;
 }
 
 .p-meta {
@@ -2574,6 +2582,8 @@ img {
   align-items: center;
   justify-content: center;
   padding: 0;
+  /* scale hover — reduced-motion chặn bởi global gate ui-kit.css (§3.3) */
+  transition: transform var(--dur-fast) var(--ease-pop);
 }
 
 .wl-heart--card {

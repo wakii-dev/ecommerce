@@ -14,6 +14,7 @@ export { Icon } from '../../../packages/ui-kit/src/components/Icon';
 export { Skeleton } from '../../../packages/ui-kit/src/components/Skeleton';
 export { ProductCardSkeleton } from '../../../packages/ui-kit/src/components/skeletons';
 export { Tabs } from '../../../packages/ui-kit/src/components/Tabs';
+export { Modal } from '../../../packages/ui-kit/src/components/Modal';
 export {
   ToastProvider,
   useToast,

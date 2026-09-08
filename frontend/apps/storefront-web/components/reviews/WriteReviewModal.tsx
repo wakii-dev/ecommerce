@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
+
+import { Modal } from '../ui-kit';
 
 import { buildReviewPayload } from '../../lib/reviews-api';
 import { authedFetch, ensureSession } from '../../lib/account-session';
@@ -10,10 +12,12 @@ import type { Locale } from '../../lib/format';
 
 /**
  * Write-review modal (SF-8, spec Q14 — pack: write modal client component).
- * StarRating interactive local (ui-kit StarRating là readOnly — KHÔNG sửa
- * ui-kit, file slice). Submit 202 no-body → toast "đang chờ duyệt" (client
- * side — spec-critic P0). 409 → message "đã đánh giá". Guest → CTA link
- * `/account` (shell đăng nhập — pack).
+ * T9 (FI-392): bọc bằng primitive ui-kit `Modal` (portal + focus-trap + ESC,
+ * dialog aria-labelledby từ title). Restore focus về trigger tự lo ở đây —
+ * useOverlay chỉ trap/ESC. StarRating interactive local (ui-kit StarRating là
+ * readOnly — KHÔNG sửa ui-kit, file slice). Submit 202 no-body → toast "đang
+ * chờ duyệt" (client side — spec-critic P0). 409 → message "đã đánh giá".
+ * Guest → CTA link `/account` (shell đăng nhập — pack).
  */
 
 const COPY = {
@@ -34,7 +38,6 @@ const COPY = {
     duplicate: 'Bạn đã đánh giá sản phẩm này rồi',
     error: 'Gửi đánh giá thất bại — thử lại sau ít phút',
     ratingRequired: 'Hãy chọn số sao',
-    close: 'Đóng',
   },
   en: {
     title: 'Write a review',
@@ -53,7 +56,6 @@ const COPY = {
     duplicate: 'You already reviewed this product',
     error: 'Failed to submit — please try again later',
     ratingRequired: 'Pick a star rating',
-    close: 'Close',
   },
 } as const;
 
@@ -87,15 +89,22 @@ export default function WriteReviewModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Restore focus về trigger khi modal unmount — useOverlay chỉ lo trap/ESC.
+  // Capture bằng lazy state-init (chạy lúc render): child effect của Modal
+  // focus-first vào panel TRƯỚC effect parent — capture trong useEffect sẽ
+  // nhận nhầm nút đóng trong portal thay vì trigger.
+  const [restoreTo] = useState<HTMLElement | null>(() =>
+    typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null)
+  );
+  useEffect(() => () => restoreTo?.focus(), []);
+
   // Boot session lần đầu mở modal — guest → CTA đăng nhập (spec Q13)
   if (guest === null) {
     ensureSession().then((ok) => setGuest(!ok));
     return (
-      <div className="rv-overlay" role="dialog" aria-modal="true" aria-label={copy.title}>
-        <div className="rv-modal">
-          <p className="rv-modal-loading">…</p>
-        </div>
-      </div>
+      <Modal open onClose={onClose} title={copy.title} size="md">
+        <p className="rv-modal-loading">…</p>
+      </Modal>
     );
   }
 
@@ -137,74 +146,71 @@ export default function WriteReviewModal({
   };
 
   return (
-    <div className="rv-overlay" role="dialog" aria-modal="true" aria-label={copy.title}>
-      <div className="rv-modal">
-        <button type="button" className="rv-modal-close" aria-label={copy.close} onClick={onClose}>
-          ✕
-        </button>
-
-        {guest ? (
-          <div className="rv-guest">
-            <h3>{copy.guestTitle}</h3>
-            <p>{copy.guestDesc}</p>
-            <a className="rv-cta" href={`${shellUrl()}/account`}>
-              {copy.guestCta}
-            </a>
+    <Modal
+      open
+      onClose={onClose}
+      title={mode === 'edit' ? copy.editTitle : copy.title}
+      size="md"
+    >
+      {guest ? (
+        <div className="rv-guest">
+          <h3>{copy.guestTitle}</h3>
+          <p>{copy.guestDesc}</p>
+          <a className="rv-cta" href={`${shellUrl()}/account`}>
+            {copy.guestCta}
+          </a>
+        </div>
+      ) : (
+        <form className="rv-form" onSubmit={onSubmit}>
+          <div className="rv-stars-input" role="radiogroup" aria-label={copy.yourRating}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                role="radio"
+                aria-checked={rating === star}
+                aria-label={`${star}`}
+                className={star <= rating ? 'rv-star rv-star--on' : 'rv-star'}
+                onClick={() => setRating(star)}
+              >
+                ★
+              </button>
+            ))}
           </div>
-        ) : (
-          <form onSubmit={onSubmit}>
-            <h3>{mode === 'edit' ? copy.editTitle : copy.title}</h3>
 
-            <div className="rv-stars-input" role="radiogroup" aria-label={copy.yourRating}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  role="radio"
-                  aria-checked={rating === star}
-                  aria-label={`${star}`}
-                  className={star <= rating ? 'rv-star rv-star--on' : 'rv-star'}
-                  onClick={() => setRating(star)}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
+          <label className="rv-label">
+            {copy.nameLabel}
+            <input
+              className="rv-input"
+              value={title}
+              maxLength={255}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
 
-            <label className="rv-label">
-              {copy.nameLabel}
-              <input
-                className="rv-input"
-                value={title}
-                maxLength={255}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
+          <label className="rv-label">
+            {copy.contentLabel}
+            <textarea
+              className="rv-input rv-textarea"
+              value={content}
+              required
+              rows={4}
+              placeholder={copy.contentPlaceholder}
+              onChange={(e) => setContent(e.target.value)}
+            />
+          </label>
 
-            <label className="rv-label">
-              {copy.contentLabel}
-              <textarea
-                className="rv-input rv-textarea"
-                value={content}
-                required
-                rows={4}
-                placeholder={copy.contentPlaceholder}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            </label>
+          {error ? (
+            <p className="rv-error" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-            {error ? (
-              <p className="rv-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <button type="submit" className="rv-cta" disabled={sending}>
-              {sending ? copy.saving : copy.submit}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          <button type="submit" className="rv-cta" disabled={sending}>
+            {sending ? copy.saving : copy.submit}
+          </button>
+        </form>
+      )}
+    </Modal>
   );
 }

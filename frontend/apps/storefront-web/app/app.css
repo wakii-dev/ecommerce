@@ -2416,43 +2416,18 @@ img {
   font-size: var(--text-sm, 12px);
 }
 
-/* Modal viết/sửa review */
+/* Modal viết/sửa review — primitive ui-kit `Modal` (uk-overlay/uk-modal),
+ * app chỉ giữ css form bên trong + loading. Overlay/modal tự viết đã xóa (T9). */
 
-.rv-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 45%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
-}
-
-.rv-modal {
-  position: relative;
-  width: min(480px, calc(100vw - 32px));
-  background: var(--c-surface, #FFFFFF);
-  border-radius: var(--radius-lg, 12px);
-  padding: var(--space-5, 24px);
+.rv-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3, 12px);
 }
 
-.rv-modal h3 {
+.rv-guest h3 {
   margin: 0;
   font-size: var(--text-xl, 18px);
-}
-
-.rv-modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  color: var(--c-text-muted, #757575);
 }
 
 .rv-modal-loading {

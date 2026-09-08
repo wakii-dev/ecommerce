@@ -16,16 +16,16 @@ const LATIN_RANGE = 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02
 // vietnamese subset — dấu tiếng Việt
 const VIET_RANGE = 'U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB';
 
-import latin400 from './assets/fonts/be-vietnam-pro-400-latin.woff2?url';
-import viet400 from './assets/fonts/be-vietnam-pro-400-vietnamese.woff2?url';
-import latin500 from './assets/fonts/be-vietnam-pro-500-latin.woff2?url';
-import viet500 from './assets/fonts/be-vietnam-pro-500-vietnamese.woff2?url';
-import latin600 from './assets/fonts/be-vietnam-pro-600-latin.woff2?url';
-import viet600 from './assets/fonts/be-vietnam-pro-600-vietnamese.woff2?url';
-import latin700 from './assets/fonts/be-vietnam-pro-700-latin.woff2?url';
-import viet700 from './assets/fonts/be-vietnam-pro-700-vietnamese.woff2?url';
-import latin800 from './assets/fonts/be-vietnam-pro-800-latin.woff2?url';
-import viet800 from './assets/fonts/be-vietnam-pro-800-vietnamese.woff2?url';
+import latin400 from '../assets/fonts/be-vietnam-pro-400-latin.woff2?url';
+import viet400 from '../assets/fonts/be-vietnam-pro-400-vietnamese.woff2?url';
+import latin500 from '../assets/fonts/be-vietnam-pro-500-latin.woff2?url';
+import viet500 from '../assets/fonts/be-vietnam-pro-500-vietnamese.woff2?url';
+import latin600 from '../assets/fonts/be-vietnam-pro-600-latin.woff2?url';
+import viet600 from '../assets/fonts/be-vietnam-pro-600-vietnamese.woff2?url';
+import latin700 from '../assets/fonts/be-vietnam-pro-700-latin.woff2?url';
+import viet700 from '../assets/fonts/be-vietnam-pro-700-vietnamese.woff2?url';
+import latin800 from '../assets/fonts/be-vietnam-pro-800-latin.woff2?url';
+import viet800 from '../assets/fonts/be-vietnam-pro-800-vietnamese.woff2?url';
 
 // jsdom/Node không có FontFace — im lặng no-op (font là chuyện browser).
 if (typeof document !== 'undefined' && typeof FontFace !== 'undefined') {

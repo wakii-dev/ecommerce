@@ -123,19 +123,19 @@ Ghi chú: bracket list thứ tự gốc là adminshell trước dashboard; chạ
 - Create: `src/lib/tableSort.ts`, `src/components/DataTable.tsx`, `src/components/PageSizeSelect.tsx` (+ `tests/tableSort.test.ts`)
 - Modify: `page.css`, catalogs vi/en
 
-- [ ] **Step 1:** tableSort.ts: pure `compareRows(accessor, dir, locale='vi')` (number → numeric; string → localeCompare vi; null/undefined xuống cuối) + `useClientSort` hook (state {key,dir} | null; click cùng key → asc→desc→none; khác key → asc).
-- [ ] **Step 2:** DataTable.tsx: props `{columns: AdminTableColumn<Row>[] (header, render?, align?, sortValue?), rows, rowKey, empty, caption, loading (→ TableSkeleton rows/cols), sort? (controlled từ useClientSort), onSortClick?}`; render `<div class="admin-table-block">` (surface + border + radius-md + shadow-1 + overflow) → `<table class="uk-table admin-table">` thead sticky (`position: sticky; top: 0; background: var(--c-surface)` + shadow `0 1px 0 var(--c-border)`; th 11/700 uppercase ls .08em muted) — sortable th = `<button>` (header text + arrow ▲/▼ 9px, asc primary/desc primary rotate 180/none muted) + `aria-sort` trên th; row hover `--wash-hover` `--dur-fast`; empty/caption pattern ui-kit.
-- [ ] **Step 3:** PageSizeSelect.tsx: nhóm nút 10/25/50 (active nền primary chữ trắng, padding 5×11) + label `admin.common.pageSize`; props `{value, onChange}`.
-- [ ] **Step 4:** page.css: .admin-table-block/.admin-table thead/sort arrow/hover (dur-fast) /page-size group; i18n: `admin.common.pageSize`, `admin.common.sortLabel` ('Sắp xếp' — aria), vi/en.
-- [ ] **Step 5:** Test: tableSort.test mới (asc/desc/none, number+string vi, null cuối); vitest mfe-admin xanh.
-- [ ] **Step 6:** Commit **3a** `feat(admin): DataTable sort/page-size/sticky infra (FI-395 T3a)`.
+- [x] **Step 1:** tableSort.ts: pure `compareRows(accessor, dir, locale='vi')` (number → numeric; string → localeCompare vi; null/undefined xuống cuối) + `useClientSort` hook (state {key,dir} | null; click cùng key → asc→desc→none; khác key → asc).
+- [x] **Step 2:** DataTable.tsx: props `{columns: AdminTableColumn<Row>[] (header, render?, align?, sortValue?), rows, rowKey, empty, caption, loading (→ TableSkeleton rows/cols), sort? (controlled từ useClientSort), onSortClick?}`; render `<div class="admin-table-block">` (surface + border + radius-md + shadow-1 + overflow) → `<table class="uk-table admin-table">` thead sticky (`position: sticky; top: 0; background: var(--c-surface)` + shadow `0 1px 0 var(--c-border)`; th 11/700 uppercase ls .08em muted) — sortable th = `<button>` (header text + arrow ▲/▼ 9px, asc primary/desc primary rotate 180/none muted) + `aria-sort` trên th; row hover `--wash-hover` `--dur-fast`; empty/caption pattern ui-kit.
+- [x] **Step 3:** PageSizeSelect.tsx: nhóm nút 10/25/50 (active nền primary chữ trắng, padding 5×11) + label `admin.common.pageSize`; props `{value, onChange}`.
+- [x] **Step 4:** page.css: .admin-table-block/.admin-table thead/sort arrow/hover (dur-fast) /page-size group; i18n: `admin.common.pageSize`, `admin.common.sortLabel` ('Sắp xếp' — aria), vi/en.
+- [x] **Step 5:** Test: tableSort.test mới (asc/desc/none, number+string vi, null cuối); vitest mfe-admin xanh.
+- [x] **Step 6:** Commit **3a** `feat(admin): DataTable sort/page-size/sticky infra (FI-395 T3a)`.
 
 **Task 3b — rollout 9 pages** (sub-commit 2 batch: server-paged Products/Orders/Audit/Newsletter trước, load-all Coupons/Affiliates/Reviews/RMA/Loyalty sau):
 
-- [ ] **Step 1:** Rải 9 pages: thay `Table`→`DataTable` (thêm `sortValue` cho cột có nghĩa: name/price/status/createdAt/total/code/qty…), `Skeleton rect`→`loading`, page-size state (server-paged: set size param + page=1; load-all: slice client), GIỮ NGUYÊN mọi data-testid + label i18n cũ.
-- [ ] **Step 2 (commit gate — plan-critic P1):** grep testid inventory vs §0 list (`coupon-create-btn|coupon-submit-btn|coupon-toggle-|coupon-usage-|coupon-delete-|coupon-form-errors|audit-page|audit-filter-|audit-apply|rma-approve-|rma-received-|rma-refund-|upload-image|products-export-csv|orders-export-csv|review-row|category-row|loyalty-balance|loyalty-total-earned|affiliates-stat-total|admin-user`) — diff rỗng mới commit.
-- [ ] **Step 3:** vitest mfe-admin xanh.
-- [ ] **Step 4:** Commit **3b** `feat(admin): rollout DataTable 9 tables (FI-395 T3b)`.
+- [x] **Step 1:** Rải 9 pages: thay `Table`→`DataTable` (thêm `sortValue` cho cột có nghĩa: name/price/status/createdAt/total/code/qty…), `Skeleton rect`→`loading`, page-size state (server-paged: set size param + page=1; load-all: slice client), GIỮ NGUYÊN mọi data-testid + label i18n cũ.
+- [x] **Step 2 (commit gate — plan-critic P1):** grep testid inventory vs §0 list (`coupon-create-btn|coupon-submit-btn|coupon-toggle-|coupon-usage-|coupon-delete-|coupon-form-errors|audit-page|audit-filter-|audit-apply|rma-approve-|rma-received-|rma-refund-|upload-image|products-export-csv|orders-export-csv|review-row|category-row|loyalty-balance|loyalty-total-earned|affiliates-stat-total|admin-user`) — diff rỗng mới commit.
+- [x] **Step 3:** vitest mfe-admin xanh.
+- [x] **Step 4:** Commit **3b** — dispatch chia 2 sub-commit: `feat(admin): rollout DataTable 4 server-paged tables (FI-395 T3b-1)` + `feat(admin): rollout DataTable 5 client tables (FI-395 T3b-2)`.
 
 ### Task 4: pagination-primitive-swap-4-pages
 

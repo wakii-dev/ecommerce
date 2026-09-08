@@ -77,7 +77,7 @@ Consumers/regression: `tokens.test.ts` (7 exact-count assertion — cập nhật
 
 **File structure:** primitives mới ở `packages/ui-kit/src/components/<Name>.tsx` (PascalCase, named export, interface `<Name>Props`, pattern khớp Input.tsx: `useId`, className join helper, aria đầy đủ). CSS uk-* thêm CUỐI ui-kit.css trước block dark-badge override (giữ organize: section comment `/* ── <Primitive> (SF-1 FI-391) */`). Demo sections thêm trong UiKitDemo.tsx DemoInner (pattern `<section className="uk-demo__section">`).
 
-**Testing strategy:** SSR renderToStaticMarkup (mặc định — chạy được trong jsdom env) cho markup/aria/tint classes; jsdom RTL fireEvent cho interaction (keyboard, click, IO mock); token-regression đọc file css (countDef pattern có sẵn). Suite: `pnpm vitest run` trong `packages/ui-kit` + `packages/i18n` — xanh sau MỖI task.
+**Testing strategy:** SSR renderToStaticMarkup (mặc định — chạy được trong jsdom env) cho markup/aria/tint classes; jsdom RTL fireEvent cho interaction (keyboard, click, IO mock); token-regression đọc file css (countDef pattern có sẵn). Suite: `pnpm vitest run` chạy TRONG từng package (`cd frontend/packages/ui-kit && pnpm vitest run`, `cd frontend/packages/i18n && pnpm vitest run` — chạy từ workspace root sẽ bỏ qua vitest.config.ts jsdom) — xanh sau MỖI task.
 
 ## 6. Risks & unknowns
 - **Must verify:** Vite resolve url() font qua cả 2 biên (browser-verify Phase 5 acceptance #1) · admin-dark hiển thị qua demo switcher (acceptance #4) · reduced-motion emulate OS-level (Playwright/CDP emulation hoặc devtools) · Vitest mock IntersectionObserver + matchMedia cho useReveal test.
@@ -95,7 +95,7 @@ Consumers/regression: `tokens.test.ts` (7 exact-count assertion — cập nhật
 
 Giá trị NGUỒN: hand-off §1.2–§1.5 (đã liệt kê đủ dưới đây — không sáng tạo thêm).
 
-- [ ] **Step 0: Pre-flight môi trường** — worktree chưa có node_modules: `cd frontend && pnpm install` (mỗi lần đầu). Verify `pnpm vitest run packages/ui-kit` chạy được (suite cũ xanh) TRƯỚC khi sửa bất cứ gì.
+- [ ] **Step 0: Pre-flight môi trường** — worktree chưa có node_modules: `cd frontend && pnpm install` (mỗi lần đầu). Verify `cd frontend/packages/ui-kit && pnpm vitest run` chạy được (suite cũ xanh) TRƯỚC khi sửa bất cứ gì.
 
 - [ ] **Step 1: Thêm motion + z-index + breakpoints vào block `:root, [data-theme='storefront']`** (sau section Elevation, comment `/* ── Tokens v2 (SF-1 FI-391) — hand-off §1.2 */`):
 
@@ -169,7 +169,7 @@ Gradient/swatch: giữ nguyên hex lowercase như hand-off viết (chỉ dùng t
   - Số count thay đổi do admin-dark: `--c-warning #FE9C08` 3→4 · `--c-accent #FFD839` 3→4 · `--c-on-accent #212121` 3→4 · `--c-link #FF6B54` 1→2 · `--c-text-muted #9E9E9E` 1→2 · `--c-border #2C2C2C` 1→2 · `--c-danger #FF5A5A` 1→2.
   - THÊM: `countDef('--c-bg', '#0F0F0F')` = 1 (admin-dark duy nhất); dark shadows `0 1px 2px rgba(0, 0, 0, 0.4)` = **2** (dark + admin-dark — `admin-dark` KHÔNG cascade từ `dark` vì khác attribute value, hand-off §1.5 ghi "shadow = bộ dark §1.4" = re-declare trong block; tương tự 0.5/0.6 = 2); `--dur-fast: 140ms` = 1, `--dur-base: 180ms` = 1, `--dur-slow: 260ms` = 1; `--ease-pop` = 1; `--z-toast: 400` = 1; `--bp-md: 960px` = 1; `--grad-cta` contains `#F53D2D` (substring assert trên css); `--shadow-cta: 0 4px 12px rgba(245, 61, 45, 0.35)` = 1. describe mới `'tokens v2 — SF-1 FI-391 (hand-off §1.2-§1.5)'`.
 
-- [ ] **Step 7: Run** `cd frontend && pnpm vitest run packages/ui-kit` → PASS. Commit:
+- [ ] **Step 7: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/styles/tokens.css frontend/packages/ui-kit/src/__tests__/tokens.test.ts
 git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-391 T1, hand-off §1.2-§1.5) + regression cùng commit"
@@ -213,7 +213,7 @@ git commit -m "feat(ui-kit): tokens v2 — motion/z/bp/gradient/admin-dark (FI-3
 /* ... lặp cho 500/600/700/800 — chỉ đổi font-weight + tên file ... */
 ```
 
-- [ ] **Step 3: Run** `pnpm vitest run packages/ui-kit` (tokens.test đọc text — @font-face không ảnh hưởng countDef) → PASS. Commit (git add tokens.css + 10 woff2):
+- [ ] **Step 3: Run** `cd frontend/packages/ui-kit && pnpm vitest run` (tokens.test đọc text — @font-face không ảnh hưởng countDef) → PASS. Commit (git add tokens.css + 10 woff2):
 ```bash
 git add frontend/packages/ui-kit/src/styles/tokens.css frontend/packages/ui-kit/src/assets/fonts/
 git commit -m "feat(ui-kit): @font-face Be Vietnam Pro self-host 400-800 vietnamese+latin (FI-391 T2)"
@@ -225,7 +225,7 @@ git commit -m "feat(ui-kit): @font-face Be Vietnam Pro self-host 400-800 vietnam
 - Modify: `frontend/packages/ui-kit/src/components/Modal.tsx`, `Drawer.tsx`, `Tabs.tsx`, `Toast.tsx`, `Select.tsx` — thêm `'use client';` dòng 1 (trước import, sau không có gì).
 
 - [ ] **Step 1:** Thêm directive `'use client';` chính xác dòng đầu 5 file stateful. KHÔNG đụng StarRating/EmptyState/Badge/Price/Card/Skeleton/Price/Input/Button (server-safe — Input/Button là pure render, state do consumer giữ). KHÔNG đụng shim `apps/storefront-web/components/ui-kit.ts` (SF-2 own — comment shim tự stale, chấp nhận).
-- [ ] **Step 2: Run** `pnpm vitest run packages/ui-kit` ('use client' là no-op trong vitest — chỉ bảo đảm không vỡ) → PASS. Commit:
+- [ ] **Step 2: Run** `cd frontend/packages/ui-kit && pnpm vitest run` ('use client' là no-op trong vitest — chỉ bảo đảm không vỡ) → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/components/Modal.tsx frontend/packages/ui-kit/src/components/Drawer.tsx frontend/packages/ui-kit/src/components/Tabs.tsx frontend/packages/ui-kit/src/components/Toast.tsx frontend/packages/ui-kit/src/components/Select.tsx
 git commit -m "feat(ui-kit): 'use client' cho 5 primitive stateful — RSC-safe (FI-391 T3)"
@@ -321,7 +321,7 @@ git commit -m "feat(apps): ui-kit css import host-biên 3 bootstrap (FI-391 T4)"
 
 - [ ] **Step 4: ADR `0007-data-testid-convention.md`** — nội dung: Context (e2e ~30 classname selector vỡ khi elevation đổi markup); Decision (semantic classname giữ là contract chính; `data-testid="<surface>-<element>"` chỉ khi rename bất khả kháng; testid theo surface prefix, không theo component — vd `data-testid="plp-pagination-next"`); Consequences (SF-2..5 thêm testid khi rename; SF-6 fix selector vỡ bằng testid fallback); status Accepted; ngày 2026-09-09; ref FI-391.
 
-- [ ] **Step 5: Run** `pnpm vitest run packages/i18n` → PASS. Commit:
+- [ ] **Step 5: Run** `cd frontend/packages/i18n && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/i18n/src/catalogs/vi.ts frontend/packages/i18n/src/catalogs/en.ts frontend/packages/i18n/src/__tests__/i18n.test.ts docs/adr/0007-data-testid-convention.md
 git commit -m "feat(i18n): ui.* keys vi/en + parity structural + ADR 0007 data-testid (FI-391 T5)"
@@ -355,7 +355,7 @@ Markup: `<div className="uk-qty" role="group" aria-label={label}>` + nút `−` 
 
 - [ ] **Step 4: Test SSR** (uiKit.test.tsx) — render markup chứa role=group, 2 nút aria-label default đúng, input value; test clamp: render value=1 → nút − disabled.
 
-- [ ] **Step 5: Run** `pnpm vitest run packages/ui-kit` → PASS. Commit:
+- [ ] **Step 5: Run** `cd frontend/packages/ui-kit && pnpm vitest run` → PASS. Commit:
 ```bash
 git add frontend/packages/ui-kit/src/components/QuantityStepper.tsx frontend/packages/ui-kit/src/styles/ui-kit.css frontend/packages/ui-kit/src/components/index.ts frontend/packages/ui-kit/src/demo/UiKitDemo.tsx frontend/packages/ui-kit/src/__tests__/uiKit.test.tsx
 git commit -m "feat(ui-kit): primitive QuantityStepper keyboard+aria (FI-391 T6)"
@@ -592,7 +592,7 @@ Hành vi: (1) nếu `typeof IntersectionObserver === 'undefined'` → no-op (con
 
 - [ ] **Step 1: Tabs keyboard test KHÓA hành vi hiện có** (Tabs.tsx:40-80 — KHÔNG sửa logic): render 3 tabs jsdom; focus tab đầu; `fireEvent.keyDown(list, { key: 'ArrowRight' })` → tab 2 `aria-selected=true` + `document.activeElement` = nút tab 2; ArrowLeft từ tab 2 → về tab 1; wrap: ArrowLeft tại tab 1 → tab CUỐI (enabled); disabled item bị skip qua; Home/End KHÔNG được handle hiện tại → test chỉ khóa Arrow behavior (không assert Home/End — không định nghĩa behavior mới).
 
-- [ ] **Step 2: Consolidation sweep** — chạy TOÀN BỘ: `pnpm vitest run` trong `packages/ui-kit` + `packages/i18n` → tất cả xanh (SSR + jsdom + tokens regression + i18n parity). `pnpm -r --filter @ecommerce/ui-kit --filter @ecommerce/i18n lint` (tsc --noEmit) sạch. Nếu test nào đỏ → fix root cause (KHÔNG skip test).
+- [ ] **Step 2: Consolidation sweep** — chạy TOÀN BỘ: `pnpm vitest run` chạy TRONG từng package (`cd frontend/packages/ui-kit && pnpm vitest run`, `cd frontend/packages/i18n && pnpm vitest run` — chạy từ workspace root sẽ bỏ qua vitest.config.ts jsdom) → tất cả xanh (SSR + jsdom + tokens regression + i18n parity). `pnpm -r --filter @ecommerce/ui-kit --filter @ecommerce/i18n lint` (tsc --noEmit) sạch. Nếu test nào đỏ → fix root cause (KHÔNG skip test).
 - [ ] **Step 3: Commit:** `test(ui-kit): Tabs keyboard roving-tabindex lock + suite consolidation (FI-391 T14)`.
 
 ---

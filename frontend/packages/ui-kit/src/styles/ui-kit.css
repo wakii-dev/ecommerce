@@ -682,11 +682,20 @@ button.uk-star {
 
 /* ── Skeleton ───────────────────────────────────────────────────────── */
 
+/* Shimmer (FI-391 T12 — hand-off §2.5): gradient sweep
+ * wash-hover → border → wash-hover, quét background-position
+ * 120% → −120%; token nên tự đúng màu ở dark cascade. */
 .uk-skeleton {
   display: block;
-  background: var(--c-border);
+  background: linear-gradient(
+    90deg,
+    var(--wash-hover) 25%,
+    var(--c-border) 50%,
+    var(--wash-hover) 75%
+  );
+  background-size: 240% 100%;
   border-radius: var(--radius-md);
-  animation: uk-skeleton-pulse 1.4s ease-in-out infinite;
+  animation: uk-skeleton-pulse var(--dur-shimmer) linear infinite;
 }
 
 .uk-skeleton--text {
@@ -705,13 +714,12 @@ button.uk-star {
 }
 
 @keyframes uk-skeleton-pulse {
-  0%,
-  100% {
-    opacity: 1;
+  0% {
+    background-position: 120% 0;
   }
 
-  50% {
-    opacity: 0.55;
+  100% {
+    background-position: -120% 0;
   }
 }
 
@@ -821,6 +829,13 @@ button.uk-star {
   font-size: var(--text-xs);
   text-align: center;
   word-break: break-word;
+}
+
+.uk-demo__sk {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
 }
 
 /* ── QuantityStepper (SF-1 FI-391) ──────────────────────────────────── */
@@ -1357,4 +1372,60 @@ button.uk-star {
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
+}
+
+/* ── Skeleton compositions (SF-1 FI-391 — hand-off §2.5) ────────────── */
+
+.uk-sk-card,
+.uk-sk-list {
+  width: 100%;
+}
+
+.uk-sk-card__thumb {
+  /* height:auto từ inline style của composition — aspect giữ thumb vuông */
+  aspect-ratio: 1 / 1;
+}
+
+.uk-sk-card__body,
+.uk-sk-list__text {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.uk-sk-card__body {
+  padding-top: var(--space-2);
+}
+
+.uk-sk-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* text variant mặc định có margin-bottom — compositions dùng grid gap */
+.uk-sk-card .uk-skeleton,
+.uk-sk-table .uk-skeleton,
+.uk-sk-list .uk-skeleton {
+  margin-bottom: 0;
+}
+
+.uk-sk-table {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.uk-sk-table__row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  height: 38px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.uk-sk-table__cell .uk-skeleton {
+  width: 100%;
 }

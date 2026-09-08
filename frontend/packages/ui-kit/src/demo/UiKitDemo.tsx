@@ -22,6 +22,9 @@ import {
   Skeleton,
   StarRating,
   Stepper,
+  ListSkeleton,
+  ProductCardSkeleton,
+  TableSkeleton,
   Table,
   Tabs,
   Textarea,
@@ -372,6 +375,15 @@ function DemoInner() {
           <Skeleton variant="text" count={3} width="100%" />
           <Skeleton variant="circle" />
           <Skeleton variant="rect" width={160} height={90} />
+        </div>
+      </section>
+
+      <section className="uk-demo__section">
+        <h2 className="uk-demo__section-title">Skeleton compositions</h2>
+        <div className="uk-demo__sk">
+          <ProductCardSkeleton />
+          <TableSkeleton rows={4} cols={3} />
+          <ListSkeleton count={3} />
         </div>
       </section>
 

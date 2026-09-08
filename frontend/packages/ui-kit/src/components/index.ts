@@ -70,3 +70,9 @@ export {
   type IconName,
   type IconProps
 } from './Icon';
+export {
+  ListSkeleton,
+  ProductCardSkeleton,
+  TableSkeleton,
+  type TableSkeletonProps
+} from './skeletons';

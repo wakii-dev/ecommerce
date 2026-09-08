@@ -23,6 +23,11 @@ import { Textarea } from '../components/Textarea';
 import { Stepper } from '../components/Stepper';
 import { ICON_PATHS, Icon } from '../components/Icon';
 import type { IconName } from '../components/Icon';
+import {
+  ListSkeleton,
+  ProductCardSkeleton,
+  TableSkeleton
+} from '../components/skeletons';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -148,6 +153,35 @@ describe('Skeleton / EmptyState', () => {
     expect(html).toContain('Giỏ hàng trống');
     expect(html).toContain('Hãy mua sắm');
     expect(html).toContain('Mua ngay');
+  });
+});
+
+describe('Skeleton compositions — SSR (FI-391 T12)', () => {
+  it('TableSkeleton rows=3 cols=4 → 3 hàng × 4 cell + role=table aria-busy', () => {
+    const html = renderToStaticMarkup(<TableSkeleton rows={3} cols={4} />);
+    expect(count(html, 'uk-sk-table__row')).toBe(3);
+    expect(count(html, 'uk-sk-table__cell')).toBe(12);
+    expect(html).toContain('role="table"');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('aria-label="Đang tải dữ liệu"');
+    expect(html).not.toContain('<table');
+  });
+
+  it('ProductCardSkeleton compose Skeleton primitive thật (rect + text + giá 60%)', () => {
+    const html = renderToStaticMarkup(<ProductCardSkeleton />);
+    expect(html).toContain('uk-sk-card');
+    expect(html).toContain('uk-skeleton uk-skeleton--rect');
+    expect(count(html, 'uk-skeleton--text')).toBe(3); // 2 dòng text + dòng giá
+    expect(html).toContain('uk-sk-card__price');
+    expect(html).toContain('width:60%');
+  });
+
+  it('ListSkeleton count override → đúng số hàng circle 40 + 2 dòng text', () => {
+    const html = renderToStaticMarkup(<ListSkeleton count={2} />);
+    expect(count(html, 'uk-sk-list__item')).toBe(2);
+    expect(count(html, 'uk-skeleton--circle')).toBe(2);
+    expect(count(html, 'uk-sk-list__text')).toBe(2);
+    expect(count(html, 'uk-skeleton--text')).toBe(4);
   });
 });
 

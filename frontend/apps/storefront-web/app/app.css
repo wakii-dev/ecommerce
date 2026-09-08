@@ -1504,9 +1504,15 @@ img {
   margin-bottom: var(--space-4);
 }
 
+/* T8b: count là link anchor #tab-reviews (deep-link vào panel đánh giá) */
 .pdp-meta-count {
   font-size: 12px;
-  color: var(--c-text-muted);
+  color: var(--c-link);
+  text-decoration: none;
+}
+
+.pdp-meta-count:hover {
+  text-decoration: underline;
 }
 
 .pdp-meta-sold {
@@ -1734,19 +1740,58 @@ img {
   cursor: not-allowed;
 }
 
-/* Toast êm bottom-center (stub cart — tự dismiss 2.5s) */
+/* Toast §3.2: nền --c-text chữ --c-bg, --radius-full, 13/700, shadow-3
+   (cascade resting toast) — mở opacity + translateY(12px→0) --dur-slow
+   --ease-pop; auto-dismiss 2.2s (AddToCart timer). Markup .pdp-toast +
+   role="status" GIỮ nguyên — e2e nav-honesty assert đúng selector này. */
 .pdp-toast {
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
-  background: #212121;
-  color: #fff;
+  transform: translate(-50%, 0);
+  background: var(--c-text);
+  color: var(--c-bg);
   font-size: 13px;
+  font-weight: 700;
   padding: 10px 18px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-3);
   z-index: 200;
+  animation: pdp-toast-in var(--dur-slow) var(--ease-pop) both;
+}
+
+@keyframes pdp-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* §3.3: reduced-motion → toast hiện tức thời, không slide */
+@media (prefers-reduced-motion: reduce) {
+  .pdp-toast {
+    animation: none;
+  }
+}
+
+/* Sticky ATC mobile <600px (direction §2.3 buy-sticky): bar bám đáy viewport
+   khi cuộn qua buy-box. 600px = giá trị token --bp-sm (tham chiếu — @media
+   không đọc được var). */
+@media (max-width: 600px) {
+  .pdp-cta-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+    box-shadow: var(--shadow-2);
+    padding: var(--space-2) 0;
+  }
 }
 
 /* Perks row: border-top dashed + icon tròn 30px primary-tint (§2.5) */
@@ -1776,66 +1821,39 @@ img {
   font-size: 14px;
 }
 
-/* Tabs: bar gap 24 + border-bottom 2; active chữ primary + underline 3px.
-   Panels CSS :target — cả 3 panel đều nằm sẵn trong HTML (D16), không JS:
-   mặc định hiện tab-desc; :target đổi pane; :has bắt active tab. */
+/* Tabs (T8b): primitive Tabs (role=tab button + keyboard ←→ roving tabindex)
+   thay nav anchor CSS :target — restyle uk-tab theo ngôn ngữ PDP (gap 24 +
+   border-bottom 2, 15/700, active underline 3px). Panels ẩn/hiện qua hidden
+   attribute (SSR sẵn trong HTML — no-JS: panel đầu hiện, tab switching là
+   enhancement). */
 .pdp-tabs {
   margin-top: var(--space-6);
 }
 
-.pdp-tab-bar {
-  display: flex;
+.pdp-tabs .uk-tabs__list {
   gap: var(--space-5);
   border-bottom: 2px solid var(--c-border);
   margin-bottom: var(--space-4);
 }
 
-.pdp-tab-bar a {
+.pdp-tabs .uk-tab {
   padding: var(--space-3) 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--c-text-muted);
-  text-decoration: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
 }
 
-.pdp-tab-bar a:hover {
+.pdp-tabs .uk-tab:hover:not(:disabled) {
   color: var(--c-link);
 }
 
+.pdp-tabs .uk-tab--active {
+  color: var(--c-link);
+}
+
+/* Panel: anchor target cho deep-link/meta "N đánh giá" — scroll-margin-top
+   để sticky header không che đỉnh khi hash-jump. */
 .pdp-panel {
-  display: none;
-}
-
-.pdp-panel:target {
-  display: block;
-}
-
-/* Không panel nào :target → mặc định hiện Mô tả (tab đầu) */
-.pdp-tabs:not(:has(.pdp-panel:target)) #tab-desc {
-  display: block;
-}
-
-.pdp-tab-bar a[href='#tab-desc'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
-}
-
-.pdp-tabs:has(#tab-info:target) a[href='#tab-desc'],
-.pdp-tabs:has(#tab-reviews:target) a[href='#tab-desc'] {
-  color: var(--c-text-muted);
-  border-bottom-color: transparent;
-}
-
-.pdp-tabs:has(#tab-info:target) a[href='#tab-info'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
-}
-
-.pdp-tabs:has(#tab-reviews:target) a[href='#tab-reviews'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
+  scroll-margin-top: 80px;
 }
 
 .pdp-desc {

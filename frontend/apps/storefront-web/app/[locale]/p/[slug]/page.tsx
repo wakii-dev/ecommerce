@@ -5,11 +5,12 @@ import { notFound } from 'next/navigation';
 import ProductCardView from '../../../../components/ProductCardView';
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import PdpTabs from '../../../../components/pdp/PdpTabs';
 import RecentlyViewedTracker from '../../../../components/pdp/RecentlyViewedTracker';
 import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
 import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
-import { EmptyState, StarRating } from '../../../../components/ui-kit';
+import { EmptyState, Icon, StarRating } from '../../../../components/ui-kit';
 import {
   catalogApi,
   CatalogUnavailableError,
@@ -236,9 +237,11 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
           <h1 className="pdp-name">{product.name}</h1>
           <div className="pdp-meta">
             <StarRating value={product.ratingAvg} size="sm" ariaLabel={`${product.name}: ${product.ratingAvg}/5`} />
-            <span className="pdp-meta-count">
-              ({product.ratingCount} {copy.reviews})
-            </span>
+            {/* T8b (P0-2): count là link anchor #tab-reviews — click → hash →
+                PdpTabs activate panel reviews (e2e review-flow click link này) */}
+            <a className="pdp-meta-count" href="#tab-reviews">
+              {product.ratingCount} {copy.reviews}
+            </a>
             <span className="pdp-meta-sold">
               {copy.sold} {product.ratingCount}
             </span>
@@ -248,16 +251,34 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
 
           <PdpBuyBox product={product} locale={locale} />
 
+          {/* T8b: perk icon tròn 30 nền tint-primary (§2.3) — check = Icon
+              primitive; ship = inline SVG (catalog 24 names không có truck,
+              precedent Header stroke 1.8). Decorative → aria-hidden. */}
           <div className="pdp-perks">
             <span className="pdp-perk">
               <span className="pdp-perk-icon" aria-hidden="true">
-                ✓
+                <Icon name="check" size={16} />
               </span>
               {copy.perkAuth}
             </span>
             <span className="pdp-perk">
               <span className="pdp-perk-icon" aria-hidden="true">
-                🚚
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="1" y="3" width="15" height="13" />
+                  <path d="M16 8h4l3 3v5h-7z" />
+                  <circle cx="5.5" cy="18.5" r="2.5" />
+                  <circle cx="18.5" cy="18.5" r="2.5" />
+                </svg>
               </span>
               {copy.perkShip}
             </span>
@@ -265,19 +286,12 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
         </div>
       </div>
 
-      {/* Tabs CSS :target — cả 3 panel đều nằm sẵn trong HTML (D16), không JS. */}
-      <div className="pdp-tabs">
-        <nav className="pdp-tab-bar" aria-label={copy.tabDesc}>
-          <a href="#tab-desc">{copy.tabDesc}</a>
-          <a href="#tab-info">{copy.tabInfo}</a>
-          <a href="#tab-reviews">{copy.tabReviews}</a>
-        </nav>
-
-        <section id="tab-desc" className="pdp-panel">
-          <p className="pdp-desc">{product.description || product.name}</p>
-        </section>
-
-        <section id="tab-info" className="pdp-panel">
+      {/* Tabs thật (T8b): primitive Tabs keyboard ←→ + hashchange deep-link;
+          panels vẫn SSR sẵn trong HTML, ẩn/hiện qua hidden attribute. */}
+      <PdpTabs
+        labels={{ desc: copy.tabDesc, info: copy.tabInfo, reviews: copy.tabReviews }}
+        desc={<p className="pdp-desc">{product.description || product.name}</p>}
+        info={
           <table className="pdp-spec">
             <tbody>
               <tr>
@@ -300,31 +314,32 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
               </tr>
             </tbody>
           </table>
-        </section>
+        }
+        reviews={
+          <>
+            {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay placeholder reviews SF-4; dead i18n key đã xoá (SF-3) */}
+            <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
+            {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
+            <MyPendingReviewPanel productId={product.id} locale={locale} />
+          </>
+        }
+      />
 
-        <section id="tab-reviews" className="pdp-panel">
-          {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay placeholder reviews SF-4; dead i18n key đã xoá (SF-3) */}
-          <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
-          {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
-          <MyPendingReviewPanel productId={product.id} locale={locale} />
+      {related && related.items.length > 0 ? (
+        <section className="featured" aria-label={copy.related} data-testid="related-products">
+          <div className="featured-head">
+            <div className="featured-head-left">
+              <span className="section-bar" aria-hidden="true" />
+              <h2 className="section-title">{copy.related}</h2>
+            </div>
+          </div>
+          <div className="featured-grid">
+            {related.items.map((item) => (
+              <ProductCardView key={item.id} product={item} locale={locale} />
+            ))}
+          </div>
         </section>
-
-        {related && related.items.length > 0 ? (
-          <section className="featured" aria-label={copy.related} data-testid="related-products">
-            <div className="featured-head">
-              <div className="featured-head-left">
-                <span className="section-bar" aria-hidden="true" />
-                <h2 className="section-title">{copy.related}</h2>
-              </div>
-            </div>
-            <div className="featured-grid">
-              {related.items.map((item) => (
-                <ProductCardView key={item.id} product={item} locale={locale} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

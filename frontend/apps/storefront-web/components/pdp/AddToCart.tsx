@@ -119,7 +119,8 @@ export default function AddToCart({ productId, variantId, slug, locale }: AddToC
     setToastOk(ok);
     setToast(true);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(false), 2500);
+    // §3.2: toast tự đóng 2.2s
+    toastTimer.current = setTimeout(() => setToast(false), 2200);
   }
 
   async function submit(buyNow: boolean): Promise<void> {

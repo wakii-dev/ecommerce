@@ -115,6 +115,119 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PublicCoupon'
+  /api/ordering/admin/coupons:
+    get:
+      tags: [admin, coupons]
+      operationId: listAdminCoupons
+      summary: Danh sach coupon toan bo (admin) — ke ca inactive
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Danh sach coupon (AdminCouponDto).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminCoupon'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/coupons:
+    post:
+      tags: [admin, coupons]
+      operationId: createAdminCoupon
+      summary: Tao coupon moi
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCouponUpsert'
+      responses:
+        '201':
+          description: Coupon da tao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCoupon'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/ordering/admin/coupons/{code}:
+    put:
+      tags: [admin, coupons]
+      operationId: updateAdminCoupon
+      summary: Cap nhat coupon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCouponUpsert'
+      responses:
+        '200':
+          description: Coupon da cap nhat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCoupon'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin, coupons]
+      operationId: deleteAdminCoupon
+      summary: Xoa coupon (chi khi chua co reservation)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Da xoa.
+        '409':
+          description: Coupon da co reservation/used — deactivate thay vi xoa.
+  /api/ordering/admin/coupons/{code}/toggle:
+    post:
+      tags: [admin, coupons]
+      operationId: toggleAdminCoupon
+      summary: Bat/tat coupon (active flip)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trang thai active moi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCoupon'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/ordering/me/orders:
+    get:
+      tags: [orders]
   /api/ordering/me/orders:
     get:
       tags: [orders]
@@ -1118,6 +1231,57 @@ components:
         message:
           type: string
           description: Ly do khi invalid (vd "Don toi thieu 500.000d").
+    AdminCoupon:
+      type: object
+      required: [code, type, value, active, usageLimit, usedCount]
+      properties:
+        code:
+          type: string
+        type:
+          type: string
+          enum: [PERCENT, FIXED]
+        value:
+          type: integer
+          description: PERCENT → %; FIXED → so VND.
+        active:
+          type: boolean
+        usageLimit:
+          type: integer
+          nullable: true
+        usedCount:
+          type: integer
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+    AdminCouponUpsert:
+      type: object
+      required: [code, type, value]
+      properties:
+        code:
+          type: string
+        type:
+          type: string
+          enum: [PERCENT, FIXED]
+        value:
+          type: integer
+        active:
+          type: boolean
+        usageLimit:
+          type: integer
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
     PublicCoupon:
       type: object
       description: Coupon cho coupon center — KHONG lo usage-limit/used-count noi bo.

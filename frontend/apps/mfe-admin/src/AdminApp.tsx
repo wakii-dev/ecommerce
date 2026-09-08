@@ -98,7 +98,12 @@ function AdminShell({ path }: { path: string }): ReactElement {
     void logout()
       .catch(() => undefined)
       .then(clearLocal)
-      .then(() => appNavigate('/login'));
+      .then(() => {
+        // Shell: subscribe applyGuard đã redirect /login?next=... — không
+        // double-nav. Standalone: về loginPath của host (main.tsx set '/'
+        // vì :5177 không có route /login — hardcode cũ là dead-end 404).
+        if (!hasShellNavigate()) appNavigate(authStore.getLoginPath() ?? '/login');
+      });
   };
 
   return (
@@ -190,14 +195,35 @@ export default function AdminApp(): ReactElement {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Guard apply DÙNG CHUNG: boot settle lẫn logout/401 giữa phiên (authStore
+  // subscribe dưới) đều qua đây — logout phải flip layout về guest/forbidden
+  // NGAY, không giữ chrome admin treo (standalone không có route /login để
+  // đón → dead-end "Không tìm thấy trang").
+  const applyGuard = (): void => {
+    const next = resolveGuardState(authStore.isAuthenticated(), authStore.getUser()?.roles ?? []);
+    if (next === 'guest' && hasShellNavigate()) {
+      // Guest trong shell → về login, giữ next để quay lại (UX; LoginPage
+      // hiện tại bỏ qua next — user đăng nhập xong bấm lại /admin).
+      appNavigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+    setState(next);
+  };
+
   // Guard boot: token in-memory còn → dùng ngay; không → refresh-on-boot 1 lần
   // (idempotent với boot của mfe-account trong shell; standalone tự đứng được).
   useEffect(() => {
     let alive = true;
+    // KHÔNG set loginPath ở đây — config của host phải thắng (configureAuth
+    // là merge): bootstrap.tsx shell '/login', main.tsx standalone '/'.
     configureAuth({
       refreshUrl: '/api/identity/auth/refresh',
-      identityBaseUrl: '',
-      loginPath: '/login'
+      identityBaseUrl: ''
+    });
+    // Giữa phiên: logout/expire (notify) → re-eval guard. Bỏ qua khi boot
+    // đang chạy (bootAuth non-null) — boot.then apply 1 lần khi settle.
+    const unsubscribe = authStore.subscribe(() => {
+      if (alive && !bootAuth) applyGuard();
     });
     const boot: Promise<boolean> = bootAuthenticate();
     void boot
@@ -214,6 +240,7 @@ export default function AdminApp(): ReactElement {
       });
     return () => {
       alive = false;
+      unsubscribe();
     };
   }, []);
 

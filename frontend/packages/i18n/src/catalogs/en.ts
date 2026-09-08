@@ -137,7 +137,10 @@ export const en = {
       image: 'Image',
       date: 'Date',
       from: 'From date',
-      to: 'To date'
+      to: 'To date',
+      // SF-5 (FI-395) append
+      pageSize: 'Rows',
+      sortLabel: 'Sort'
     },
     guard: {
       checking: 'Checking permissions...',

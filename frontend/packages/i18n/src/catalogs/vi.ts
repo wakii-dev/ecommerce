@@ -138,7 +138,10 @@ export const vi = {
       image: 'Ảnh',
       date: 'Ngày',
       from: 'Từ ngày',
-      to: 'Đến ngày'
+      to: 'Đến ngày',
+      // SF-5 (FI-395) append
+      pageSize: 'Số dòng',
+      sortLabel: 'Sắp xếp'
     },
     guard: {
       checking: 'Đang kiểm tra quyền...',

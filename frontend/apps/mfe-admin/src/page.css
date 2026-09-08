@@ -512,3 +512,128 @@
     display: none;
   }
 }
+
+/* ── DataTable: sticky/sort/hover + page-size (SF-5 FI-395) ──────────── */
+.admin-table-block {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  overflow: auto;
+  max-height: none;
+}
+
+.admin-table {
+  width: 100%;
+}
+
+/* Direction §2.5: thead sticky top 0, nền surface, shadow 0 1px 0 border;
+   th 11/700 uppercase tracking .08em muted */
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--c-surface);
+  box-shadow: 0 1px 0 var(--c-border);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+/* Nút sort trong th — reset button, kế thừa typography th */
+.admin-th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.admin-th-sort:hover {
+  color: var(--c-link);
+}
+
+/* Mũi tên 9px — none muted, asc/desc primary (desc xoay 180) */
+.admin-th-sort__arrow {
+  font-size: 9px;
+  display: inline-block;
+  transition: transform var(--dur-fast) var(--ease-pop),
+    color var(--dur-fast) var(--ease-pop);
+}
+
+.admin-th-sort__arrow--none {
+  color: var(--c-text-muted);
+}
+
+.admin-th-sort__arrow--asc {
+  color: var(--c-primary);
+}
+
+.admin-th-sort__arrow--desc {
+  color: var(--c-primary);
+  transform: rotate(180deg);
+}
+
+/* Align center — ui-kit chỉ có uk-table__right; center admin-local */
+.admin-table th.admin-table__center,
+.admin-table td.admin-table__center {
+  text-align: center;
+}
+
+/* Direction §2.5: row hover nền --wash-hover chuyển --dur-fast */
+.admin-table tbody td {
+  transition: background var(--dur-fast) var(--ease-pop);
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--wash-hover);
+}
+
+/* ── Page-size selector — direction §2.5: nhóm nút padding 5×11,
+   active nền primary chữ trắng (pattern uk-btn--primary) ────────────── */
+.admin-pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-pagesize__label {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.admin-pagesize__btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 11px;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-pop),
+    color var(--dur-fast) var(--ease-pop);
+}
+
+.admin-pagesize__btn:hover {
+  background: var(--wash-hover);
+}
+
+.admin-pagesize__btn--active,
+.admin-pagesize__btn--active:hover {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: var(--c-surface);
+  font-weight: 700;
+}

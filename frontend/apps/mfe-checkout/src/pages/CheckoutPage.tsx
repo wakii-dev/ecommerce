@@ -62,7 +62,8 @@ const EMPTY_ADDRESS: Address = {
 // catalog `checkout.step1.<name>.error` lúc render — component giữ i18n).
 const FIELD_NAMES = ['fullName', 'phone', 'line1', 'ward', 'district', 'city'] as const;
 
-function fieldInvalid(name: keyof Address, value: string): boolean {
+// FI-393 review-G3 — export để unit-test được (pure, không đụng React).
+export function fieldInvalid(name: keyof Address, value: string): boolean {
   switch (name) {
     case 'fullName':
       return value.trim().length < 2;
@@ -447,7 +448,7 @@ export default function CheckoutPage(): ReactElement {
         onStepClick={(i) => {
           if (i + 1 < step) setStep((i + 1) as 1 | 2 | 3);
         }}
-        label={t('checkout.title')}
+        label={t('checkout.stepper.label')}
       />
 
       <div className="checkout-grid">
@@ -584,6 +585,11 @@ export default function CheckoutPage(): ReactElement {
                         setUsePoints(Math.max(0, Math.min(maxPoints, Math.trunc(value))));
                       }}
                     />
+                    {/* FI-393 review-G3 — label ngắn T7 đã bỏ số dư → hiện lại
+                        balance dưới input points (display-only). */}
+                    <div className="summary-note">
+                      {t('checkout.points.balance', { points: pointsBalance.toLocaleString('vi-VN') })}
+                    </div>
                     {effectivePoints > 0 && (
                       <div className="coupon-applied">
                         <span>

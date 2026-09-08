@@ -24,6 +24,7 @@ export const vi = {
   checkout: {
     title: 'Thanh toán',
     stepper: {
+      label: 'Các bước thanh toán',
       address: 'Địa chỉ',
       shipping: 'Vận chuyển',
       payment: 'Thanh toán'
@@ -83,6 +84,7 @@ export const vi = {
     points: {
       title: 'Điểm thưởng',
       label: 'Dùng điểm (tối đa {{max}} ≈ {{value}})',
+      balance: 'Bạn có {{points}} điểm',
       use: 'Dùng {{points}} điểm — giảm {{amount}}',
       remove: 'Gỡ',
       none: 'Bạn có 0 điểm — mua hàng CONFIRMED sẽ nhận 1% điểm.',

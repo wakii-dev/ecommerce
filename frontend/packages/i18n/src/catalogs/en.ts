@@ -23,6 +23,7 @@ export const en = {
   checkout: {
     title: 'Checkout',
     stepper: {
+      label: 'Checkout steps',
       address: 'Address',
       shipping: 'Shipping',
       payment: 'Payment'
@@ -82,6 +83,7 @@ export const en = {
     points: {
       title: 'Loyalty points',
       label: 'Use points (max {{max}} ≈ {{value}})',
+      balance: 'You have {{points}} points',
       use: 'Use {{points}} points — save {{amount}}',
       remove: 'Remove',
       none: 'You have 0 points — CONFIRMED orders earn 1% points.',

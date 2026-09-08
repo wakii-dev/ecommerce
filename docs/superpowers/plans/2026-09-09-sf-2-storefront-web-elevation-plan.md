@@ -197,11 +197,11 @@ Mọi task: làm trong worktree hiện tại, commit ngay sau khi xong (`<type>(
 
 **Files:** `components/home/HeroCarousel.tsx`, css hero + keyframes kb (app.css).
 
-- [ ] **Step 1:** Anatomy §2.2.1: cao 380px `--radius-lg` `--shadow-2`; slide padding ngang 8%; kicker 13/700 tracking .3em uppercase; h2 44/800 lh 1.12; ribbon -8deg top 26 right 8%; arrows tròn 38px nền trắng .92; dots 9px (active 22px bo 6px); track translateX `--dur-carousel` ease.
-- [ ] **Step 2:** Ken-burns: lớp con inset -4%, scale 1→1.09, `--dur-kb` ease-in-out alternate (keyframes surface trong app.css, gate reduced-motion); chỉ hero (§5.5).
-- [ ] **Step 3:** A11y autoplay: auto-rotate 6000ms (direction §6: 6s đề xuất); pause on hover/focus của section (clear interval); nút pause/play (button thật aria-label vi/en + aria-pressed) luôn hiển thị khi autoplay; reduced-motion (`matchMedia`) → KHÔNG auto-rotate (chỉ bấm arrows/dots) + kb tắt (css global reduced-motion đã có từ SF-1 — kb keyframes bị .01ms là đủ, nhưng auto-rotate phải chặn bằng JS).
-- [ ] **Step 4:** Giữ SLIDES copy vi/en (i18n consolidate T12 sẽ gom).
-- [ ] **Step 5:** vitest + lint xanh → commit `feat(storefront): hero ken-burns + pause a11y + anatomy direction §2.2.1 (FI-392)`.
+- [x] **Step 1:** Anatomy §2.2.1: cao 380px `--radius-lg` `--shadow-2`; slide padding ngang 8%; kicker 13/700 tracking .3em uppercase; h2 44/800 lh 1.12; ribbon -8deg top 26 right 8%; arrows tròn 38px nền trắng .92; dots 9px (active 22px bo 6px); track translateX `--dur-carousel` ease.
+- [x] **Step 2:** Ken-burns: lớp con inset -4%, scale 1→1.09, `--dur-kb` ease-in-out alternate (keyframes surface trong app.css, gate reduced-motion); chỉ hero (§5.5).
+- [x] **Step 3:** A11y autoplay: auto-rotate 6000ms (direction §6: 6s đề xuất); pause on hover/focus của section (clear interval); nút pause/play (button thật aria-label vi/en + aria-pressed) luôn hiển thị khi autoplay; reduced-motion (`matchMedia`) → KHÔNG auto-rotate (chỉ bấm arrows/dots) + kb tắt (css global reduced-motion đã có từ SF-1 — kb keyframes bị .01ms là đủ, nhưng auto-rotate phải chặn bằng JS).
+- [x] **Step 4:** Giữ SLIDES copy vi/en (i18n consolidate T12 sẽ gom).
+- [x] **Step 5:** vitest + lint xanh → commit `feat(storefront): hero ken-burns + pause a11y + anatomy direction §2.2.1 (FI-392)`.
 
 ### Task 5: home-sections-flash-category-featured-scroll-reveal (nhóm B)
 

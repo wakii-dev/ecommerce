@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductCardView from '../../components/ProductCardView';
+import Reveal from '../../components/Reveal';
 import CategoryTiles from '../../components/home/CategoryTiles';
 import FlashDealSection from '../../components/home/FlashDealSection';
 import HeroCarousel from '../../components/home/HeroCarousel';
@@ -71,16 +72,27 @@ export default async function HomePage({ params }: { params: { locale: string } 
     <div className="container home">
       <HeroCarousel locale={locale} />
 
-      {flash.length > 0 ? <FlashDealSection items={flash} locale={locale} /> : null}
+      {/* Scroll-reveal CHỈ home (§5.5) — Reveal wrapper client, SSR/no-JS/reduced-motion
+          → content hiện sẵn. Featured stagger 70ms×index cap 5 card đầu (§3.2); grid
+          còn lại dưới fold → delay 0. */}
+      {flash.length > 0 ? (
+        <Reveal>
+          <FlashDealSection items={flash} locale={locale} />
+        </Reveal>
+      ) : null}
 
-      {categories.length > 0 ? <CategoryTiles categories={categories} locale={locale} /> : null}
+      {categories.length > 0 ? (
+        <Reveal>
+          <CategoryTiles categories={categories} locale={locale} />
+        </Reveal>
+      ) : null}
 
       {featured.length > 0 ? (
         <section className="featured" aria-label="Gợi ý hôm nay">
-          <div className="featured-head">
+          <Reveal className="featured-head">
             <div className="featured-head-left">
               <span className="section-bar" aria-hidden="true" />
-              <h2 className="section-title">{locale === 'en' ? 'Picked for today' : 'Gợi ý hôm nay'}</h2>
+              <h3 className="section-title">{locale === 'en' ? 'Picked for today' : 'Gợi ý hôm nay'}</h3>
             </div>
             {/* E7d: "Xem thêm" → PLP danh mục gốc đầu theo sort=discount (đúng
                 ngôn ngữ "gợi ý giảm giá"; route thật, slug từ API categories). */}
@@ -90,13 +102,15 @@ export default async function HomePage({ params }: { params: { locale: string } 
                 href={localePath(`/c/${categories[0]?.slug}?sort=discount`, locale)}
                 prefetch={false}
               >
-                {locale === 'en' ? 'See more' : 'Xem thêm'}
+                {locale === 'en' ? 'See more ›' : 'Xem thêm ›'}
               </Link>
             ) : null}
-          </div>
+          </Reveal>
           <div className="featured-grid">
-            {featured.map((product) => (
-              <ProductCardView key={product.id} product={product} locale={locale} />
+            {featured.map((product, index) => (
+              <Reveal key={product.id} className="featured-cell" delayMs={index < 5 ? index * 70 : 0}>
+                <ProductCardView product={product} locale={locale} />
+              </Reveal>
             ))}
           </div>
         </section>

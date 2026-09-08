@@ -11,6 +11,10 @@ import { localePath, type Locale } from '../../lib/format';
  *
  * Public CategoryDto KHÔNG có icon (seed backend có nhưng không expose) →
  * emoji map theo slug gốc (khớp icon seed), thiếu → cycle theo vị trí.
+ *
+ * Honesty: count 11px muted (§2.2.3) KHÔNG render — Category DTO (catalogSchema
+ * "Category": id, slug, slugEn, name, parentId, children) không có
+ * `productCount` → không bịa số.
  */
 
 const EMOJI_BY_SLUG: ReadonlyArray<readonly [RegExp, string]> = [

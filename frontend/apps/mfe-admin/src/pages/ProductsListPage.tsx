@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Input, Modal, Pagination, Select, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, EmptyState, Input, Modal, Pagination, Select, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
 import { DataTable } from '../components/DataTable';
@@ -224,7 +224,7 @@ export default function ProductsListPage(): ReactElement {
           columns={columns}
           rows={rows}
           rowKey={(row) => row.id}
-          empty={t('admin.products.empty')}
+          empty={<EmptyState title={t('admin.products.empty')} />}
           caption={`${t('admin.common.total', { count: total })} — ${t('admin.common.pageOf', {
             page,
             total: totalPages

@@ -182,7 +182,7 @@
 .admin-form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-4, 16px);
+  gap: var(--space-5, 24px); /* T6: thoáng hơn space-4 cho form dài */
 }
 
 .admin-form-grid .admin-form-field--full {
@@ -252,9 +252,46 @@
   display: grid;
   grid-template-columns: 1.2fr 1.2fr 1.4fr 0.8fr 0.8fr auto;
   gap: var(--space-2, 8px);
-  align-items: end;
-  padding-block: var(--space-2, 8px);
+  align-items: center; /* T6: hàng thấp — căn giữa thay vì đáy */
+  padding-block: var(--space-3, 12px); /* T6: ranh giới hàng rõ hơn */
   border-bottom: 1px dashed var(--c-border, #e5e7eb);
+}
+
+/* Tránh viền đôi: hàng cuối kề ngay nút "+ Thêm" — bỏ gạch dashed cuối */
+.admin-variant-row:last-child {
+  border-bottom: none;
+}
+
+/* ── Upload dropzone (product form — images tab) — VISUAL ONLY: cùng input
+   file ẩn + cùng click flow + cùng testid 'upload-image' (FI-395 T6) ── */
+.admin-upload-dropzone {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-4, 16px) var(--space-5, 24px);
+  border: 1.5px dashed var(--tint-primary-border, #fbc8c2);
+  border-radius: var(--radius-md, 4px);
+  background: transparent;
+  color: var(--c-text-muted, #757575);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.admin-upload-dropzone:hover:not(:disabled) {
+  background: var(--tint-primary-bg, #fff1f0);
+  color: var(--c-text, #212121);
+}
+
+.admin-upload-dropzone:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 /* ── Order detail ────────────────────────────────────────────────────── */

@@ -1,6 +1,6 @@
 # Phase 7 — No-Fallback & Feature-Complete — Epic Spec (Story Design)
 
-> Date: 2026-09-08 · Status: DRAFT (spec-critic pending) · Repo: `/Users/hoivu/orca/projects/ecommerce` · Base: master (GA v1.1) · Predecessor: FI-366 (PR #8 chờ merge — story này base trên master, merge PR #8 trước khi SF code chạm frontend)
+> Date: 2026-09-08 · Status: REVISED (spec-critic FIX-P0 applied) · Repo: `/Users/hoivu/orca/projects/ecommerce` · Base: master GA v1.1 (PR #8 FI-366 ĐÃ merged 21:03 — premise stale sửa)
 
 ---
 
@@ -68,7 +68,7 @@
 1. Header links (Header.tsx:74-76) → routes thật (probe PLP sort params `new`/`popular` tồn tại trước)
 2. CategoryTiles "more" + home "Xem thêm" (page.tsx:85) → PLP/category route thật
 3. Footer (Footer.tsx:34) — trim về routes có thật (N5)
-4. `AddToCart.tsx:36,45` toastFail "Cart is coming soon" → lỗi thật ("Không thêm được vào giỏ — thử lại"); **verify method: unit test error state + E2E route.abort assert toast** (SF-1 T15 
+4. `AddToCart.tsx:36,45` toastFail "Cart is coming soon" → lỗi thật ("Không thêm được vào giỏ — thử lại"); **verify method: unit test error state + E2E route.abort assert toast**
 5. Xoá dead i18n `reviewsSoon` (p/[slug]/page.tsx:51,69) — grep test tham chiếu trước
 6. Tách `canShip/canDeliver/canCancel` + test → `lib/orderRules.ts`; **`tests/stub.test.ts` SPLIT**: phần order-rules giữ thành `orderRules.test.ts`, phần mock-API test XOÁ; xoá `createStubApi`+seed khỏi `adminStub.ts`; xoá file rỗng
 7. Rename `Stub*` types (`lib/types.ts` + Dashboard/Orders/OrderDetail/Reviews pages — **CouponsPage KHÔNG dùng Stub, dùng PublicCoupon generated**; thêm `lib/api.ts` stub re-exports) — mechanical 1 commit

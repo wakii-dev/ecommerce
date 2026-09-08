@@ -11,6 +11,7 @@ import com.ecommerce.ordering.domain.CouponType;
 import com.ecommerce.ordering.repo.CouponRepository;
 import com.ecommerce.ordering.repo.CouponReservationRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Sort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -120,7 +121,12 @@ public class CouponService {
             });
     }
 
-    // ── Admin CRUD (FI-366 SF-1 T11 — spec §4.10; contracts A2 pending) ─────
+    // ── Admin CRUD (FI-366 SF-1 T11 — spec §4.10; contracts A3, FI-371) ─────
+
+    /** GET list admin — TẤT CẢ coupon (cả inactive/hết hạn), sort code. Khác public list (chỉ running, không lộ usage). */
+    public List<Coupon> adminList() {
+        return coupons.findAll(Sort.by(Sort.Direction.ASC, "code"));
+    }
 
     /** Tạo — code trùng → 409 (controller map). Validation chung {@link #validateAdmin}. */
     public Coupon adminCreate(AdminCouponRequest req) {
@@ -150,14 +156,36 @@ public class CouponService {
         return coupons.save(coupon);
     }
 
-    /** Xóa — mã đang có reservation RESERVED thì chặn (usage đã hứa cho đơn). */
+    /**
+     * Xóa (N4 — "DELETE cứng chỉ khi chưa reservation"): đang RESERVED → 409
+     * (usage đã hứa cho đơn in-flight); có lịch sử RELEASED/FINALIZED → 409
+     * (row reservation là audit + FK giữ code — dùng toggle off thay vì xóa);
+     * chưa từng có reservation → xóa được.
+     */
     public void adminDelete(String code) {
         Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
             .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
         if (reservations.countReservedForCoupon(coupon.getCode()) > 0) {
             throw new IllegalStateException("Mã đang có lượt dùng đang giữ (RESERVED) — không xóa được");
         }
+        if (reservations.countByCouponCode(coupon.getCode()) > 0) {
+            throw new IllegalStateException(
+                "Mã đã có lịch sử sử dụng — tắt mã (toggle off) thay vì xóa cứng");
+        }
         coupons.delete(coupon);
+    }
+
+    /**
+     * Toggle active (FI-369 SF-2 A3). N4: off giữa chừng → đơn in-flight đang
+     * RESERVED vẫn được finalize (finalize/release không check active), chỉ mã
+     * MỚI bị từ chối (validate/reserve qua {@code isRunning}). KHÔNG dùng
+     * delete+recreate — mất usedCount + vỡ reservation theo code.
+     */
+    public Coupon adminSetActive(String code, boolean active) {
+        Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
+            .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
+        coupon.setActive(active);
+        return coupons.save(coupon);
     }
 
     /**

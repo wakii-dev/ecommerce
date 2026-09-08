@@ -34,9 +34,9 @@ public final class CouponDtos {
 
     /**
      * Admin CRUD (FI-366 SF-1 T11 — spec §4.10 shape: %, fixed, window, usage
-     * limit). Contract contracts/openapi/ordering.yaml amendment A2 PENDING
-     * (REQUIREMENT-GAP trên FI-366 — coordinator apply); shape đóng băng theo
-     * spec epic, reconcile khi A2 land.
+     * limit). Contract contracts/openapi/ordering.yaml amendment A3 (FI-371 —
+     * proposal theo baseline shape này, coordinator apply); endpoint thiếu so
+     * với A3 = GET list + toggle — SF-2 bổ sung trong khi chờ regen.
      */
     public record AdminCouponRequest(
         String code,
@@ -63,5 +63,9 @@ public final class CouponDtos {
         boolean active,
         String description
     ) {
+    }
+
+    /** Body PUT /admin/coupons/{code}/active (FI-369 SF-2 A3 — toggle N4). */
+    public record AdminCouponActiveRequest(boolean active) {
     }
 }

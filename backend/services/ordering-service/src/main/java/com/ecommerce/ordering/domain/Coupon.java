@@ -139,6 +139,15 @@ public class Coupon {
     }
 
     /**
+     * Toggle admin (FI-369 SF-2 A3) — bật/tắt mà không đụng policy fields.
+     * N4: off → mã MỚI bị từ chối ({@code isRunning}); reservation in-flight
+     * đã RESERVED vẫn honor (finalize/release không check active).
+     */
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    /**
      * Admin update (FI-366 SF-1 T11 — spec §4.10 shape): thay giá trị chính sách,
      * GIỮ nguyên {@code usedCount} (usage đã reserve không mất khi sửa limit/hạn)
      * + gắn cờ active theo request. Không đổi code (PK).

@@ -21,7 +21,7 @@ const mfeConfig = defineMfeConfig({
   }
 });
 
-const devPort = Number(process.env.DEV_PORT ?? 5175);
+const devPort = Number(process.env.DEV_PORT) > 0 ? Number(process.env.DEV_PORT) : 5175;
 
 export default defineConfig({
   base: '/remotes/checkout/',

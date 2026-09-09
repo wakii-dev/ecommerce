@@ -23,7 +23,7 @@ const spaFallback = {
             req.method === 'GET' &&
             !req.url?.includes('.') &&
             !req.url?.startsWith('/@') &&
-            !req.url?.startsWith('/remotes')
+            !req.url?.startsWith('/remotes/')
           ) {
             req.url = '/';
           }
@@ -40,7 +40,7 @@ const spaFallback = {
 // → default absolute port. `REMOTE_<NAME>_PORT` override port target cho
 // rig/debug khi remote chạy port lệch chuẩn mà muốn giữ entry relative.
 const remoteEntry = (raw: string | undefined, name: string): string =>
-  `${raw ?? `/remotes/${name}`}/remoteEntry.js`;
+  `${raw && raw.trim() ? raw.replace(/\/$/, '') : `/remotes/${name}`}/remoteEntry.js`;
 const absTarget = (raw: string | undefined, name: string, port: number): string => {
   if (raw && /^https?:\/\//.test(raw)) return raw.replace(/\/$/, '');
   const override = process.env[`REMOTE_${name.toUpperCase()}_PORT`];
@@ -92,7 +92,7 @@ const mfeConfig = defineMfeConfig({
   }
 });
 
-const devPort = Number(process.env.DEV_PORT ?? 5173);
+const devPort = Number(process.env.DEV_PORT) > 0 ? Number(process.env.DEV_PORT) : 5173;
 
 export default defineConfig({
   ...spaFallback,

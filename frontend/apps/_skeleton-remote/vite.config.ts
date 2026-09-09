@@ -13,7 +13,7 @@ const mfeConfig = defineMfeConfig({
   }
 });
 
-const devPort = Number(process.env.DEV_PORT ?? 5178);
+const devPort = Number(process.env.DEV_PORT) > 0 ? Number(process.env.DEV_PORT) : 5178;
 
 export default defineConfig({
   base: '/remotes/skeleton/',

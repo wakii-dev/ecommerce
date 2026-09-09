@@ -32,7 +32,7 @@ const mfeConfig = defineMfeConfig({
   }
 });
 
-const devPort = Number(process.env.DEV_PORT ?? 5176);
+const devPort = Number(process.env.DEV_PORT) > 0 ? Number(process.env.DEV_PORT) : 5176;
 
 export default defineConfig({
   base: '/remotes/account/',

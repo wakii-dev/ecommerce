@@ -14,7 +14,6 @@ mkdirSync(OUT, { recursive: true });
 
 const steps = [];
 const step = async (name, fn) => {
-  const url0 = null;
   try {
     await fn();
     steps.push({ name, ok: true });

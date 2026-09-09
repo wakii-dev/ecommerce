@@ -49,7 +49,7 @@ docker run -d --name fi397sf5-stripe-cli --network fi397sf5-net \
   --forward-to fi397sf2-payment-service:8086/payment/webhook
 ```
 
-- whsec của cli isolate = **whsec_f26132e7… ≡ .env** (Stripe CLI tái dùng webhook endpoint theo API key) → payment container (env từ .env) verify signature OK, KHÔNG cần override env.
+- whsec của cli isolate = **whsec_*** ≡ .env** (Stripe CLI tái dùng webhook endpoint theo API key) → payment container (env từ .env) verify signature OK, KHÔNG cần override env.
 - **Smoke PASS**: `stripe trigger payment_intent.succeeded` → cli log `[200] POST …/payment/webhook` ×4 events; payment log ack no-op đúng (synthetic intent không có order local — "không 500, Stripe retry vô ích").
 
 ## 5. Teardown

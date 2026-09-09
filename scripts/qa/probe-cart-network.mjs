@@ -8,7 +8,8 @@ const ENTRY = process.env.RIG_ENTRY || 'http://localhost:3400';
 mkdirSync('.run', { recursive: true });
 
 const browser = await chromium.launch({
-  executablePath: '/Users/hoivu/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+  executablePath: process.env.PW_EXEC
+    || '/Users/hoivu/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell'
 });
 const page = await (await browser.newContext()).newPage();
 const reqs = [];

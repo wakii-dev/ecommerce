@@ -1,0 +1,176 @@
+/* Shell header 2 hàng (FI-393 T2) — anatomy direction §2.1 (FI-390 hướng B
+   "Chợ Sôi Động 2.0"). Tokens-only: MỌI màu qua var(--*) — cấm hex trực tiếp
+   (direction §5.2); motion qua --dur-*/--ease-*; spacing/radius qua tokens
+   (fallback px chỉ phòng var undefined). */
+
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 100);
+  background: var(--c-bg);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Hàng 1: logo | search | actions ─────────────────────────────────── */
+
+.shell-header__row1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5, 24px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+}
+
+/* Slot 'center' không grow (Slot div inline-style chỉ flex inline) — search
+   chiếm giữa nhờ rule này (critic-P2: registry contract không đổi). */
+.shell-header__row1 [data-slot='center'] {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* Logo wordmark — 26px/800 primary + chấm đỏ 9px (direction §2.1). */
+.shell-logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  text-decoration: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.shell-logo:hover {
+  opacity: 0.85;
+}
+
+.shell-logo strong {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--c-primary);
+}
+
+.shell-logo::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--c-primary);
+}
+
+/* Search — viền 2px primary luôn sẵn, focus-within ring tint + shadow-2. */
+.shell-search {
+  display: flex;
+  flex: 1 1 auto;
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--c-surface);
+  border: 2px solid var(--c-primary);
+  border-radius: var(--radius-sm, 2px);
+  overflow: hidden;
+  transition: box-shadow var(--dur-base) var(--ease-out);
+}
+
+.shell-search:focus-within {
+  box-shadow: 0 0 0 4px var(--tint-primary-bg), var(--shadow-2);
+}
+
+.shell-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px var(--space-3, 12px);
+  font-size: var(--text-md, 14px);
+  color: var(--c-text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.shell-search input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.shell-search button {
+  padding: 0 22px;
+  font-weight: 700;
+  font-size: var(--text-md, 14px);
+  color: var(--c-surface);
+  background: var(--c-primary);
+  border: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.shell-search button:hover {
+  background: var(--c-primary-hover);
+}
+
+/* Icon-btn 42×42 (direction §2.1 actions) — áp CHỈ qua class .shell-icon-btn
+   (conservative: AuthWidget inline-styled từ mfe-account KHÔNG đụng). */
+.shell-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--c-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 4px);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.shell-icon-btn:hover {
+  color: var(--c-link);
+  background: var(--wash-hover);
+}
+
+/* Nhãn ẩn cho icon-only button (theme.dark/light) — visible cho SR. */
+.shell-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Hàng 2: mini-nav nền primary (direction §2.1) ───────────────────── */
+
+.shell-header__row2 {
+  background: var(--c-primary);
+}
+
+.shell-mininav__inner {
+  display: flex;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--space-4, 16px);
+  overflow-x: auto;
+}
+
+.shell-mininav__inner a {
+  padding: var(--space-2, 8px) 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-surface);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.shell-mininav__inner a:hover {
+  background: var(--c-primary-hover);
+}
+
+/* Mục hot ("Hàng mới", "Bán chạy") màu accent (direction §2.1). */
+.shell-mininav__inner a.accent {
+  color: var(--c-accent);
+}

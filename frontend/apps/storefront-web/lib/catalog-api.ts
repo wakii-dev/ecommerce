@@ -94,13 +94,13 @@ export function catalogApi(locale: Locale): CatalogApi {
 
 // ── Presentation helpers (plan Task 10 lib bullet) ──────────────────────────
 
-/** Gradient placeholder theo danh mục — map §1.8 (biến CSS định nghĩa ở app.css). */
+/** Gradient placeholder theo danh mục — map §1.8 (token `--grad-cat-*` trong ui-kit tokens.css). */
 const GRADIENT_BY_CATEGORY: ReadonlyArray<readonly [RegExp, string]> = [
-  [/(dien-tu|electronics)/, 'var(--grad-electronics)'],
-  [/(thoi-trang|fashion)/, 'var(--grad-fashion)'],
-  [/(nha-cua|home)/, 'var(--grad-home)'],
-  [/(sach|books?)/, 'var(--grad-books)'],
-  [/(lam-dep|beauty)/, 'var(--grad-beauty)'],
+  [/(dien-tu|electronics)/, 'var(--grad-cat-dientu)'],
+  [/(thoi-trang|fashion)/, 'var(--grad-cat-thoitrang)'],
+  [/(nha-cua|home)/, 'var(--grad-cat-nhacua)'],
+  [/(sach|books?)/, 'var(--grad-cat-sach)'],
+  [/(lam-dep|beauty)/, 'var(--grad-cat-lamdep)'],
 ];
 
 export function categoryGradient(slug: string): string {
@@ -108,7 +108,7 @@ export function categoryGradient(slug: string): string {
   for (const [pattern, gradient] of GRADIENT_BY_CATEGORY) {
     if (pattern.test(normalized)) return gradient;
   }
-  return 'var(--grad-electronics)';
+  return 'var(--grad-cat-dientu)';
 }
 
 /** Emoji placeholder đi kèm gradient khi ảnh rỗng (direction §2.5 gallery). */

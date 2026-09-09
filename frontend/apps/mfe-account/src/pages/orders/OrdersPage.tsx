@@ -1,27 +1,33 @@
-// pages/orders/OrdersPage.tsx — my-orders list (SF-9 file-slice).
-// Đơn thật từ ordering qua gateway: status badge màu theo trạng thái, ngày
-// vi-VN, total VND, empty state + CTA về trang chủ.
+// pages/orders/OrdersPage.tsx — my-orders list (SF-9 file-slice; SF-4 FI-394 T5 polish).
+// Đơn thật từ ordering qua gateway: pill trạng thái 6 màu đúng token --pill-*
+// (direction §2.5: 11/800 ls .05 padding 3×9 full), ngày vi-VN, total VND,
+// ListSkeleton khi tải, empty/error EmptyState icon thay emoji.
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Badge, Button, Card, EmptyState } from '@ecommerce/ui-kit';
+import { Button, Card, EmptyState, Icon, ListSkeleton } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { authStore } from '@ecommerce/auth';
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import { fetchMyOrders, type OrderStatus, type OrderSummary } from './ordersApi';
 
-/** Badge màu theo trạng thái — bảng màu khớp ngữ nghĩa (xanh=tiến triển tốt). */
-const STATUS_META: Record<OrderStatus, { label: string; variant: 'primary' | 'success' | 'warning' | 'danger' | 'neutral' }> = {
-  PENDING: { label: 'Chờ thanh toán', variant: 'warning' },
-  PAID: { label: 'Đã thanh toán', variant: 'primary' },
-  CONFIRMED: { label: 'Đã xác nhận', variant: 'success' },
-  SHIPPED: { label: 'Đang giao', variant: 'primary' },
-  DELIVERED: { label: 'Đã giao', variant: 'success' },
-  CANCELLED: { label: 'Đã hủy', variant: 'neutral' },
-  FAILED: { label: 'Thất bại', variant: 'danger' }
+/** Slug pill theo trạng thái — FAILED family cancelled (đỏ) qua class .pill--failed. */
+const STATUS_SLUG: Record<OrderStatus, string> = {
+  PENDING: 'pending',
+  PAID: 'paid',
+  CONFIRMED: 'confirmed',
+  SHIPPED: 'shipped',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled',
+  FAILED: 'failed'
 };
 
+/** Pill trạng thái — màu qua var(--pill-<slug>-*) (page.css), label qua i18n.
+ *  Export GIỮ (OrderDetailPage import); useT an toàn vì đây là React component. */
 export function StatusBadge({ status }: { status: OrderStatus }): ReactElement {
-  const meta = STATUS_META[status] ?? { label: status, variant: 'neutral' as const };
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+  const { t } = useT();
+  const slug = STATUS_SLUG[status] ?? 'cancelled';
+  return <span className={`pill pill--${slug}`}>{t(`account.order.status.${slug}`)}</span>;
 }
 
 export function formatVnd(amount: number): string {
@@ -35,7 +41,8 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-export default function OrdersPage(): ReactElement {
+function OrdersPageContent(): ReactElement {
+  const { t } = useT();
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,21 +57,22 @@ export default function OrdersPage(): ReactElement {
       }
       fetchMyOrders()
         .then((page) => alive && setOrders(page.items))
-        .catch((err: unknown) => alive && setError(err instanceof Error ? err.message : 'Có lỗi xảy ra'));
+        .catch((err: unknown) => alive && setError(err instanceof Error ? err.message : t('account.order.errorGeneric')));
     });
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (error) {
     return (
       <Card>
         <EmptyState
-          icon="⚠️"
-          title="Không tải được đơn hàng"
+          icon={<Icon name="alert" size={40} />}
+          title={t('account.orders.errorTitle')}
           description={error}
-          action={<Button onClick={() => window.location.reload()}>Thử lại</Button>}
+          action={<Button onClick={() => window.location.reload()}>{t('account.orders.retry')}</Button>}
         />
       </Card>
     );
@@ -73,7 +81,9 @@ export default function OrdersPage(): ReactElement {
   if (orders === null) {
     return (
       <Card>
-        <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>Đang tải đơn hàng…</p>
+        <div role="status" aria-label={t('account.orders.loading')}>
+          <ListSkeleton count={4} />
+        </div>
       </Card>
     );
   }
@@ -82,10 +92,10 @@ export default function OrdersPage(): ReactElement {
     return (
       <Card>
         <EmptyState
-          icon="🛍️"
-          title="Bạn chưa có đơn hàng nào"
-          description="Khám phá hàng ngàn sản phẩm đang khuyến mãi hot."
-          action={<Button onClick={() => appNavigate('/')}>Tiếp tục mua sắm</Button>}
+          icon={<Icon name="package" size={40} />}
+          title={t('account.orders.emptyTitle')}
+          description={t('account.orders.emptyDesc')}
+          action={<Button onClick={() => appNavigate('/')}>{t('account.orders.emptyCta')}</Button>}
         />
       </Card>
     );
@@ -93,33 +103,33 @@ export default function OrdersPage(): ReactElement {
 
   return (
     <div data-testid="orders-page">
-      <h1 style={{ marginTop: 0 }}>Đơn hàng của tôi</h1>
-      <div style={{ display: 'grid', gap: 'var(--space-3, 12px)' }}>
+      <h1 className="acc-page-title">{t('account.orders.title')}</h1>
+      <div className="order-card-list">
         {orders.map((order) => (
-          <Card key={order.id}>
+          <Card key={order.id} className="order-card">
             <a
               href={`/account/orders/${order.id}`}
               onClick={(event) => {
                 event.preventDefault();
                 appNavigate(`/account/orders/${order.id}`);
               }}
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+              className="order-card__link"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div className="order-card__row">
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                    Đơn #{order.id.slice(0, 8).toUpperCase()}
+                  <div className="order-card__id">
+                    {t('account.orders.orderId', { id: order.id.slice(0, 8).toUpperCase() })}
                   </div>
-                  <div style={{ fontSize: 'var(--text-sm, 13px)', color: 'var(--c-text-secondary, #666)' }}>
-                    {formatDateTime(order.createdAt)} · {order.itemsCount} sản phẩm ·{' '}
-                    {order.paymentMethod === 'stripe' ? 'Stripe' : 'COD'}
+                  <div className="order-card__meta">
+                    {formatDateTime(order.createdAt)} · {t('account.orders.itemsCount', { count: order.itemsCount })} ·{' '}
+                    {order.paymentMethod === 'stripe'
+                      ? t('account.orders.paymentStripe')
+                      : t('account.orders.paymentCod')}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', display: 'grid', gap: 6, justifyItems: 'end' }}>
+                <div className="order-card__side">
                   <StatusBadge status={order.status} />
-                  <div style={{ fontWeight: 700, color: 'var(--c-primary, #F53D2D)' }}>
-                    {formatVnd(order.total)}
-                  </div>
+                  <div className="order-card__total">{formatVnd(order.total)}</div>
                 </div>
               </div>
             </a>
@@ -127,5 +137,14 @@ export default function OrdersPage(): ReactElement {
         ))}
       </div>
     </div>
+  );
+}
+
+/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page (kể cả loading/error). */
+export default function OrdersPage(): ReactElement {
+  return (
+    <AccountLayout active="orders">
+      <OrdersPageContent />
+    </AccountLayout>
   );
 }

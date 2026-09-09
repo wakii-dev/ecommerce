@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 
 import { authedFetch, ensureSession } from '../../lib/account-session';
 import type { Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import WriteReviewModal from './WriteReviewModal';
 
 /**
@@ -13,28 +14,8 @@ import WriteReviewModal from './WriteReviewModal';
  * user đăng nhập có review PENDING cho product này → hiện card + Sửa (modal
  * PUT me/reviews) + Xóa (DELETE). Guest / không có → không render.
  * ADDITIVE ngoài contract (REQUIREMENT-GAP FI-310 — spec Q1).
+ * T12: copy trong lib/i18n (miền `reviews`).
  */
-
-const COPY = {
-  vi: {
-    heading: 'Đánh giá của bạn (đang chờ duyệt)',
-    edit: 'Sửa',
-    remove: 'Xóa',
-    removing: 'Đang xóa…',
-    removed: 'Đã xóa đánh giá đang chờ duyệt',
-    error: 'Không tải được đánh giá của bạn',
-    deleteFail: 'Xóa thất bại — thử lại',
-  },
-  en: {
-    heading: 'Your review (pending moderation)',
-    edit: 'Edit',
-    remove: 'Delete',
-    removing: 'Deleting…',
-    removed: 'Pending review deleted',
-    error: 'Could not load your review',
-    deleteFail: 'Delete failed — try again',
-  },
-} as const;
 
 interface PendingReview {
   id: string;
@@ -50,7 +31,6 @@ export default function MyPendingReviewPanel({
   productId: string;
   locale: Locale;
 }): ReactElement | null {
-  const copy = COPY[locale];
   const router = useRouter();
   const [review, setReview] = useState<PendingReview | null>(null);
   const [checked, setChecked] = useState(false);
@@ -103,34 +83,34 @@ export default function MyPendingReviewPanel({
       .then((res) => {
         if (res.status === 204) {
           setReview(null);
-          notify(copy.removed);
+          notify(t(locale, 'reviews.removed'));
         } else {
-          notify(copy.deleteFail);
+          notify(t(locale, 'reviews.deleteFail'));
         }
       })
-      .catch(() => notify(copy.deleteFail))
+      .catch(() => notify(t(locale, 'reviews.deleteFail')))
       .finally(() => setRemoving(false));
   };
 
   return (
     <div className="rv-mine">
-      <p className="rv-mine-heading">{copy.heading}</p>
+      <p className="rv-mine-heading">{t(locale, 'reviews.pendingHeading')}</p>
       <div className="rv-item">
         <div className="rv-item-head">
           <span className="rv-stars-static" aria-label={`${review.rating}/5`}>
             {'★'.repeat(review.rating)}
             {'☆'.repeat(5 - review.rating)}
           </span>
-          <span className="rv-status rv-status--pending">{locale === 'vi' ? 'Chờ duyệt' : 'Pending'}</span>
+          <span className="rv-status rv-status--pending">{t(locale, 'reviews.statusPending')}</span>
         </div>
         {review.title ? <p className="rv-item-title">{review.title}</p> : null}
         <p className="rv-item-content">{review.content}</p>
         <div className="rv-mine-actions">
           <button type="button" className="rv-link" onClick={() => setEditing(true)}>
-            {copy.edit}
+            {t(locale, 'reviews.edit')}
           </button>
           <button type="button" className="rv-link rv-link--danger" onClick={onDelete} disabled={removing}>
-            {removing ? copy.removing : copy.remove}
+            {removing ? t(locale, 'reviews.removing') : t(locale, 'reviews.remove')}
           </button>
         </div>
       </div>

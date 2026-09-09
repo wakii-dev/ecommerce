@@ -1,20 +1,16 @@
 /*
  * storefront-web — app-level styles.
  *
- * Phần app: gradient §1.8 (map placeholder ảnh theo danh mục — KHÔNG có sẵn
- * trong ui-kit tokens), biến phụ (--footer-link), container + header/footer.
+ * Phần app: gradient surface §1.8 (hero/flash/buy — placeholder danh mục
+ * `--grad-cat-*` đã nằm trong @ecommerce/ui-kit tokens.css từ SF-1, FI-392
+ * T11 đã xóa bản duplicate chết), biến phụ (--footer-link/--footer-bg),
+ * container + header/footer.
  * Màu gốc (§1.1) + tints §1.6 đã là CSS vars trong
  * @ecommerce/ui-kit/tokens.css — import ở layout, KHÔNG hardcode lại hex
  * đã có token (Conventions #10).
  */
 
 :root {
-  /* Gradient placeholder ảnh theo danh mục (direction §1.8) */
-  --grad-electronics: linear-gradient(140deg, #EAF3FF, #D9E9FF);
-  --grad-fashion: linear-gradient(140deg, #FFEEE8, #FFDFD2);
-  --grad-home: linear-gradient(140deg, #E9F7EE, #D8F0E1);
-  --grad-books: linear-gradient(140deg, #FFF7DC, #FFEFBC);
-  --grad-beauty: linear-gradient(140deg, #F4EBFC, #EBDCF8);
   /* Hero carousel / flash / CTA (direction §1.8) */
   --grad-hero-1: linear-gradient(120deg, #F53D2D, #FF7A45);
   --grad-hero-2: linear-gradient(120deg, #CB1B00, #F53D2D);
@@ -68,7 +64,7 @@ img {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-header);
   background: var(--c-surface);
   box-shadow: var(--shadow-1);
 }
@@ -133,6 +129,12 @@ img {
   border-radius: var(--radius-sm);
   background: var(--c-surface);
   overflow: hidden;
+  transition: box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Focus §2.1/§3.1: ring tint 4px + shadow-2 (--dur-base). */
+.search-form:focus-within {
+  box-shadow: 0 0 0 4px var(--tint-primary-bg), var(--shadow-2);
 }
 
 /* Dropdown suggest §2.1: top calc(100%+4px), full-width, surface + border +
@@ -251,14 +253,23 @@ img {
   gap: var(--space-4);
 }
 
+/* Icon-btn 42×42 radius-md (§2.1) — cart/account/theme-toggle; vị trí relative
+   là mốc cho cart-badge (shell/SF-3 render). */
 .header-action {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
   color: var(--c-text);
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .header-action svg {
@@ -267,22 +278,50 @@ img {
 }
 
 .header-action:hover {
+  background: var(--wash-hover);
   color: var(--c-link);
+}
+
+/* Cart badge (§2.1): nền accent chữ on-accent, min 18×18, 10.5/800,
+   border 2px surface, đè góc trên-phải icon. Storefront KHÔNG render số —
+   cart state thuộc shell/SF-3 (badge số chờ shell cart state — không bịa). */
+.cart-badge {
+  position: absolute;
+  top: 1px;
+  right: -1px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  color: var(--c-on-accent);
+  background: var(--c-accent);
+  border: 2px solid var(--c-surface);
+  border-radius: var(--radius-full);
 }
 
 /* Locale switcher (Task 10) — ghost: 13px/600, muted → primary hover,
    tách khỏi actions bằng border-left như direction §3. */
 .locale-switch {
   padding-left: var(--space-4);
+  padding-right: var(--space-2);
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
   border-left: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
   color: var(--c-text-muted);
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .locale-switch:hover {
+  background: var(--wash-hover);
   color: var(--c-link);
 }
 
@@ -293,6 +332,12 @@ img {
 
 .mini-nav-inner {
   display: flex;
+  /* scroll-x khi hẹp §2.1 — scrollbar ẩn (T13 hoàn thiện mobile) */
+  scrollbar-width: none;
+}
+
+.mini-nav-inner::-webkit-scrollbar {
+  display: none;
 }
 
 .mini-nav a {
@@ -347,7 +392,8 @@ img {
   padding-bottom: var(--space-6);
 }
 
-.site-footer h4 {
+.site-footer h4,
+.footer-heading {
   /* trắng trên footer #212121 — literal cả 2 theme */
   color: #ffffff;
   font-size: 13px;
@@ -368,10 +414,65 @@ img {
   font-size: 13px;
   text-decoration: none;
   line-height: 2;
+  /* §2.2.5: muted → accent hover, nhịp nhanh (direction §3.2) */
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .site-footer a:hover {
   color: var(--c-accent);
+}
+
+/* ── Newsletter (client island trong footer — SF-13 A8; tokenize FI-392 T11) ─ */
+
+.nl-desc {
+  color: var(--footer-link);
+  font-size: 13px;
+  margin: 0 0 var(--space-3);
+}
+
+.nl-form {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 320px;
+}
+
+.nl-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 13px;
+}
+
+.nl-submit {
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+  border: none;
+  background: var(--c-primary);
+  /* trắng trên primary — literal như .badge-off (không có token --c-on-primary) */
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nl-msg {
+  font-size: 13px;
+}
+
+.nl-msg--ok {
+  color: var(--c-success);
+}
+
+/* Error msg contrast 2.9:1 trên nền footer tối (FI-392 review nhóm C P1-3)
+   → chip nền surface, chữ danger (≈5.6:1); .nl-msg--ok giữ nguyên. */
+.nl-msg--error {
+  display: inline-block;
+  background: var(--c-surface);
+  color: var(--c-danger);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
 }
 
 @media (max-width: 900px) {
@@ -399,10 +500,11 @@ img {
   margin: var(--space-6) 0;
 }
 
-/* Hero carousel — radius-lg, shadow-2, cao 300px, padding ngang 8% (§2.2.1) */
+/* Hero carousel — radius-lg, shadow-2, cao 380px, padding ngang 8% (§2.2.1).
+   Cao khớp skeleton mirror .sk-hero (cuối file) — đổi chiều cao phải đồng bộ cả 2. */
 .hero {
   position: relative;
-  height: 300px;
+  height: 380px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-2);
   overflow: hidden;
@@ -411,7 +513,7 @@ img {
 .hero-track {
   display: flex;
   height: 100%;
-  transition: transform 0.45s ease;
+  transition: transform var(--dur-carousel) ease;
 }
 
 .hero-slide {
@@ -428,11 +530,49 @@ img {
   color: #ffffff;
 }
 
+/* Ken-burns §2.2.1: lớp con inset -4% chạy scale 1→1.09, --dur-kb alternate —
+   2 vòng glow alpha trắng/đen (rgba phụ được phép, chỉ cấm rgba primary ngoài token).
+   Keyframes surface nằm trong app.css (§5.6) — chỉ hero (§5.5, không rải chỗ khác). */
+.hero-slide::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  background:
+    radial-gradient(42% 60% at 78% 28%, rgba(255, 255, 255, 0.16), transparent 70%),
+    radial-gradient(50% 70% at 18% 82%, rgba(0, 0, 0, 0.18), transparent 72%);
+  animation: hero-kb var(--dur-kb) ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Nội dung slide nổi trên lớp kb (::before là positioned đầu tiên trong tree order) */
+.hero-slide > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes hero-kb {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.09);
+  }
+}
+
+/* Reduced-motion §3.3: kb tắt hẳn — frame tĩnh đầu (global rule SF-1 đã kill
+   animation-duration, block này chốt thêm scale tĩnh cho chắc) */
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide::before {
+    animation: none;
+    transform: none;
+  }
+}
+
 .hero-kicker {
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
   opacity: 0.92;
 }
@@ -456,15 +596,24 @@ img {
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
+  box-shadow: var(--shadow-2);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-3);
 }
 
 .hero-ribbon {
   position: absolute;
-  top: 28px;
+  top: 26px;
   right: 8%;
   background: var(--c-surface);
-  color: var(--c-link);
-  font-size: 14px;
+  color: var(--c-primary);
+  font-size: 18px;
   font-weight: 800;
   padding: 8px 14px;
   border-radius: var(--radius-md);
@@ -528,11 +677,47 @@ img {
   border-radius: 6px;
 }
 
-/* Flash deal — gradient vàng #FFD839→#FFB800 qua --grad-flash (§2.2.2) */
+/* Nút pause/play autoplay (§2.2.1/§3.3-3.4) — cạnh dots, góc phải-dưới;
+   icon color #212121 literal như .hero-arrow (nền trắng .92, dark không đảo) */
+.hero-pause {
+  position: absolute;
+  right: 14px;
+  bottom: 5px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--c-on-accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.hero-pause:hover {
+  background: var(--c-surface);
+}
+
+/* reduced-motion: autoplay tắt vĩnh viễn (JS chặn) — nút play vô nghĩa, disabled */
+.hero-pause:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hero-pause svg {
+  display: block;
+}
+
+/* Flash deal — gradient vàng #FFD839→#FFB800 qua --grad-flash (§2.2.2);
+   khối --radius-lg padding 16 + resting --shadow-2 (§3.1 flash block) */
 .flash {
   background: var(--grad-flash);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
+  box-shadow: var(--shadow-2);
 }
 
 .flash-head {
@@ -544,12 +729,41 @@ img {
 
 .flash-title {
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 24px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   /* chữ tối trên gradient vàng — --c-text trắng trong dark sẽ 1.35:1 */
   color: var(--c-on-accent);
+}
+
+/* icon sét --c-primary (§2.2.2) — inline SVG storefront, stroke 1.8 22px (§6) */
+.flash-bolt {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--c-primary);
+}
+
+/* pill "Xem tất cả" nền trắng .4 hover .65 (§2.2.2) — white-alpha precedent
+   hero-arrow .92 (rgba trắng trên gradient đậm màu, không phải hex mới) */
+.flash-more {
+  margin-left: auto;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--c-on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.flash-more:hover {
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .countdown {
@@ -596,12 +810,14 @@ img {
   padding: 10px;
   text-decoration: none;
   color: var(--c-text);
-  transition: box-shadow 0.12s ease, transform 0.12s ease;
+  /* §3.1 hover fcard: lift + shadow qua token timing */
+  transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
+/* §3.1 hover fcard: translateY(−3px) + shadow lên cấp 3 (card thương mại) */
 .flash-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .flash-thumb {
@@ -616,6 +832,8 @@ img {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
+  /* §2.2.2 cao 37 cố định — 2 dòng clamp, giá hàng dưới thẳng hàng mọi card */
+  height: 37px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -660,9 +878,10 @@ img {
   text-decoration: none;
   color: var(--c-text);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
-  transition: box-shadow 0.12s ease, transform 0.12s ease;
+  /* §3.1 hover tile: −2px + shadow 1→2 qua token timing (--dur-base) */
+  transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 .cat-tile:hover {
@@ -671,7 +890,7 @@ img {
 }
 
 .cat-icon {
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1;
 }
 
@@ -726,6 +945,16 @@ img {
   gap: var(--space-3);
 }
 
+/* Reveal wrapper (client) là grid item thay cho .p-card trực tiếp — flex đổ
+   đầy để card vẫn giãn theo chiều cao row như khi Link là grid item */
+.featured-grid > .featured-cell {
+  display: flex;
+}
+
+.featured-grid > .featured-cell > .p-card {
+  flex: 1 1 auto;
+}
+
 /* ── ProductCardView — anatomy §2.3 (dùng chung home/PLP/related) ──────── */
 
 .p-card {
@@ -738,12 +967,13 @@ img {
   overflow: hidden;
   text-decoration: none;
   color: var(--c-text);
-  transition: box-shadow 0.12s ease, transform 0.12s ease;
+  /* hover cascade §3.1: lift −3px + shadow-1→3 (điểm nhấn thương mại lên cấp 3) */
+  transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
 }
 
 .p-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .p-thumb {
@@ -836,15 +1066,22 @@ img {
   gap: 6px;
 }
 
-.p-price {
+/* Giá qua primitive Price (ui-kit) — wrapper mang .p-price; ghép .uk-price
+   để thắng .uk-price--md (--text-lg 16px): card giữ 17/800 danger §2.2.5 */
+.p-price.uk-price {
   color: var(--c-danger);
   font-size: 17px;
   font-weight: 800;
 }
 
-.p-price-compare {
+.p-price .uk-price__compare {
   color: var(--c-text-muted);
   font-size: 12px;
+}
+
+/* badge -% của Price primitive đã có trên thumb (.badge-off) — suppress trong card */
+.p-card .uk-price__discount {
+  display: none;
 }
 
 .p-meta {
@@ -1126,18 +1363,25 @@ img {
 
 .plp-sort select {
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 7px 10px;
   font-size: 13px;
   font-family: inherit;
   color: var(--c-text);
   background: var(--c-surface);
   cursor: pointer;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 
 .plp-sort select:hover {
   border-color: var(--c-link);
   color: var(--c-link);
+}
+
+.plp-sort select:focus-visible {
+  outline: none;
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 3px var(--c-focus);
 }
 
 /* Grid kết quả 3 cột gap 16px, dùng chung .p-card (§2.4) */
@@ -1157,52 +1401,15 @@ img {
   margin-top: 0;
 }
 
-/* Pagination — nút 34×34, hover viền+chữ primary, active nền primary (§2.4) */
+/* Pagination — primitive ui-kit `Pagination` (uk-page 32×32, active nền
+ * primary — §2.4/§2.5, style trong ui-kit.css); app chỉ giữ layout
+ * center + margin qua class này (merge vào `uk-pagination`). */
 .plp-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
   margin-top: var(--space-5);
-}
-
-.plp-page-btn {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  color: var(--c-text);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.plp-page-btn--nav {
-  font-size: 16px;
-}
-
-.plp-page-btn:hover {
-  border-color: var(--c-link);
-  color: var(--c-link);
-}
-
-.plp-page-btn.is-active {
-  background: var(--c-primary);
-  border-color: var(--c-link);
-  color: #ffffff;
-  cursor: default;
-}
-
-.plp-page-dots {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--c-text-muted);
 }
 
 /* ≤900px: grid 2 cột, sidebar xuống dưới full-width (direction §4) */
@@ -1249,6 +1456,39 @@ img {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Zoom-lens (direction §2.3): transform-origin theo con trỏ (--mx/--my do
+   Gallery mousemove set) + scale 1.18 + lens radial-gradient trắng — chỉ
+   transform (perf §3.2); gate hover + pointer:fine — touch/mobile không zoom,
+   placeholder (--zoom không có) cũng không. */
+@media (hover: hover) and (pointer: fine) {
+  .pdp-gallery-main--zoom img {
+    transition: transform 0.25s var(--ease-out);
+    transform-origin: var(--mx, 50%) var(--my, 50%);
+  }
+
+  .pdp-gallery-main--zoom:hover img {
+    transform: scale(1.18);
+  }
+
+  .pdp-gallery-main--zoom::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      160px at var(--mx, 50%) var(--my, 50%),
+      rgba(255, 255, 255, 0.35),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-out);
+    pointer-events: none;
+  }
+
+  .pdp-gallery-main--zoom:hover::after {
+    opacity: 1;
+  }
 }
 
 .pdp-gallery-emoji {
@@ -1298,7 +1538,7 @@ img {
 }
 
 .pdp-thumb--active {
-  border-color: var(--c-link);
+  border-color: var(--c-primary);
 }
 
 /* Info: h1 23px/700/1.35 + meta (đã bán + sao) */
@@ -1316,19 +1556,15 @@ img {
   margin-bottom: var(--space-4);
 }
 
+/* T8b: count là link anchor #tab-reviews (deep-link vào panel đánh giá) */
 .pdp-meta-count {
   font-size: 12px;
-  color: var(--c-text-muted);
+  color: var(--c-link);
+  text-decoration: none;
 }
 
-.pdp-meta-sold {
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
-.pdp-meta-sold::before {
-  content: '·';
-  margin-right: var(--space-2);
+.pdp-meta-count:hover {
+  text-decoration: underline;
 }
 
 /* Price-block: wash #FFF1F0 + viền #FBC8C2 (tints §1.6 đã là CSS vars) */
@@ -1546,19 +1782,68 @@ img {
   cursor: not-allowed;
 }
 
-/* Toast êm bottom-center (stub cart — tự dismiss 2.5s) */
+/* Toast §3.2: nền --c-text chữ --c-bg, --radius-full, 13/700, shadow-3
+   (cascade resting toast) — mở opacity + translateY(12px→0) --dur-slow
+   --ease-pop; auto-dismiss 2.2s (AddToCart timer). Markup .pdp-toast +
+   role="status" GIỮ nguyên — e2e nav-honesty assert đúng selector này. */
 .pdp-toast {
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
-  background: #212121;
-  color: #fff;
+  transform: translate(-50%, 0);
+  background: var(--c-text);
+  color: var(--c-bg);
   font-size: 13px;
+  font-weight: 700;
   padding: 10px 18px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-3);
   z-index: 200;
+  animation: pdp-toast-in var(--dur-slow) var(--ease-pop) both;
+}
+
+@keyframes pdp-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* §3.3: reduced-motion → toast hiện tức thời, không slide */
+@media (prefers-reduced-motion: reduce) {
+  .pdp-toast {
+    animation: none;
+  }
+}
+
+/* Sticky ATC mobile <600px (direction §2.3 buy-sticky): bar bám ĐÁY VIEWPORT
+   khi cuộn qua buy-box. `sticky` không đủ — .pdp-cta-row nằm trong parent
+   .pdp-buybox nên bar chỉ "dính" khi buybox còn trong viewport → dùng
+   `fixed` full-width, góc vuông, z ngang header (không có ancestor
+   transform/filter tạo containing block). 600px = giá trị token --bp-sm
+   (tham chiếu — @media không đọc được var). */
+@media (max-width: 600px) {
+  /* Đệm đáy trang đủ chiều cao bar (nút 50px + pad --space-2 ×2 + border-top
+     1px) — nội dung cuối không bị bar che khi cuộn hết. */
+  .pdp-layout {
+    padding-bottom: calc(50px + var(--space-2) * 2 + 1px);
+  }
+  .pdp-cta-row {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-header);
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+    box-shadow: var(--shadow-2);
+    padding: var(--space-2) var(--space-4);
+  }
 }
 
 /* Perks row: border-top dashed + icon tròn 30px primary-tint (§2.5) */
@@ -1588,66 +1873,39 @@ img {
   font-size: 14px;
 }
 
-/* Tabs: bar gap 24 + border-bottom 2; active chữ primary + underline 3px.
-   Panels CSS :target — cả 3 panel đều nằm sẵn trong HTML (D16), không JS:
-   mặc định hiện tab-desc; :target đổi pane; :has bắt active tab. */
+/* Tabs (T8b): primitive Tabs (role=tab button + keyboard ←→ roving tabindex)
+   thay nav anchor CSS :target — restyle uk-tab theo ngôn ngữ PDP (gap 24 +
+   border-bottom 2, 15/700, active underline 3px). Panels ẩn/hiện qua hidden
+   attribute (SSR sẵn trong HTML — no-JS: panel đầu hiện, tab switching là
+   enhancement). */
 .pdp-tabs {
   margin-top: var(--space-6);
 }
 
-.pdp-tab-bar {
-  display: flex;
+.pdp-tabs .uk-tabs__list {
   gap: var(--space-5);
   border-bottom: 2px solid var(--c-border);
   margin-bottom: var(--space-4);
 }
 
-.pdp-tab-bar a {
+.pdp-tabs .uk-tab {
   padding: var(--space-3) 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--c-text-muted);
-  text-decoration: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
 }
 
-.pdp-tab-bar a:hover {
+.pdp-tabs .uk-tab:hover:not(:disabled) {
   color: var(--c-link);
 }
 
+.pdp-tabs .uk-tab--active {
+  color: var(--c-link);
+}
+
+/* Panel: anchor target cho deep-link/meta "N đánh giá" — scroll-margin-top
+   để sticky header không che đỉnh khi hash-jump. */
 .pdp-panel {
-  display: none;
-}
-
-.pdp-panel:target {
-  display: block;
-}
-
-/* Không panel nào :target → mặc định hiện Mô tả (tab đầu) */
-.pdp-tabs:not(:has(.pdp-panel:target)) #tab-desc {
-  display: block;
-}
-
-.pdp-tab-bar a[href='#tab-desc'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
-}
-
-.pdp-tabs:has(#tab-info:target) a[href='#tab-desc'],
-.pdp-tabs:has(#tab-reviews:target) a[href='#tab-desc'] {
-  color: var(--c-text-muted);
-  border-bottom-color: transparent;
-}
-
-.pdp-tabs:has(#tab-info:target) a[href='#tab-info'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
-}
-
-.pdp-tabs:has(#tab-reviews:target) a[href='#tab-reviews'] {
-  color: var(--c-link);
-  border-bottom-color: var(--c-link);
+  scroll-margin-top: 80px;
 }
 
 .pdp-desc {
@@ -1680,10 +1938,23 @@ img {
   font-weight: 600;
 }
 
-/* 404 page (app/not-found + [locale]/not-found) */
+/* 404 page (app/not-found + [locale]/not-found) — elevation FI-392 T2 */
 .not-found {
+  display: grid;
+  justify-items: center;
   padding: var(--space-8) 0;
   text-align: center;
+}
+
+.not-found-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--tint-primary-bg);
+  color: var(--c-primary);
 }
 
 .not-found-code {
@@ -1704,14 +1975,172 @@ img {
   color: var(--c-text-muted);
 }
 
+/* CTA outline về trang chủ (direction: nút outline, không còn link trần) */
 .not-found-home {
-  color: var(--c-link);
+  margin-top: var(--space-4);
+  padding: 10px 22px;
+  border: 2px solid var(--c-primary);
+  border-radius: var(--radius-full);
+  color: var(--c-primary);
   font-weight: 700;
   text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .not-found-home:hover {
-  text-decoration: underline;
+  background: var(--tint-primary-bg);
+  text-decoration: none;
+}
+
+/* ── Loading skeletons + route error (FI-392 T2) ───────────────────────
+   Shimmer DÙNG .uk-skeleton có sẵn của ui-kit (gradient wash→border→wash +
+   --dur-shimmer; reduced-motion global đã tắt animation). Compound selector
+   .uk-skeleton.sk-* thắng .uk-skeleton--rect bất kể css order (app.css ở root
+   layout load TRƯỚC ui-kit styles.css ở [locale]/layout). KHÔNG hex. */
+
+.sk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* HOME — hero tĩnh 380px (khớp .hero §2.2.1) + flash rail 186px + featured grid */
+.sk-home {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.uk-skeleton.sk-hero {
+  height: 380px;
+  border-radius: var(--radius-lg);
+}
+
+.sk-flash-row {
+  display: flex;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+.sk-flash-row .sk-flash-card {
+  flex: 0 0 186px;
+}
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+.sk-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sk-plp-head {
+  margin-bottom: var(--space-4);
+}
+
+/* PDP — khớp .pdp-layout: media 45% + info; gallery aspect 1/1 */
+.sk-pdp {
+  display: grid;
+  grid-template-columns: minmax(380px, 45%) 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.uk-skeleton.sk-pdp-gallery {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+}
+
+.sk-pdp-thumbs {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.uk-skeleton.sk-pdp-thumb {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+}
+
+.sk-pdp-info {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.uk-skeleton.sk-pdp-cta {
+  width: 220px;
+  height: 48px;
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .sk-grid,
+  .sk-grid--3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sk-pdp {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Route error boundary — thay crash screen Next (FI-392 T2) */
+.route-error {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) 0;
+  text-align: center;
+}
+
+.route-error-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--tint-primary-bg);
+  color: var(--c-danger);
+}
+
+.route-error-title {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+}
+
+.route-error-desc {
+  margin: 0 0 var(--space-4);
+  max-width: 48ch;
+  color: var(--c-text-muted);
+}
+
+.route-error-retry {
+  margin-top: var(--space-2);
+  padding: 10px 22px;
+  border: 2px solid var(--c-primary);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--c-primary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.route-error-retry:hover {
+  background: var(--tint-primary-bg);
 }
 
 /* ≤900px: PDP 1 cột (direction §4 — grid 2 cột tối thiểu) */
@@ -1733,17 +2162,20 @@ img {
 .search-keyword-chip {
   display: inline-block;
   border: 1px solid var(--c-border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 4px 12px;
   font-size: 13px;
   color: var(--c-text);
   text-decoration: none;
   background: var(--c-surface);
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .search-keyword-chip:hover {
   border-color: var(--c-link);
   color: var(--c-link);
+  background: var(--wash-hover);
 }
 
 /* ── Coupon center (Task 14 — mock-gate đến SF-9) ────────────────────────── */
@@ -1789,6 +2221,13 @@ img {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-1);
   padding: var(--space-4);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Hover §3.1: card thương mại — translateY(−3px) + shadow-1→3 (--dur-base --ease-out). */
+.coupon-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .coupon-code {
@@ -1798,7 +2237,7 @@ img {
   letter-spacing: 1.5px;
   color: var(--c-link);
   border: 1px dashed var(--c-primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 6px 12px;
   background: var(--tint-primary-bg);
 }
@@ -1819,20 +2258,33 @@ img {
   color: var(--c-text-muted);
 }
 
+/* CTA-outline (direction §4): viền primary, hover nền tint — bỏ nút solid + hex. */
 .coupon-copy {
-  border: 0;
-  background: var(--c-primary);
-  color: #ffffff;
+  border: 2px solid var(--c-primary);
+  background: transparent;
+  color: var(--c-primary);
   font-weight: 700;
   font-size: 13px;
-  padding: 7px 16px;
-  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   margin-top: auto;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .coupon-copy:hover {
-  background: var(--c-primary-hover);
+  background: var(--tint-primary-bg);
+}
+
+/* Badge hết hạn tint-new (direction §4) — mirror .p-pill--new. */
+.coupon-expired {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--tint-new-border);
+  background: var(--tint-new-bg);
+  color: var(--tint-new-text);
 }
 
 /* ≤900px: coupon grid 1 cột (direction §4) */
@@ -2039,43 +2491,18 @@ img {
   font-size: var(--text-sm, 12px);
 }
 
-/* Modal viết/sửa review */
+/* Modal viết/sửa review — primitive ui-kit `Modal` (uk-overlay/uk-modal),
+ * app chỉ giữ css form bên trong + loading. Overlay/modal tự viết đã xóa (T9). */
 
-.rv-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 45%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
-}
-
-.rv-modal {
-  position: relative;
-  width: min(480px, calc(100vw - 32px));
-  background: var(--c-surface, #FFFFFF);
-  border-radius: var(--radius-lg, 12px);
-  padding: var(--space-5, 24px);
+.rv-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3, 12px);
 }
 
-.rv-modal h3 {
+.rv-guest h3 {
   margin: 0;
   font-size: var(--text-xl, 18px);
-}
-
-.rv-modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  color: var(--c-text-muted, #757575);
 }
 
 .rv-modal-loading {
@@ -2226,6 +2653,8 @@ img {
   align-items: center;
   justify-content: center;
   padding: 0;
+  /* scale hover — reduced-motion chặn bởi global gate ui-kit.css (§3.3) */
+  transition: transform var(--dur-fast) var(--ease-pop);
 }
 
 .wl-heart--card {
@@ -2321,4 +2750,103 @@ img {
 }
 [data-theme='storefront'] {
   --hot-tag-text: #ffffff;
+}
+
+/* ═══ Mobile pass <600px (FI-392 T13 — spec item 13; direction §6 "chi tiết
+   responsive <600px beyond buy-sticky do SF-2 sở hữu") ═════════════════════
+   600px = giá trị token --bp-sm (tham chiếu — @media không đọc được var).
+   ≤900px đã xử lý phía trên: search full-width hàng riêng, mini-nav scroll-x,
+   footer 2 cột, cat 3 / featured 2 / plp 2 / coupons 1 cột, pdp 1 cột,
+   hero title 32 — block này chỉ bổ sung phần <600px còn thiếu. */
+@media (max-width: 600px) {
+  /* Header: logo co vừa (ticker ẩn), actions icon-only — label dùng mẫu
+     visually-hidden GIỮ tên a11y (display:none sẽ mất accessible name),
+     nút icon 40px + gap hẹp để logo + EN + 3 nút vừa hàng đầu 375px. */
+  .header-main {
+    gap: var(--space-3);
+  }
+
+  .logo-word {
+    font-size: 20px;
+  }
+
+  .logo-ticker {
+    display: none;
+  }
+
+  .header-actions {
+    gap: var(--space-2);
+  }
+
+  .locale-switch {
+    padding-left: var(--space-2);
+  }
+
+  .header-action {
+    min-width: 40px;
+    padding: 0;
+  }
+
+  .header-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Mini-nav: rail swipe trơn — link không co, không wrap text; tràn thì
+     scroll-x (scrollbar ẩn sẵn ở .mini-nav-inner toàn cục). */
+  .mini-nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Hero cao co giãn 380→260 (đồng bộ mirror .uk-skeleton.sk-hero — comment
+     .hero bắt buộc sync); slide padding ngang giảm; ribbon nhỏ xuống;
+     arrows 34px vừa 375px, dots giữ — vẫn usable. Title 32px kế thừa
+     block ≤900 (spec ~30-32). */
+  .hero,
+  .uk-skeleton.sk-hero {
+    height: 260px;
+  }
+
+  .hero-slide {
+    padding: 0 var(--space-5);
+  }
+
+  .hero-ribbon {
+    top: var(--space-3);
+    font-size: 14px;
+    padding: 4px 10px;
+  }
+
+  .hero-arrow {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Flash head co vừa 375px: title giảm, pill "Xem tất cả" wrap xuống
+     thay vì tràn ngang. Rail fcard giữ scroll-x (không đổi). */
+  .flash-head {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .flash-title {
+    font-size: 18px;
+  }
+
+  /* Footer: cột stack dọc 1 cột, newsletter full-width. */
+  .site-footer-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .nl-form {
+    max-width: 100%;
+  }
 }

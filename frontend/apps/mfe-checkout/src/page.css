@@ -1,6 +1,6 @@
 /* page.css — cart + checkout (SF-6, Tiki-inspired density).
-   Mọi màu/spacing QUA CSS vars ui-kit (tokens-only; không hex cứng trừ
-   fallback var()). */
+   Mọi màu/spacing QUA CSS vars ui-kit — tokens-only 100%, KHÔNG hex cứng
+   (FI-393 T10: hex + fallback var đã quét — mọi token declare ở tokens.css). */
 
 /* ── Khung trang ─────────────────────────────────────────────────────── */
 .cart-page {
@@ -13,7 +13,7 @@
   margin: 0;
   font-size: 24px;
   font-weight: 800;
-  color: var(--c-text, #212121);
+  color: var(--c-text);
 }
 
 .skeleton-line {
@@ -39,7 +39,14 @@
   gap: var(--space-3, 12px);
   align-items: flex-start;
   padding: var(--space-3, 12px) 0;
-  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  border-bottom: 1px solid var(--c-border);
+  /* row trong card — KHÔNG lift (direction §3.1 guard), chỉ wash mượt */
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+/* FI-393 T4 — line hover wash (direction §2.4 density) */
+.cart-line:hover {
+  background: var(--wash-hover);
 }
 
 .cart-line--unavailable {
@@ -51,6 +58,7 @@
   height: 80px;
   object-fit: cover;
   border-radius: var(--radius-sm, 2px);
+  border: 1px solid var(--c-border);
   background: var(--wash-hover);
   flex: none;
 }
@@ -64,7 +72,7 @@
 }
 
 .cart-line-name {
-  color: var(--c-text, #212121);
+  color: var(--c-text);
   text-decoration: none;
   font-weight: 500;
   display: -webkit-box;
@@ -74,7 +82,7 @@
 }
 
 .cart-line-name:hover {
-  color: var(--c-primary, #F53D2D);
+  color: var(--c-link);
 }
 
 .cart-line-row {
@@ -86,54 +94,22 @@
 
 .cart-line-price {
   font-weight: 700;
-  color: var(--c-primary, #F53D2D);
-}
-
-/* Stepper qty (− input +) */
-.qty-stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--c-border, #e5e7eb);
-  border-radius: var(--radius-sm, 2px);
-  overflow: hidden;
-}
-
-.qty-stepper button {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: var(--c-surface, #fff);
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--c-text, #212121);
-}
-
-.qty-stepper button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.qty-stepper input {
-  width: 44px;
-  height: 32px;
-  text-align: center;
-  border: none;
-  border-inline: 1px solid var(--c-border, #e5e7eb);
-  font: inherit;
+  color: var(--c-danger);
 }
 
 .cart-line-remove {
   background: none;
   border: none;
-  color: var(--c-text-muted, #787878);
+  color: var(--c-text-muted);
   cursor: pointer;
   font-size: 13px;
   text-decoration: underline;
   padding: 0;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .cart-line-remove:hover {
-  color: var(--c-primary, #F53D2D);
+  color: var(--c-primary);
 }
 
 /* Badge "Không còn khả dụng" */
@@ -142,7 +118,7 @@
   padding: 2px 8px;
   border-radius: var(--radius-sm, 2px);
   background: var(--pill-cancelled-bg);
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 12px;
   font-weight: 600;
 }
@@ -153,94 +129,106 @@
   flex-direction: column;
   gap: var(--space-3, 12px);
   padding: var(--space-4, 16px);
+  /* Card lift (direction §3.1): resting shadow-1 từ primitive .uk-card;
+     hover 1→3. :hover specificity (0,2,0) thắng .uk-card bất kể import order. */
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.cart-summary:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3);
 }
 
 .summary-note {
   font-size: 12px;
-  color: var(--c-text-muted, #787878);
+  color: var(--c-text-muted);
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: var(--c-text, #212121);
+  color: var(--c-text);
 }
 
+/* FI-393 T8 — Tổng cộng 26/800 danger + border-top 2px (direction §2.4) */
 .summary-row--total {
-  font-size: 18px;
+  font-size: 26px;
   font-weight: 800;
-  color: var(--c-primary, #F53D2D);
+  color: var(--c-danger);
+  border-top: 2px solid var(--c-border);
+  padding-top: var(--space-3, 12px);
 }
 
 .summary-row--discount .summary-value {
   color: var(--c-success);
 }
 
-.summary-divider {
-  border: none;
-  border-top: 1px dashed var(--c-border, #e5e7eb);
-  margin: 0;
-}
-
-/* ── Checkout stepper ────────────────────────────────────────────────── */
-.stepper {
-  display: flex;
-  gap: 0;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.stepper-item {
-  flex: 1;
-  display: flex;
+/* ── Summary line item có ảnh (FI-393 T8, direction §2.4) ───────────── */
+.summary-item {
   align-items: center;
-  gap: 8px;
-  padding: 10px 8px;
-  border-bottom: 2px solid var(--c-border, #e5e7eb);
-  color: var(--c-text-muted, #787878);
-  font-size: 14px;
-  cursor: default;
+  gap: var(--space-2, 8px);
 }
 
-.stepper-item--active {
-  border-bottom-color: var(--c-primary, #F53D2D);
-  color: var(--c-primary, #F53D2D);
-  font-weight: 700;
+.summary-item__thumb {
+  position: relative;
+  flex: none;
 }
 
-.stepper-item--done {
-  border-bottom-color: var(--c-success);
-  color: var(--c-success);
-  cursor: pointer;
+.summary-item__thumb img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 2px);
+  border: 1px solid var(--c-border);
+  background: var(--wash-hover);
 }
 
-.stepper-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
+.summary-item__qty {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--wash-hover);
-  font-size: 12px;
+  border: 2px solid var(--c-surface);
+  border-radius: var(--radius-full);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  font-size: 11px;
   font-weight: 700;
 }
 
-.stepper-item--active .stepper-num {
-  background: var(--c-primary, #F53D2D);
-  color: #fff;
+.summary-item__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
 }
 
-.stepper-item--done .stepper-num {
-  background: var(--c-success);
-  color: var(--c-on-accent);
+.summary-item__price {
+  font-weight: 700;
 }
+
+.summary-divider {
+  border: none;
+  border-top: 1px dashed var(--c-border);
+  margin: 0;
+}
+
+/* FI-393 T6 — stepper hand-roll đã bỏ: dùng primitive .uk-stepper (ui-kit.css). */
 
 .checkout-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--space-4, 16px);
   align-items: start;
 }
@@ -257,6 +245,87 @@
   gap: var(--space-3, 12px);
 }
 
+/* ── Shipping card (FI-393 T8, direction §2.4) ──────────────────────── */
+/* Radio native ẩn thị giác vẫn focus/không xấu a11y (SR đọc bình thường) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.shipping-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  padding: 16px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.shipping-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+}
+
+.shipping-card:focus-within {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+}
+
+.shipping-card--selected {
+  border-color: var(--c-primary);
+  background: var(--tint-primary-bg);
+}
+
+.shipping-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shipping-card__eta {
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.shipping-card__fee {
+  color: var(--c-primary);
+  font-weight: 700;
+}
+
+.shipping-card__check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.shipping-card--selected .shipping-card__check {
+  display: inline-flex;
+}
+
 /* ── Coupon ──────────────────────────────────────────────────────────── */
 .coupon-box {
   display: flex;
@@ -268,7 +337,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  /* tint-success (FI-368 P1 fix: #eef9f4 literal => dark unreadable) */
+  /* tint-success (FI-368 P1 fix: literal cũ => dark unreadable) */
   background: var(--tint-success-bg);
   border: 1px dashed var(--c-success);
   border-radius: var(--radius-sm, 2px);
@@ -276,11 +345,107 @@
 }
 
 .coupon-error {
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 13px;
 }
 
+/* FI-393 T5 — coupon áp từ cart: input dashed + nút tint (direction §2.4) */
+.cart-coupon__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px dashed var(--c-border);
+  border-radius: var(--radius-sm, 2px);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.cart-coupon__input:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+
+.cart-coupon__apply {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-sm, 2px);
+  background: var(--tint-primary-bg);
+  color: var(--tint-primary-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-coupon__apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* ── Payment ─────────────────────────────────────────────────────────── */
+/* FI-393 T8 — pay-method card hoá nhẹ (radio native giữ nguyên) */
+.pay-method {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 12px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Payment card hover −2px + shadow-1 (direction §2.4) */
+.pay-method:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+}
+
+.pay-method--selected {
+  border-color: var(--c-primary);
+  background: var(--tint-primary-bg);
+}
+
+/* Nút đặt hàng — CTA grad 52px (direction §2.4; chữ UPPERCASE qua CSS,
+   DOM text giữ nguyên cho e2e regex) */
+.btn-order {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--grad-cta);
+  color: var(--c-surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-cta);
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.btn-order:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-cta-hover);
+}
+
+.btn-order:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 .pay-panel {
   display: flex;
   flex-direction: column;
@@ -289,52 +454,297 @@
 
 .pay-warning {
   padding: 12px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
+  /* tint-new (FI-393 T10: hex literal cũ => dark mode ô lệch — pending/warning family) */
+  background: var(--tint-new-bg);
+  border: 1px solid var(--tint-new-border);
   border-radius: var(--radius-sm, 2px);
-  color: #874d00;
+  color: var(--tint-new-text);
   font-size: 14px;
 }
 
 .pay-error {
   padding: 12px;
   background: var(--pill-cancelled-bg);
-  border: 1px solid var(--c-danger, #C0151F);
+  border: 1px solid var(--c-danger);
   border-radius: var(--radius-sm, 2px);
-  color: var(--c-danger, #C0151F);
+  color: var(--c-danger);
   font-size: 14px;
   white-space: pre-wrap;
 }
 
-/* ── Confirmation ────────────────────────────────────────────────────── */
+/* ── Confirmation (FI-393 T9 — hero gradient, direction §2.4) ────────── */
 .confirm-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2, 8px);
-  padding: var(--space-6, 32px) 0;
+  padding: 32px 16px;
   text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--grad-hero-1);
+  box-shadow: var(--shadow-2);
+  color: var(--c-surface);
+}
+
+/* h1/note kế thừa màu page — trên gradient phải trắng */
+.confirm-hero .page-title {
+  color: var(--c-surface);
+  font-size: 26px;
+}
+
+.confirm-hero .summary-note {
+  color: var(--c-surface);
+  opacity: 0.85;
+}
+
+.confirm-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 .confirm-check {
   width: 56px;
   height: 56px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--c-success);
-  color: var(--c-on-accent);
+  color: var(--c-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+}
+
+.confirm-check--bad {
+  background: var(--c-danger);
 }
 
 .confirm-status {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 999px;
-  /* tint-success (FI-368 P1 fix) */
+  /* terminal-ok mặc định tint-success (FI-368 P1 fix); còn lại theo status */
   background: var(--tint-success-bg);
   color: var(--tint-success-text);
   font-weight: 600;
   font-size: 13px;
+}
+
+.confirm-status[data-status-code='PENDING'],
+.confirm-status[data-status-code='PAID'] {
+  background: var(--tint-new-bg);
+  color: var(--tint-new-text);
+}
+
+.confirm-status[data-status-code='FAILED'],
+.confirm-status[data-status-code='CANCELLED'] {
+  background: var(--pill-cancelled-bg);
+  color: var(--c-danger);
+}
+
+/* CTA "Tiếp tục mua sắm" — accent (2 class specificity thắng uk-btn--secondary) */
+.uk-btn.confirm-cta {
+  border: none;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 800;
+}
+
+/* ── Mini-cart drawer (FI-393 T3) — override instance ui-kit Drawer ────
+   Drawer portal ra document.body → wrapper css không cascade; scope bằng
+   modifier `.uk-overlay--drawer` (CHỈ Drawer đặt class này — Modal dùng
+   .uk-overlay trần, không bị dính). Specificity 2 class để thắng shorthand
+   `.uk-drawer`/`.uk-overlay` của ui-kit.css bất kể import order
+   (bootstrap.tsx import page.css TRƯỚC styles.css). mfe-checkout không có
+   Drawer khác → override theo modifier an toàn theo plan. */
+.uk-overlay.uk-overlay--drawer {
+  background: rgba(0, 0, 0, 0.45);
+  animation-duration: var(--dur-slow, 260ms);
+}
+
+.uk-overlay--drawer .uk-drawer {
+  width: min(390px, 92vw);
+  animation-duration: var(--dur-slow, 260ms);
+  animation-timing-function: var(--ease-drawer, cubic-bezier(.32, .72, .3, 1.08));
+}
+
+.uk-overlay--drawer .uk-drawer__header {
+  background: var(--c-primary);
+  border-bottom: none;
+}
+
+.uk-overlay--drawer .uk-drawer__title {
+  color: var(--c-surface);
+  font-weight: 800;
+}
+
+.uk-overlay--drawer .uk-modal__close {
+  color: var(--c-surface);
+}
+
+.uk-overlay--drawer .uk-modal__close:hover {
+  /* nền primary — hover wash xám của primitive sẽ lệch tông, giữ trong họ primary */
+  background: transparent;
+  color: var(--c-primary-hover);
+}
+
+/* ── Mini-cart drawer — nội dung line items + footer (FI-393 T3) ─────── */
+.mini-cart__count {
+  margin-left: var(--space-2, 8px);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font-size: 13px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.mini-cart-line {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: flex-start;
+  padding: var(--space-3, 12px) 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.mini-cart-line:last-child {
+  border-bottom: none;
+}
+
+.mini-cart-line__thumb {
+  position: relative;
+  flex: none;
+}
+
+.mini-cart-line__thumb img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 2px);
+  border: 1px solid var(--c-border);
+  background: var(--wash-hover);
+}
+
+.mini-cart-line__qty {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--c-surface);
+  border-radius: var(--radius-full);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.mini-cart-line__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mini-cart-line__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mini-cart-line__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-danger);
+}
+
+.mini-cart__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  width: 100%;
+}
+
+.mini-cart__freeship {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 2px);
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.mini-cart__subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mini-cart__subtotal-row > span {
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.mini-cart__subtotal {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--c-danger);
+}
+
+.mini-cart__ctas {
+  display: flex;
+  gap: var(--space-2, 8px);
+}
+
+.mini-cart__btn {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--radius-sm, 2px);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.mini-cart__btn--outline {
+  border: 2px solid var(--c-primary);
+  background: var(--c-surface);
+  color: var(--c-primary);
+}
+
+.mini-cart__btn--outline:hover {
+  background: var(--tint-primary-bg);
+}
+
+.mini-cart__btn--solid {
+  border: none;
+  background: var(--grad-cta);
+  color: var(--c-surface);
+  box-shadow: var(--shadow-cta);
+}
+
+.mini-cart__btn--solid:hover {
+  box-shadow: var(--shadow-cta-hover);
+}
+
+.mini-cart__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
 }

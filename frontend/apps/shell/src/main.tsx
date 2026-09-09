@@ -5,8 +5,11 @@ import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/fonts';
+import './base.css';
+import './header.css';
 import App from './App';
 import { ShellNav } from './header/Header';
+import ShellSearch from './header/ShellSearch';
 import { HeaderSlots } from './header/HeaderSlots';
 import { navigate } from './router';
 import { initGa } from './ga';
@@ -26,6 +29,9 @@ import { injectLiveChat } from './livechat';
 // Nav mặc định của shell — registry pattern: chính shell cũng đăng ký qua
 // HeaderSlots như mọi consumer khác, Header.tsx không hardcode item nào.
 HeaderSlots.register('left', 'shell-nav', ShellNav);
+// Search form (FI-393 T2) — slot 'center': GET native sang storefront
+// /search?q= (cross-origin full navigation, không SPA navigate).
+HeaderSlots.register('center', 'shell-search', ShellSearch);
 // Toggle dark mode (SF-15) — slot 'right' cạnh auth widget/cart badge.
 HeaderSlots.register('right', 'theme-toggle', ThemeToggle);
 

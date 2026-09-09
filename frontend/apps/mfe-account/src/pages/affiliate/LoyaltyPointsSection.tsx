@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Card } from '@ecommerce/ui-kit';
+import { Badge, Card, ListSkeleton } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
 import { authStore } from '@ecommerce/auth';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate, authReady } from '../../bootstrap';
 import { fetchMyLoyalty, type LoyaltyAccount } from './loyaltyApi';
 
@@ -11,10 +12,23 @@ import { fetchMyLoyalty, type LoyaltyAccount } from './loyaltyApi';
  * pack ("account dashboard block điểm"). Điểm earn 1% mỗi đơn CONFIRMED,
  * dùng ở checkout để giảm tiền; hiển thị quy đổi VND (1 điểm = 100đ).
  * Tự fetch độc lập — khách không đăng ký affiliate vẫn thấy điểm.
+ * SF-4 (FI-394 T9): `<section id="loyalty">` anchor — side-nav item
+ * /account/affiliate#loyalty scrollIntoView (tôn trọng prefers-reduced-motion);
+ * stats → KPI pattern (value màu chuẩn, quy đổi thành Badge tint-primary —
+ * KHÔNG tô value --c-primary); loading → ListSkeleton; i18n
+ * `account.loyalty.*`. T9-fix: hash là PROP từ AffiliatePage (owner của hash
+ * state + popstate/hashchange listener) — effect phụ thuộc [hash, loaded] để
+ * scroll chạy cả khi SPA navigate pushState cùng pathname (không re-mount).
  */
-export default function LoyaltyPointsSection(): ReactElement {
+export default function LoyaltyPointsSection({
+  hash,
+}: {
+  hash: string;
+}): ReactElement {
+  const { t } = useT();
   const [account, setAccount] = useState<LoyaltyAccount | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -38,44 +52,75 @@ export default function LoyaltyPointsSection(): ReactElement {
     };
   }, []);
 
+  // Anchor #loyalty — scroll khi (hash === '#loyalty' && loaded). Hash là prop
+  // (AffiliatePage đồng bộ popstate/hashchange) → click side-nav Điểm thưởng
+  // khi đang ở trang cũng scroll, không chỉ lúc mount. loaded đảm bảo section
+  // (hoặc skeleton của nó) đã mount trước khi đo vị trí.
+  useEffect(() => {
+    if (!loaded) return;
+    if (typeof window === 'undefined' || hash !== '#loyalty') return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    sectionRef.current?.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, [hash, loaded]);
+
   if (!loaded) {
     return (
-      <Card>
-        <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>Đang tải điểm thưởng…</p>
-      </Card>
+      <section
+        id="loyalty"
+        data-testid="loyalty-section"
+        className="af-loyalty"
+        ref={sectionRef}
+        aria-label={t('account.loyalty.loading')}
+      >
+        <ListSkeleton count={1} />
+      </section>
     );
   }
 
   return (
-    <Card data-testid="loyalty-section">
-      <h2 className="auth-subtitle" style={{ marginTop: 0 }}>Điểm thưởng</h2>
-      {account ? (
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'baseline' }}>
-          <div data-testid="loyalty-balance">
-            <div style={{ color: 'var(--c-text-secondary, #666)', fontSize: 'var(--text-sm, 13px)' }}>
-              Điểm hiện có
-            </div>
-            <strong style={{ fontSize: 22, color: 'var(--c-primary, #F53D2D)' }}>
-              {account.balance.toLocaleString('vi-VN')}
-            </strong>{' '}
-            điểm
+    <section
+      id="loyalty"
+      data-testid="loyalty-section"
+      className="af-loyalty"
+      ref={sectionRef}
+    >
+      <Card>
+        <h2 className="auth-subtitle af-loyalty__title">{t('account.loyalty.title')}</h2>
+        {account ? (
+          <div className="af-kpis">
+            <Card>
+              <p className="af-kpi__label">{t('account.loyalty.balance')}</p>
+              <p className="af-kpi__value">
+                <span data-testid="loyalty-balance">
+                  {account.balance.toLocaleString('vi-VN')}
+                </span>{' '}
+                <span className="af-kpi__unit">{t('account.loyalty.points')}</span>
+              </p>
+              <Badge variant="primary">≈ {formatPrice(account.balance * 100)}</Badge>
+            </Card>
+            <Card>
+              <p className="af-kpi__label">{t('account.loyalty.totalEarned')}</p>
+              <p className="af-kpi__value">
+                {account.totalEarned.toLocaleString('vi-VN')}{' '}
+                <span className="af-kpi__unit">{t('account.loyalty.points')}</span>
+              </p>
+            </Card>
+            <Card>
+              <p className="af-kpi__label">{t('account.loyalty.convert')}</p>
+              <p className="af-kpi__value">
+                {t('account.loyalty.convertRate', {
+                  amount: formatPrice(account.balance * 100),
+                })}
+              </p>
+            </Card>
           </div>
-          <div>
-            <div style={{ color: 'var(--c-text-secondary, #666)', fontSize: 'var(--text-sm, 13px)' }}>
-              Tổng đã nhận
-            </div>
-            <strong>{account.totalEarned.toLocaleString('vi-VN')}</strong> điểm
-          </div>
-          <div>
-            <div style={{ color: 'var(--c-text-secondary, #666)', fontSize: 'var(--text-sm, 13px)' }}>
-              Quy đổi khi mua hàng
-            </div>
-            ≈ {formatPrice(account.balance * 100)} (1 điểm = 100đ)
-          </div>
-        </div>
-      ) : (
-        <p style={{ margin: 0 }}>Không tải được điểm thưởng — thử tải lại trang.</p>
-      )}
-    </Card>
+        ) : (
+          <p className="af-loyalty__error">{t('account.loyalty.errorLoad')}</p>
+        )}
+      </Card>
+    </section>
   );
 }

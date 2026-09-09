@@ -421,18 +421,27 @@ function renderReport(ev, realBugs, aaNotes) {
   if (realBugs.length === 0) {
     L.push('Không có real-bug.');
   } else {
-    const bySf = {};
-    for (const f of realBugs) (bySf[f.sf] = bySf[f.sf] || []).push(f);
-    L.push('| SF | Page | Theme | Element | Text | Màu chữ | Nền effective | bgSource | Ratio | Ngưỡng |');
-    L.push('|----|------|-------|---------|------|---------|---------------|----------|-------|--------|');
+    // group theo signature (element giống hệt lặp qua nhiều page — 1 fix duy nhất)
+    const sig = {};
     for (const f of realBugs) {
-      L.push(`| ${f.sf} | ${f.page} | \`${f.theme}\` | ${f.kind} (\`${(f.cls || f.tag).slice(0, 40)}\`) | ${f.text.slice(0, 30) || '—'} | \`${f.color}\` | \`${f.backgroundColor}\` | ${f.bgSource} | **${f.ratio}** | ${f.threshold} |`);
+      const k = [f.sf, f.kind, f.cls.slice(0, 50), f.color, f.backgroundColor, f.bgSource, (f.theme === 'dark' || f.theme === 'admin-dark') ? 'dark' : 'light'].join('¦');
+      (sig[k] = sig[k] || { ...f, pages: [], themes: new Set() });
+      sig[k].pages.push(f.page);
+      sig[k].themes.add(f.theme);
     }
+    const groups = Object.values(sig).sort((a, b) => b.pages.length - a.pages.length);
+    L.push('| SF | Element (gộp signature) | Text | Màu chữ | Nền effective | bgSource | Theme | Ratio | Ngưỡng | Xuất hiện trên |');
+    L.push('|----|--------------------------|-------|---------|---------------|----------|-------|-------|--------|-----------------|');
+    for (const g of groups) {
+      L.push(`| ${g.sf} | ${g.kind} (\`${(g.cls || g.tag).slice(0, 40)}\`) | ${g.text.slice(0, 26) || '—'} | \`${g.color}\` | \`${g.backgroundColor}\` | ${g.bgSource} | ${[...g.themes].map((t) => `\`${t}\``).join('/')} | **${g.ratio}** | ${g.threshold} | ${[...new Set(g.pages)].join(', ')} |`);
+    }
+    L.push('');
+    L.push(`(${groups.length} signature khác nhau cho ${realBugs.length} fail — element giống hệt lặp qua nhiều page chỉ cần 1 fix.)`);
     L.push('');
     L.push('### Fix-task proposals');
     L.push('');
-    for (const f of realBugs) {
-      L.push(`- [${f.sf}] \`${f.page}\` × \`${f.theme}\` — ${f.kind} \`${(f.cls || f.tag).slice(0, 60)}\`: ratio ${f.ratio} < ${f.threshold} (${f.thresholdBasis}); color \`${f.color}\` trên \`${f.backgroundColor}\` (${f.bgSource}); text "${f.text.slice(0, 40)}"${f.textRuleNote ? `; ${f.textRuleNote}` : ''}`);
+    for (const g of groups) {
+      L.push(`- [${g.sf}] ${[...g.themes].join('/')} — ${g.kind} \`${(g.cls || g.tag).slice(0, 60)}\` (trên: ${[...new Set(g.pages)].join(', ')}): ratio ${g.ratio} < ${g.threshold} (${g.thresholdBasis}); color \`${g.color}\` trên \`${g.backgroundColor}\` (${g.bgSource}); text "${g.text.slice(0, 40)}"${g.textRuleNote ? `; ${g.textRuleNote}` : ''}`);
     }
   }
   L.push('');

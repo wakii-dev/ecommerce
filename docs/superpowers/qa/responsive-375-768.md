@@ -69,3 +69,8 @@
 - `docs/superpowers/qa/walkthrough/responsive/checkout-{375,768}.png`
 
 Kết quả JSON thô: `/tmp/rs-results.json` (50 records).
+
+## Coordinator adjudication (2026-09-09)
+- **F1 (shell tràn ngang @375, scrollWidth 686 vs 375) — XÁC NHẬN real bug (SF-3):** coordinator probe lại độc lập: scrollW=686/innerW=375, `form.shell-search`=250px, `.um-guest`=124-201px — shell header row không co/wrap mobile. Ảnh `walkthrough/rule0-shell-home-375.png`.
+- **F2 (login không Set-Cookie) — ARTIFACT, bỏ:** e2e `auth-cookie.spec.ts` 4/4 PASS trên cùng stack (run 4 T7, commit b823649) chứng minh UI login → session cookie hoạt động xuyên MFE. Sweep script login bằng POST API trực tiếp rồi đo cookie của page context — không phản ánh UI flow thật (shell login là IdP redirect flow). 6 check INCONCLUSIVE của F2 sẽ được cover lại bởi T5 keyboard-flow (login bằng UI thật) + T10 walkthrough.
+- **Verdict T4 (adjudicated): FAIL với 1 root F1 (SF-3 shell header mobile wrap) — 9 fail instance đều là F1 trên các page shell-owned; storefront Next sạch hoàn toàn (số liệu giữ nguyên).**

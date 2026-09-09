@@ -1692,7 +1692,7 @@ docker rm -f fi397sf2-pg
 ```
 Verify sạch: `lsof -nP -iTCP:8480 -iTCP:8481 -iTCP:5573 -iTCP:5833 -sTCP:LISTEN` rỗng.
 
-- [ ] **Step 7.7: Commit evidence (nếu có file evidence) — KHÔNG commit log /tmp**
+- [x] **Step 7.7: Commit evidence (nếu có file evidence) — KHÔNG commit log /tmp**
 
 Evidence ghi vào Linear comment Phase 5 (outputs curl + playwright), không cần commit gì ngoài code.
 

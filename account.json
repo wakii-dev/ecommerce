@@ -1,0 +1,37 @@
+{
+  "demo": {
+    "entry": "http://localhost:8080",
+    "note": "Docker full stack — mọi URL đi qua gateway. Chạy lại từ đầu: make full && make seed",
+    "accounts": [
+      {
+        "role": "admin",
+        "email": "admin@demo.vn",
+        "password": "admin123",
+        "loginUrl": "http://localhost:8080/login",
+        "pages": ["/admin", "/account"]
+      },
+      {
+        "role": "customer",
+        "email": "user@demo.vn",
+        "password": "Demo#2026",
+        "loginUrl": "http://localhost:8080/login",
+        "pages": ["/account", "/account/orders", "/account/wishlist", "/account/reviews", "/account/affiliate"],
+        "note": "Có 2 đơn CONFIRMED (invoice PDF) + review verified + eligibility review tiếp"
+      }
+    ],
+    "coupons": [
+      { "code": "WELCOME10", "effect": "giảm 10%", "limit": "100 lượt, +30 ngày" },
+      { "code": "GIAM50K", "effect": "giảm 50.000₫" }
+    ],
+    "partner": {
+      "apiKey": "pk_0123456789abcdef0123456789abcdef",
+      "docs": "docs/demo-script.md §affiliate"
+    },
+    "infra": {
+      "mailpit": "http://localhost:8025",
+      "rabbitmq": "http://localhost:15672 (guest/guest)",
+      "mongoExpress": "http://localhost:8089"
+    },
+    "services": "identity :8081 · catalog :8082 · cart :8083 · inventory :8084 · ordering :8085 · payment :8086 · notification :8087 · log :8088 · invoice :8090 · partner :8091 · affiliate :8092 — TẤT CẢ trong container, ngoài host chỉ có gateway :8080"
+  }
+}

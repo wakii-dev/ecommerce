@@ -8,11 +8,11 @@ import { useT } from '@ecommerce/i18n';
  * suggest/autocomplete (spec SF-3 T2).
  *
  * Origin: env `VITE_STOREFRONT_URL` (Vite bake lúc start — đổi env phải restart);
- * thiếu → fallback localhost:3000 (href thôi, không fetch — shell vẫn chạy).
+ * thiếu → same-origin '' (mọi nav qua gateway/entry — KHÔNG absolute port cũ).
  * Export helper cho ShellMiniNav (cùng origin, cùng fallback).
  */
 export const sfUrl = (): string =>
-  (import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? 'http://localhost:3000';
+  (import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? '';
 
 export default function ShellSearch(): ReactElement {
   const { t } = useT();

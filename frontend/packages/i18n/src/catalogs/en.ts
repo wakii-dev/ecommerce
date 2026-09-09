@@ -618,7 +618,7 @@ export const en = {
       forbiddenTitle: 'No access',
       forbiddenDesc: 'Your account does not have permission to access the admin area.',
       backHome: 'Back to home',
-      standaloneGuest: 'Not signed in. Open the admin via the shell (http://localhost:5173) and sign in with an admin account.',
+      standaloneGuest: 'Not signed in. Sign in, then open the admin via the header admin button.',
       loginViaShell: 'Sign in via shell'
     },
     status: {

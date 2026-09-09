@@ -292,24 +292,26 @@
 
 ---
 
-## Coordinator adjudication — FINAL (2026-09-09, áp cho run 3: 602 elements)
+## Coordinator adjudication — FINAL v2 (2026-09-09, sửa sau khi probe shell :5703 trực tiếp)
 
-Run 1 (148 fail, 508 el) → run 2 (544 el) → run 3 (602 el): script vẫn còn đo sai một số family — coordinator probe TRỰC TIẾP từng family (eval computed style trên node đúng, screenshots `walkthrough/rule0-*.png`) và ra verdict chốt sau. Run 1/2 numbers OBSOLETE — bảng dưới thay thế.
+**SỬA SO VỚI ADJUDICATION v1:** v1 phán "mini-nav 'Danh mục' + 'Tìm kiếm' = artifact" dựa trên probe STOREFRONT :3101 header — SAI PHẠM VI: shell :5703 là HEADER COMPONENT KHÁC (SF-3). Probe trực tiếp trên shell /cart dark: `nav a` 'Danh mục' = rgb(30,30,30) trên đỏ, search-btn 'Tìm kiếm' = rgb(30,30,30) trên đỏ — EXECUTOR ĐÚNG về family này. Storefront :3101 probe = trắng (đúng design) — 2 header khác code.
 
-### Real-bug fix-tasks CHỐT (3 — đủ điều kiện sinh fix-task, re-run sau khi SF merge fix)
-| # | SF | Element | Bằng chứng | Ratio |
-|---|----|---------|-----------|-------|
-| 1 | SF-2 | `.theme-toggle` + header action chip (dark) | chip sáng #EFEFEF + label #F5F5F5 — ảnh rule0-home-dark-header.png, rule0-plp-dark-brand-input.png | 1.05 |
-| 2 | SF-2 | `.plp-brand-input` (dark) | text #F5F5F5 trên bg #FFFFFF — gõ 'ASUS' vô hình, ảnh rule0-plp-dark-brand-input.png | 1.09 |
-| 3 | SF-1 | `uk-btn` primary label (dark) | label #1E1E1E trên #F53D2D không flip theme — probe + ảnh rule0-login-dark.png; biểu hiện trên mọi surface (SF-3/4/5) → root = primitive | ~3.7 |
+### Real-bug fix-tasks CHỐT (4 roots — re-run sweep sau khi fix merge)
+| # | SF | Root | Evidence | Ratio |
+|---|----|------|----------|-------|
+| 1 | SF-2 | storefront `.theme-toggle`/action chip (dark): chip sáng #EFEFEF + label #F5F5F5 | ảnh rule0-home-dark-header.png, rule0-plp-dark-brand-input.png | 1.05 |
+| 2 | SF-2 | `.plp-brand-input` (dark): text #F5F5F5 trên bg #FFFFFF, gõ vô hình | ảnh rule0-plp-dark-brand-input.png | 1.09 |
+| 3 | SF-1 | `uk-btn` primary label (dark): #1E1E1E trên #F53D2D không flip theme — mọi surface | probe + ảnh rule0-login-dark.png | ~3.7 |
+| 4 | SF-3 | SHELL header (dark): mini-nav links + search-btn text flip sang --c-text tối trên nền primary giữ nguyên | probe shell :5703 /cart dark = rgb(30,30,30); ảnh rule0-shell-cart-dark-header.png | 4.44 |
 
-### Artifact — probe lại PASS, bỏ khỏi fail-list
-- `a` 'Danh mục' + `button` 'Tìm kiếm' + admin buttons dark: probe trực tiếp = TRẮNG trên đỏ (khớp design §2.1) — script đo stale-CSS/sai node (xuất hiện ở cả 3 run với giá trị khác nhau = dấu hiệu đo không ổn định).
-- `pdp-chip`/`pdp-stepper-btn`: PDP đo (sf4-order, stock 0) render DISABLED — WCAG miễn trừ disabled; node enabled probe = #9E9E9E trên #1E1E1E = 4.6 PASS.
-- confirmation `/skeleton` + `/ui-kit` default-blue anchors: fail-loud FALLBACK UI lúc remote timing — trạng thái lỗi trung thực, không phải styled-page bug (P2 note: fallback anchors nên style token).
-- Các dòng `uk-btn__label` còn lại = cùng root real-bug #3 (đã gộp).
+Ghi chú: executor run-3 liệt kê ~37 instances = 4 roots trên (một root, nhiều page). Owner theo ROOT component, không theo page: shell header family → SF-3; uk-btn → SF-1; theme-toggle/brand-input storefront → SF-2. PDP chip/stepper dark 'M'/'+' đen trên #1E1E1E (1.26) — NIỀM TIN CAO là bug cùng họ brand-input (SF-2 PDP) nhưng chưa probe riêng (PDP đo là product stock-0 disabled-state) → gộp vào fix-task SF-2 kèm yêu cầu verify khi fix.
 
-### AA design-exception notes (brand-lock Q1 — cấm đổi hex; epic cân nhắc riêng, ngoài scope SF-6)
-Trắng trên primary/gradient (hero kicker/title 2.59-3.76, search-btn, nl-submit, MUA NGAY) — design §2.2/§2.3 chỉ định · accent-on-primary mini-nav hot 2.71 (§2.1) · muted-on-bg 4.23 · link #F53D2D trên dark 4.44 · coupon-copy 4.44 · checkout 'đăng nhập' trên tint 3.89 + toàn Bảng 2 của run 3 (152 item).
+### Artifact — probe lại PASS (giữ nguyên từ v1)
+- storefront mini-nav/search-btn :3101 = trắng đúng design (không phải bug).
+- `pdp-stepper-btn` disabled: WCAG miễn trừ; node enabled = 4.6 PASS.
+- confirmation `/skeleton` + `/ui-kit` default-blue anchors: fail-loud FALLBACK UI — P2 note (fallback anchors nên style token).
 
-**VERDICT CHỐT: FAIL với 3 real-bug fix-tasks (SF-2 ×2 theme-toggle + brand-input; SF-1 ×1 uk-btn dark label) — metric phần còn lại: AA-notes (không fix trong epic, brand-lock). Run 3 coverage 602 elements được giữ làm evidence nền.**
+### AA design-exception notes (brand-lock Q1 — không fix trong epic)
+Trắng trên primary/gradient (hero 2.59-3.76, MUA NGAY 2.59) — design §2.2/§2.3 chỉ định · accent-on-primary 2.71 (§2.1) · muted-on-bg 4.23 · link #F53D2D trên dark 4.44 (token --c-link dark) · coupon-copy 4.44 · 'đăng nhập' trên tint 3.89 + Bảng 2 run-3 (152 item).
+
+**VERDICT CHỐT v2: FAIL với 4 real-bug roots (SF-2 ×2, SF-1 ×1, SF-3 ×1) — đủ điều kiện fix-task.**

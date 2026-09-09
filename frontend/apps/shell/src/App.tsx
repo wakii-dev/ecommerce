@@ -3,6 +3,10 @@ import type { ReactElement, ReactNode } from 'react';
 import { useT } from '@ecommerce/i18n';
 import { AuthProvider } from '@ecommerce/auth';
 import { Button, Card, EmptyState } from '@ecommerce/ui-kit';
+// FLAG F1 (FI-398 spec §3.3/§7): Footer từ chrome — ngoài touch map gốc, bắt
+// buộc cho ACCEPTANCE 1 (shell render Header/Footer từ chrome; admin KHÔNG
+// chrome wrap → chỉ nhánh non-admin render).
+import { Footer } from '@ecommerce/chrome';
 import Header from './header/Header';
 import ErrorBoundary from './ErrorBoundary';
 import Home from './pages/Home';
@@ -312,6 +316,8 @@ export default function App(): ReactElement {
     <AuthProvider>
       <Header />
       <main style={mainStyle}>{page}</main>
+      {/* F1: footer chrome — non-admin only (admin full-bleed không footer). */}
+      <Footer />
     </AuthProvider>
   );
 }

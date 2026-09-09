@@ -57,7 +57,7 @@ Scaffold package mới + move registry + extract components (chrome sở hữu),
   - [x] T5 `site-header-ssr-able-slots-props-render-to-static-markup` — SSR contract: props path render server được + renderToStaticMarkup test (links trong HTML, sạch server) — evidence ACCEPTANCE 3.
   - [x] T7 `theme-toggle-canonical-key-ecommerce-theme-boot-script` — chrome ThemeToggle + THEME_STORAGE_KEY/THEME_BOOT_SCRIPT/resolveTheme/storedThemeValue + main.tsx đổi nguồn + **xóa `apps/shell/src/ThemeToggle.tsx` (F2 — P0 critic: chuyển từ T4 sang ĐÂY, cùng commit với rewire main.tsx kẻo red build giữa wave)** + unit bảng case. Verify: build xanh + unit.
 - Wave 4 (footer + locale) — thứ tự T6→T12:
-  - [ ] T6 `footer-chrome-port` — site.ts (setChromeSite/shellUrl/sfUrl/localePath; **shell host call pin: `setChromeSite({ sfUrl: VITE_STOREFRONT_URL, shellUrl: '' })` — P1 critic**) + Footer ('use client', self-contained `.chrome-container`) + App.tsx render non-admin (F1 — comment epic) + SSR test.
+  - [x] T6 `footer-chrome-port` — site.ts (setChromeSite/shellUrl/sfUrl/localePath; **shell host call pin: `setChromeSite({ sfUrl: VITE_STOREFRONT_URL, shellUrl: '' })` — P1 critic**) + Footer ('use client', self-contained `.chrome-container`) + App.tsx render non-admin (F1 — comment epic) + SSR test.
   - [ ] T12 `locale-switcher-chrome` — LocaleSwitcher (**shell-model; KHÔNG drop-in storefront URL-locale — P1 critic; Next integration = SF-4**) + storedLang + main.tsx initI18n({lang: storedLang()}) + unit.
 - Wave 5 (widgets) — thứ tự T8→T9:
   - [ ] T8 `cart-badge-widget-extract-checkout-wraps` — chrome CartBadge (fetchCart inject, CART_CHANGED_EVENT, onOpen) + checkout wrapper (drawer giữ) + bootstrap import chrome. Verify: unit count/event/subscribe; testid giữ.

@@ -4,6 +4,9 @@
 export { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots } from './header-slots';
 export type { SlotKey } from './header-slots';
 export { SiteHeader } from './SiteHeader';
+export { Footer } from './Footer';
+export { localePath, setChromeSite, sfUrl, shellUrl } from './site';
+export type { ChromeSiteConfig, Locale } from './site';
 export {
   THEME_BOOT_SCRIPT,
   THEME_STORAGE_KEY,

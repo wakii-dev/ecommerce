@@ -11,10 +11,18 @@ import './header.css'; // vẫn style shell-owned: .shell-logo/.shell-search/.sh
 import App from './App';
 import { ShellNav } from './header/Header';
 import ShellSearch from './header/ShellSearch';
-import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots, ThemeToggle } from '@ecommerce/chrome';
+import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots, ThemeToggle, setChromeSite } from '@ecommerce/chrome';
 import { navigate } from './router';
 import { initGa } from './ga';
 import { injectLiveChat } from './livechat';
+
+// Site helpers chrome (FI-398 T6, spec §3.4 — pin P1 critic): shell KHÔNG có
+// env self-URL → shellUrl '' = same-origin relative (link /cart đúng ở mọi
+// port kể cả rig +500); sfUrl từ env (unset → default http://localhost:3000).
+setChromeSite({
+  sfUrl: import.meta.env.VITE_STOREFRONT_URL as string | undefined,
+  shellUrl: ''
+});
 
 // Chip kiểm chứng React singleton (Task 14): shell gắn bản React CỦA MÌNH lên
 // window TRƯỚC khi module nào của remote được nạp (import động chạy sau

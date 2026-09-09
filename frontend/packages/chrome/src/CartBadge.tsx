@@ -25,6 +25,7 @@ import type { CartBadgeCart } from './cart-badge';
  * (GET /api/cart), KHÔNG phải nguồn state mới — chrome không tạo cart store.
  */
 export interface CartBadgeProps {
+  /** fetchCart phải stable (module-level) — inline arrow từ host sẽ re-subscribe/re-GET mỗi render. */
   fetchCart: () => Promise<CartBadgeCart | null>;
   onOpen?: () => void;
 }

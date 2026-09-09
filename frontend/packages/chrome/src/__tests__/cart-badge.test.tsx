@@ -1,13 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { initI18n } from '@ecommerce/i18n';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { authStore } from '@ecommerce/auth';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { CART_CHANGED_EVENT, CartBadge, cartBadgeCount } from '../index';
 import type { CartBadgeCart } from '../index';
-
-// i18next KHÔNG phải direct dep của chrome (transitive qua @ecommerce/i18n —
-// tsc chặn import trực tiếp) → infer type instance từ initI18n.
-type I18nInstance = Awaited<ReturnType<typeof initI18n>>;
+import { renderWithProviders } from './setup';
 
 /**
  * CartBadge (FI-398 T8, spec §3.6): count = Σ qty qua fetchCart inject
@@ -18,7 +14,8 @@ type I18nInstance = Awaited<ReturnType<typeof initI18n>>;
  *
  * authStore DÙNG THẬT (singleton — không mock '@ecommerce/auth'): seed qua
  * setToken (pattern authStore.test.ts) + reset null giữa các case; subscribe
- * notify bằng setToken/ logout thật.
+ * notify bằng setToken/ logout thật. i18n qua renderWithProviders (setup
+ * T13 — P1 critic, lang vi cho assert aria-label tiếng Việt).
  */
 function makeJwt(payload: Record<string, unknown>): string {
   const b64url = (s: string) =>
@@ -29,14 +26,19 @@ function makeJwt(payload: Record<string, unknown>): string {
   return `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(JSON.stringify(payload))}.sig`;
 }
 
-beforeEach(async () => {
-  const i18n: I18nInstance = await initI18n();
-  await i18n.changeLanguage('vi');
+beforeEach(() => {
   authStore.setToken(null);
 });
 
-afterEach(() => {
-  authStore.setToken(null);
+afterEach(async () => {
+  // act() + flush microtask quanh reset seed: badge còn mounted lúc afterEach
+  // (RTL cleanup chạy sau user hooks); setToken → notify → refresh() →
+  // fetchCart promise .then(setCount) là MICROTASK sau act sync — cần await
+  // trong act để nuốt (P2 W5 — cosmetic, không chase zero-warning).
+  await act(async () => {
+    authStore.setToken(null);
+    await Promise.resolve();
+  });
 });
 
 describe('cartBadgeCount (Σ qty)', () => {
@@ -48,12 +50,12 @@ describe('cartBadgeCount (Σ qty)', () => {
 });
 
 describe('CartBadge (fetchCart inject)', () => {
-  /** Render + flush refresh-mount (promise fetchCart) BÊN TRONG act —
-   *  setCount từ microtask ngoài act sinh warning React (noise test log).
-   *  setTimeout(0) = macrotask: mọi microtask của chuỗi promise đã chạy xong
-   *  trước khi act thoát. */
+  /** Render (renderWithProviders — i18n vi) + flush refresh-mount (promise
+   *  fetchCart) BÊN TRONG act — setCount từ microtask ngoài act sinh warning
+   *  React (noise test log). setTimeout(0) = macrotask: mọi microtask của
+   *  chuỗi promise đã chạy xong trước khi act thoát. */
   async function renderBadge(props: Parameters<typeof CartBadge>[0]) {
-    const utils = render(<CartBadge {...props} />);
+    const utils = await renderWithProviders(<CartBadge {...props} />, { lang: 'vi' });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });

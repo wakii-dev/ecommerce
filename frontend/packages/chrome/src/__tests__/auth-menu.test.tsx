@@ -1,26 +1,22 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { initI18n } from '@ecommerce/i18n';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { AuthProvider, authStore, logout } from '@ecommerce/auth';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthMenu } from '../index';
-
-// i18next KHÔNG phải direct dep của chrome (transitive qua @ecommerce/i18n —
-// tsc chặn import trực tiếp) → infer type instance từ initI18n.
-type I18nInstance = Awaited<ReturnType<typeof initI18n>>;
+import { renderWithProviders } from './setup';
 
 /**
  * AuthMenu (FI-398 T9, spec §3.7): guest → 2 link Đăng nhập/Đăng ký;
  * user → trigger displayName + menu 3 item; keyboard roving focus GIỮ
  * (ArrowDown mở + focus item đầu, ArrowDown/Up wrap, Escape đóng + restore
- * focus trigger); logout → chuỗi GIỮ: logout (API) → clearLocal
- * (useAuth.logout = authStore.logout) → onNavigate('/login').
+ * focus trigger, Space chọn như click); logout → chuỗi GIỮ: logout (API) →
+ * clearLocal (useAuth.logout = authStore.logout) → onNavigate('/login').
  *
  * '@ecommerce/auth' mock CỤC BỘ (importOriginal spread actual): chỉ `logout`
  * thành spy — tránh network thật (POST identity); AuthProvider/useAuth/
  * authStore DÙNG THẬT (seed phiên bằng setToken + JWT giả — pattern
  * authStore.test.ts; token KHÔNG verify chữ ký client-side).
- * i18n: initI18n() default instance (pattern LocaleSwitcher T12 — useT qua
- * react-i18next fallback instance toàn cục, KHÔNG cần I18nextProvider).
+ * i18n qua renderWithProviders (setup T13 — P1 critic, instance thật bọc
+ * I18nextProvider).
  */
 vi.mock('@ecommerce/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@ecommerce/auth')>();
@@ -44,22 +40,26 @@ const USER_JWT = makeJwt({
   roles: []
 });
 
-beforeEach(async () => {
-  const i18n: I18nInstance = await initI18n();
-  await i18n.changeLanguage('vi');
+beforeEach(() => {
   authStore.setToken(null);
   vi.clearAllMocks(); // xóa call history spy logout giữa các case (giữ impl)
 });
 
 afterEach(() => {
-  authStore.setToken(null);
+  // act() quanh reset seed: AuthProvider/Vite subscriber còn mounted lúc
+  // afterEach (RTL cleanup chạy sau user hooks) — setToken ngoài act sinh
+  // warning React (noise log, P2 W5 — cosmetic, không chase zero-warning).
+  act(() => {
+    authStore.setToken(null);
+  });
 });
 
 function renderMenu(onNavigate?: (to: string) => void) {
-  return render(
+  return renderWithProviders(
     <AuthProvider>
       <AuthMenu onNavigate={onNavigate} />
-    </AuthProvider>
+    </AuthProvider>,
+    { lang: 'vi' }
   );
 }
 
@@ -74,8 +74,8 @@ function threeMenuItems(): [HTMLElement, HTMLElement, HTMLElement] {
 }
 
 describe('AuthMenu — guest', () => {
-  it('authStore unauth → auth-guest + 2 link Đăng nhập/Đăng ký (href giữ)', () => {
-    renderMenu();
+  it('authStore unauth → auth-guest + 2 link Đăng nhập/Đăng ký (href giữ)', async () => {
+    await renderMenu();
     expect(screen.getByTestId('auth-guest')).toBeTruthy();
     expect(screen.queryByTestId('auth-user')).toBeNull();
     const login = screen.getByRole('link', { name: 'Đăng nhập' });
@@ -97,16 +97,16 @@ describe('AuthMenu — guest', () => {
     return prevented;
   }
 
-  it('guest + onNavigate → click link preventDefault + onNavigate(to)', () => {
+  it('guest + onNavigate → click link preventDefault + onNavigate(to)', async () => {
     const onNavigate = vi.fn();
-    renderMenu(onNavigate);
+    await renderMenu(onNavigate);
     const login = screen.getByRole('link', { name: 'Đăng nhập' });
     expect(clickAndCapturePrevented(login)).toBe(true); // router shell điều hướng, href bị chặn
     expect(onNavigate).toHaveBeenCalledWith('/login');
   });
 
-  it('guest KHÔNG onNavigate → click link KHÔNG preventDefault (href tự nhiên)', () => {
-    renderMenu();
+  it('guest KHÔNG onNavigate → click link KHÔNG preventDefault (href tự nhiên)', async () => {
+    await renderMenu();
     const login = screen.getByRole('link', { name: 'Đăng nhập' });
     // stderr "Not implemented: navigation" từ jsdom SAU test này = kỳ vọng:
     // anchor KHÔNG bị chặn → jsdom thử follow /login (browser thật sẽ điều hướng).
@@ -115,17 +115,17 @@ describe('AuthMenu — guest', () => {
 });
 
 describe('AuthMenu — user menu', () => {
-  it('authStore user → auth-user + trigger displayName (fullNames[0])', () => {
+  it('authStore user → auth-user + trigger displayName (fullNames[0])', async () => {
     authStore.setToken(USER_JWT);
-    renderMenu();
+    await renderMenu();
     expect(screen.getByTestId('auth-user')).toBeTruthy();
     expect(screen.queryByTestId('auth-guest')).toBeNull();
     expect(screen.getByRole('button').textContent).toContain('Nguyen');
   });
 
-  it('click trigger mở menu → 3 menuitem Tài khoản/Đơn hàng của tôi/Đăng xuất', () => {
+  it('click trigger mở menu → 3 menuitem Tài khoản/Đơn hàng của tôi/Đăng xuất', async () => {
     authStore.setToken(USER_JWT);
-    renderMenu();
+    await renderMenu();
     fireEvent.click(screen.getByRole('button'));
     const [i0, i1, i2] = threeMenuItems();
     expect(i0.textContent).toBe('Tài khoản');
@@ -137,7 +137,7 @@ describe('AuthMenu — user menu', () => {
   it('click Đăng xuất (onNavigate) → logout spy → clearLocal → onNavigate(\'/login\')', async () => {
     authStore.setToken(USER_JWT);
     const onNavigate = vi.fn();
-    renderMenu(onNavigate);
+    await renderMenu(onNavigate);
     fireEvent.click(screen.getByRole('button'));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
 
@@ -154,7 +154,7 @@ describe('AuthMenu — user menu', () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', { configurable: true, value: { assign } });
     try {
-      renderMenu();
+      await renderMenu();
       fireEvent.click(screen.getByRole('button'));
       fireEvent.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
       await waitFor(() => expect(vi.mocked(logout)).toHaveBeenCalledTimes(1));
@@ -169,7 +169,7 @@ describe('AuthMenu — user menu', () => {
 describe('AuthMenu — keyboard roving focus (FI-390 GIỮ)', () => {
   it('ArrowDown trên trigger → mở + focus item ĐẦU; ArrowDown/Up di chuyển + wrap; Escape đóng + focus về trigger', async () => {
     authStore.setToken(USER_JWT);
-    renderMenu();
+    await renderMenu();
     const trigger = screen.getByRole('button');
 
     fireEvent.keyDown(trigger, { key: 'ArrowDown' });
@@ -195,7 +195,7 @@ describe('AuthMenu — keyboard roving focus (FI-390 GIỮ)', () => {
 
   it('ArrowUp trên trigger → mở + focus item CUỐI; Home/End jump; Tab đóng', async () => {
     authStore.setToken(USER_JWT);
-    renderMenu();
+    await renderMenu();
     const trigger = screen.getByRole('button');
 
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
@@ -210,5 +210,22 @@ describe('AuthMenu — keyboard roving focus (FI-390 GIỮ)', () => {
 
     fireEvent.keyDown(i2, { key: 'Tab' });
     expect(screen.queryByRole('menu')).toBeNull(); // đóng, focus đi tiếp tự nhiên
+  });
+
+  it('Space trên menuitem → chọn như click (select): onNavigate(to) + menu đóng', async () => {
+    // Space KHÔNG activate <a> mặc định — AuthMenu xử lý ' ' như click (P2 W5)
+    authStore.setToken(USER_JWT);
+    const onNavigate = vi.fn();
+    await renderMenu(onNavigate);
+    const trigger = screen.getByRole('button');
+
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    await screen.findAllByRole('menuitem'); // menu render xong
+    const [i0] = threeMenuItems();
+    await waitFor(() => expect(document.activeElement).toBe(i0)); // focus item đầu
+
+    fireEvent.keyDown(i0, { key: ' ' });
+    expect(onNavigate).toHaveBeenCalledWith('/account'); // select(it) → onNavigate
+    expect(screen.queryByRole('menu')).toBeNull(); // menu đóng sau chọn
   });
 });

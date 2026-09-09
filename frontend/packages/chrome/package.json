@@ -28,7 +28,9 @@
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "^18.3.1",
+    "i18next": "catalog:",
     "jsdom": "catalog:",
+    "react-i18next": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

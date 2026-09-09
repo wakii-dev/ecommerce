@@ -1,4 +1,4 @@
-/* chrome component styles — CHỈ var(--*), KHÔNG hex, KHÔNG url() (gotcha FI-390: shared css qua MF dev → spa-fallback HTML → resource error) */
+/* chrome component styles — CHỈ var(--*), không hex thuần (fallback var(--token, legacy) kế thừa từ nguồn được phép — spec §4), KHÔNG url() (gotcha FI-390: shared css qua MF dev → spa-fallback HTML → resource error) */
 
 /* SiteHeader (FI-398 T4) — port values EXACT từ shell header.css (FI-393 T2
    anatomy direction §2.1 FI-390, wrap KHÔNG redesign). Shell-owned classes

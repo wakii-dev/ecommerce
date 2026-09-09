@@ -671,7 +671,11 @@ function makeTab(hub: BroadcastHub, opts: TabOpts) {
     fetchImpl: async (input, init) => {
       if (failures > 0) {
         failures -= 1;
+        const sent = jar.cookie;
         await new Promise((r) => setTimeout(r, 0));
+        // PHẢI đếm POST vào log (base() không chạy ở nhánh này) — các test
+        // retry assert log length; stale=false để không nhiễu filter(stale).
+        log.push({ sent, stale: false, replay: false });
         return jsonResponse({ title: 'forced 401' }, 401);
       }
       return base(input, init);
@@ -1193,15 +1197,20 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
     };
   }
 
-  /** Mở SHELL ở tab mới, chờ guest UI + đóng dấu chống-reload. */
+  /**
+   * Mở SHELL ở tab mới. Counter attach TRƯỚC navigation — boot POST của B
+   * (initAccountShell → refresh, bootstrap.tsx:54) bay TRƯỚC khi auth-guest
+   * visible; attach sau goto sẽ miss nó → poll(counter ≥ 1) chết vĩnh viễn.
+   */
   async function openGuestPage(context: import('@playwright/test').BrowserContext) {
     const page = await context.newPage();
+    const counter = trackRefreshPosts(page);
     await page.goto(`${SHELL}/`);
     await expect(page.getByTestId('auth-guest')).toBeVisible();
     await page.evaluate(() => {
       (window as unknown as { sync399Loaded: boolean }).sync399Loaded = true;
     });
-    return page;
+    return { page, counter };
   }
 
   /** Tab A cũng phải navigate tường minh (fixture `page` khởi đầu ở about:blank). */
@@ -1228,10 +1237,9 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
   test('login A → B thấy user NGAY (không reload, ĐÚNG 1 POST refresh trên B)', async ({ page }) => {
     test.setTimeout(60_000);
     await openMainPage(page);
-    const b = await openGuestPage(page.context());
+    const { page: b, counter: bCounter } = await openGuestPage(page.context());
     // Chờ boot-refresh của B (initAccountShell POST 1 lần) được counter quan
     // sát rồi RESET — bất biến với rig chậm (boot POST không tính vào t0).
-    const bCounter = trackRefreshPosts(b);
     await expect
       .poll(() => bCounter.count(), { timeout: 10_000 })
       .toBeGreaterThanOrEqual(1);
@@ -1249,7 +1257,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
   test('logout A → B về guest NGAY (không reload)', async ({ page }) => {
     test.setTimeout(60_000);
     await openMainPage(page);
-    const b = await openGuestPage(page.context());
+    const { page: b } = await openGuestPage(page.context());
     await loginViaUi(page);
     await expect(b.getByTestId('auth-user')).toBeVisible({ timeout: 15_000 });
 
@@ -1263,7 +1271,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
   test('20-run rotate-race: 0 spurious logout (2 tab refresh đồng thời qua BC)', async ({ page }) => {
     test.setTimeout(180_000);
     await openMainPage(page);
-    const b = await openGuestPage(page.context());
+    const { page: b } = await openGuestPage(page.context());
     await loginViaUi(page);
     await expect(b.getByTestId('auth-user')).toBeVisible({ timeout: 15_000 });
 

@@ -62,11 +62,11 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 **Exit criteria:** script syntax pass; cả 4 nhánh guard có receipt chạy thật (sandbox); banner text đúng cả 3 chế độ (1-origin / REMOTE_* legacy / NEXT_PUBLIC_SHELL_URL leak).
 
 ### Task T3 — env/site/e2e-helpers — dep T1
-- [ ] T3.1 .env.example: REMOTE_{CHECKOUT,ACCOUNT,ADMIN,SKELETON}_URL → `/remotes/<name>` + comment 2 chế độ; REMOTE_STOREFRONT_URL note legacy; NEXT_PUBLIC_SHELL_URL để trống + comment (default same-origin nằm ở site.ts; SITE_URL KHÔNG có sẵn trong .env.example — không thêm no-op); IDENTITY_OAUTH_FE_REDIRECT_BASE → `http://localhost:3000` + NOTIFY_MY_ORDERS_URL → `http://localhost:3000/account/orders` (comment entry)
-- [ ] T3.2 lib/site.ts: `shellUrl()` default `''` + comment entry; giữ env override
-- [ ] T3.3 Unit test site.ts (shellUrl default '' / env override / không `//`) — chạy trong package dir
-- [ ] T3.4 e2e/helpers/env.ts: SHELL default `http://localhost:3000` (+comment qua entry)
-- [ ] T3.5 Commit `feat(sf3): env defaults + shellUrl same-origin relative + e2e SHELL entry (FI-400)`
+- [x] T3.1 .env.example: REMOTE_{CHECKOUT,ACCOUNT,ADMIN,SKELETON}_URL → `/remotes/<name>` + comment 2 chế độ; REMOTE_STOREFRONT_URL note legacy; NEXT_PUBLIC_SHELL_URL để trống + comment (default same-origin nằm ở site.ts; SITE_URL KHÔNG có sẵn trong .env.example — không thêm no-op); IDENTITY_OAUTH_FE_REDIRECT_BASE → `http://localhost:3000` + NOTIFY_MY_ORDERS_URL → `http://localhost:3000/account/orders` (comment entry)
+- [x] T3.2 lib/site.ts: `shellUrl()` default `''` + comment entry; giữ env override
+- [x] T3.3 Unit test site.ts (shellUrl default '' / env override / không `//`) — chạy trong package dir
+- [x] T3.4 e2e/helpers/env.ts: SHELL default `http://localhost:3000` (+comment qua entry)
+- [x] T3.5 Commit `feat(sf3): env defaults + shellUrl same-origin relative + e2e SHELL entry (FI-400)`
 
 **Exit criteria:** unit test pass; grep không còn default absolute `:5173` trong site.ts; .env.example comment tự giải thích.
 

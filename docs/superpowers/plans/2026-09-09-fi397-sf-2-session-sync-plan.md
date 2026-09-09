@@ -964,7 +964,7 @@ git commit -m "feat(auth): cross-tab refresh coordination — Web Locks serializ
 - Modify: `frontend/apps/storefront-web/middleware.ts` (guard đầu hàm + matcher `_next`)
 - Test command: `cd frontend && pnpm --filter storefront-web test`
 
-- [ ] **Step 3.1: Viết test FAIL — `tests/host-redirect.test.ts`**
+- [x] **Step 3.1: Viết test FAIL — `tests/host-redirect.test.ts`**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -986,7 +986,7 @@ describe('redirectHost127', () => {
 });
 ```
 
-- [ ] **Step 3.2: Implement `lib/host-redirect.ts`**
+- [x] **Step 3.2: Implement `lib/host-redirect.ts`**
 
 ```ts
 /**
@@ -999,7 +999,7 @@ export function redirectHost127(hostname: string): 'localhost' | null {
 }
 ```
 
-- [ ] **Step 3.3: Sửa `middleware.ts`** — guard TRƯỚC mọi logic hiện có (affiliate `?ref` + locale), KHÔNG đụng phần còn lại:
+- [x] **Step 3.3: Sửa `middleware.ts`** — guard TRƯỚC mọi logic hiện có (affiliate `?ref` + locale), KHÔNG đụng phần còn lại:
 
 ```ts
 import { redirectHost127 } from './lib/host-redirect';
@@ -1028,12 +1028,12 @@ export const config = {
 };
 ```
 
-- [ ] **Step 3.4: Chạy verify PASS + regression locale/affiliate tests**
+- [x] **Step 3.4: Chạy verify PASS + regression locale/affiliate tests**
 
 Run: `cd frontend && pnpm --filter storefront-web test`
 Expected: PASS (host-redirect mới + tests cũ unit/affiliate-cookie/locale vẫn xanh — middleware helper thay đổi không đụng logic của chúng).
 
-- [ ] **Step 3.5: Commit**
+- [x] **Step 3.5: Commit**
 
 ```bash
 git add frontend/apps/storefront-web/lib/host-redirect.ts frontend/apps/storefront-web/tests/host-redirect.test.ts frontend/apps/storefront-web/middleware.ts

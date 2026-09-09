@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { redirectHost127 } from './lib/host-redirect';
 import { rewriteTarget } from './lib/locale-rewrite';
 import {
   nextAffiliateCookieAction,
@@ -21,6 +22,14 @@ import {
  * 1/IP/10' do service lo.
  */
 export async function middleware(request: NextRequest) {
+  // FI-399: 127.0.0.1 → localhost (cookie host) — giữ path+query (?ref vẫn qua
+  // capture ở hop sau). 308 giữ method. Đặt TRƯỚC affiliate/locale.
+  const localhost = redirectHost127(request.nextUrl.hostname);
+  if (localhost) {
+    const target = request.nextUrl.clone();
+    target.hostname = localhost;
+    return NextResponse.redirect(target, 308);
+  }
   const target = rewriteTarget(request.nextUrl.pathname);
   // SF-8: locale resolve cho <html lang> ở root app/layout.tsx (không thấy
   // params segment) — segment /en hoặc path rewrite vi.
@@ -101,7 +110,8 @@ function resolveHeaderLocale(pathname: string): string | null {
 }
 
 export const config = {
-  // Loại trừ asset tĩnh + API proxy (rewrites của next.config chạy riêng) —
-  // plan Task 10 matcher: `/_next|favicon|robots.txt|sitemap.xml|api`.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api).*)'],
+  // FI-399: loại trừ TOÀN BỘ /_next/* (redirect trên asset/data = refetch sai
+  // host). App Router không phát sinh _next/data — matcher mới chỉ fast-path
+  // các request middleware hôm nay đã no-op. api + robots… giữ nguyên.
+  matcher: ['/((?!_next|favicon.ico|robots.txt|sitemap.xml|api).*)'],
 };

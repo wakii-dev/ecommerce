@@ -78,11 +78,11 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] Report `docs/superpowers/qa/sync-matrix.md` (bảng case × kết quả × evidence; fail app-surface → fix-task epic cap 2 vòng)
 
 ### Task 2 — one-origin golden-path walkthrough (coordinator, Rule 0)
-- [ ] Đi flow trên rig A entry :3400: home→PLP→PDP→cart→checkout guest COD→confirmation→account (không đổi port) + /admin (layout admin RIÊNG full-bleed, KHÔNG chrome wrap) — coordinator TỰ nhìn
-- [ ] **Stripe quyết định tường minh (plan-critic P1#5): 3-gates sống → walkthrough đi variant Stripe 4242 đến PAID** (golden-path e2e T4 cũng chạy full PAID khi hasStripe); gates chết → COD + disclose trong report
-- [ ] Screenshot từng màn → `docs/superpowers/qa/walkthrough/`
-- [ ] HMR re-verify 1 lần (evidence SF-3 giữ nguyên trạng thái): remoteEntry 200 qua entry + ws `vite-hmr` clientPort mở
-- [ ] Ghi gap (nếu có) → fix-task epic; không tự sửa
+- [x] Đi flow trên rig A entry :3400: home→PLP→PDP→cart→checkout guest COD→confirmation→account (không đổi port) + /admin (layout admin RIÊNG full-bleed, KHÔNG chrome wrap) — coordinator TỰ nhìn
+- [x] **Stripe quyết định tường minh (plan-critic P1#5): 3-gates sống → walkthrough đi variant Stripe 4242 đến PAID** (golden-path e2e T4 cũng chạy full PAID khi hasStripe); gates chết → COD + disclose trong report
+- [x] Screenshot từng màn → `docs/superpowers/qa/walkthrough/`
+- [x] HMR re-verify 1 lần (evidence SF-3 giữ nguyên trạng thái): remoteEntry 200 qua entry + ws `vite-hmr` clientPort mở
+- [x] Ghi gap (nếu có) → fix-task epic; không tự sửa
 
 ### Task 3 — 127-redirect verify matrix
 - [x] curl -I matrix §4 trên rig A (:3400 Next middleware + :5573 vite plugin) — path+query giữ, `/_next` + `/@vite` + static KHÔNG redirect, localhost không loop
@@ -107,10 +107,10 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] TEARDOWN rig B `docker compose -p fi397sf5 down -v` (SAU KHI Task 5+6 xong hẳn — plan-critic P1#3)
 
 ### Task 7 — chrome cross-host visual consistency + theme legacy-key
-- [ ] Playwright screenshots header/footer 2 host × 4 trạng thái (light/dark × guest/authed) qua entry — lưu `docs/superpowers/qa/walkthrough/chrome-consistency/`
-- [ ] DOM assert cùng cấu trúc chrome 2 host (testid/role) + theme toggle 1 host → host kia sync + badge single-instance (add storefront → badge shell đếm đúng)
-- [ ] Grep theme keys toàn monorepo = chỉ `ecommerce.theme` (legacy migration N/A evidence theme.ts:8-10) + toggle ghi canonical key 2 host
-- [ ] Report `docs/superpowers/qa/visual-consistency.md`; lệch visual → fix-task SF-1/SF-4 cap 2 vòng
+- [x] Playwright screenshots header/footer 2 host × 4 trạng thái (light/dark × guest/authed) qua entry — lưu `docs/superpowers/qa/walkthrough/chrome-consistency/`
+- [x] DOM assert cùng cấu trúc chrome 2 host (testid/role) + theme toggle 1 host → host kia sync + badge single-instance (add storefront → badge shell đếm đúng)
+- [x] Grep theme keys toàn monorepo = chỉ `ecommerce.theme` (legacy migration N/A evidence theme.ts:8-10) + toggle ghi canonical key 2 host
+- [x] Report `docs/superpowers/qa/visual-consistency.md`; lệch visual → fix-task SF-1/SF-4 cap 2 vòng
 
 ### Task 8 — unit tests monorepo
 - [x] vitest toàn packages/apps (chrome, auth, i18n, ui-kit, shell, mfe-*, storefront-web) — toàn XANH, đếm per package

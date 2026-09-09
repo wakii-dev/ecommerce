@@ -55,9 +55,9 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 **Exit criteria:** (a) re-boot rig +600 NHƯ T0.2 (giữ env offset SHELL_ORIGIN/REMOTE_*_URL absolute) + 4 gates browser PASS với config đã finalize; (b) D3 defaults (không env) verify bằng code-inspect + banner sandbox CHỈ — TUYỆT ĐỐI KHÔNG boot default ports (:3000/:5173 đang bị stack session khác giữ — cấm theo P0 constraint); tsc --noEmit shell + remotes pass.
 
 ### Task T2 — dev-stack/dev-stop — dep T1
-- [ ] T2.1 dev-stack.sh: guard boot curl `ENTRY_URL` (env `DEV_ENTRY_URL`, default :3000) VÀ `${SHELL_ORIGIN:-http://localhost:5173}`; banner 1-URL + chế độ remotes (relative/legacy từ shape REMOTE_*_URL — dev-stack export .env nên thấy) **+ kênh leak thứ hai: NEXT_PUBLIC_SHELL_URL absolute → banner cảnh báo links cross-origin (R5); health check entry sau boot FE
-- [ ] T2.2 dev-stop.sh: verify port list 3000/5173-5178 đủ (đã đủ → không đổi, ghi receipt); thêm port rig (3600/5773/5775-78) KHÔNG thêm (probe tự dọn — tránh kill nhầm)
-- [ ] T2.3 `bash -n` + exercise 4 nhánh guard (both-up / chỉ entry down / chỉ shell down / both-down) bằng curl stub hoặc port giả sandbox — bash -n KHÔNG bắt logic bug + commit `feat(sf3): dev-stack entry guard/banner/healthcheck (FI-400)`
+- [x] T2.1 dev-stack.sh: guard boot curl `ENTRY_URL` (env `DEV_ENTRY_URL`, default :3000) VÀ `${SHELL_ORIGIN:-http://localhost:5173}`; banner 1-URL + chế độ remotes (relative/legacy từ shape REMOTE_*_URL — dev-stack export .env nên thấy) **+ kênh leak thứ hai: NEXT_PUBLIC_SHELL_URL absolute → banner cảnh báo links cross-origin (R5); health check entry sau boot FE
+- [x] T2.2 dev-stop.sh: verify port list 3000/5173-5178 đủ (đã đủ → không đổi, ghi receipt); thêm port rig (3600/5773/5775-78) KHÔNG thêm (probe tự dọn — tránh kill nhầm)
+- [x] T2.3 `bash -n` + exercise 4 nhánh guard (both-up / chỉ entry down / chỉ shell down / both-down) bằng curl stub hoặc port giả sandbox — bash -n KHÔNG bắt logic bug + commit `feat(sf3): dev-stack entry guard/banner/healthcheck (FI-400)`
 
 **Exit criteria:** script syntax pass; cả 4 nhánh guard có receipt chạy thật (sandbox); banner text đúng cả 3 chế độ (1-origin / REMOTE_* legacy / NEXT_PUBLIC_SHELL_URL leak).
 

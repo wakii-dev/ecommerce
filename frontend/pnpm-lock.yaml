@@ -177,6 +177,9 @@ importers:
       '@ecommerce/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@ecommerce/chrome':
+        specifier: workspace:*
+        version: link:../../packages/chrome
       '@ecommerce/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -314,6 +317,9 @@ importers:
       '@ecommerce/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@ecommerce/chrome':
+        specifier: workspace:*
+        version: link:../../packages/chrome
       '@ecommerce/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -372,6 +378,9 @@ importers:
       '@ecommerce/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@ecommerce/chrome':
+        specifier: workspace:*
+        version: link:../../packages/chrome
       '@ecommerce/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -489,6 +498,49 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 18.3.31
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 2.1.9(@types/node@20.19.43)(jsdom@25.0.1)
+
+  packages/chrome:
+    dependencies:
+      '@ecommerce/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@ecommerce/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@ecommerce/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
+      react:
+        specifier: 'catalog:'
+        version: 18.3.1
+      react-dom:
+        specifier: 'catalog:'
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@ecommerce/config':
+        specifier: workspace:*
+        version: link:../config
+      '@testing-library/dom':
+        specifier: 'catalog:'
+        version: 10.4.1
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: 'catalog:'
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.1
+        version: 18.3.7(@types/react@18.3.31)
+      jsdom:
+        specifier: 'catalog:'
+        version: 25.0.1
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

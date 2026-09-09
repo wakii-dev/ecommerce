@@ -1,0 +1,1 @@
+/* chrome component styles — CHỈ var(--*), KHÔNG hex, KHÔNG url() (gotcha FI-390: shared css qua MF dev → spa-fallback HTML → resource error) */

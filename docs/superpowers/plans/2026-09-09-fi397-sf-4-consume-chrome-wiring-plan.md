@@ -363,13 +363,14 @@ Expected: **PASS 4/4** (labels dịch nhờ initI18n sync-data — probe `t()` c
 
 - [ ] **Step 1.7 — Commit.**
 ```bash
-git add frontend/apps/storefront-web/package.json pnpm-lock.yaml \
+git add frontend/apps/storefront-web/package.json frontend/pnpm-lock.yaml \
   frontend/apps/storefront-web/components/ChromeShell.tsx \
   frontend/apps/storefront-web/app/layout.tsx \
   'frontend/apps/storefront-web/app/[locale]/layout.tsx' \
   frontend/apps/storefront-web/tests/chrome-layout.test.ts
 git commit -m "feat(sf4): layout swap chrome — ChromeShell gate + SiteHeader slots + i18n wire (FI-401)"
 ```
+(⚠ lock ở `frontend/pnpm-lock.yaml` — workspace root là `frontend/` — P1-2 plan-critic.)
 
 ### Task PT2: Xóa dup storefront + theme canonical + css bridge (bracket 2+3)
 
@@ -378,11 +379,11 @@ git commit -m "feat(sf4): layout swap chrome — ChromeShell gate + SiteHeader s
 - Modify: `app/app.css` (bridge nhỏ, tokens-only)
 - Modify: `tests/theme.test.ts` (re-point chrome)
 
-- [ ] **Step 2.1 — Verify 0 import còn lại trước xóa:**
+- [ ] **Step 2.1 — Verify import còn lại trước xóa:**
 ```bash
 grep -rn "components/Header\|components/Footer\|components/ThemeToggle\|lib/theme" frontend/apps/storefront-web --include="*.tsx" --include="*.ts" | grep -v node_modules | grep -v ".next"
 ```
-Expected: chỉ `tests/theme.test.ts` (import lib/theme). Layout đãswap ở PT1.
+Expected: ĐÚNG 2 hit (P2-1 plan-critic): `components/ThemeToggle.tsx:8` (tự import lib/theme — sẽ bị xóa cùng lô) + `tests/theme.test.ts` (re-point ở Step 2.2). Layout đã swap ở PT1.
 
 - [ ] **Step 2.2 — theme.test.ts re-point chrome** (contract giữ — chrome theme.ts là port EXACT):
 
@@ -438,6 +439,15 @@ describe('resolveTheme (SF-15 dark mode — canonical chrome SF-4)', () => {
   .site-header .chrome-header__row1 [data-slot='center'] {
     order: 3;
     flex-basis: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  /* ≤600px .header-main gap co còn space-3 (app.css:2765-2767) — class cũ mất
+     theo DOM, bridge sang row1 (P1-3 plan-critic — không bridge = header 375px
+     giữ gap 24px, chật). */
+  .site-header .chrome-header__row1 {
+    gap: var(--space-3);
   }
 }
 
@@ -527,9 +537,9 @@ function CheckoutCartBadge(): ReactElement {
 }
 ```
 
-Trong `initCheckoutShell` thay register:
+Trong `initCheckoutShell` thay register (function component assign trực tiếp — không cần cast, P2-2 plan-critic):
 ```tsx
-  ctx.HeaderSlots.register('right', 'checkout-cart-badge', CheckoutCartBadge as ComponentType);
+  ctx.HeaderSlots.register('right', 'checkout-cart-badge', CheckoutCartBadge);
 ```
 
 - [ ] **Step 3.2 — Xóa `mfe-checkout/src/CartBadge.tsx`** (`git rm frontend/apps/mfe-checkout/src/CartBadge.tsx`).
@@ -538,6 +548,10 @@ Trong `initCheckoutShell` thay register:
 
 ```tsx
 import { AuthMenu } from '@ecommerce/chrome';
+```
+và mở rộng type import đầu file (P2-2 plan-critic — file hiện chỉ import `ComponentType`):
+```tsx
+import type { ComponentType, ReactElement } from 'react';
 ```
 
 Thêm binding TRƯỚC `initAccountShell` (function declaration — `appNavigate` hoisted, an toàn):
@@ -563,7 +577,7 @@ Trong `initAccountShell` thay register:
 git rm frontend/apps/mfe-account/src/AuthWidget.tsx
 grep -n "^\.um-" frontend/apps/mfe-account/src/page.css
 ```
-Xóa TOÀN BỘ rule-block `.um-*` (`.um-root/.um-trigger/.um-caret/.um-menu/.um-menu__item/.um-guest*` + media query nếu có) — chrome.css sở hữu bản port (AuthMenu.tsx:29-30 chỉ dẫn). ⚠ GIỮ mọi rule KHÔNG phải `.um-*` trong file.
+Xóa TOÀN BỘ rule-block `.um-*` + `@keyframes um-menu-in` (P2-3 plan-critic — grep `^\.um-` không bắt keyframes; search thêm `um-` trong file cho chắc) — chrome.css sở hữu bản port (AuthMenu.tsx:29-30 chỉ dẫn). ⚠ GIỮ mọi rule KHÔNG phải `.um-*`/`um-menu-in` trong file.
 
 - [ ] **Step 3.5 — userMenu.test.tsx re-point (P0-3).** Mở file — thay:
 ```tsx
@@ -573,11 +587,11 @@ thành:
 ```tsx
 import { AuthMenu } from '@ecommerce/chrome';
 ```
-và thay toàn bộ usage `<AuthWidget …>` / `createElement(AuthWidget…)` (7 chỗ) bằng `<AuthMenu />` / `createElement(AuthMenu, null)` — mock `@ecommerce/auth` hiện có áp dụng cho AuthMenu (import cùng module logout/useAuth). Chạy:
+và thay toàn bộ usage `<AuthWidget …>` (7 chỗ) bằng **`<AuthMenu onNavigate={appNavigate} />`** — P0-2 plan-critic: test 7 assert `expect(appNavigate).toHaveBeenCalledWith('/login')` (userMenu.test.tsx:145) — bare `<AuthMenu />` rơi vào nhánh `window.location.assign` (AuthMenu.tsx:90) → fail. `appNavigate` đã được test import sẵn từ '../bootstrap' (mock theo cách hiện có — giữ nguyên); binding GIỮ ĐÚNG spec §2.5. Mock `@ecommerce/auth` hiện có áp dụng cho AuthMenu (import cùng module logout/useAuth). Chạy:
 ```bash
 cd frontend/apps/mfe-account && pnpm vitest run
 ```
-Expected: xanh. (Nếu test assert DOM class `.um-*` — chrome render cùng class → giữ pass; nếu assert gì khác của wrapper — điều chỉnh assert theo behavior AuthMenu, không bỏ test.)
+Expected: xanh 7/7.
 
 - [ ] **Step 3.6 — Typecheck 2 MFE + shell (không import vỡ):**
 ```bash
@@ -585,11 +599,11 @@ cd frontend/apps/mfe-checkout && pnpm lint && cd ../mfe-account && pnpm lint
 ```
 Expected: 0 lỗi.
 
-- [ ] **Step 3.7 — Grep evidence (exit criteria P1 — pattern rộng P0-3):**
+- [ ] **Step 3.7 — Grep evidence (exit criteria P1 — pattern import-only, spec §2.5 "trừ comment giải thích" — P1-1 plan-critic):**
 ```bash
-grep -rn "CartBadge\|AuthWidget" frontend/apps/mfe-checkout/src frontend/apps/mfe-account/src | grep -v "ChromeCartBadge\|CheckoutCartBadge\|AccountAuthWidget"
+grep -rnE "import .*from .*\./(CartBadge|AuthWidget)" frontend/apps/mfe-checkout/src frontend/apps/mfe-account/src
 ```
-Expected: **0 dòng** (chỉ còn tên binding mới + import từ chrome). Lưu output vào `docs/superpowers/evidence/sf-4/grep-zero-wrappers.txt`.
+Expected: **0 dòng** (import wrapper = 0; comment/docstring không tính). Lưu output (kể cả exit code) vào `docs/superpowers/evidence/sf-4/grep-zero-wrappers.txt`.
 
 - [ ] **Step 3.8 — Commit.**
 ```bash
@@ -675,8 +689,8 @@ git commit -m "test(sf4): unit sweep xanh sau swap — storefront/chrome/mfe (FI
 
 **Files:** không sửa code (chỉ chạy); nếu locator footer vỡ → sửa `frontend/e2e/tests/nav-honesty.spec.ts` (TỐI THIỂU, có comment).
 
-**Rig (shared backend từ main checkout — backend read-only, contract đồng nhất; FE của worktree NÀY chạy port riêng):**
-- Next entry: `:3100` (worktree này) — SHELL_ORIGIN trỏ shell dev main checkout `:5173` (shell host code = base, KHÔNG đổi trong SF-4); remotes checkout/account chạy từ worktree này (code PT3) ở `:5185/:5186`.
+**Rig (backend + shell + remotes + entry — TẤT CẢ FE từ worktree NÀY, port offset; chỉ infra+JVM backend share main checkout — backend read-only, contract đồng nhất):**
+- Next entry `:3100` · shell `:5273` (worktree này — P0-1 plan-critic: main's shell :5173 load i18n/chrome từ worktree CỦA NÓ → label-demo PT7.4 không thể "đổi cả 2 app" nếu dùng shell main; provenance remotes cũng chỉ chắc chắn với shell của worktree này) · remotes checkout/account `:5185/:5186` (code PT3).
 
 - [ ] **Step 6.1 — Sửa local `.env` (untracked, KHÔNG commit):** comment out `NEXT_PUBLIC_SHELL_URL` + đổi `REMOTE_CHECKOUT_URL`/`REMOTE_ACCOUNT_URL` thành relative `/remotes/checkout` // `/remotes/account` (1-origin mode — next.config đọc env khớp `^https?://` mới dùng absolute).
 
@@ -687,15 +701,21 @@ cd frontend/apps/mfe-account  && DEV_PORT=5186 nohup pnpm dev > /tmp/sf4-account
 ```
 Expected: vite lên (log `Local: http://localhost:5185/remotes/checkout/`).
 
+- [ ] **Step 6.2b — Boot shell của worktree (P0-1 plan-critic):**
+```bash
+cd frontend/apps/shell && DEV_PORT=5273 nohup pnpm dev > /tmp/sf4-shell.log 2>&1 &
+```
+Expected: vite `:5273`. (Shell code KHÔNG đổi trong SF-4 — nhưng phải chạy từ worktree này để i18n/chrome package + remote provenance là CỦA worktree: shell resolve remoteEntry relative `/remotes/<name>` theo page origin :3100 → rewrites → :5185/:5186 của mình.)
+
 - [ ] **Step 6.3 — Boot Next entry worktree:** (⚠ dev script hardcode `-p 3000` — dùng `pnpm exec next dev -p 3100`; inline env WIN trên .env file — rewrites đọc SHELL_ORIGIN/REMOTE_*_URL lúc boot)
 ```bash
 cd frontend/apps/storefront-web && \
-  SHELL_ORIGIN=http://localhost:5173 \
+  SHELL_ORIGIN=http://localhost:5273 \
   REMOTE_CHECKOUT_URL=http://localhost:5185 REMOTE_ACCOUNT_URL=http://localhost:5186 \
   GATEWAY_URL=http://localhost:8080 \
   nohup pnpm exec next dev -p 3100 > /tmp/sf4-next.log 2>&1 &
 ```
-Mục tiêu: entry Listen `:3100`, rewrites /cart → :5173, /remotes/checkout → :5185, /remotes/account → :5186 (verify trong log + curl).
+Mục tiêu: entry Listen `:3100`, rewrites /cart → :5273 (shell mình), /remotes/checkout → :5185, /remotes/account → :5186 (verify trong log + curl).
 
 - [ ] **Step 6.4 — Smoke bằng browser (Rule 0 — T1 DOM):** mở `http://localhost:3100/vi` — header chrome render (`chrome-header` trong DOM), /cart proxy về shell :5173 KHÔNG 404 (stack main checkout entry cũ bị 404 — rig mình phải đúng), /remotes/checkout/remoteEntry.js 200.
 
@@ -706,7 +726,7 @@ cd frontend/e2e && E2E_STOREFRONT_URL=http://localhost:3100 E2E_SHELL_URL=http:/
 cd frontend/e2e && E2E_STOREFRONT_URL=http://localhost:3100 E2E_SHELL_URL=http://localhost:3100 \
   pnpm playwright test tests/golden-path.spec.ts
 ```
-Expected: XANH. ⚠ golden-path test 3+ cần backend identity/cart sống (main stack :8080) + Stripe keys nếu có (hasStripe gate — thiếu thì skip PAID phần, KHÔNG phải fail).
+Expected: XANH. ⚠ golden-path test 0 HARD-ASSERT Stripe keys trong root .env (golden-path.spec.ts:86-92 — thiếu = FAIL THẬT, KHÔNG skip; P2-4 plan-critic sửa nhận định sai). Root .env đã copy từ main checkout (đang chạy stripe e2e) — kỳ vọng đủ; nếu vẫn fail vì keys → report BLOCKED với evidence, KHÔNG sửa spec/skip test trong SF-4. Backend identity/cart từ main stack :8080.
 ⚠ Nếu footer locator `.site-footer a` fail vì chrome markup — wrapper alias `site-footer--chrome` đã giữ class `site-footer` → locator vẫn match; chỉ sửa spec khi còn vỡ, đổi thành `.site-footer a, .chrome-site-footer a` + comment `SF-4 chrome footer`.
 
 - [ ] **Step 6.6 — Evidence + commit (nếu sửa spec):**

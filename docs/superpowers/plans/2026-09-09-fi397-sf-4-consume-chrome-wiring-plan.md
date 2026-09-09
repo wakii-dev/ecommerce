@@ -739,14 +739,14 @@ git commit -m "test(sf4): e2e nav-honesty selector chrome footer (FI-401)"   # c
 
 Không có code change (GA/livechat giữ storefront-owned — spec §2.4). Coordinator TỰ mở browser đi flow, KHÔNG giao agent.
 
-- [ ] **Step 7.1 — BEFORE/AFTER screenshots home + PLP :3100 (đã có BEFORE `docs/superpowers/evidence/sf-4/before-*.png`) — so visual: header 2 hàng/logo/search/actions/mini-nav/footer band "giống hệt FI-390"; ghi gap-list (newsletter reflow = delta accepted §ChromeShell).**
-- [ ] **Step 7.2 — Cross-app flow:** storefront → click Giỏ hàng → `/cart` (shell) → Tài khoản → `/account` → back storefront; screenshot từng bước.
-- [ ] **Step 7.3 — Theme sync:** toggle ở storefront → screenshot; sang `/cart` cùng theme; toggle ở shell → quay lại storefront cùng theme (key `ecommerce.theme` chung).
-- [ ] **Step 7.4 — Label demo:** sửa tạm 1 nhãn `chrome.*` (vd `chrome.footer.linkCart` vi trong `packages/i18n/src/catalogs/vi.ts` — CHỈ local, KHÔNG save vào git) → reload cả :3100 storefront + shell qua :3100/cart → CẢ HAI hiện nhãn mới → `git checkout -- packages/i18n/src/catalogs/vi.ts` revert + screenshot evidence.
-- [ ] **Step 7.5 — GA/livechat network evidence:** devtools network trên :3100/vi — pageview gtag bắn khi navigate (NEXT_PUBLIC_GA_ID set), script tawk chỉ khi NEXT_PUBLIC_LIVECHAT_LICENSE_ID set (env trống → evidence "không load gì, không lỗi console").
-- [ ] **Step 7.6 — /admin smoke:** `:3100/admin` vào được, layout riêng full-bleed (không chrome wrap) — screenshot.
-- [ ] **Step 7.7 — not-found:** `/vi/route-khong-ton-tai` render CÓ chrome; root not-found (như /cart khi shell chết) KHÔNG chrome — screenshot cặp, ghi expected.
-- [ ] **Step 7.8 — Dark + en + 375px spot-check:** dark mode header/footer; `/en` chrome labels tiếng Anh (changeLanguage path — cần request ĐỘC LẬP fresh load); mobile 375 header wrap (bridge media query).
+- [x] **Step 7.1 — BEFORE/AFTER screenshots home + PLP :3100 (đã có BEFORE `docs/superpowers/evidence/sf-4/before-*.png`) — so visual: header 2 hàng/logo/search/actions/mini-nav/footer band "giống hệt FI-390"; ghi gap-list (newsletter reflow = delta accepted §ChromeShell).**
+- [x] **Step 7.2 — Cross-app flow:** storefront → click Giỏ hàng → `/cart` (shell) → Tài khoản → `/account` → back storefront; screenshot từng bước.
+- [x] **Step 7.3 — Theme sync:** toggle ở storefront → screenshot; sang `/cart` cùng theme; toggle ở shell → quay lại storefront cùng theme (key `ecommerce.theme` chung).
+- [x] **Step 7.4 — Label demo:** sửa tạm 1 nhãn `chrome.*` (vd `chrome.footer.linkCart` vi trong `packages/i18n/src/catalogs/vi.ts` — CHỈ local, KHÔNG save vào git) → reload cả :3100 storefront + shell qua :3100/cart → CẢ HAI hiện nhãn mới → `git checkout -- packages/i18n/src/catalogs/vi.ts` revert + screenshot evidence.
+- [x] **Step 7.5 — GA/livechat network evidence:** devtools network trên :3100/vi — pageview gtag bắn khi navigate (NEXT_PUBLIC_GA_ID set), script tawk chỉ khi NEXT_PUBLIC_LIVECHAT_LICENSE_ID set (env trống → evidence "không load gì, không lỗi console").
+- [x] **Step 7.6 — /admin smoke:** `:3100/admin` vào được, layout riêng full-bleed (không chrome wrap) — screenshot.
+- [x] **Step 7.7 — not-found:** `/vi/route-khong-ton-tai` render CÓ chrome; root not-found (như /cart khi shell chết) KHÔNG chrome — screenshot cặp, ghi expected.
+- [x] **Step 7.8 — Dark + en + 375px spot-check:** dark mode header/footer; `/en` chrome labels tiếng Anh (changeLanguage path — cần request ĐỘC LẬP fresh load); mobile 375 header wrap (bridge media query).
 
 ---
 

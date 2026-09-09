@@ -42,11 +42,13 @@ export function generateMetadata({ params }: { params: { locale: string } }): Me
  * (SiteHeader props-slots + Footer) qua client gate ChromeShell. setChromeSite
  * same-origin gọi ở server trước render; initI18n + changeLanguage URL locale
  * chạy trong ChromeShell (P0-2 note PT6: server-await bị BỎ — react-i18next
- * không vào được bundle RSC, xem comment import phía trên; SSR chrome.* labels
- * nhảy key-thô→dịch sau hydration — trade-off chấp nhận, header labels qua
- * lib/i18n static dict vẫn dịch từ HTML đầu). ChromeShell bọc client tree trong
- * SessionBootProvider; islands local giữ (SearchBar/LocaleSwitcher/
- * PwaRegister/LiveChat/ToastProvider).
+ * không vào được bundle RSC, xem comment import phía trên). SSR chrome.* labels
+ * DỊCH ĐÚNG từ HTML đầu (sync-init trong gate trước children render — curl
+ * evidence PT7: "Trang chủ" trong HTML); residual: singleton memoized
+ * per-process — request đổi locale LIÊN TỤC sau locale khác có thể render
+ * HTML theo lang cũ (đã dịch), client changeLanguage tự sửa khi hydrate.
+ * ChromeShell bọc client tree trong SessionBootProvider; islands local giữ
+ * (SearchBar/LocaleSwitcher/PwaRegister/LiveChat/ToastProvider).
  */
 export default function LocaleLayout({
   children,

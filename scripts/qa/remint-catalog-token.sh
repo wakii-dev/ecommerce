@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 GW="${RIG_GATEWAY:-http://localhost:8480}"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.vn}"; ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
+export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.vn}"; export ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 OVF=( -f docker-compose.yml -f docker-compose.override-sf2.yml
       -f scripts/qa/docker-override-sf5-keys.yml -f scripts/qa/docker-override-sf5-net.yml
       -f scripts/qa/docker-override-sf5-identity-ttl.yml

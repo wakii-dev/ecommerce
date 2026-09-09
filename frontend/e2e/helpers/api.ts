@@ -135,11 +135,11 @@ export async function mongoEventLogCount(eventType?: string): Promise<number> {
   // lệch khi chạy qua make e2e (code-review P1)
   const path = require('node:path') as typeof import('node:path');
   const repoRoot = path.resolve(__dirname, '../../..');
-  // eval ĐÓNG KHÉP double-quote (single-quote bên trong là literal — quoting
-  // ngược lại vỡ với {eventType:'product.changed'}: shell thấy 'product' lơ
-  // lửng → ReferenceError: product is not defined — live-verify round 1)
-  const out = execSync(
-    `docker compose exec -T mongo mongosh --quiet db_log --eval "${filter}"`,
+  // FI-402 code-review P0: execFileSync arg-array (re-check P0-1: import/body
+  // phải CÙNG kiểu — mongo eval đi nguyên một argv, không qua /bin/sh)
+  const out = execFileSync(
+    'docker',
+    ['compose', 'exec', '-T', 'mongo', 'mongosh', '--quiet', 'db_log', '--eval', filter],
     { encoding: 'utf8', cwd: repoRoot }
   );
   return Number(out.trim().split('\n').pop());

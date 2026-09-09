@@ -61,6 +61,12 @@ describe('redirect-127-to-localhost plugin (FI-399)', () => {
     expect(res1.headers.Location).toBe('http://localhost:5573/c/x?ref=CODE1');
     expect(res1.ended).toBe(true);
 
+    // P2 (FI-399 review round-2): 127.0.0.10 chỉ PREFIX-khớp "127.0.0.1" —
+    // anchor regex (`^127\.0\.0\.1(:|$)`) bảo vệ → next(), không redirect nhầm.
+    let nextedPrefix = false;
+    captured({ method: 'GET', headers: { host: '127.0.0.10:5573' }, url: '/' }, makeRes(), () => { nextedPrefix = true; });
+    expect(nextedPrefix).toBe(true);
+
     // localhost → next()
     let nexted = false;
     captured({ method: 'GET', headers: { host: 'localhost:5573' }, url: '/' }, makeRes(), () => { nexted = true; });

@@ -151,10 +151,10 @@ export class AuthStore {
       const res = await this.doFetch(this.config.refreshUrl, {
         method: 'POST',
         credentials: 'include',
-        // P2 (FI-399 review): feature-detect — môi trường cũ không có
-        // AbortSignal.timeout không được chết ở dòng này.
+        // P2 (FI-399 review): feature-detect — môi trường cũ không có AbortSignal
+        // (hoặc chỉ thiếu .timeout) không được chết ở dòng này.
         signal:
-          typeof AbortSignal.timeout === 'function'
+          typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
             ? AbortSignal.timeout(this.config.fetchTimeoutMs ?? 10_000)
             : undefined
       });
@@ -231,19 +231,19 @@ export class AuthStore {
 export const authStore = new AuthStore();
 
 let sessionSyncHandle: SessionSyncHandle | null = null;
-/** fetchTimeoutMs từ configureAuth — thread vào singleton sync (P2 FI-399 review: backoff-cap dùng đúng timeout đã cấu hình). */
-let configuredFetchTimeoutMs: number | undefined;
 
 /** Browser: start ĐÚNG 1 lần dù configureAuth gọi bao nhiêu lần (shell host + remotes đều gọi). */
 function ensureSessionSyncStarted(): void {
   if (typeof window === 'undefined') return; // SSR/Node — lazy, không chạm Web API
   if (sessionSyncHandle) return;
-  sessionSyncHandle = createSessionSync(authStore, { fetchTimeoutMs: configuredFetchTimeoutMs });
+  // P2 (FI-399 review round-2): KHÔNG thread snapshot fetchTimeoutMs vào deps —
+  // session-sync đọc LIVE qua authStore.getConfig(), configureAuth muộn vẫn
+  // có hiệu lực (deps chỉ là fallback cho store DI không có getConfig).
+  sessionSyncHandle = createSessionSync(authStore);
   sessionSyncHandle.start();
 }
 
 export function configureAuth(config: Partial<AuthConfig>): void {
   authStore.configureAuth(config);
-  if (config.fetchTimeoutMs !== undefined) configuredFetchTimeoutMs = config.fetchTimeoutMs;
   ensureSessionSyncStarted();
 }

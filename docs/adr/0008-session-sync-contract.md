@@ -16,7 +16,10 @@ ra login/logout 1 tab không lan tab khác; 127.0.0.1 vs localhost = 2 cookie ho
    thành `auth-changed` → handshake start/done tự gây refresh → exponential
    storm); receiver CHỈ nhận whitelist `auth-changed|refresh-start|refresh-done`,
    sentinel v1 bare (không type, bản cũ) = `auth-changed`; KHÔNG token trong
-   message).
+   message). Mixed old/new tabs (P2 FI-399 review round-2): tab bare-v1 trộn tab
+   typed trong storage-fallback KHÔNG được serialize — bare sentinel gộp mọi
+   message thành `auth-changed`; chấp nhận vì module chưa từng ship (không có
+   fleet legacy) — refactor KHÔNG được lược bỏ `type` cho "đơn giản".
 2. **Broadcast transition-only**: chỉ khi isAuthenticated() FLIP auth↔unauth
    (subscriber-diff trên authStore). Refresh rotate token (authed→authed) không
    broadcast → chặn BC loop N-tab. Receiver nhận `auth-changed` → refresh()

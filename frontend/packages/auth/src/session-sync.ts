@@ -122,6 +122,7 @@ export function createStorageFallbackBus(
   const subs = new Set<(m: SyncMessage) => void>();
   const offListen = listen((e) => {
     if (e.key !== SENTINEL_KEY || !e.newValue) return;
+    let message: SyncMessage | null = null;
     try {
       const parsed = JSON.parse(e.newValue) as { v?: unknown; type?: unknown };
       if (parsed.v !== 1) return; // version lạ — tương lai mới xử
@@ -131,11 +132,13 @@ export function createStorageFallbackBus(
       // → exponential refresh storm (700K refresh/800ms từ 1 login).
       const type = typeof parsed.type === 'string' ? parsed.type : AUTH_CHANGED; // v1 bare (không type) = auth-changed (backwards-compat)
       if (!STORAGE_FALLBACK_TYPES.has(type)) return;
-      const message: SyncMessage = { type };
-      for (const fn of subs) fn(message);
+      message = { type };
     } catch {
       return; // value rác — bỏ qua
     }
+    // P2 (FI-399 review round-2): loop subscriber NGOÀI try — subscriber throw
+    // không bị nuốt và không skip các subscriber còn lại; CHỈ PARSE nằm trong try.
+    for (const fn of subs) fn(message);
   });
   return {
     post(message) {
@@ -234,6 +237,12 @@ type RefreshFn = () => Promise<boolean>;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** P2 (FI-399 review round-2): các store ĐANG wrap — chặn re-wrap CÙNG object
+ *  (chain-wrap = 2 tầng coordination) nhưng KHÔNG chặn store KHÁC có own
+ *  `refresh` (shape DI quảng bá refresh là method — hasOwnProperty throw cũ
+ *  giết nhầm store structurally-typed hợp lệ). WeakSet không giữ store sống thêm. */
+const wrappedStores = new WeakSet<AuthSyncStore>();
+
 /** Wrap store.refresh = coordinatedRefresh; giữ bản gốc để stop() restore. */
 function wrapRefresh(ctx: SyncCtx): void {
   const target = ctx.store as AuthSyncStore & { refresh: RefreshFn };
@@ -241,20 +250,22 @@ function wrapRefresh(ctx: SyncCtx): void {
   // (originalRefresh) POST thẳng, KHÔNG BAO GIỜ gọi this.refresh()/
   // this.fetch() trong khi đang giữ lock (fetch() 401-path đi qua
   // ensureRefreshed → refreshPromise — vẫn OK vì holder không await nó).
-  if (Object.prototype.hasOwnProperty.call(target, 'refresh')) {
+  if (wrappedStores.has(ctx.store)) {
     // P2 (FI-399 review): start 2 lần trên cùng store sẽ chain-wrap → mỗi
     // refresh chạy 2 tầng coordination — fail loud thay vì wrap câm.
     throw new Error('[auth] createSessionSync: store.refresh đã bị wrap (start 2 lần?)');
   }
-  ctx.originalRefresh = target.refresh; // prototype method (chưa bị wrap)
+  ctx.originalRefresh = target.refresh; // prototype/own method (chưa bị wrap)
   target.refresh = () => coordinatedRefresh(ctx);
   ctx.refreshWrapped = true;
+  wrappedStores.add(ctx.store);
 }
 
 function unwrapRefresh(ctx: SyncCtx): void {
   if (!ctx.refreshWrapped) return;
   delete (ctx.store as { refresh?: RefreshFn }).refresh; // trả prototype lookup
   ctx.refreshWrapped = false;
+  wrappedStores.delete(ctx.store); // stop() nguyên vẹn — start lại sau stop hợp lệ
 }
 
 function getLocks(deps: SessionSyncDeps): LockManager | null {
@@ -337,7 +348,12 @@ async function refreshWithConditionalRetry(
   const kind = ctx.store.getLastRefreshFailure?.() ?? null;
   if (kind !== '401') return false;
   // Retry ĐÚNG 1 lần (quyết định epic) — vẫn trong lock này.
-  const timeoutMs = ctx.deps.fetchTimeoutMs ?? 10_000;
+  // P2 (FI-399 review round-2): timeout đọc LIVE qua store.getConfig() — module
+  // snapshot trong deps chết sau configureAuth({fetchTimeoutMs}) muộn; deps chỉ
+  // là fallback cho store DI không có getConfig.
+  const liveTimeoutMs = (ctx.store as { getConfig?: () => { fetchTimeoutMs?: number } })
+    .getConfig?.()?.fetchTimeoutMs;
+  const timeoutMs = liveTimeoutMs ?? ctx.deps.fetchTimeoutMs ?? 10_000;
   await sleep(Math.min(ctx.deps.backoffMs ?? 400, timeoutMs));
   return attempt();
 }

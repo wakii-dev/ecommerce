@@ -13,5 +13,9 @@ describe('redirectHost127', () => {
     expect(redirectHost127('localhost')).toBeNull();
     expect(redirectHost127('example.com')).toBeNull();
     expect(redirectHost127('')).toBeNull();
+    // P2 (FI-399 review round-2): IPv6 CÓ assertion — cả bracket (Next hostname
+    // mang bracket) lẫn bare.
+    expect(redirectHost127('[::1]')).toBeNull();
+    expect(redirectHost127('::1')).toBeNull();
   });
 });

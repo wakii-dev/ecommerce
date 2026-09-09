@@ -15,7 +15,17 @@ const checkoutCartApi = resolve(here, '../../../../apps/mfe-checkout/src/lib/car
 const storefrontAddToCart = resolve(here, '../../../../apps/storefront-web/components/pdp/AddToCart.tsx');
 
 function extractKeyLiteral(source: string): string | null {
-  const m = /['"`]ecommerce\.guest_cart_token['"`]/.exec(source);
+  // P2 (FI-399 review round-2): lược dòng COMMENT (//, *, /*) trước khi match —
+  // regex cũ ăn cả key literal NẰM TRONG comment (AddToCart.tsx:16) → binary
+  // lock vẫn xanh dù key THẬT ở code (AddToCart.tsx:128) trôi.
+  const codeOnly = source
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*'));
+    })
+    .join('\n');
+  const m = /['"`]ecommerce\.guest_cart_token['"`]/.exec(codeOnly);
   return m ? 'ecommerce.guest_cart_token' : null;
 }
 

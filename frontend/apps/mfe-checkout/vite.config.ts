@@ -14,7 +14,6 @@ const mfeConfig = defineMfeConfig({
   name: 'mfe_checkout',
   exposes: {
     './bootstrap': './src/bootstrap.tsx',
-    './CartBadge': './src/CartBadge.tsx',
     './CartPage': './src/pages/CartPage.tsx',
     './CheckoutPage': './src/pages/CheckoutPage.tsx',
     './ConfirmationPage': './src/pages/ConfirmationPage.tsx'

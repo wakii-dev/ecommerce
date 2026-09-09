@@ -969,3 +969,13 @@
     overflow-x: auto;
   }
 }
+
+/* Reduced-motion (SF-4 restore — reviewer P1: block cũ bị cuốn theo cleanup
+   .um-*; .um-menu KHÔNG hoàn — chrome.css sở hữu port của nó) */
+@media (prefers-reduced-motion: reduce) {
+  .order-card,
+  .wl-card {
+    transition: none;
+    transform: none;
+  }
+}

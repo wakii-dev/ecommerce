@@ -51,3 +51,15 @@ Test khóa giá trị token qua 5 lần merge (gồm 3 giá trị dark shadow m�
 ## Kết luận cuối
 
 **PASS — Unit tests toàn monorepo XANH trên nhánh đích (52 files / 456 tests / 0 fail / 0 skip), token-regression 14/14 PASS.**
+
+## Coordinator correction + backfill (2026-09-09 — verifier finding)
+
+**SỬA claim "pnpm-lock 0-diff" (sai theo chữ):** §7.10 phải đọc 2 tầng —
+1. **SF-6**: `git diff 8d775b8..HEAD -- frontend/pnpm-lock.yaml` = **0 thay đổi** (SF-6 không đụng lock — đúng boundary). Claim trong report này + epic comment là thiếu chính xác.
+2. **Epic-wide** `git diff master..8d775b8 -- frontend/pnpm-lock.yaml` = **+21 dòng** devDependencies TEST-ONLY (`vitest`, `jsdom`, `@testing-library/dom`, `@testing-library/react` — tất cả `specifier: catalog:`),được introduce bởi SF-4 T1 "vitest infra" (dc524f4) + SF-2 tests (a8e25a4). Đây là dep INFRATEST, không phải runtime dep — vi phạm đúng chữ §7.10 "pnpm-lock không đổi" nhưng KHÔNG vi phạm tinh thần §4.10 dep-freeze (animation CSS-only / runtime). **Cần epic coordinator ruling** (đã ghi trong merge comment lên FI-396).
+
+## Backfill evidence — epic §7.4 / §7.5 / §7.3 (verifier: MISSING → backfilled)
+
+- **§7.4 SortSelect**: `SortSelect.tsx:37` = `router.push(url.toString(), { scroll: false })` — `window.location.assign` đã bị thay (chỉ còn trong comment :13 + read-only `new URL(window.location.href)` :34). PASS.
+- **§7.5 loading/error/skeleton**: `[locale]/loading.tsx` + `[locale]/error.tsx` + `c/[slug]/loading.tsx` + `p/[slug]/loading.tsx` + `search/loading.tsx` + `search/error.tsx` đều TỒN TẠI trên disk; skeleton: OrdersPage/OrderDetailPage/WishlistPage (mfe-account) + OrderDetailPage/CategoriesPage/LoyaltyPage (mfe-admin) grep TableSkeleton/Skeleton hits. PASS.
+- **§7.3 wording note**: bảo toàn keyframes holds (0 hit ngoài 4 page.css + ui-kit.css) NHƯNG literal "> 0 trong ĐÚNG 4 file" unmet: mfe-checkout/page.css + mfe-admin/page.css có 0 keyframes (11 hits nằm ở app.css 2 + mfe-account/page.css 1 + ui-kit.css 8). Ý định gốc = không rò rỉ keyframes (holds); chữ "mỗi file >0" coi như wording P3 cho epic.

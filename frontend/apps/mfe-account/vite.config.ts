@@ -1,6 +1,8 @@
 // mfe-account — remote đăng nhập/đăng ký/profile (SF-3). Port 5176 (.env.example
 // REMOTE_ACCOUNT_URL). Proxy /api → gateway: standalone dev cùng same-origin
 // cookie (khi chạy dưới shell thì proxy của shell lo).
+// SF-3 (FI-400) 1-origin dev entry: base `/remotes/account/` mirror prod bake
+// (Dockerfile.web) + DEV_PORT 1 nguồn cho port + hmr.clientPort.
 import react from '@vitejs/plugin-react';
 import { defineConfig, defineMfeConfig } from '@ecommerce/config/vite';
 
@@ -8,7 +10,6 @@ const mfeConfig = defineMfeConfig({
   name: 'mfe_account',
   exposes: {
     './bootstrap': './src/bootstrap.tsx',
-    './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
     './ForgotPasswordPage': './src/pages/ForgotPasswordPage.tsx',
     './ResetPasswordPage': './src/pages/ResetPasswordPage.tsx',
@@ -30,11 +31,16 @@ const mfeConfig = defineMfeConfig({
   }
 });
 
+const devPort = Number(process.env.DEV_PORT) > 0 ? Number(process.env.DEV_PORT) : 5176;
+
 export default defineConfig({
+  base: '/remotes/account/',
   ...mfeConfig,
   plugins: [react(), ...(mfeConfig.plugins ?? [])],
   server: {
-    port: 5176,
+    port: devPort,
+    strictPort: true,
+    hmr: { clientPort: devPort },
     proxy: {
       '/api': { target: process.env.GATEWAY_URL ?? 'http://localhost:8080', changeOrigin: true }
     }

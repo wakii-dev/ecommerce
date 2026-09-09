@@ -8,11 +8,12 @@ export function siteUrl(): string {
 }
 
 /**
- * Origin của SHELL (cart/checkout/account là trang shell Vite MF — KHÔNG phải
- * route Next; link relative '/cart' 404 trên mọi dev topology — code-review
- * SF-6 P1). env NEXT_PUBLIC_SHELL_URL (Next: chỉ NEXT_PUBLIC_* expose client),
- * default http://localhost:5173 theo .env.example. Đọc lúc gọi như siteUrl.
+ * Origin shell — SF-4 (FI-401): same-origin TUYỆT ĐỐI qua entry :3000
+ * (SF-3). Kill-switch NEXT_PUBLIC_SHELL_URL ĐÃ XÓA (pack item 10 — code path
+ * chết sau 1-origin; docker-compose env :502 prod GIỮ nguyên, code không đọc
+ * nữa). Link `${shellUrl()}/cart` = `/cart` relative — KHÔNG bao giờ
+ * protocol-relative `//cart` (site.test.ts guard).
  */
 export function shellUrl(): string {
-  return process.env.NEXT_PUBLIC_SHELL_URL || 'http://localhost:5173';
+  return '';
 }

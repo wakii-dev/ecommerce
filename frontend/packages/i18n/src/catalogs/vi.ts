@@ -868,5 +868,52 @@ export const vi = {
       ordersCol: 'Đơn',
       qty: 'Số lượng'
     }
+  },
+  // ── SF-1 FI-398 chrome (anchor: cuối file trước export — duy trì merge sạch) ──
+  // Nguồn label cho package @ecommerce/chrome — string MIRROR các nguồn hiện có
+  // (nav.home, shell.theme.*, shell.cart.aria, account.menu.*, nav.login/register,
+  // storefront lib/i18n footer.*) — KHÔNG xóa/sửa key cũ.
+  chrome: {
+    header: {
+      aria: 'Trang chủ'
+    },
+    cart: {
+      aria: 'Giỏ hàng — {{count}} sản phẩm'
+    },
+    theme: {
+      toLight: 'Chuyển giao diện sáng',
+      toDark: 'Chuyển giao diện tối',
+      light: 'Sáng',
+      dark: 'Tối'
+    },
+    menu: {
+      account: 'Tài khoản',
+      orders: 'Đơn hàng của tôi',
+      logout: 'Đăng xuất',
+      displayNameFallback: 'Tài khoản'
+    },
+    guest: {
+      login: 'Đăng nhập',
+      register: 'Đăng ký'
+    },
+    locale: {
+      label: 'Ngôn ngữ',
+      vi: 'Tiếng Việt',
+      en: 'English'
+    },
+    footer: {
+      colCategories: 'Danh mục nổi bật',
+      catElectronics: 'Điện Tử',
+      catFashion: 'Thời Trang',
+      catHome: 'Nhà Cửa',
+      catBooks: 'Sách',
+      catBeauty: 'Làm Đẹp',
+      colAccount: 'Tài khoản',
+      linkCart: 'Giỏ hàng',
+      linkAccount: 'Tài khoản',
+      linkOrders: 'Đơn hàng của tôi',
+      linkWishlist: 'Sản phẩm yêu thích',
+      linkMyReviews: 'Đánh giá của tôi'
+    }
   }
 };

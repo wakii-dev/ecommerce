@@ -23,11 +23,45 @@ const SHARED_SINGLETONS = {
   i18next: { singleton: true, requiredVersion: false },
   'react-i18next': { singleton: true, requiredVersion: false },
   // Workspace packages dùng xuyên MF boundary (SF-2 Task 14 pack pin):
-  // 1 instance authStore/ui-kit/i18n toàn app — remote KHÔNG mang bản riêng.
+  // 1 instance authStore/ui-kit/i18n/chrome toàn app — remote KHÔNG mang bản riêng.
   '@ecommerce/auth': { singleton: true, requiredVersion: false },
   '@ecommerce/ui-kit': { singleton: true, requiredVersion: false },
-  '@ecommerce/i18n': { singleton: true, requiredVersion: false }
+  '@ecommerce/i18n': { singleton: true, requiredVersion: false },
+  '@ecommerce/chrome': { singleton: true, requiredVersion: false }
 };
+
+// FI-399: 127.0.0.1 vs localhost = 2 cookie host — dev mở bằng 127.0.0.1 sẽ vỡ
+// session sync. Redirect 308 về localhost giữ port/path/query (proxy /api không
+// đổi — redirect xảy ra trước). ws upgrade (HMR) không redirect. PRE middleware
+// — chạy trước spa-fallback/transform (plugin order = mfeConfig.plugins rồi app
+// plugins; configureServer hook chạy theo thứ tự plugin).
+function redirect127ToLocalhostPlugin() {
+  return {
+    name: 'redirect-127-to-localhost',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.headers.upgrade === 'websocket') return next();
+        const host = req.headers.host ?? '';
+        // URL-parse (security-audit P2-1): chặn userinfo smuggling
+        // (Host: 127.0.0.1:5573@evil.com — slice prefix sẽ sinh Location với
+        // authority evil.com). Port CHỈ nhận ^:\\d+$ (regex neo cũng chặn
+        // 127.0.0.10).
+        let hostName = '';
+        let port = '';
+        try {
+          const parsed = new URL(`http://${host}`);
+          hostName = parsed.hostname;
+          port = /^\d+$/.test(parsed.port) ? `:${parsed.port}` : ''; // URL.port là digits (không ':')
+        } catch {
+          return next();
+        }
+        if (hostName !== '127.0.0.1') return next();
+        res.writeHead(308, { Location: `http://localhost${port}${req.url ?? '/'}` });
+        res.end();
+      });
+    }
+  };
+}
 
 /**
  * @param {object} opts
@@ -48,8 +82,18 @@ export function defineMfeConfig({ name, filename = 'remoteEntry.js', exposes, re
         filename,
         exposes,
         remotes,
-        shared: { ...SHARED_SINGLETONS, ...shared }
-      })
+        shared: { ...SHARED_SINGLETONS, ...shared },
+        // SF-3 (FI-400) 1-origin dev entry: bật HMR remote — strategy
+        // 'full-reload' (probe FI-400: native/react-refresh KHÔNG deliver cho
+        // module load qua federation runtime vào host page; full-reload là
+        // cơ chế cross-federation chính thức của plugin — relay Node-to-Node
+        // ws://clientPort bypass entry, remote edit → trang shell tự reload).
+        // Không bật → plugin bỏ qua toàn bộ plumbing remote-HMR (check
+        // isRemoteHmrEnabled đứng trước mọi setup).
+        dev: { remoteHmr: 'full-reload' }
+      }),
+      // SF-2 (FI-399): redirect 127.0.0.1 → localhost trên mọi MFE dev server
+      redirect127ToLocalhostPlugin()
     ]
   });
 }

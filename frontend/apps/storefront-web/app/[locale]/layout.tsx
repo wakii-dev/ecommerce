@@ -2,11 +2,18 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+// SF-4 PT6 (FI-401): KHÔNG import @ecommerce/i18n ở server component — init.ts
+// (thiếu 'use client') kéo react-i18next vào bundle RSC, mà react-server runtime
+// không export createContext → 500 "(0 , react.createContext) is not a function"
+// khi boot /vi. init + changeLanguage locale chạy ở client gate ChromeShell
+// ('use client' — bundle SSR/browser đều hợp lệ). setChromeSite giữ ở đây: barrel
+// chrome trong RSC an toàn (module thuần + client-reference stub).
+import { setChromeSite } from '@ecommerce/chrome';
+
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/tokens.css';
 
-import Footer from '../../components/Footer';
-import Header from '../../components/Header';
+import ChromeShell from '../../components/ChromeShell';
 import LiveChat from '../../components/LiveChat';
 import PwaRegister from '../../components/PwaRegister';
 import { ToastProvider } from '../../components/ui-kit';
@@ -31,11 +38,17 @@ export function generateMetadata({ params }: { params: { locale: string } }): Me
 }
 
 /**
- * Locale layout — shell Header/main/Footer. SF-8 sửa build vỡ có sẵn:
- * <html>/<body> + font chuyển lên root app/layout.tsx (Next ≥14.2 bắt buộc
- * root layout vì app/not-found.tsx — pattern i18n chuẩn; chi tiết trong
- * app/layout.tsx). Guard locale lạ giữ nguyên — not-found render trong
- * root layout.
+ * Locale layout — SF-4 (FI-401): Header/Footer render từ @ecommerce/chrome
+ * (SiteHeader props-slots + Footer) qua client gate ChromeShell. setChromeSite
+ * same-origin gọi ở server trước render; initI18n + changeLanguage URL locale
+ * chạy trong ChromeShell (P0-2 note PT6: server-await bị BỎ — react-i18next
+ * không vào được bundle RSC, xem comment import phía trên). SSR chrome.* labels
+ * DỊCH ĐÚNG từ HTML đầu (sync-init trong gate trước children render — curl
+ * evidence PT7: "Trang chủ" trong HTML); residual: singleton memoized
+ * per-process — request đổi locale LIÊN TỤC sau locale khác có thể render
+ * HTML theo lang cũ (đã dịch), client changeLanguage tự sửa khi hydrate.
+ * ChromeShell bọc client tree trong SessionBootProvider; islands local giữ
+ * (SearchBar/LocaleSwitcher/PwaRegister/LiveChat/ToastProvider).
  */
 export default function LocaleLayout({
   children,
@@ -46,18 +59,17 @@ export default function LocaleLayout({
 }) {
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
+  setChromeSite({ sfUrl: '', shellUrl: '' });
   return (
-    <>
-      <Header locale={locale} />
+    <ChromeShell locale={locale}>
       {/* ToastProvider (client boundary qua shim) cho mọi page-level consumer
           useToast (hiện tại: CopyButton coupons — T10). Region toast render
           cuối layout — không chiếm layout flow. */}
       <ToastProvider>
         <main>{children}</main>
       </ToastProvider>
-      <Footer locale={locale} />
       <PwaRegister />
       <LiveChat />
-    </>
+    </ChromeShell>
   );
 }

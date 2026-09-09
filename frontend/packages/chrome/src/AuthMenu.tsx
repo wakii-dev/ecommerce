@@ -1,18 +1,37 @@
-// AuthWidget (SF-4 FI-394 T3) — UserMenu keyboard-OK: trigger aria-haspopup +
-// aria-expanded, menu role="menu" + item role="menuitem" roving focus thật
-// (tabIndex=-1 + .focus(), KHÔNG aria-activedescendant): ArrowDown/Up wrap,
-// Home/End, Escape đóng + restore focus về trigger, Tab đóng tự nhiên.
-// ▲/▼ text → Icon chevron-down + caret rotate; toàn bộ inline style → .um-*
-// (page.css). GIỮ data-testid auth-guest/auth-user + chuỗi vi ('Đăng nhập',
-// 'Đăng ký', 'Tài khoản', 'Đơn hàng của tôi', 'Đăng xuất') — e2e/walkthrough
-// locate theo text. KHÔNG đổi AuthProvider API / slot registration / logout flow.
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactElement } from 'react';
-import { useAuth } from '@ecommerce/auth';
+import { logout, useAuth } from '@ecommerce/auth';
 import { useT } from '@ecommerce/i18n';
 import { Icon } from '@ecommerce/ui-kit';
-import { logout } from './api';
-import { appNavigate } from './bootstrap';
+
+/**
+ * AuthMenu (FI-398 T9, spec §3.7) — port VERBATIM từ mfe-account AuthWidget
+ * (SF-4 FI-394 T3) — UserMenu keyboard-OK: trigger aria-haspopup +
+ * aria-expanded, menu role="menu" + item role="menuitem" roving focus thật
+ * (tabIndex=-1 + .focus(), KHÔNG aria-activedescendant): ArrowDown/Up wrap,
+ * Home/End, Escape đóng + restore focus về trigger, Tab đóng tự nhiên.
+ * ▲/▼ text → Icon chevron-down + caret rotate. GIỮ data-testid
+ * auth-guest/auth-user + chuỗi vi ('Đăng nhập', 'Đăng ký', 'Tài khoản',
+ * 'Đơn hàng của tôi', 'Đăng xuất') — e2e/walkthrough locate theo text.
+ *
+ * DELTA so với nguồn (spec §3.7 chốt):
+ * - `logout` import từ '@ecommerce/auth' (account src/api.ts chỉ re-export —
+ *   cùng nguồn; packages/auth api.ts: POST logout + finally clear cục bộ).
+ * - `appNavigate(to)` → prop `onNavigate?: (to: string) => void`. Không
+ *   onNavigate → KHÔNG preventDefault: anchor href (/login,/register,
+ *   /account) điều hướng tự nhiên (guest links + menu item nav 2 nhánh);
+ *   logout → window.location.assign('/login') khi không có router shell.
+ * - i18n keys đổi nguồn: nav.login/register → chrome.guest.login/register;
+ *   account.menu.* → chrome.menu.* — strings GIỮ NGUYÊN (mirror T11).
+ *
+ * Classes .um-* do chrome.css sở hữu bản port (account page.css GIỮ bộ cũ
+ * cho standalone — dup tạm F4 đã duyệt, SF-4 dọn khi xóa wrapper).
+ */
+export interface AuthMenuProps {
+  onNavigate?: (to: string) => void;
+}
 
 interface MenuItem {
   key: string;
@@ -21,25 +40,27 @@ interface MenuItem {
   action?: () => void;
 }
 
-function GuestLinks(): ReactElement {
+function GuestLinks({ onNavigate }: { onNavigate?: (to: string) => void }): ReactElement {
   const { t } = useT();
   const go = (to: string) => (event: { preventDefault(): void }) => {
+    // Không onNavigate → KHÔNG preventDefault: anchor href điều hướng tự nhiên
+    if (!onNavigate) return;
     event.preventDefault();
-    appNavigate(to);
+    onNavigate(to);
   };
   return (
     <span className="um-guest" data-testid="auth-guest">
       <a href="/login" onClick={go('/login')} className="um-guest__login">
-        {t('nav.login')}
+        {t('chrome.guest.login')}
       </a>
       <a href="/register" onClick={go('/register')} className="um-guest__register">
-        {t('nav.register')}
+        {t('chrome.guest.register')}
       </a>
     </span>
   );
 }
 
-function UserMenu(): ReactElement {
+function UserMenu({ onNavigate }: { onNavigate?: (to: string) => void }): ReactElement {
   const { user, logout: clearLocal } = useAuth();
   const { t } = useT();
   const [open, setOpen] = useState(false);
@@ -50,17 +71,24 @@ function UserMenu(): ReactElement {
   const pendingFocus = useRef<'first' | 'last' | null>(null);
 
   const displayName =
-    user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || t('account.menu.displayNameFallback');
+    user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || t('chrome.menu.displayNameFallback');
 
   // 3 item cố định — logout GIỮ nguyên flow cũ (logout → clearLocal → /login).
   const items: MenuItem[] = [
-    { key: 'account.menu.account', to: '/account' },
-    { key: 'account.menu.orders', to: '/account/orders' },
+    { key: 'chrome.menu.account', to: '/account' },
+    { key: 'chrome.menu.orders', to: '/account/orders' },
     {
-      key: 'account.menu.logout',
+      key: 'chrome.menu.logout',
       danger: true,
       action: () => {
-        void logout().then(() => clearLocal()).then(() => appNavigate('/login'));
+        void logout()
+          .then(() => clearLocal())
+          .then(() => {
+            // Điều hướng /login: qua router shell khi có onNavigate;
+            // standalone (không router) → điều hướng trình duyệt.
+            if (onNavigate) onNavigate('/login');
+            else window.location.assign('/login');
+          });
       }
     }
   ];
@@ -87,10 +115,18 @@ function UserMenu(): ReactElement {
     setOpen(true);
   };
 
-  const select = (it: MenuItem) => {
+  const select = (it: MenuItem, event?: { preventDefault(): void }) => {
     setOpen(false);
-    if (it.action) it.action();
-    else if (it.to) appNavigate(it.to);
+    if (it.action) {
+      event?.preventDefault();
+      it.action();
+      return;
+    }
+    if (it.to && onNavigate) {
+      event?.preventDefault();
+      onNavigate(it.to);
+    }
+    // nav item + KHÔNG onNavigate → KHÔNG preventDefault — anchor href tự nhiên
   };
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -182,8 +218,7 @@ function UserMenu(): ReactElement {
               tabIndex={-1}
               className={it.danger ? 'um-menu__item um-menu__item--danger' : 'um-menu__item'}
               onClick={(event) => {
-                event.preventDefault();
-                select(it);
+                select(it, event);
               }}
               onKeyDown={(event) => onItemKeyDown(event, index, it)}
             >
@@ -196,7 +231,9 @@ function UserMenu(): ReactElement {
   );
 }
 
-export default function AuthWidget(): ReactElement {
+export function AuthMenu({ onNavigate }: AuthMenuProps): ReactElement {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <UserMenu /> : <GuestLinks />;
+  return isAuthenticated ? <UserMenu onNavigate={onNavigate} /> : <GuestLinks onNavigate={onNavigate} />;
 }
+
+export default AuthMenu;

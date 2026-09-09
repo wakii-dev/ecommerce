@@ -7,13 +7,18 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
-import { useAuth } from '@ecommerce/auth';
-import AuthWidget from '../AuthWidget';
-import { logout } from '../api';
+import { logout, useAuth } from '@ecommerce/auth';
+import { AuthMenu } from '@ecommerce/chrome';
 import { appNavigate } from '../bootstrap';
 
-vi.mock('@ecommerce/auth', () => ({ useAuth: vi.fn() }));
-vi.mock('../api', () => ({ logout: vi.fn(() => Promise.resolve()) }));
+// FI-398 T13: AuthWidget nguồn chrome AuthMenu — logout giờ import TỪ
+// '@ecommerce/auth' (account api.ts chỉ re-export cùng nguồn) → spy logout
+// phải mock ở '@ecommerce/auth' (spread actual giữ phần còn lại của package);
+// mock cũ '../api' không còn nằm trên path AuthMenu gọi (spy mù → test đỏ).
+vi.mock('@ecommerce/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@ecommerce/auth')>();
+  return { ...actual, useAuth: vi.fn(), logout: vi.fn(() => Promise.resolve()) };
+});
 vi.mock('../bootstrap', () => ({ appNavigate: vi.fn() }));
 
 const mockClearLocal = vi.fn();
@@ -52,7 +57,7 @@ const openWithArrowDown = () => {
 
 describe('UserMenu — keyboard + role=menu', () => {
   it('click trigger → mở menu: 3 role="menuitem", aria-expanded đổi, trigger giữ focus', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = screen.getByRole('button');
     expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
@@ -66,7 +71,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('ArrowDown từ trigger → mở + focus item 1 (roving tabIndex=-1); ×3 wrap về item 1; ArrowUp từ item 1 → item cuối; Home/End', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = openWithArrowDown();
     const items = screen.getAllByRole('menuitem');
     expect(items).toHaveLength(3);
@@ -89,7 +94,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('ArrowUp từ trigger (đóng) → mở + focus item CUỐI', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = screen.getByRole('button');
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
     const items = screen.getAllByRole('menuitem');
@@ -97,7 +102,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('Enter trên trigger (đóng) → mở + focus item đầu (fireEvent.keyDown, KHÔNG click — synthetic click sẽ toggle lần 2)', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = screen.getByRole('button');
     fireEvent.keyDown(trigger, { key: 'Enter' });
     const items = screen.getAllByRole('menuitem');
@@ -107,7 +112,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('Enter trên trigger khi menu đang mở → đóng + restore focus về trigger', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = openWithArrowDown();
     expect(screen.queryByRole('menu')).toBeTruthy();
     fireEvent.keyDown(trigger, { key: 'Enter' });
@@ -116,7 +121,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('Escape từ item → menu đóng + focus RESTORE về trigger; Tab từ item → đóng (không giữ focus trong menu)', () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     const trigger = openWithArrowDown();
     expect(screen.queryByRole('menu')).toBeTruthy();
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
@@ -129,7 +134,7 @@ describe('UserMenu — keyboard + role=menu', () => {
   });
 
   it('click item Đăng xuất (item 3) → logout flow gọi đủ (logout → clearLocal → appNavigate /login) + menu đóng', async () => {
-    render(<AuthWidget />);
+    render(<AuthMenu onNavigate={appNavigate} />);
     fireEvent.click(screen.getByRole('button'));
     const items = screen.getAllByRole('menuitem');
     fireEvent.click(items[items.length - 1]!); // item cuối — Đăng xuất

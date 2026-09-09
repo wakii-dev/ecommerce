@@ -1,0 +1,11 @@
+# SF-5 QA override #4: identity ISOLATED — (a) TTL access-token 3600s (token
+# CATALOG_API_TOKEN mặc định 15' → ordering re-price 502 giữa session dài);
+# (b) RABBITMQ_HOST=rabbitmq — base compose identity-service KHÔNG set env
+# rabbit → yml fallback `localhost` → trong container = tự trỏ mình → Connection
+# refused (dev-host mode không lộ vì localhost = host rabbit). Finding #11.
+services:
+  identity-service:
+    environment:
+      JWT_ACCESS_TTL_SECONDS: "3600"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"

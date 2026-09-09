@@ -1,0 +1,51 @@
+# SF-5 convergence-qa (FI-402) — QA-only override #2: TÁCH NETWORK cho rig B.
+#
+# FINDING #3 regression (2026-09-09, critical): base compose khai báo
+# `networks: ecommerce-net: name: ecommerce-net` — TÊN NETWORK CỐ ĐỊNH dùng
+# CHUNG mọi compose project. Kết quả: postgres của stack chính (alias
+# `postgres`, container ecommerce-postgres) và postgres của stack isolated
+# (alias `postgres`, container fi397sf2-postgres) CÙNG DNS alias trên CÙNG
+# network → container DNS `postgres` ROUND-ROBIN giữa 2 PG → 10 JVM isolated
+# pool nhầm sang PG chính (main PG ngập ~160 established connections) VÀ ngược
+# lại. Override-sf2 chỉ đổi PORT HOST + container_name — KHÔNG fix alias DNS
+# (isolation recipe SF-2 khiếm khuyết ở tầng network).
+#
+# Fix QA: network riêng `fi397sf5-net` cho toàn bộ services của project này —
+# service-name DNS (postgres/payment-service/…) chỉ resolve trong network đó,
+# hết round-robin. Compose repo KHÔNG đụng (boundary SF-5) — fix thật thuộc
+# owner compose (comment epic FI-397, gộp finding #1 keys-mount + #2 PG
+# max_connections).
+#
+# Dùng CÙNG: docker compose -p fi397sf5 -f docker-compose.yml
+#   -f docker-compose.override-sf2.yml
+#   -f scripts/qa/docker-override-sf5-keys.yml
+#   -f scripts/qa/docker-override-sf5-net.yml --profile full up -d
+networks:
+  sf5-net:
+    name: fi397sf5-net
+
+services:
+  postgres: { networks: !override [sf5-net] }
+  redis: { networks: !override [sf5-net] }
+  rabbitmq: { networks: !override [sf5-net] }
+  mailpit: { networks: !override [sf5-net] }
+  mongo: { networks: !override [sf5-net] }
+  mongo-express: { networks: !override [sf5-net] }
+  elasticsearch: { networks: !override [sf5-net] }
+  invoice-service: { networks: !override [sf5-net] }
+  gateway: { networks: !override [sf5-net] }
+  minio: { networks: !override [sf5-net] }
+  identity-service: { networks: !override [sf5-net] }
+  catalog-service: { networks: !override [sf5-net] }
+  cart-service: { networks: !override [sf5-net] }
+  inventory-service: { networks: !override [sf5-net] }
+  ordering-service: { networks: !override [sf5-net] }
+  payment-service: { networks: !override [sf5-net] }
+  notification-service: { networks: !override [sf5-net] }
+  log-service: { networks: !override [sf5-net] }
+  partner-api: { networks: !override [sf5-net] }
+  affiliate-service: { networks: !override [sf5-net] }
+  storefront-web: { networks: !override [sf5-net] }
+  frontend-web: { networks: !override [sf5-net] }
+  minio-init: { networks: !override [sf5-net] }
+  stripe-cli: { networks: !override [sf5-net] }

@@ -30,3 +30,56 @@ describe('vite-preset (MFE config dùng chung)', () => {
     expect(() => defineMfeConfig({ name: 'mfe_x', filename: 'custom-entry.js' })).not.toThrow();
   });
 });
+
+describe('redirect-127-to-localhost plugin (FI-399)', () => {
+  it('defineMfeConfig nạp plugin redirect', () => {
+    const config = defineMfeConfig({ name: 'mfe_x' });
+    const names = config.plugins.filter(Boolean).map((p) => (Array.isArray(p) ? p.map((q) => q?.name) : p?.name));
+    expect(names.flat()).toContain('redirect-127-to-localhost');
+  });
+
+  it('middleware: host 127.0.0.1 → 308 localhost giữ port+path+query; localhost → next(); ws upgrade → next()', () => {
+    const config = defineMfeConfig({ name: 'mfe_x' });
+    const plugin = config.plugins.flat().find((p) => p?.name === 'redirect-127-to-localhost');
+    expect(plugin).toBeTruthy();
+    let captured;
+    const fakeServer = { middlewares: { use: (fn) => { captured = fn; } } };
+    plugin.configureServer(fakeServer);
+    expect(captured).toBeTypeOf('function');
+
+    const makeRes = () => {
+      const res = { code: null, headers: null, ended: false };
+      res.writeHead = (code, headers) => { res.code = code; res.headers = headers; };
+      res.end = () => { res.ended = true; };
+      return res;
+    };
+
+    // 127.0.0.1 + path + query → 308 Location localhost (giữ ?ref để hop sau capture)
+    const res1 = makeRes();
+    captured({ method: 'GET', headers: { host: '127.0.0.1:5573' }, url: '/c/x?ref=CODE1' }, res1, () => { throw new Error('không được next'); });
+    expect(res1.code).toBe(308);
+    expect(res1.headers.Location).toBe('http://localhost:5573/c/x?ref=CODE1');
+    expect(res1.ended).toBe(true);
+
+    // P2 (FI-399 review round-2): 127.0.0.10 chỉ PREFIX-khớp "127.0.0.1" —
+    // anchor regex (`^127\.0\.0\.1(:|$)`) bảo vệ → next(), không redirect nhầm.
+    let nextedPrefix = false;
+    captured({ method: 'GET', headers: { host: '127.0.0.10:5573' }, url: '/' }, makeRes(), () => { nextedPrefix = true; });
+    expect(nextedPrefix).toBe(true);
+
+    // localhost → next()
+    let nexted = false;
+    captured({ method: 'GET', headers: { host: 'localhost:5573' }, url: '/' }, makeRes(), () => { nexted = true; });
+    expect(nexted).toBe(true);
+
+    // userinfo smuggling (security-audit P2-1) → KHÔNG redirect, next()
+    nextedPrefix = false;
+    captured({ method: 'GET', headers: { host: '127.0.0.1:5573@evil.com' }, url: '/' }, makeRes(), () => { nextedPrefix = true; });
+    expect(nextedPrefix, 'host chứa userinfo → bỏ qua, không tạo Location authority lạ').toBe(true);
+
+    // ws upgrade (HMR) → next() — không redirect websocket
+    nexted = false;
+    captured({ method: 'GET', headers: { host: '127.0.0.1:5573', upgrade: 'websocket' }, url: '/' }, makeRes(), () => { nexted = true; });
+    expect(nexted).toBe(true);
+  });
+});

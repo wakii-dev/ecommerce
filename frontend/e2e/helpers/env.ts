@@ -35,12 +35,15 @@ export function env(name: string): string {
 }
 
 export const STOREFRONT = env('E2E_STOREFRONT_URL') || 'http://localhost:3000';
-export const SHELL = env('E2E_SHELL_URL') || 'http://localhost:5173';
+// SF-3: shell routes đi qua entry :3000 (Next rewrites) — 1 URL
+export const SHELL = env('E2E_SHELL_URL') || 'http://localhost:3000';
 // GATEWAY_URL single-source (FI-366 SF-1 T12): đọc `GATEWAY_URL` từ .env như
 // mọi file khác (13-file grep-verified); E2E_GATEWAY_URL giữ làm override
 // legacy. Default chỉ là documented fallback — nguồn giá trị = .env.
 export const GATEWAY = env('GATEWAY_URL') || env('E2E_GATEWAY_URL') || 'http://localhost:8080';
-export const MAILPIT_API = 'http://localhost:8025';
+// SF-5 (FI-402): override cho rig isolated +400 (mailpit :8425) — trước đây
+// hardcode :8025 chặn e2e trên stack isolate (improvements-log FI-399 flag).
+export const MAILPIT_API = env('MAILPIT_API') || 'http://localhost:8025';
 export const ADMIN_EMAIL = env('ADMIN_EMAIL') || 'admin@demo.vn';
 export const ADMIN_PASSWORD = env('ADMIN_PASSWORD') || 'admin123';
 

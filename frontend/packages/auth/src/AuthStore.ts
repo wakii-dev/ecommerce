@@ -3,6 +3,8 @@
 // XSS không đọc được token). Refresh dựa vào cookie httpOnly do identity
 // service set — client không bao giờ chạm refresh token.
 
+import { createSessionSync, type SessionSyncHandle } from './session-sync';
+
 export interface AuthUser {
   id: string;
   email?: string;
@@ -19,6 +21,8 @@ export interface AuthConfig {
   identityBaseUrl?: string;
   /** Inject fetch cho test / SSR client riêng. Mặc định global fetch. */
   fetchImpl?: typeof fetch;
+  /** Timeout 1 POST refresh (ms) — default 10s. Fetch treo không được giữ cross-tab lock. */
+  fetchTimeoutMs?: number;
 }
 
 type AuthListener = () => void;
@@ -61,13 +65,18 @@ function toUser(payload: Record<string, unknown>): AuthUser | null {
   return user;
 }
 
-class AuthStore {
+export class AuthStore {
   private accessToken: string | null = null;
   private user: AuthUser | null = null;
   private config: AuthConfig = { refreshUrl: '' };
   private listeners = new Set<AuthListener>();
   /** Single-flight refresh — nhiều 401 đồng thời chia sẻ ĐÚNG 1 promise này. */
   private refreshPromise: Promise<boolean> | null = null;
+  /**
+   * Kind failure của lần refresh GẦN NHẤT (P1#2 FI-399 review) — session-sync
+   * đọc qua getLastRefreshFailure() để gate retry-once (CHỈ 401 mới retry).
+   */
+  private lastRefreshFailure: '401' | 'other' | null = null;
 
   configureAuth(config: Partial<AuthConfig>): void {
     this.config = { ...this.config, ...config };
@@ -137,26 +146,41 @@ class AuthStore {
     if (!this.config.refreshUrl) {
       throw new Error('[auth] refreshUrl chưa cấu hình — gọi configureAuth({refreshUrl}) trước');
     }
+    this.lastRefreshFailure = null; // mỗi lần refresh tự đo lại kind của CHÍNH nó
     try {
       const res = await this.doFetch(this.config.refreshUrl, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        // P2 (FI-399 review): feature-detect — môi trường cũ không có AbortSignal
+        // (hoặc chỉ thiếu .timeout) không được chết ở dòng này.
+        signal:
+          typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+            ? AbortSignal.timeout(this.config.fetchTimeoutMs ?? 10_000)
+            : undefined
       });
       if (!res.ok) {
+        this.lastRefreshFailure = res.status === 401 ? '401' : 'other';
         this.logout();
         return false;
       }
       const data = (await res.json()) as { accessToken?: unknown };
       if (typeof data.accessToken !== 'string') {
+        this.lastRefreshFailure = 'other';
         this.logout();
         return false;
       }
       this.setToken(data.accessToken);
       return true;
     } catch {
+      this.lastRefreshFailure = 'other'; // network throw / timeout / abort
       this.logout();
       return false;
     }
+  }
+
+  /** Kind failure refresh gần nhất (internal accessor cho session-sync retry gate). */
+  getLastRefreshFailure(): '401' | 'other' | null {
+    return this.lastRefreshFailure;
   }
 
   private ensureRefreshed(): Promise<boolean> {
@@ -206,6 +230,20 @@ class AuthStore {
 
 export const authStore = new AuthStore();
 
+let sessionSyncHandle: SessionSyncHandle | null = null;
+
+/** Browser: start ĐÚNG 1 lần dù configureAuth gọi bao nhiêu lần (shell host + remotes đều gọi). */
+function ensureSessionSyncStarted(): void {
+  if (typeof window === 'undefined') return; // SSR/Node — lazy, không chạm Web API
+  if (sessionSyncHandle) return;
+  // P2 (FI-399 review round-2): KHÔNG thread snapshot fetchTimeoutMs vào deps —
+  // session-sync đọc LIVE qua authStore.getConfig(), configureAuth muộn vẫn
+  // có hiệu lực (deps chỉ là fallback cho store DI không có getConfig).
+  sessionSyncHandle = createSessionSync(authStore);
+  sessionSyncHandle.start();
+}
+
 export function configureAuth(config: Partial<AuthConfig>): void {
   authStore.configureAuth(config);
+  ensureSessionSyncStarted();
 }

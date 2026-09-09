@@ -2,27 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { formatPrice } from '@ecommerce/ui-kit';
+import { Price } from '@ecommerce/ui-kit';
+import Link from 'next/link';
+import { categoryGradient } from '../lib/catalog-api';
+import type { Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 import { readRecentlyViewed, type RecentlyViewedItem } from '../lib/recently-viewed';
-
-const COPY = {
-  vi: { title: 'Đã xem gần đây' },
-  en: { title: 'Recently viewed' }
-} as const;
-
-const GRADIENTS = [
-  'linear-gradient(135deg,#ffe9e4,#ffd8cf)',
-  'linear-gradient(135deg,#e4f2ff,#cfe6ff)',
-  'linear-gradient(135deg,#fff5d6,#ffe9ad)',
-  'linear-gradient(135deg,#e9f9ef,#cdefdc)',
-  'linear-gradient(135deg,#f3e9ff,#e0ccff)'
-];
 
 /**
  * Section "Đã xem gần đây" ở home (SF-13 A6a) — client island đọc
  * localStorage (PDP ghi qua RecentlyViewedTracker); ẩn khi trống.
+ * FI-392 T11: card dùng anatomy `.p-card` như ProductCardView (thumb
+ * gradient qua categoryGradient(slug) → token `--grad-cat-*`, Price
+ * primitive); 0 inline-style, 0 hex. T12: copy trong lib/i18n (miền `home`).
  */
-export default function RecentlyViewed({ locale }: { locale: string }): ReactElement | null {
+export default function RecentlyViewed({ locale }: { locale: Locale }): ReactElement | null {
   const [items, setItems] = useState<RecentlyViewedItem[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -34,53 +28,39 @@ export default function RecentlyViewed({ locale }: { locale: string }): ReactEle
   // SSR + lần render đầu client trống → null (tránh hydration mismatch)
   if (!mounted || items.length === 0) return null;
 
-  const copy = COPY[locale === 'en' ? 'en' : 'vi'];
-  const gradientFor = (index: number) => GRADIENTS[index % GRADIENTS.length];
+  const title = t(locale, 'home.recentlyViewed');
 
   return (
-    <section className="featured" aria-label={copy.title} data-testid="recently-viewed">
+    <section className="featured" aria-label={title} data-testid="recently-viewed">
       <div className="featured-head">
         <div className="featured-head-left">
-          <h2 style={{ margin: 0, fontSize: 20 }}>{copy.title}</h2>
+          <span className="section-bar" aria-hidden="true" />
+          <h3 className="section-title">{title}</h3>
         </div>
       </div>
       <div className="featured-grid">
-        {items.map((item, index) => (
-          <a
+        {items.map((item) => (
+          <Link
             key={item.slug}
             href={locale === 'en' ? `/en/p/${item.slugEn || item.slug}` : `/p/${item.slug}`}
-            className="rv-card"
-            style={{ textDecoration: 'none', color: 'inherit' }}
+            className="p-card"
           >
-            <span className="p-thumb" style={{ background: gradientFor(index) }}>
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            <span className="p-thumb" style={{ background: categoryGradient(item.slug) }}>
+              {item.image ? <img src={item.image} alt={item.name} loading="lazy" /> : null}
+            </span>
+            <span className="p-body">
+              <span className="p-name">{item.name}</span>
+              <span className="p-price-row">
+                {/* locale 'vi-VN' cố định — khớp ProductCardView (i18n T12 xem lại) */}
+                <Price
+                  value={item.price}
+                  comparePrice={item.comparePrice ?? undefined}
+                  locale="vi-VN"
+                  className="p-price"
                 />
-              ) : null}
-            </span>
-            <span
-              style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                fontSize: 13,
-                minHeight: 36
-              }}
-            >
-              {item.name}
-            </span>
-            <span style={{ fontWeight: 600, color: '#F53D2D', fontSize: 14 }}>{formatPrice(item.price)}</span>
-            {item.comparePrice != null && item.comparePrice > item.price ? (
-              <span style={{ textDecoration: 'line-through', color: '#999', fontSize: 12 }}>
-                {formatPrice(item.comparePrice)}
               </span>
-            ) : null}
-          </a>
+            </span>
+          </Link>
         ))}
       </div>
     </section>

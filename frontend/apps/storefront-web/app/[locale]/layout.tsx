@@ -9,6 +9,7 @@ import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import LiveChat from '../../components/LiveChat';
 import PwaRegister from '../../components/PwaRegister';
+import { ToastProvider } from '../../components/ui-kit';
 import { resolveLocale } from '../../lib/format';
 import { buildAlternates } from '../../lib/seo';
 import { siteUrl } from '../../lib/site';
@@ -48,7 +49,12 @@ export default function LocaleLayout({
   return (
     <>
       <Header locale={locale} />
-      <main>{children}</main>
+      {/* ToastProvider (client boundary qua shim) cho mọi page-level consumer
+          useToast (hiện tại: CopyButton coupons — T10). Region toast render
+          cuối layout — không chiếm layout flow. */}
+      <ToastProvider>
+        <main>{children}</main>
+      </ToastProvider>
       <Footer locale={locale} />
       <PwaRegister />
       <LiveChat />

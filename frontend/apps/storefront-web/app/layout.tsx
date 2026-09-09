@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import GaPageview from '../components/GaPageview';
 import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';
 
+import '@ecommerce/ui-kit/tokens.css';
 import './app.css';
 
 /**

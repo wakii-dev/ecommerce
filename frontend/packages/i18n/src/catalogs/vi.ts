@@ -294,6 +294,204 @@ export const vi = {
     register: 'Đăng ký',
     forgot: 'Quên mật khẩu?'
   },
+  // ── SF-3 checkout (FI-393) — luồng tiền; cart./confirmation./drawer. là
+  // group CON của checkout (checkout.cart.* ...) — KHÔNG top-level khác.
+  // vi value = chuẩn e2e (labels nút/bước giữ NGUYÊN CHỮ) ──────────────────
+  checkout: {
+    title: 'Thanh toán',
+    stepper: {
+      label: 'Các bước thanh toán',
+      address: 'Địa chỉ',
+      shipping: 'Vận chuyển',
+      payment: 'Thanh toán'
+    },
+    step1: {
+      title: 'Địa chỉ nhận hàng',
+      fullName: {
+        label: 'Họ tên người nhận',
+        placeholder: 'Nguyen Van A',
+        error: 'Nhập họ tên người nhận'
+      },
+      phone: {
+        label: 'Số điện thoại',
+        placeholder: '0901234567',
+        error: 'Số điện thoại không hợp lệ'
+      },
+      line1: {
+        label: 'Số nhà + đường',
+        placeholder: '12 Nguyen Hue',
+        error: 'Nhập số nhà + tên đường'
+      },
+      ward: {
+        label: 'Phường/xã',
+        placeholder: 'Ben Nghe',
+        error: 'Nhập phường/xã'
+      },
+      district: {
+        label: 'Quận/huyện',
+        placeholder: 'Quan 1',
+        error: 'Nhập quận/huyện'
+      },
+      city: {
+        label: 'Tỉnh/thành phố',
+        placeholder: 'TP. Hồ Chí Minh',
+        error: 'Nhập tỉnh/thành phố'
+      }
+    },
+    continueShipping: 'Tiếp tục — chọn vận chuyển',
+    continuePayment: 'Tiếp tục — thanh toán',
+    backAddress: '← Quay lại địa chỉ',
+    backShipping: '← Quay lại vận chuyển',
+    step2: {
+      title: 'Phương thức vận chuyển'
+    },
+    eta: 'Dự kiến {{days}} ngày',
+    ghnNote: 'phí GHN theo địa chỉ',
+    flatNote: 'phí tiêu chuẩn (flat-fee)',
+    coupon: {
+      title: 'Mã giảm giá',
+      label: 'Mã giảm giá',
+      apply: 'Áp dụng',
+      checking: 'Đang kiểm tra…',
+      applied: 'giảm {{amount}}',
+      remove: 'Gỡ',
+      invalid: 'Mã không hợp lệ'
+    },
+    points: {
+      title: 'Điểm thưởng',
+      label: 'Dùng điểm (tối đa {{max}} ≈ {{value}})',
+      balance: 'Bạn có {{points}} điểm',
+      use: 'Dùng {{points}} điểm — giảm {{amount}}',
+      remove: 'Gỡ',
+      none: 'Bạn có 0 điểm — mua hàng CONFIRMED sẽ nhận 1% điểm.',
+      noPoints: 'Bạn chưa có điểm — mua hàng CONFIRMED sẽ nhận 1% điểm.',
+      notEligible: 'Đơn hiện tại chưa dùng được điểm (giá trị hàng sau giảm giá phải ≥ {{amount}}).'
+    },
+    payment: {
+      title: 'Thanh toán',
+      stripe: 'Thẻ quốc tế (Stripe)',
+      cod: 'COD — Thanh toán khi nhận hàng'
+    },
+    codNote: 'Kiểm tra hàng và thanh toán tiền mặt khi nhận — đơn được xác nhận ngay.',
+    payUnavailable: {
+      prefix: 'Đơn {{id}} đã tạo nhưng chưa mount được form thẻ (thiếu VITE_STRIPE_PUBLISHABLE_KEY).',
+      ctaLink: 'Đơn hàng của tôi',
+      suffix: 'để thanh toán — đơn chưa trả sẽ tự hủy sau 30 phút.'
+    },
+    placeOrder: {
+      card: 'Kiểm tra & tạo đơn — {{total}}',
+      cod: 'Đặt hàng COD — {{total}}'
+    },
+    payingCard: 'Đang xử lý thẻ…',
+    payByCard: 'Thanh toán bằng thẻ',
+    summary: {
+      title: 'Đơn hàng',
+      subtotal: 'Tạm tính',
+      discount: 'Giảm giá',
+      points: 'Điểm thưởng ({{points}})',
+      shipping: 'Phí vận chuyển (phí tiêu chuẩn)',
+      total: 'Tổng cộng',
+      shipTo: 'Địa chỉ:'
+    },
+    empty: {
+      title: 'Chưa có sản phẩm để thanh toán',
+      description: 'Quay lại giỏ hàng để kiểm tra lại đơn của bạn.',
+      back: 'Về giỏ hàng'
+    },
+    guestGate: {
+      prefix: 'Bạn cần',
+      ctaLink: 'đăng nhập',
+      middle: 'để thanh toán. Giỏ hàng của bạn vẫn được giữ lại sau khi đăng nhập.'
+    },
+    noAvailableItems: 'Không có sản phẩm khả dụng để thanh toán.',
+    loadingFee: 'Đang tải phí vận chuyển…',
+    feeLoadFail: 'Không tải được phí vận chuyển — thử quay lại bước địa chỉ.',
+    cart: {
+      titleCount: 'Giỏ hàng ({{count}} sản phẩm)',
+      line: {
+        removeFromCart: 'Xóa',
+        total: 'Thành tiền'
+      },
+      removeConfirm: {
+        title: 'Xóa sản phẩm',
+        description: 'Bỏ {{name}} khỏi giỏ?',
+        cancel: 'Giữ lại',
+        confirm: 'Xóa'
+      },
+      summary: {
+        title: 'Thông tin đơn hàng',
+        available: 'Tạm tính ({{count}} sản phẩm khả dụng)',
+        note: 'Giá hiển thị trong giỏ là duyệt — tổng cuối cùng được xác nhận lúc đặt hàng.'
+      },
+      checkout: 'Thanh toán',
+      empty: {
+        title: 'Giỏ hàng trống',
+        description: 'Duyệt cửa hàng và thêm sản phẩm bạn thích vào giỏ nhé!',
+        home: 'Về trang chủ'
+      },
+      noAvailable: 'Không có sản phẩm khả dụng để thanh toán.'
+    },
+    confirmation: {
+      hero: {
+        ok: 'Cảm ơn bạn đã mua hàng!',
+        fail: 'Rất tiếc, đơn hàng chưa thành công'
+      },
+      received: 'Đơn hàng {{id}} đã được ghi nhận.',
+      ctaHome: 'Tiếp tục mua sắm',
+      myOrders: 'Xem Đơn hàng của tôi',
+      failedNote: 'Đơn không hoàn tất — kho và mã giảm giá đã được trả lại, bạn có thể đặt hàng lại.',
+      cancelledNote: 'Đơn đã bị hủy. Nếu bạn đã thanh toán, tiền sẽ được hoàn qua cổng thanh toán.',
+      emailNote: 'Email xác nhận đã được gửi kèm hóa đơn PDF — kiểm tra hộp thư dev (Mailpit).',
+      notFound: {
+        title: 'Không tìm thấy đơn hàng',
+        description: 'Đơn vừa đặt không còn trên máy này (sessionStorage). Đơn của bạn nằm trong mục Đơn hàng của tôi.'
+      },
+      status: {
+        CONFIRMED: 'Đang xử lý',
+        SHIPPED: 'Đang giao',
+        DELIVERED: 'Đã giao',
+        PENDING: 'Chờ thanh toán',
+        PAID: 'Đã thanh toán — đang xác nhận',
+        CANCELLED: 'Đã hủy',
+        FAILED: 'Thất bại'
+      },
+      detail: 'Chi tiết đơn',
+      pollError: 'Không tải được trạng thái mới nhất từ hệ thống',
+      kicker: 'ĐƠN HÀNG'
+    },
+    drawer: {
+      title: 'Giỏ hàng của bạn',
+      empty: 'Chưa có sản phẩm trong giỏ',
+      continueShopping: 'Tiếp tục mua sắm',
+      viewCart: 'Xem giỏ hàng',
+      checkout: 'Thanh toán',
+      subtotal: 'Tạm tính',
+      freeship: 'Miễn phí vận chuyển cho đơn từ {{amount}}',
+      unavailable: 'Không còn khả dụng',
+      close: 'Đóng'
+    }
+  },
+  // ── SF-3 shell header (FI-393 T2) — labels header shell ─────────────────
+  shell: {
+    search: {
+      placeholder: 'Tìm sản phẩm, thương hiệu...',
+      submit: 'Tìm kiếm'
+    },
+    mininav: {
+      categories: 'Danh mục',
+      new: 'Hàng mới',
+      best: 'Bán chạy'
+    },
+    theme: {
+      toDark: 'Chuyển giao diện tối',
+      toLight: 'Chuyển giao diện sáng',
+      dark: 'Tối',
+      light: 'Sáng'
+    },
+    cart: {
+      aria: 'Giỏ hàng — {{count}} sản phẩm'
+    }
+  },
   actions: {
     save: 'Lưu',
     cancel: 'Hủy',

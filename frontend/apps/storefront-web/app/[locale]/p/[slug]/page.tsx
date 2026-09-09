@@ -1,14 +1,16 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductCardView from '../../../../components/ProductCardView';
 import Gallery from '../../../../components/pdp/Gallery';
 import PdpBuyBox from '../../../../components/pdp/PdpBuyBox';
+import PdpTabs from '../../../../components/pdp/PdpTabs';
 import RecentlyViewedTracker from '../../../../components/pdp/RecentlyViewedTracker';
 import MyPendingReviewPanel from '../../../../components/reviews/MyPendingReviewPanel';
 import ProductReviewsSection from '../../../../components/reviews/ProductReviewsSection';
 import WishlistHeart from '../../../../components/wishlist/WishlistHeart';
-import { EmptyState, StarRating } from '../../../../components/ui-kit';
+import { EmptyState, Icon, StarRating } from '../../../../components/ui-kit';
 import {
   catalogApi,
   CatalogUnavailableError,
@@ -20,7 +22,8 @@ import {
   type ProductDetail,
 } from '../../../../lib/catalog-api';
 import { localePath, resolveLocale } from '../../../../lib/format';
-import { categoryPathById, jsonLdFor } from '../../../../lib/pdp';
+import { t } from '../../../../lib/i18n';
+import { breadcrumbJsonld, categoryPathById, jsonLdFor } from '../../../../lib/pdp';
 import { pdpMetadata } from '../../../../lib/seo';
 import { siteUrl } from '../../../../lib/site';
 
@@ -29,7 +32,8 @@ import { siteUrl } from '../../../../lib/site';
  * variant/buy-box client (vẫn SSR HTML lần đầu). Distinguish 404 (ApiError
  * status) vs catalog down qua `.status` của CatalogUnavailableError (lib doc).
  * Related (SF-13 A6b): SSR fetch `/related` (ES MLT — ADR 0005) → section
- * ProductCardView sau reviews; rỗng/fail → ẩn.
+ * ProductCardView sau reviews; rỗng/fail → ẩn. T12: copy trong lib/i18n
+ * (miền `pdp`).
  */
 
 interface PdpPageProps {
@@ -37,43 +41,6 @@ interface PdpPageProps {
   /** SF-8: `?reviewPage=N` — pagination reviews section (server-rendered links). */
   searchParams?: { reviewPage?: string };
 }
-
-const COPY = {
-  vi: {
-    home: 'Trang chủ',
-    sold: 'Đã bán',
-    reviews: 'đánh giá',
-    perkAuth: 'Hàng chính hãng 100%',
-    perkShip: 'Miễn phí vận chuyển',
-    tabDesc: 'Mô tả',
-    tabInfo: 'Thông tin',
-    tabReviews: 'Đánh giá',
-    infoBrand: 'Thương hiệu',
-    infoSku: 'Mã sản phẩm',
-    infoCat: 'Danh mục',
-    infoRating: 'Đánh giá',
-    related: 'Sản phẩm tương tự',
-    unavailable: 'Sản phẩm tạm thời không khả dụng',
-    unavailableDesc: 'Hệ thống đang bận — vui lòng thử lại sau ít phút.',
-  },
-  en: {
-    home: 'Home',
-    sold: 'Sold',
-    reviews: 'reviews',
-    perkAuth: '100% authentic',
-    perkShip: 'Free shipping',
-    tabDesc: 'Description',
-    tabInfo: 'Specifications',
-    tabReviews: 'Reviews',
-    infoBrand: 'Brand',
-    infoSku: 'SKU',
-    infoCat: 'Category',
-    infoRating: 'Rating',
-    related: 'Similar products',
-    unavailable: 'Product temporarily unavailable',
-    unavailableDesc: 'The system is busy — please try again in a few minutes.',
-  },
-} as const;
 
 /** Metadata PDP: seoTitle/seoDescription priority + OG + alternates + noindex-en-fallback. */
 export async function generateMetadata({ params }: PdpPageProps): Promise<Metadata> {
@@ -133,7 +100,6 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
 export default async function ProductPage({ params, searchParams }: PdpPageProps) {
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
-  const copy = COPY[locale];
   const reviewPage = Math.max(1, Number.parseInt(searchParams?.reviewPage ?? '1', 10) || 1);
 
   let product: ProductDetail | null = null;
@@ -159,9 +125,9 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     return (
       <div className="container pdp">
         <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-          <a href={localePath('/', locale)}>{copy.home}</a>
+          <Link href={localePath('/', locale)}>{t(locale, 'pdp.home')}</Link>
         </nav>
-        <EmptyState icon="🛠️" title={copy.unavailable} description={copy.unavailableDesc} />
+        <EmptyState icon="🛠️" title={t(locale, 'pdp.unavailable')} description={t(locale, 'pdp.unavailableDesc')} />
       </div>
     );
   }
@@ -191,6 +157,20 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
     siteUrl(),
   );
 
+  // T14: BreadcrumbList JSON-LD khớp breadcrumb hiển thị (Trang chủ → categories
+  // path → PDP hiện tại). breadcrumbJsonld trả chuỗi ĐÃ escape `<` (lib/pdp).
+  const breadcrumbLd = breadcrumbJsonld(
+    [
+      { name: t(locale, 'pdp.home'), path: localePath('/', locale) },
+      ...(path ?? []).map((node) => ({
+        name: node.name,
+        path: localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale),
+      })),
+      { name: product.name, path: localePath(`/p/${product.slug}`, locale) },
+    ],
+    siteUrl(),
+  );
+
   return (
     <div className="container pdp">
       {/* JSON-LD Product schema — stringify + escape `<` → `<` để `</script>`
@@ -200,6 +180,7 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbLd }} />
 
       {/* SF-13 A6a: ghi "đã xem gần đây" (localStorage, max 12) */}
       <RecentlyViewedTracker
@@ -213,13 +194,13 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       />
 
       <nav className="plp-breadcrumb" aria-label="Breadcrumb">
-        <a href={localePath('/', locale)}>{copy.home}</a>
+        <Link href={localePath('/', locale)}>{t(locale, 'pdp.home')}</Link>
         {(path ?? []).map((node) => (
           <span key={node.id} className="plp-breadcrumb-item">
             <span className="plp-breadcrumb-sep" aria-hidden="true">
               ›
             </span>
-            <a href={localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale)}>{node.name}</a>
+            <Link href={localePath(`/c/${locale === 'en' ? node.slugEn : node.slug}`, locale)}>{node.name}</Link>
           </span>
         ))}
         <span className="plp-breadcrumb-sep" aria-hidden="true">
@@ -229,101 +210,112 @@ export default async function ProductPage({ params, searchParams }: PdpPageProps
       </nav>
 
       <div className="pdp-layout">
-        <Gallery images={galleryImages} name={product.name} gradient={gradient} emoji={emoji} percent={percent} />
+        <Gallery images={galleryImages} name={product.name} gradient={gradient} emoji={emoji} percent={percent} locale={locale} />
 
         <div className="pdp-info">
           <h1 className="pdp-name">{product.name}</h1>
           <div className="pdp-meta">
             <StarRating value={product.ratingAvg} size="sm" ariaLabel={`${product.name}: ${product.ratingAvg}/5`} />
-            <span className="pdp-meta-count">
-              ({product.ratingCount} {copy.reviews})
-            </span>
-            <span className="pdp-meta-sold">
-              {copy.sold} {product.ratingCount}
-            </span>
+            {/* T8b (P0-2): count là link anchor #tab-reviews — click → hash →
+                PdpTabs activate panel reviews (e2e review-flow click link này) */}
+            <a className="pdp-meta-count" href="#tab-reviews">
+              {product.ratingCount} {t(locale, 'pdp.reviewsUnit')}
+            </a>
             {/* SF-8: wishlist heart — guest → /account (đăng nhập shell) */}
             <WishlistHeart productId={product.id} locale={locale} variant="pdp" />
           </div>
 
           <PdpBuyBox product={product} locale={locale} />
 
+          {/* T8b: perk icon tròn 30 nền tint-primary (§2.3) — check = Icon
+              primitive; ship = inline SVG (catalog 24 names không có truck,
+              precedent Header stroke 1.8). Decorative → aria-hidden. */}
           <div className="pdp-perks">
             <span className="pdp-perk">
               <span className="pdp-perk-icon" aria-hidden="true">
-                ✓
+                <Icon name="check" size={16} />
               </span>
-              {copy.perkAuth}
+              {t(locale, 'pdp.perkAuth')}
             </span>
             <span className="pdp-perk">
               <span className="pdp-perk-icon" aria-hidden="true">
-                🚚
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="1" y="3" width="15" height="13" />
+                  <path d="M16 8h4l3 3v5h-7z" />
+                  <circle cx="5.5" cy="18.5" r="2.5" />
+                  <circle cx="18.5" cy="18.5" r="2.5" />
+                </svg>
               </span>
-              {copy.perkShip}
+              {t(locale, 'pdp.perkShip')}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Tabs CSS :target — cả 3 panel đều nằm sẵn trong HTML (D16), không JS. */}
-      <div className="pdp-tabs">
-        <nav className="pdp-tab-bar" aria-label={copy.tabDesc}>
-          <a href="#tab-desc">{copy.tabDesc}</a>
-          <a href="#tab-info">{copy.tabInfo}</a>
-          <a href="#tab-reviews">{copy.tabReviews}</a>
-        </nav>
-
-        <section id="tab-desc" className="pdp-panel">
-          <p className="pdp-desc">{product.description || product.name}</p>
-        </section>
-
-        <section id="tab-info" className="pdp-panel">
+      {/* Tabs thật (T8b): primitive Tabs keyboard ←→ + hashchange deep-link;
+          panels vẫn SSR sẵn trong HTML, ẩn/hiện qua hidden attribute. */}
+      <PdpTabs
+        labels={{ desc: t(locale, 'pdp.tabDesc'), info: t(locale, 'pdp.tabInfo'), reviews: t(locale, 'pdp.tabReviews') }}
+        desc={<p className="pdp-desc">{product.description || product.name}</p>}
+        info={
           <table className="pdp-spec">
             <tbody>
               <tr>
-                <th scope="row">{copy.infoBrand}</th>
+                <th scope="row">{t(locale, 'pdp.infoBrand')}</th>
                 <td>{product.brand || '—'}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoSku}</th>
+                <th scope="row">{t(locale, 'pdp.infoSku')}</th>
                 <td>{locale === 'en' ? product.slugEn : product.slug}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoCat}</th>
+                <th scope="row">{t(locale, 'pdp.infoCat')}</th>
                 <td>{path?.[path.length - 1]?.name ?? '—'}</td>
               </tr>
               <tr>
-                <th scope="row">{copy.infoRating}</th>
+                <th scope="row">{t(locale, 'pdp.infoRating')}</th>
                 <td>
-                  {product.ratingAvg}/5 — {product.ratingCount} {copy.reviews}
+                  {product.ratingAvg}/5 — {product.ratingCount} {t(locale, 'pdp.reviewsUnit')}
                 </td>
               </tr>
             </tbody>
           </table>
-        </section>
+        }
+        reviews={
+          <>
+            {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay placeholder reviews SF-4; dead i18n key đã xoá (SF-3) */}
+            <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
+            {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
+            <MyPendingReviewPanel productId={product.id} locale={locale} />
+          </>
+        }
+      />
 
-        <section id="tab-reviews" className="pdp-panel">
-          {/* SF-8: reviews section SSR (chỉ APPROVED + badge verified) — thay placeholder reviews SF-4; dead i18n key đã xoá (SF-3) */}
-          <ProductReviewsSection slug={params.slug} productId={product.id} locale={locale} reviewPage={reviewPage} />
-          {/* SF-8: panel quản lý review PENDING của chính mình (Sửa/Xóa) */}
-          <MyPendingReviewPanel productId={product.id} locale={locale} />
+      {related && related.items.length > 0 ? (
+        <section className="featured" aria-label={t(locale, 'pdp.related')} data-testid="related-products">
+          <div className="featured-head">
+            <div className="featured-head-left">
+              <span className="section-bar" aria-hidden="true" />
+              <h2 className="section-title">{t(locale, 'pdp.related')}</h2>
+            </div>
+          </div>
+          <div className="featured-grid">
+            {related.items.map((item) => (
+              <ProductCardView key={item.id} product={item} locale={locale} />
+            ))}
+          </div>
         </section>
-
-        {related && related.items.length > 0 ? (
-          <section className="featured" aria-label={copy.related} data-testid="related-products">
-            <div className="featured-head">
-              <div className="featured-head-left">
-                <span className="section-bar" aria-hidden="true" />
-                <h2 className="section-title">{copy.related}</h2>
-              </div>
-            </div>
-            <div className="featured-grid">
-              {related.items.map((item) => (
-                <ProductCardView key={item.id} product={item} locale={locale} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

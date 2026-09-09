@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Button, Card, EmptyState } from '@ecommerce/ui-kit';
+import { Button, Card, EmptyState, Icon } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate } from '../bootstrap';
 import { fetchMyOrder, type Order, type OrderStatus } from '../lib/orderingApi';
+import { storefrontUrl } from '../lib/appUrls';
 import '../page.css';
 
 /**
@@ -30,16 +32,6 @@ function readLastOrder(): Order | null {
     return null;
   }
 }
-
-const STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
-  CONFIRMED: 'Đang xử lý',
-  SHIPPED: 'Đang giao',
-  DELIVERED: 'Đã giao',
-  PENDING: 'Chờ thanh toán',
-  PAID: 'Đã thanh toán — đang xác nhận',
-  CANCELLED: 'Đã hủy',
-  FAILED: 'Thất bại'
-};
 
 const TERMINAL_OK: OrderStatus[] = ['CONFIRMED', 'SHIPPED', 'DELIVERED'];
 const TERMINAL_BAD: OrderStatus[] = ['FAILED', 'CANCELLED'];
@@ -84,6 +76,7 @@ function useOrderPolling(orderId: string | null): {
 }
 
 export default function ConfirmationPage(): ReactElement {
+  const { t } = useT();
   const [snapshot] = useState<Order | null>(readLastOrder);
   const { live, pollError } = useOrderPolling(snapshot?.id ?? null);
   // SF-13 A7a: purchase GA4 — fire ĐÚNG 1 LẦN/order khi tới terminal OK
@@ -115,9 +108,15 @@ export default function ConfirmationPage(): ReactElement {
         <h1 className="page-title">Xác nhận đơn hàng</h1>
         <Card>
           <EmptyState
-            title="Không tìm thấy đơn hàng"
-            description="Đơn vừa đặt không còn trên máy này (sessionStorage). Đơn của bạn nằm trong mục Đơn hàng của tôi."
-            action={<Button onClick={() => appNavigate('/account/orders')}>Đơn hàng của tôi</Button>}
+            icon={<Icon name="package" size={40} />}
+            title={t('checkout.confirmation.notFound.title')}
+            description={t('checkout.confirmation.notFound.description')}
+            action={
+              <Button onClick={() => appNavigate('/account/orders')}>
+                {/* cùng chuỗi 'Đơn hàng của tôi' — key duy nhất có text này */}
+                {t('checkout.payUnavailable.ctaLink')}
+              </Button>
+            }
           />
         </Card>
       </div>
@@ -126,29 +125,44 @@ export default function ConfirmationPage(): ReactElement {
 
   const order = live ?? snapshot;
   const terminalBad = TERMINAL_BAD.includes(order.status);
+  // FI-393 T9 — label trạng thái qua catalog; key thiếu → hiện raw status
+  const statusKey = `checkout.confirmation.status.${order.status}`;
+  const statusLabel = t(statusKey) === statusKey ? order.status : t(statusKey);
 
   return (
     <div className="cart-page">
       <div className="confirm-hero">
-        <div className="confirm-check" aria-hidden="true">{terminalBad ? '!' : '✓'}</div>
+        <div
+          className={`confirm-check${terminalBad ? ' confirm-check--bad' : ''}`}
+          aria-hidden="true"
+        >
+          <Icon name={terminalBad ? 'alert' : 'check'} size={30} />
+        </div>
+        <div className="confirm-kicker">{t('checkout.confirmation.kicker')}</div>
         <h1 className="page-title">
-          {terminalBad ? 'Rất tiếc, đơn hàng chưa thành công' : 'Cảm ơn bạn đã mua hàng!'}
+          {terminalBad
+            ? t('checkout.confirmation.hero.fail')
+            : t('checkout.confirmation.hero.ok')}
         </h1>
-        <div>
-          Đơn hàng <strong data-testid="order-id">{order.id}</strong> đã được ghi nhận.
+        <div className="confirm-received">
+          {/* testid bọc RIÊNG id (visually-hidden → textContent = đúng id) */}
+          <span className="visually-hidden" data-testid="order-id">
+            {order.id}
+          </span>
+          {t('checkout.confirmation.received', { id: order.id })}
         </div>
         <span
           className="confirm-status"
           data-testid="order-status"
           data-status-code={order.status}
         >
-          {STATUS_LABEL[order.status] ?? order.status}
+          {statusLabel}
         </span>
         {terminalBad ? (
           <div className="pay-warning" role="alert" data-testid="order-failed-note">
             {order.status === 'FAILED'
-              ? 'Đơn không hoàn tất — kho và mã giảm giá đã được trả lại, bạn có thể đặt hàng lại.'
-              : 'Đơn đã bị hủy. Nếu bạn đã thanh toán, tiền sẽ được hoàn qua cổng thanh toán.'}
+              ? t('checkout.confirmation.failedNote')
+              : t('checkout.confirmation.cancelledNote')}
             <div>
               <a
                 href="/account/orders"
@@ -158,14 +172,14 @@ export default function ConfirmationPage(): ReactElement {
                 }}
                 style={{ color: 'var(--c-primary, #F53D2D)' }}
               >
-                Xem Đơn hàng của tôi
+                {t('checkout.confirmation.myOrders')}
               </a>
             </div>
           </div>
         ) : null}
         {confirmedOk ? (
           <div className="summary-note" data-testid="order-email-note">
-            Email xác nhận đã được gửi kèm hóa đơn PDF — kiểm tra hộp thư dev (Mailpit).
+            {t('checkout.confirmation.emailNote')}
           </div>
         ) : null}
         {pollError && !confirmedOk && !terminalBad ? (
@@ -174,7 +188,7 @@ export default function ConfirmationPage(): ReactElement {
       </div>
 
       <Card className="cart-summary">
-        <h2 style={{ margin: 0, fontSize: 18 }}>Chi tiết đơn</h2>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.confirmation.detail')}</h2>
         {order.items.map((line) => (
           <div className="summary-row" key={line.id}>
             <span>
@@ -185,32 +199,41 @@ export default function ConfirmationPage(): ReactElement {
         ))}
         <hr className="summary-divider" />
         <div className="summary-row">
-          <span>Tạm tính</span>
+          <span>{t('checkout.summary.subtotal')}</span>
           <span>{formatPrice(order.subtotal)}</span>
         </div>
         {order.discount > 0 && (
           <div className="summary-row summary-row--discount">
-            <span>Giảm giá {order.couponCode ? `(${order.couponCode})` : ''}</span>
+            <span>
+              {t('checkout.summary.discount')} {order.couponCode ? `(${order.couponCode})` : ''}
+            </span>
             <span className="summary-value">−{formatPrice(order.discount)}</span>
           </div>
         )}
         <div className="summary-row">
           {/* SF-3 honesty-pass (ADR 0006 D15-3): nhãn phí phẳng trung thực. */}
-          <span>Phí vận chuyển (phí tiêu chuẩn)</span>
+          <span>{t('checkout.summary.shipping')}</span>
           <span>{formatPrice(order.shippingFee)}</span>
         </div>
         <hr className="summary-divider" />
         <div className="summary-row summary-row--total">
-          <span>Tổng cộng</span>
+          <span>{t('checkout.summary.total')}</span>
           <span>{formatPrice(order.total)}</span>
         </div>
         <div className="summary-note">
-          Giao tới: {[order.address.line1, order.address.ward, order.address.district, order.address.city]
+          {t('checkout.summary.shipTo')}{' '}
+          {[order.address.line1, order.address.ward, order.address.district, order.address.city]
             .filter(Boolean)
             .join(', ')}
         </div>
-        <Button variant="secondary" onClick={() => appNavigate('/cart')}>
-          Tiếp tục mua sắm
+        {/* FI-393 T9 — CTA về trang chủ STOREFRONT (cross-origin → full nav,
+            KHÔNG appNavigate); style accent theo direction §2.4 */}
+        <Button
+          variant="secondary"
+          className="confirm-cta"
+          onClick={() => window.location.assign(storefrontUrl())}
+        >
+          {t('checkout.confirmation.ctaHome')}
         </Button>
       </Card>
     </div>

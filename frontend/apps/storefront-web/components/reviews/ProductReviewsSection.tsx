@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { StarRating } from '../../components/ui-kit';
 import { localePath, type Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { breakdownPercentages, listProductReviews, ReviewsUnavailableError, type ReviewList } from '../../lib/reviews-api';
 import ReviewBadge from './ReviewBadge';
 import MyPendingReviewPanel from './MyPendingReviewPanel';
@@ -13,28 +14,8 @@ import WriteReviewControl from './WriteReviewControl';
  * verifiedPurchase) + pagination links `?reviewPage=N`. Fetch NO-STORE —
  * moderation thấy ngay (khác ISR 60s product, Q14). Client islands: nút viết
  * review (modal) + my-pending manage. Lỗi fetch → degraded, không crash PDP.
+ * T12: copy trong lib/i18n (miền `reviews`).
  */
-
-const COPY = {
-  vi: {
-    heading: 'Đánh giá sản phẩm',
-    reviewsUnit: 'đánh giá',
-    empty: 'Chưa có đánh giá nào — hãy là người đầu tiên!',
-    degraded: 'Không tải được đánh giá lúc này — thử lại sau ít phút.',
-    verified: 'Mua đã xác nhận',
-    prev: 'Trang trước',
-    next: 'Trang sau',
-  },
-  en: {
-    heading: 'Product reviews',
-    reviewsUnit: 'reviews',
-    empty: 'No reviews yet — be the first!',
-    degraded: 'Could not load reviews right now — try again later.',
-    verified: 'Verified purchase',
-    prev: 'Previous',
-    next: 'Next',
-  },
-} as const;
 
 export const REVIEWS_PAGE_SIZE = 5;
 
@@ -49,8 +30,6 @@ export default async function ProductReviewsSection({
   locale: Locale;
   reviewPage: number;
 }): Promise<React.ReactElement> {
-  const copy = COPY[locale];
-
   let list: ReviewList | null;
   try {
     list = await listProductReviews(slug, reviewPage, locale);
@@ -58,8 +37,8 @@ export default async function ProductReviewsSection({
     if (!(error instanceof ReviewsUnavailableError)) throw error;
     return (
       <div className="rv-section">
-        <h2 className="rv-heading">{copy.heading}</h2>
-        <p className="rv-empty">{copy.degraded}</p>
+        <h2 className="rv-heading">{t(locale, 'reviews.heading')}</h2>
+        <p className="rv-empty">{t(locale, 'reviews.degraded')}</p>
       </div>
     );
   }
@@ -73,14 +52,14 @@ export default async function ProductReviewsSection({
 
   return (
     <div className="rv-section">
-      <h2 className="rv-heading">{copy.heading}</h2>
+      <h2 className="rv-heading">{t(locale, 'reviews.heading')}</h2>
 
       <div className="rv-summary">
         <div className="rv-summary-score">
           <StarRating value={average} size="md" ariaLabel={`${average}/5`} />
           <span className="rv-summary-avg">{average.toFixed(1)}/5</span>
           <span className="rv-summary-count">
-            {total} {copy.reviewsUnit}
+            {total} {t(locale, 'reviews.reviewsUnit')}
           </span>
         </div>
         <div className="rv-breakdown">
@@ -101,7 +80,7 @@ export default async function ProductReviewsSection({
 
       <MyPendingReviewPanel productId={productId} locale={locale} />
 
-      {total === 0 ? <p className="rv-empty">{copy.empty}</p> : null}
+      {total === 0 ? <p className="rv-empty">{t(locale, 'reviews.empty')}</p> : null}
 
       <ul className="rv-list">
         {(list.items ?? []).map((review) => (
@@ -112,7 +91,7 @@ export default async function ProductReviewsSection({
                 {'★'.repeat(review.rating)}
                 {'☆'.repeat(5 - review.rating)}
               </span>
-              {review.verifiedPurchase ? <ReviewBadge label={copy.verified} /> : null}
+              {review.verifiedPurchase ? <ReviewBadge label={t(locale, 'reviews.verified')} /> : null}
               <time className="rv-item-date" dateTime={review.createdAt}>
                 {formatDate(review.createdAt, locale)}
               </time>
@@ -124,10 +103,10 @@ export default async function ProductReviewsSection({
       </ul>
 
       {totalPages > 1 ? (
-        <nav className="rv-pagination" aria-label={copy.heading}>
+        <nav className="rv-pagination" aria-label={t(locale, 'reviews.heading')}>
           {reviewPage > 1 ? (
             <Link className="rv-page-link" href={pageHref(slug, locale, reviewPage - 1)}>
-              ‹ {copy.prev}
+              ‹ {t(locale, 'reviews.prev')}
             </Link>
           ) : null}
           <span className="rv-page-info">
@@ -135,7 +114,7 @@ export default async function ProductReviewsSection({
           </span>
           {reviewPage < totalPages ? (
             <Link className="rv-page-link" href={pageHref(slug, locale, reviewPage + 1)}>
-              {copy.next} ›
+              {t(locale, 'reviews.next')} ›
             </Link>
           ) : null}
         </nav>

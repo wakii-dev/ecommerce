@@ -49,6 +49,14 @@ public class Stock {
         this.productName = productName;
     }
 
+    /** Admin set-stock (FI-397 demo follow-up) — ghi đè quantity + denormalized fields. */
+    public void applyAdminSet(int quantity, String productId, String productName) {
+        this.quantity = quantity;
+        if (productId != null) this.productId = productId;
+        if (productName != null) this.productName = productName;
+        this.updatedAt = Instant.now();
+    }
+
     public String getVariantId() {
         return variantId;
     }

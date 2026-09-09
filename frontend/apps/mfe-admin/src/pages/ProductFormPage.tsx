@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient, type CatalogClient } from '@ecommerce/contracts';
+import { authStore } from '@ecommerce/auth';
 import { useT } from '@ecommerce/i18n';
 import { Button, Card, Icon, Input, Select, Skeleton, Tabs, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
@@ -49,17 +50,62 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
   });
 
   useEffect(() => {
-    if (isEdit && detailQuery.data) setForm(viewToForm(detailQuery.data));
+    if (isEdit && detailQuery.data) {
+      setForm(viewToForm(detailQuery.data));
+      // Stock thật từ inventory (admin view không trả stock — luôn 0; FI-397
+      // demo follow-up). Fail im lặng → giữ giá trị view.
+      const ids = (detailQuery.data.variants ?? [])
+        .map((v) => v.id)
+        .filter((x): x is string => Boolean(x));
+      if (ids.length === 0) return;
+      void authStore
+        .fetch(`/api/inventory/availability?variantIds=${ids.join(',')}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((rows: Array<{ variantId: string; available: number }>) => {
+          setForm((f) => ({
+            ...f,
+            variants: f.variants.map((row, i) => {
+              const vid = ids[i];
+              const match = rows.find((x) => x.variantId === vid);
+              return match ? { ...row, stock: String(match.available) } : row;
+            })
+          }));
+        })
+        .catch(() => undefined);
+    }
   }, [isEdit, detailQuery.data]);
 
   const patch = (partial: Partial<ProductFormState>): void =>
     setForm((f) => ({ ...f, ...partial }));
 
   const save = useMutation({
-    mutationFn: (payload: Parameters<CatalogClient['adminCreateProduct']>[0]) =>
-      isEdit
-        ? catalogApi().adminUpdateProduct({ id: id ?? '', ...payload })
-        : catalogApi().adminCreateProduct(payload),
+    mutationFn: async (payload: Parameters<CatalogClient['adminCreateProduct']>[0]) => {
+      const saved = isEdit
+        ? await catalogApi().adminUpdateProduct({ id: id ?? '', ...payload })
+        : await catalogApi().adminCreateProduct(payload);
+      // Sync stock variant → inventory (catalog PUT bỏ qua stock — inventory
+      // sở hữu tồn kho; FI-397 demo follow-up). Match variant đã save theo
+      // thứ tự payload (backend replace-all giữ thứ tự) + fallback theo tên.
+      const savedVariants = saved.variants ?? [];
+      await Promise.all(
+        (payload.variants ?? []).map(async (row, i) => {
+          const vid =
+            savedVariants[i]?.id ??
+            savedVariants.find((s) => s.name === row.nameI18n?.vi)?.id;
+          if (!vid) return; // backend không trả id → không đoán (honesty-pass)
+          await authStore.fetch('/api/inventory/admin/stocks', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              variantId: vid,
+              quantity: Number(row.stock) || 0,
+              productName: payload.nameI18n?.vi
+            })
+          });
+        })
+      );
+      return saved;
+    },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-product', id] });

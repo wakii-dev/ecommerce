@@ -155,6 +155,25 @@ public class CatalogQueryService {
     }
 
     /**
+     * FI-397 demo follow-up — GET /api/catalog/products/by-id/{id}: ordering
+     * re-price saga đọc giá theo id (HttpCatalogPricingClient) thay vì path
+     * admin (ROLE_ADMIN — ordering không có token service → 401 → saga 502).
+     * Public cùng shape ProductDetailDto (name/price/variants[].id+priceDelta).
+     * Draft/deleted → 404 (khác admin view — public chỉ thấy PUBLISHED).
+     */
+    @Transactional(readOnly = true)
+    public ProductDetailDto getProductById(java.util.UUID id, String locale) {
+        ProductEntity product = productRepository.findById(id)
+            .filter(p -> p.getStatus() == ProductStatus.PUBLISHED && p.getDeletedAt() == null)
+            .orElseThrow(() -> new NoSuchElementException("product: " + id));
+        return cache.getOrLoadDetail(product.getSlugVi(), locale, () -> {
+            List<ProductImageEntity> images = imageRepository.findByProductIdOrderByPositionAsc(product.getId());
+            List<ProductVariantEntity> variants = variantRepository.findByProductIdOrderByCreatedAtAsc(product.getId());
+            return toDetail(product, images, variants, locale);
+        });
+    }
+
+    /**
      * Cây danh mục — load 1 lần, assemble đệ quy trong memory, children sort
      * theo tên đã resolve. Cache-aside 1 key/{@code locale} TTL 1800s (Task 7)
      * — category write không emit event nên invalidate chỉ xảy ra theo TTL.

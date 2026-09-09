@@ -209,6 +209,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       CATALOG_BASE_URL: http://catalog-service:8082
+      ORDERING_PRICING_BYIDPATH: /api/catalog/products/by-id/  # FI-397 demo — re-price public by-id (path admin cần ROLE_ADMIN → 401 → saga 502)
       INVENTORY_BASE_URL: http://inventory-service:8084
       PAYMENT_BASE_URL: http://payment-service:8086
       INVOICE_SERVICE_URL: http://invoice-service:8090
@@ -469,6 +470,7 @@ services:
       NOTIFICATION_URI: http://notification-service:8087
       PARTNER_API_URI: http://partner-api:8091
       AFFILIATE_URI: http://affiliate-service:8092
+      LOG_URI: http://log-service:8088        # SF-13 — thiếu env → gateway 500 'Connection refused localhost:8088' (full mode)
       STOREFRONT_WEB_URI: http://storefront-web:3000
       SHELL_WEB_ORIGIN: http://frontend-web:80
       MINIO_URI: http://minio:9000        # SF-13 A3 — route /media/** (review G1)

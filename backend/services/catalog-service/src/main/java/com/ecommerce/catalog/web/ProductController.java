@@ -68,6 +68,21 @@ public class ProductController {
     }
 
     /**
+     * FI-397 demo follow-up — GET /api/catalog/products/by-id/{id}: ordering
+     * re-price saga theo id (trước đây dùng path admin → 401 vì ordering
+     * không có token service → checkout 502). Public, same shape PDP detail;
+     * đặt TRƯỚC mapper {slug} không xung đột (path literal dài hơn match trước).
+     * Draft/deleted → 404.
+     */
+    @GetMapping("/products/by-id/{id}")
+    public ProductDetailDto getProductById(
+            @PathVariable java.util.UUID id,
+            @RequestParam(required = false) String locale,
+            HttpServletRequest request) {
+        return catalog.getProductById(id, localeResolver.resolve(request, locale));
+    }
+
+    /**
      * SF-13 (FI-323) A6b — GET /api/catalog/products/{slug}/related: "Sản phẩm
      * tương tự" (ES more_like_this + fill cùng category). Runtime endpoint NGOÀI
      * catalog.yaml freeze (ADR 0005 — precedent audit-log exception). Slug lạ →

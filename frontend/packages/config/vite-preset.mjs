@@ -23,10 +23,11 @@ const SHARED_SINGLETONS = {
   i18next: { singleton: true, requiredVersion: false },
   'react-i18next': { singleton: true, requiredVersion: false },
   // Workspace packages dùng xuyên MF boundary (SF-2 Task 14 pack pin):
-  // 1 instance authStore/ui-kit/i18n toàn app — remote KHÔNG mang bản riêng.
+  // 1 instance authStore/ui-kit/i18n/chrome toàn app — remote KHÔNG mang bản riêng.
   '@ecommerce/auth': { singleton: true, requiredVersion: false },
   '@ecommerce/ui-kit': { singleton: true, requiredVersion: false },
-  '@ecommerce/i18n': { singleton: true, requiredVersion: false }
+  '@ecommerce/i18n': { singleton: true, requiredVersion: false },
+  '@ecommerce/chrome': { singleton: true, requiredVersion: false }
 };
 
 /**

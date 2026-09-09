@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ecommerce/auth": "workspace:*",
+    "@ecommerce/chrome": "workspace:*",
     "@ecommerce/contracts": "workspace:*",
     "@ecommerce/i18n": "workspace:*",
     "@ecommerce/ui-kit": "workspace:*",

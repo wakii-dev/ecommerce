@@ -29,6 +29,28 @@ const SHARED_SINGLETONS = {
   '@ecommerce/i18n': { singleton: true, requiredVersion: false }
 };
 
+// FI-399: 127.0.0.1 vs localhost = 2 cookie host — dev mở bằng 127.0.0.1 sẽ vỡ
+// session sync. Redirect 308 về localhost giữ port/path/query (proxy /api không
+// đổi — redirect xảy ra trước). ws upgrade (HMR) không redirect. PRE middleware
+// — chạy trước spa-fallback/transform (plugin order = mfeConfig.plugins rồi app
+// plugins; configureServer hook chạy theo thứ tự plugin).
+function redirect127ToLocalhostPlugin() {
+  return {
+    name: 'redirect-127-to-localhost',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.headers.upgrade === 'websocket') return next();
+        const host = req.headers.host ?? '';
+        // Regex neo — startsWith('127.0.0.1') sẽ nhầm cả 127.0.0.10 / 127.0.0.100
+        if (!/^127\.0\.0\.1(:|$)/.test(host)) return next();
+        const port = host.slice('127.0.0.1'.length); // ':5573' | ''
+        res.writeHead(308, { Location: `http://localhost${port}${req.url ?? '/'}` });
+        res.end();
+      });
+    }
+  };
+}
+
 /**
  * @param {object} opts
  * @param {string} opts.name        Tên remote duy nhất (vd 'mfe_storefront')
@@ -49,7 +71,8 @@ export function defineMfeConfig({ name, filename = 'remoteEntry.js', exposes, re
         exposes,
         remotes,
         shared: { ...SHARED_SINGLETONS, ...shared }
-      })
+      }),
+      redirect127ToLocalhostPlugin()
     ]
   });
 }

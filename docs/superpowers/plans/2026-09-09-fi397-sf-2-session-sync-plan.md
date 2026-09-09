@@ -1049,7 +1049,7 @@ git commit -m "feat(storefront): redirect 127.0.0.1→localhost trong Next middl
 - Modify: `frontend/packages/config/vite-preset.test.mjs` (thêm describe)
 - Test command: `cd frontend && pnpm --filter @ecommerce/config test`
 
-- [ ] **Step 4.1: Viết test FAIL — append vào `vite-preset.test.mjs`**
+- [x] **Step 4.1: Viết test FAIL — append vào `vite-preset.test.mjs`**
 
 ```js
 describe('redirect-127-to-localhost plugin (FI-399)', () => {
@@ -1095,12 +1095,12 @@ describe('redirect-127-to-localhost plugin (FI-399)', () => {
 });
 ```
 
-- [ ] **Step 4.2: Chạy verify FAIL**
+- [x] **Step 4.2: Chạy verify FAIL**
 
 Run: `cd frontend && pnpm --filter @ecommerce/config test 2>&1 | tail -10`
 Expected: FAIL — plugin chưa tồn tại.
 
-- [ ] **Step 4.3: Implement trong `vite-preset.mjs`** — thêm function + 1 dòng trong plugins array (SHARED_SINGLETONS nguyên trạng):
+- [x] **Step 4.3: Implement trong `vite-preset.mjs`** — thêm function + 1 dòng trong plugins array (SHARED_SINGLETONS nguyên trạng):
 
 ```js
 // FI-399: 127.0.0.1 vs localhost = 2 cookie host — dev mở bằng 127.0.0.1 sẽ vỡ
@@ -1135,12 +1135,12 @@ và trong `defineMfeConfig`:
     ]
 ```
 
-- [ ] **Step 4.4: Chạy verify PASS**
+- [x] **Step 4.4: Chạy verify PASS**
 
 Run: `cd frontend && pnpm --filter @ecommerce/config test`
 Expected: PASS (test cũ preset vẫn xanh).
 
-- [ ] **Step 4.5: Commit**
+- [x] **Step 4.5: Commit**
 
 ```bash
 git add frontend/packages/config/vite-preset.mjs frontend/packages/config/vite-preset.test.mjs

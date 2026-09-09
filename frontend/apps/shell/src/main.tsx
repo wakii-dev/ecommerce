@@ -10,7 +10,7 @@ import './header.css';
 import App from './App';
 import { ShellNav } from './header/Header';
 import ShellSearch from './header/ShellSearch';
-import { HeaderSlots } from './header/HeaderSlots';
+import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots } from '@ecommerce/chrome';
 import { navigate } from './router';
 import { initGa } from './ga';
 import ThemeToggle from './ThemeToggle';
@@ -43,7 +43,7 @@ injectLiveChat();
 // down (catch chỉ warn — auth widget tạm vắng). Khi registry đổi, remote gọi
 // onRegistryChange → dispatch event → App.tsx bump re-render Header.
 const onHeaderSlotsChanged = (): void => {
-  window.dispatchEvent(new CustomEvent('ecommerce:header-slots-changed'));
+  window.dispatchEvent(new CustomEvent(HEADER_SLOTS_CHANGED_EVENT));
 };
 import('account/bootstrap')
   .then((m) => m.initAccountShell({ HeaderSlots, navigate, onRegistryChange: onHeaderSlotsChanged }))

@@ -1155,7 +1155,7 @@ git commit -m "feat(config): vite plugin redirect 127.0.0.1→localhost cho mọ
 - Modify: `frontend/e2e/tests/auth-cookie.spec.ts` (append describe MỚI — 4 test HTTP-level cũ nguyên trạng)
 - Validate syntax: `cd frontend && pnpm --filter @ecommerce/e2e exec playwright test auth-cookie --list` (chạy THẬT ở Task 7 — cần rig)
 
-- [ ] **Step 5.1: Append describe vào cuối `auth-cookie.spec.ts`**
+- [x] **Step 5.1: Append describe vào cuối `auth-cookie.spec.ts`**
 
 ```ts
 /**
@@ -1304,12 +1304,12 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 
 ⚠ Selector note: `auth-guest`/`auth-user` là data-testid có sẵn (AuthWidget.tsx:31,157 — READ-ONLY); 'Đăng nhập'/'Đăng xuất' là label vi hiện có (i18n `nav.login`, `account.menu.logout`). Nếu selector fail khi chạy thật → sửa TEST theo DOM thật ( KHÔNG sửa AuthWidget — không thuộc touch map).
 
-- [ ] **Step 5.2: Validate syntax (không cần stack)**
+- [x] **Step 5.2: Validate syntax (không cần stack)**
 
 Run: `cd frontend && pnpm --filter @ecommerce/e2e exec playwright test auth-cookie --list`
 Expected: list ra 4 test cũ + 3 test mới (7 total trong file), không lỗi compile.
 
-- [ ] **Step 5.3: Commit**
+- [x] **Step 5.3: Commit**
 
 ```bash
 git add frontend/e2e/tests/auth-cookie.spec.ts

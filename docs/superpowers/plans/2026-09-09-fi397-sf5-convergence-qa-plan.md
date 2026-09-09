@@ -66,8 +66,8 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] `make keys` (infra/keys gitignored — isolated identity tự ký)
 - [x] Probe +400 free: 3400/5573/5577/5578/5585/5586/8480/8425/5833
 - [ ] Sweeps EARLY (plan-critic P1#4 — trước rig, vì kiến trúc rig dựa trên nó): diff pnpm-lock (0 external dep — workspace-link chrome OK) + backend/contracts (comment-only) + provenance `a9a8fad..master` → viết `docs/superpowers/qa/sweeps.md` (Task 10 chỉ append raw evidence cuối)
-- [ ] Rig B: compose `fi397sf5` build + up — **STAGGER boot** (finding #2: 10 JVM đồng loạt vượt PG max_connections=100 → 53300 crash-loop) + **override keys** `scripts/qa/docker-override-sf5-keys.yml` (finding #1: cart/catalog/inventory/log thiếu mount JWT keys trong base compose — QA-only override, compose repo KHÔNG đụng, fix-task epic) → health gateway :8480 + mailpit :8425 + storefront container + catalog API có data
-- [ ] Rig A: boot storefront `next dev -p 3400` · shell `vite :5573` (DEV_PORT + REMOTE_*_PORT) · remotes :5585/:5586/:5577/:5578 (export VITE_STRIPE_PUBLISHABLE_KEY + GATEWAY_URL trước boot) — shell PHẢI từ worktree này
+- [ ] Rig B: compose `fi397sf5` build + up — **STAGGER boot** (finding #2: 10 JVM đồng loạt vượt PG max_connections=100 → 53300 crash-loop) + **override keys** `scripts/qa/docker-override-sf5-keys.yml` (finding #1: cart/catalog/inventory/log thiếu mount JWT keys trong base compose — QA-only override, compose repo KHÔNG đụng, fix-task epic) + **override network** `scripts/qa/docker-override-sf5-net.yml` (finding #3 CRITICAL: base compose fix tên network `ecommerce-net` dùng chung mọi project → 2 PG cùng alias DNS `postgres` round-robin nhầm DB — tách network riêng fi397sf5-net) → health gateway :8480 + mailpit :8425 + storefront container + catalog API có data
+- [ ] Rig A: boot storefront `next dev -p 3400` · shell `vite :5573` (DEV_PORT + REMOTE_*_PORT) · remotes :5585/:5586/:5577/:5578 (export VITE_STRIPE_PUBLISHABLE_KEY + **GATEWAY_URL=http://localhost:8480** trước boot — pivot 09-09: main PG bão 160/100 conns từ main-stack JVMs, e2e qua :8080 flaky → FE trỏ gateway ISOLATED :8480, backend tree-identical theo provenance sweeps.md) — shell PHẢI từ worktree này
 - [ ] Health: preflight 4 URL xanh trên rig A (entry :3400) · WELCOME10 ACTIVE (restore nếu off) · seed user login OK
 
 ### Task 1 — sync-matrix spec × 2 app (executor, code; coordinator CHỈ dispatch khi rig B health xanh — plan-critic P2#7)
@@ -91,10 +91,10 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 ### Task 4 — e2e FULL suite (14 + sync-matrix)
 - [ ] 1 lệnh toàn suite trên rig A: `E2E_STOREFRONT_URL=http://localhost:3400 E2E_SHELL_URL=http://localhost:3400 pnpm exec playwright test` (cd frontend/e2e; serial workers=1, retries 1)
 - [ ] Fail thuộc specs → fix trong specs (SPA-race/seed-order/selector) — cap 2 vòng; fail code surface → fix-task epic
-- [ ] Evidence full output → `docs/superpowers/qa/e2e-full.md` (bảng 15 specs × counts, zero-skip note Stripe)
+- [ ] Evidence full output → `docs/superpowers/qa/e2e-full.md` (bảng 15 specs × counts, zero-skip note Stripe) — **file TỒN TẠI từ FI-396: APPEND section mới với header `## SF-5 FI-402 (2026-09-09)`, KHÔNG xóa audit trail story cũ** (plan-critic round-2 P2#2, dùngsame cho unit-tests.md + walkthrough-record.md)
 
 ### Task 5 — docker full regression isolated +400
-- [ ] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up (STAGGER + keys override — xem Task 0)
+- [ ] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up (STAGGER + keys override + **net override `scripts/qa/docker-override-sf5-net.yml`** — xem Task 0); nếu rig B từ Task 0 còn sống + sạch → reuse, không buộc rebuild (plan-critic round-2 P2#1)
 - [ ] Rig B health từng container (17 services) + curl matrix qua :8480 (storefront `/`, shell `/cart`, `/admin`, `/api/identity` login, mailpit API :8425)
 - [ ] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **prod-red = FAIL thật → fix-task SF sở hữu** (không phải documented limitation)
 - [ ] Sync-matrix spec chạy trên :8480 — tick cùng Task 1 evidence (không chạy 2 lần, plan-critic P2#6)
@@ -116,7 +116,7 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] vitest toàn packages/apps (chrome, auth, i18n, ui-kit, shell, mfe-*, storefront-web) — toàn XANH, đếm per package
 - [ ] Report `docs/superpowers/qa/unit-tests.md`; FAIL → fix-task SF sở hữu package đỏ (cap 2 vòng)
 
-### Task 9 — perf sanity double-inclusion gate (SAU CÙNG — rig A đã dừng)
+### Task 9 — perf sanity double-inclusion gate (SAU CÙNG — rig A dừng ở cb1 trước mọi build)
 - [ ] **Dừng toàn bộ rig A** (next dev :3400, shell :5573, remotes :5585/:5586/:5577/:5578) + probe ports free — plan-critic P0#1 (`next build` phá `next dev` đang sống)
 - [ ] `vite build` shell + `next build` storefront trong worktree
 - [ ] Scan chunks cho chrome marker: 1 app KHÔNG được ≥2 bản độc lập (FAIL → fix-task SF-1 singleton config)

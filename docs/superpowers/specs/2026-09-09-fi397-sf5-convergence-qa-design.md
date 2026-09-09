@@ -33,10 +33,10 @@ Precondition ĐÃ verify 09-09: SF-1 `304f266`, SF-2 `41e9083`, SF-4 `f5be01e` m
 
 ## 2. Rig architecture (2 rig — không đụng stack chính `orca/projects/ecommerce` đang giữ :3000/:5173/:8080)
 
-**Rig A — dev +400 (code nhánh đích từ worktree này):**
-- Storefront `next dev -p 3400` = ENTRY (rewrites shell-routes + /admin từ SF-3) · shell `vite :5573` · remotes checkout :5585 / account :5586 / admin :5577 / skeleton :5578 (base 5175-78 +400).
-- Backend dùng chung gateway chính :8080 (jars main checkout) — HỢP LỆ vì diff backend fork→HEAD chỉ là comment gateway-routes (sweep item 11 chứng minh); GATEWAY_URL mặc định .env :8080. Mailpit chính :8025 (helpers/env.ts hardcode — dev-rig KHÔNG cần override).
-- `.env` copy từ main checkout TRƯỚC boot (vite bake `VITE_*` lúc start — improvements-log ×2); export `VITE_STRIPE_PUBLISHABLE_KEY` + `GATEWAY_URL` khi boot remotes (SF-3 lesson: Vite remote KHÔNG đọc root .env).
+**Rig A — dev +4xx (code nhánh đích từ worktree này):**
+- Storefront `next dev -p 3400` = ENTRY (rewrites shell-routes + /admin từ SF-3) · shell `vite :5573` · remotes **checkout :5585 / account :5586 (+410), admin :5577 / skeleton :5578 (+400)** — ports CHỤN THẬT như đã boot (spec-critic #1: đừng derive lại từ công thức — 5585/5586 là số chính thức).
+- Backend = **gateway ISOLATED :8480** (rig B — cùng machines, decision 09-09 sau khi main PG :5433 bão connection 160/100 từ main-stack JVMs: e2e qua :8080 sẽ 500 ngẫu nhiên). Hợp lệ cùng lý do provenance (sweep item 11c: backend tree-identical) + isolation chuẩn pack. Mailpit = isolated :8425 → helpers/env.ts thêm override MAILPIT_API (bắt buộc cho cả rig A lẫn B).
+- `.env` copy từ main checkout TRƯỚC boot (vite bake `VITE_*` lúc start — improvements-log ×2); export `VITE_STRIPE_PUBLISHABLE_KEY` + `GATEWAY_URL=:8480` khi boot FE (SF-3 lesson: Vite remote KHÔNG đọc root .env). Hygiene: client dùng `localhost` (không `127.0.0.1` — vite bind IPv6 ::1, memory port-squatting).
 - Shell PHẢI boot từ worktree này (provenance i18n/chrome đúng — FI-401 lesson: shell worktree khác làm label-demo bất khả).
 - e2e env: `E2E_STOREFRONT_URL=http://localhost:3400 E2E_SHELL_URL=http://localhost:3400` (1-origin qua entry — helpers/env.ts default đã là :3000, override +400).
 
@@ -52,7 +52,7 @@ Precondition ĐÃ verify 09-09: SF-1 `304f266`, SF-2 `41e9083`, SF-4 `f5be01e` m
 - **Sync-matrix spec** (pattern từ auth-cookie.spec FI-399: `trackRefreshPosts` attach TRƯỚC navigation, đóng dấu `syncLoaded` chống reload): 2 tabs khác APP — A mở storefront `/`, B mở shell `/cart` (cùng origin). Login qua `/login` (shell route — A click auth-menu Đăng nhập → /login). 2FA: `POST /api/identity/2fa/setup` (authed) trả `{secret, otpauthUrl}` → TOTP tính trong spec bằng `node:crypto` HMAC-SHA1 (không thêm dep; **base32-decode secret tự viết ~20 dòng trong spec — không có stdlib**) → enable → logout → login → challenge `/login/2fa` → assert B VẪN guest + 0 POST refresh từ B → hoàn tất TOTP → B thấy user. OAuth: `/login/oauth/callback?error=...` error-path assert không crash + state guest; success-path broadcast KHÔNG e2e được (cần provider thật) → evidence = cite unit tests sẵn có packages/auth (không viết mới) + seam `setToken` như password login — disclose trung thực trong report.
 - **20-run race cross-app**: BC ngoài app bắn `auth-changed` (pattern FI-399) → A(storefront) + B(shell) cùng refresh serialized → 0 logout, tổng POST ≤ 50.
 - **Visual consistency**: Playwright screenshots (orca screenshot flaky — precedent FI-368/FI-395): header region + footer region, 2 host × light/dark × guest/authed, lưu `docs/superpowers/qa/walkthrough/`; DOM assert cùng cấu trúc chrome (data-testid/roles) 2 host; theme toggle 1 host → kiểm host kia đồng bộ (BC/storage cùng origin); grep theme keys toàn monorepo = chỉ `ecommerce.theme`.
-- **Perf gate marker**: chọn literal duy nhất trong `packages/chrome` (xác định lúc chạy, vd tên class registry/const riêng tư) — đếm chunk chứa marker trong `apps/shell/dist` (vite build) và `.next/static/chunks` (next build): 1 app KHÔNG được có ≥2 bản chrome độc lập (MF SHARED_SINGLETONS → shared chunk duy nhất; Next transpilePackages → 1 client chunk).
+- **Perf gate marker**: chọn literal duy nhất trong `packages/chrome` (xác định lúc chạy, vd tên class registry/const riêng tư) — đếm chunk chứa marker trong `apps/shell/dist` (vite build) và `.next/static/chunks` (next build): **precondition marker đếm ≥1 mỗi app** (tránh pass-vacuous nếu marker bị minify/tree-shake — spec-critic round-2 #3); 1 app có ≥2 bản chrome độc lập = FAIL (MF SHARED_SINGLETONS → shared chunk duy nhất; Next transpilePackages → 1 client chunk).
 
 ## 4. Touch map
 

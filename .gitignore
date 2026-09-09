@@ -44,3 +44,4 @@ __pycache__/
 # Module Federation dev artifacts (@module-federation/vite)
 .mf/
 .run/
+scripts/qa/docker-override-sf5-token.yml

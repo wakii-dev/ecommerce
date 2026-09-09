@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "name": "home /vi",
+      "ok": true
+    },
+    {
+      "name": "PLP",
+      "ok": true
+    },
+    {
+      "name": "PDP",
+      "ok": true
+    },
+    {
+      "name": "add-to-cart",
+      "ok": true
+    },
+    {
+      "name": "cart /cart",
+      "ok": true
+    },
+    {
+      "name": "login",
+      "ok": true
+    },
+    {
+      "name": "checkout",
+      "ok": true
+    },
+    {
+      "name": "checkout fill + COD",
+      "ok": true
+    },
+    {
+      "name": "confirmation",
+      "ok": true
+    },
+    {
+      "name": "account page",
+      "ok": true
+    },
+    {
+      "name": "admin /admin layout riêng",
+      "ok": true
+    }
+  ],
+  "consoleErrors": [
+    "console: Warning: Extra attributes from the server: %s%s style \n    at input\n    at form\n    at div\n    at NewsletterForm (webpac",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "http4xx5xx": [
+    "404 GET http://localhost:3400/api/cart",
+    "404 GET http://localhost:3400/api/cart",
+    "404 GET http://localhost:3400/api/cart",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "401 POST http://localhost:3400/api/identity/auth/refresh BODY=",
+    "404 POST http://localhost:3400/api/cart/merge BODY=",
+    "404 POST http://localhost:3400/api/cart/merge BODY="
+  ]
+}

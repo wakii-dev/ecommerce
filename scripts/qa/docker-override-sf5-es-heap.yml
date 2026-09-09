@@ -1,0 +1,7 @@
+# SF-5 QA override #5: ES heap 512m — ES OOM-kill (137) lặp lại khi 2 full stack
+# song song trên Docker VM 7.6GB (finding #13): ES JVM default ăn ~1-2GB.
+# Không đụng compose (boundary).
+services:
+  elasticsearch:
+    environment:
+      ES_JAVA_OPTS: -Xms512m -Xmx512m

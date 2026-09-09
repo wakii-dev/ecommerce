@@ -25,7 +25,10 @@ test('§5.8 Mongo event_log có documents cho domain events của demo', async (
 });
 
 test('§5.9 ES products index count > 0 + search endpoint trả kết quả', async () => {
-  const esRes = await fetch('http://localhost:9200/products/_count');
+  // FI-402: ES URL env-driven — rig isolate +400 dùng :9600 (E2E_ES_URL),
+  // mặc định giữ :9200 (stack chính) cho backward-compat.
+  const esUrl = env('E2E_ES_URL') || 'http://localhost:9200';
+  const esRes = await fetch(`${esUrl}/products/_count`);
   expect(esRes.status).toBe(200);
   const esBody = (await esRes.json()) as { count: number };
   expect(esBody.count).toBeGreaterThan(0);

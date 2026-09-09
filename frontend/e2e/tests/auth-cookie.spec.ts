@@ -133,7 +133,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
   async function openGuestPage(context: import('@playwright/test').BrowserContext) {
     const page = await context.newPage();
     const counter = trackRefreshPosts(page);
-    await page.goto(`${SHELL}/`);
+    await page.goto(`${SHELL}/cart`); // FI-402: shell ROUTE (AuthMenu island) — entry / là storefront home không island
     await expect(page.getByTestId('auth-guest')).toBeVisible();
     await page.evaluate(() => {
       (window as unknown as { sync399Loaded: boolean }).sync399Loaded = true;
@@ -143,7 +143,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 
   /** Tab A cũng phải navigate tường minh (fixture `page` khởi đầu ở about:blank). */
   async function openMainPage(page: import('@playwright/test').Page) {
-    await page.goto(`${SHELL}/`);
+    await page.goto(`${SHELL}/cart`); // FI-402: shell route — như openGuestPage
     await expect(page.getByTestId('auth-guest')).toBeVisible();
   }
 

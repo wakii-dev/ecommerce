@@ -1,0 +1,35 @@
+# SF-5 convergence-qa (FI-402) — QA-only override cho rig B isolated.
+#
+# FINDING regression (2026-09-09): profile full nguyên trạng FAIL —
+# cart/catalog/inventory/log khai báo JWT_PUBLIC_KEY_PATH=../infra/keys/…
+# (path dev-host) nhưng compose KHÔNG mount keys vào 4 container này (chỉ
+# identity có ./infra/keys:/keys). Container cwd=/app → ../infra/keys không
+# tồn tại → JwtDecoder bean vỡ → crash-loop. Đã chết âm thầm bao nhiêu SF
+# (improvements-log: "make full đã chết 5 SF không ai biết").
+#
+# File này KHÔNG sửa docker-compose.yml (boundary SF-5: compose chỉ
+# diff-check) — là rig recipe để regression chạy được; fix thật (mount trong
+# base compose) là fix-task của owner profile full → comment epic FI-397.
+# Kèm finding #2: cold-boot 10 JVM đồng loạt vượt max_connections=100
+# (SQLState 53300) → boot phải STAGGER (scripts/qa/boot-rig-b.sh).
+services:
+  cart-service:
+    volumes:
+      - ./infra/keys:/keys:ro
+    environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+  catalog-service:
+    volumes:
+      - ./infra/keys:/keys:ro
+    environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+  inventory-service:
+    volumes:
+      - ./infra/keys:/keys:ro
+    environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+  log-service:
+    volumes:
+      - ./infra/keys:/keys:ro
+    environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem

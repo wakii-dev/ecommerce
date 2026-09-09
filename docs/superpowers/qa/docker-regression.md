@@ -36,6 +36,19 @@
 
 Chạy cod golden-path subset với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480 MAILPIT_API=http://localhost:8425 GATEWAY_URL=http://localhost:8480` — kết quả ghi bổ sung sau vòng chạy (đồng bộ executor T1): __PENDING__
 
+### 4b. Webhook Stripe path (điều kiện golden-path PAID trên rig isolate)
+
+Compose full-profile KHÔNG bật stripe-cli (profile riêng) → webhook không có đường vào payment container. Setup runtime (ops, không đụng compose):
+
+```
+docker run -d --name fi397sf5-stripe-cli --network fi397sf5-net \
+  -e STRIPE_API_KEY=$STRIPE_SECRET_KEY stripe/stripe-cli listen \
+  --forward-to fi397sf2-payment-service:8086/payment/webhook
+```
+
+- whsec của cli isolate = **whsec_f26132e7… ≡ .env** (Stripe CLI tái dùng webhook endpoint theo API key) → payment container (env từ .env) verify signature OK, KHÔNG cần override env.
+- **Smoke PASS**: `stripe trigger payment_intent.succeeded` → cli log `[200] POST …/payment/webhook` ×4 events; payment log ack no-op đúng (synthetic intent không có order local — "không 500, Stripe retry vô ích").
+
 ## 5. Teardown
 
 `docker compose -p fi397sf5 down -v` — SAU KHI Task 6 hoàn tất (plan-critic P1#3: teardown ở cuối T6).

@@ -13,7 +13,8 @@ import {
   YAxis
 } from 'recharts';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Card, EmptyState, Skeleton, Table } from '@ecommerce/ui-kit';
+import { Badge, Card, EmptyState, Skeleton } from '@ecommerce/ui-kit';
+import { DataTable } from '../components/DataTable';
 import { inventoryApi, orderingApi } from '../lib/api';
 import { formatVnd } from '../lib/format';
 import type { AdminRevenueDay, AdminSummary } from '../lib/types';
@@ -91,6 +92,33 @@ export default function DashboardPage(): ReactElement {
   const topData = topQuery.data ?? [];
 
   const lowStockRows = lowStockQuery.data ?? [];
+
+  // Không sortValue — list nhỏ, chỉ cần skeleton/sticky/hover thống nhất DataTable
+  const lowStockColumns = [
+    { key: 'variant', header: t('admin.dashboard.variant'), render: (row: (typeof lowStockRows)[number]) => <code>{row.variantId}</code> },
+    { key: 'product', header: t('admin.dashboard.product'), render: (row: (typeof lowStockRows)[number]) => row.productName },
+    {
+      key: 'available',
+      header: t('admin.dashboard.available'),
+      align: 'right' as const,
+      render: (row: (typeof lowStockRows)[number]) => (
+        <strong style={{ color: row.available <= row.threshold ? 'var(--c-danger)' : undefined }}>
+          {row.available}
+        </strong>
+      )
+    },
+    {
+      key: 'threshold',
+      header: t('admin.dashboard.threshold'),
+      align: 'right' as const,
+      render: (row: (typeof lowStockRows)[number]) =>
+        row.available <= row.threshold ? (
+          <Badge variant='danger'>≤ {row.threshold}</Badge>
+        ) : (
+          <span className='admin-hint'>{row.threshold}</span>
+        )
+    }
+  ];
 
   return (
     <div>
@@ -177,38 +205,14 @@ export default function DashboardPage(): ReactElement {
           <Badge variant='success'>LIVE</Badge>
         </h3>
         {lowStockQuery.isLoading ? (
-          <Skeleton variant='rect' height={160} />
+          <DataTable loading columns={lowStockColumns} rows={[]} loadingRows={4} />
         ) : lowStockQuery.isError ? (
           <p className='admin-error-text'>{t('admin.dashboard.lowStockFail')}</p>
         ) : lowStockRows.length === 0 ? (
           <EmptyState title={t('admin.dashboard.lowStockEmpty')} />
         ) : (
-          <Table
-            columns={[
-              { key: 'variant', header: t('admin.dashboard.variant'), render: (row: (typeof lowStockRows)[number]) => <code>{row.variantId}</code> },
-              { key: 'product', header: t('admin.dashboard.product'), render: (row: (typeof lowStockRows)[number]) => row.productName },
-              {
-                key: 'available',
-                header: t('admin.dashboard.available'),
-                align: 'right',
-                render: (row: (typeof lowStockRows)[number]) => (
-                  <strong style={{ color: row.available <= row.threshold ? 'var(--c-danger)' : undefined }}>
-                    {row.available}
-                  </strong>
-                )
-              },
-              {
-                key: 'threshold',
-                header: t('admin.dashboard.threshold'),
-                align: 'right',
-                render: (row: (typeof lowStockRows)[number]) =>
-                  row.available <= row.threshold ? (
-                    <Badge variant='danger'>≤ {row.threshold}</Badge>
-                  ) : (
-                    <span className='admin-hint'>{row.threshold}</span>
-                  )
-              }
-            ]}
+          <DataTable
+            columns={lowStockColumns}
             rows={lowStockRows}
             rowKey={(row) => `${row.productId}/${row.variantId}`}
           />

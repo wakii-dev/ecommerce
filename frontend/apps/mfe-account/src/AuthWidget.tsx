@@ -1,22 +1,39 @@
+// AuthWidget (SF-4 FI-394 T3) — UserMenu keyboard-OK: trigger aria-haspopup +
+// aria-expanded, menu role="menu" + item role="menuitem" roving focus thật
+// (tabIndex=-1 + .focus(), KHÔNG aria-activedescendant): ArrowDown/Up wrap,
+// Home/End, Escape đóng + restore focus về trigger, Tab đóng tự nhiên.
+// ▲/▼ text → Icon chevron-down + caret rotate; toàn bộ inline style → .um-*
+// (page.css). GIỮ data-testid auth-guest/auth-user + chuỗi vi ('Đăng nhập',
+// 'Đăng ký', 'Tài khoản', 'Đơn hàng của tôi', 'Đăng xuất') — e2e/walkthrough
+// locate theo text. KHÔNG đổi AuthProvider API / slot registration / logout flow.
 import { useEffect, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import { useAuth } from '@ecommerce/auth';
+import { useT } from '@ecommerce/i18n';
+import { Icon } from '@ecommerce/ui-kit';
 import { logout } from './api';
 import { appNavigate } from './bootstrap';
 
+interface MenuItem {
+  key: string;
+  to?: string;
+  danger?: boolean;
+  action?: () => void;
+}
+
 function GuestLinks(): ReactElement {
+  const { t } = useT();
   const go = (to: string) => (event: { preventDefault(): void }) => {
     event.preventDefault();
     appNavigate(to);
   };
   return (
-    <span style={{ display: 'inline-flex', gap: 'var(--space-3, 12px)', alignItems: 'center' }} data-testid="auth-guest">
-      <a href="/login" onClick={go('/login')} style={{ color: 'var(--c-text, #212121)', fontSize: 'var(--text-md, 14px)', textDecoration: 'none' }}>
-        Đăng nhập
+    <span className="um-guest" data-testid="auth-guest">
+      <a href="/login" onClick={go('/login')} className="um-guest__login">
+        {t('nav.login')}
       </a>
-      <a href="/register" onClick={go('/register')}
-        style={{ color: 'var(--c-primary, #F53D2D)', border: '1px solid var(--c-primary, #F53D2D)', borderRadius: 'var(--radius-sm, 2px)', padding: '5px 12px', fontSize: 'var(--text-md, 14px)', textDecoration: 'none', fontWeight: 600 }}>
-        Đăng ký
+      <a href="/register" onClick={go('/register')} className="um-guest__register">
+        {t('nav.register')}
       </a>
     </span>
   );
@@ -24,8 +41,29 @@ function GuestLinks(): ReactElement {
 
 function UserMenu(): ReactElement {
   const { user, logout: clearLocal } = useAuth();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  // Focus item sau khi menu render xong (setOpen trong keydown chưa có DOM item).
+  const pendingFocus = useRef<'first' | 'last' | null>(null);
+
+  const displayName =
+    user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || t('account.menu.displayNameFallback');
+
+  // 3 item cố định — logout GIỮ nguyên flow cũ (logout → clearLocal → /login).
+  const items: MenuItem[] = [
+    { key: 'account.menu.account', to: '/account' },
+    { key: 'account.menu.orders', to: '/account/orders' },
+    {
+      key: 'account.menu.logout',
+      danger: true,
+      action: () => {
+        void logout().then(() => clearLocal()).then(() => appNavigate('/login'));
+      }
+    }
+  ];
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -35,42 +73,123 @@ function UserMenu(): ReactElement {
     return () => document.removeEventListener('click', onDocClick);
   }, []);
 
-  const displayName = user?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Tài khoản';
-  const item = (label: string, to?: string, action?: () => void): ReactElement => (
-    <a
-      href={to ?? '#'}
-      onClick={(event) => {
+  useEffect(() => {
+    if (open && pendingFocus.current) {
+      const index = pendingFocus.current === 'first' ? 0 : items.length - 1;
+      itemRefs.current[index]?.focus();
+      pendingFocus.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const openWithFocus = (where: 'first' | 'last') => {
+    pendingFocus.current = where;
+    setOpen(true);
+  };
+
+  const select = (it: MenuItem) => {
+    setOpen(false);
+    if (it.action) it.action();
+    else if (it.to) appNavigate(it.to);
+  };
+
+  const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      // preventDefault TRƯỚC khi xử lý: browser tổng hợp click sau keydown —
+      // không chặn thì click đó toggle lần 2 làm menu vừa mở bị đóng ngay
+      // (Space còn cuộn trang). Đóng → mở + focus item đầu; đang mở → đóng
+      // + restore focus trigger (Safari không giữ focus nút sau click).
+      event.preventDefault();
+      if (open) {
+        setOpen(false);
+        triggerRef.current?.focus();
+      } else {
+        openWithFocus('first');
+      }
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      openWithFocus('first');
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      openWithFocus('last');
+    } else if (event.key === 'Escape' && open) {
+      setOpen(false);
+    } else if (event.key === 'Tab' && open) {
+      setOpen(false); // focus đi tiếp tự nhiên — KHÔNG preventDefault
+    }
+  };
+
+  const onItemKeyDown = (event: KeyboardEvent<HTMLAnchorElement>, index: number, it: MenuItem) => {
+    const count = items.length;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        itemRefs.current[(index + 1) % count]?.focus();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        itemRefs.current[(index - 1 + count) % count]?.focus();
+        break;
+      case 'Home':
+        event.preventDefault();
+        itemRefs.current[0]?.focus();
+        break;
+      case 'End':
+        event.preventDefault();
+        itemRefs.current[count - 1]?.focus();
+        break;
+      case 'Escape':
         event.preventDefault();
         setOpen(false);
-        action ? action() : to && appNavigate(to);
-      }}
-      style={{ display: 'block', padding: '9px 16px', fontSize: 'var(--text-md, 14px)', color: 'var(--c-text, #212121)', textDecoration: 'none' }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = '#FAFAFA')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-    >
-      {label}
-    </a>
-  );
+        triggerRef.current?.focus(); // restore focus về trigger
+        break;
+      case 'Tab':
+        setOpen(false); // KHÔNG preventDefault — focus đi tiếp tự nhiên
+        break;
+      case ' ': // Space không activate <a> mặc định — chọn như click
+        event.preventDefault();
+        select(it);
+        break;
+    }
+  };
 
   return (
-    <span ref={rootRef} style={{ position: 'relative', display: 'inline-flex' }} data-testid="auth-user">
+    <span ref={rootRef} className="um-root" data-testid="auth-user">
       <button
+        ref={triggerRef}
         type="button"
+        className="um-trigger"
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={onTriggerKeyDown}
         aria-haspopup="menu"
         aria-expanded={open}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text, #212121)', fontSize: 'var(--text-md, 14px)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
       >
-        {displayName} <span style={{ fontSize: 10 }}>{open ? '▲' : '▼'}</span>
+        {displayName}
+        <span className={open ? 'um-caret um-caret--open' : 'um-caret'} aria-hidden="true">
+          <Icon name="chevron-down" size={14} />
+        </span>
       </button>
       {open ? (
-        <span
-          role="menu"
-          style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'var(--c-surface, #fff)', border: '1px solid var(--c-border, #eee)', borderRadius: 'var(--radius-md, 4px)', boxShadow: 'var(--shadow-2, 0 2px 8px rgba(0,0,0,.12))', minWidth: 180, zIndex: 1000, display: 'block', overflow: 'hidden' }}
-        >
-          {item('Tài khoản', '/account')}
-          {item('Đơn hàng của tôi', '/account/orders')}
-          {item('Đăng xuất', undefined, () => { void logout().then(() => clearLocal()).then(() => appNavigate('/login')); })}
+        <span role="menu" className="um-menu">
+          {items.map((it, index) => (
+            <a
+              key={it.key}
+              ref={(el) => {
+                itemRefs.current[index] = el;
+              }}
+              role="menuitem"
+              href={it.to ?? '#'}
+              tabIndex={-1}
+              className={it.danger ? 'um-menu__item um-menu__item--danger' : 'um-menu__item'}
+              onClick={(event) => {
+                event.preventDefault();
+                select(it);
+              }}
+              onKeyDown={(event) => onItemKeyDown(event, index, it)}
+            >
+              {t(it.key)}
+            </a>
+          ))}
         </span>
       ) : null}
     </span>

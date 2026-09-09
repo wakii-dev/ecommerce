@@ -162,7 +162,12 @@ export async function downloadInvoicePdf(order: Order): Promise<void> {
     } catch {
       // body không phải json — giữ detail mặc định
     }
-    throw new Error(detail);
+    // FI-394 verifier P1-2: message hard-code vi giữ làm fallback; caller key
+    // hóa banner bằng name 'InvoiceDownloadError' + status (không import contracts).
+    const err = new Error(detail);
+    err.name = 'InvoiceDownloadError';
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

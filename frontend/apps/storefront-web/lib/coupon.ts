@@ -24,3 +24,9 @@ export function couponValueLabel(type: CouponType, value: number, locale: Locale
   if (type === 'PERCENT') return locale === 'en' ? `${value}% off` : `Giảm ${value}%`;
   return locale === 'en' ? `${formatVnd(value)} off` : `Giảm ${formatVnd(value)}`;
 }
+
+/** Pill "Hết hạn" chỉ khi endsAt parse được VÀ đã qua (direction §4 tint-new — không bịa khi thiếu/invalid). */
+export function isExpired(endsAt: string): boolean {
+  const date = new Date(endsAt);
+  return !Number.isNaN(date.getTime()) && date.getTime() < Date.now();
+}

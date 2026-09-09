@@ -65,6 +65,45 @@
   text-decoration: none;
 }
 
+/* ── SF-4 (FI-394 T2) — banner success + password toggle ─────────────────── */
+
+/* Banner thành công Forgot/Reset — cùng nhịp .auth-error nhưng tint success
+   token (thay hex inline #eefcf0/#1b7a34 cũ). */
+.auth-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+  background: var(--tint-success-bg, #eefcf0);
+  color: var(--tint-success-text, #1b7a34);
+  border-radius: var(--radius-md, 4px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: var(--text-md, 14px);
+}
+
+.auth-ok svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Password visibility toggle — IconButton nằm NGOÀI .uk-input (không đụng
+   ui-kit primitive): .uk-field là grid label + input, icon absolute thẳng
+   hàng tâm input (label text-sm ~14px + gap 4px + nửa input ~16px − nửa
+   icon sm 14px). Input đẩy padding-right để text không chui dưới icon. */
+.pw-field {
+  position: relative;
+}
+
+.pw-field .uk-input {
+  padding-right: 44px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 20px;
+  right: 5px;
+  color: var(--c-text-muted, #757575);
+}
+
 /* Account — layout 2 cột: info card + form card (spec §4.5). */
 .account-grid {
   display: grid;
@@ -119,32 +158,44 @@
 }
 
 
-/* ═══ SF-8: wishlist + my-reviews slices ═════════════════════════════════ */
+/* ═══ SF-8: wishlist + my-reviews slices (SF-4 FI-394 T7 — wishlist anatomy) ══ */
 
 .wl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  gap: var(--space-4, 16px);
 }
 
+/* Product-card anatomy direction §2.2 — wishlist card LÀ product card =
+   điểm nhấn thương mại: hover lift −3px + shadow-1→3 được phép lên 3
+   (§3.1 cascade), --dur-base --ease-out. Surface/border/radius/shadow-1
+   .uk-card có sẵn — chỉ thêm transition + hover ở đây. */
 .wl-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2, 8px);
+  transition:
+    transform var(--dur-base, 180ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-base, 180ms) var(--ease-out, ease-out);
+}
+
+.wl-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-3, 0 8px 24px rgba(0, 0, 0, 0.16));
 }
 
 .wl-card-link {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2, 8px);
   text-decoration: none;
   color: inherit;
 }
 
 .wl-card-thumb {
   display: block;
-  height: 140px;
-  border-radius: 8px;
+  height: 190px;
+  border-radius: var(--radius-md, 4px);
   overflow: hidden;
   background: var(--c-bg, #F5F5F5);
   position: relative;
@@ -156,36 +207,71 @@
   object-fit: cover;
 }
 
+/* Fallback không ảnh — Icon package muted thay emoji (anatomy §2.2). */
 .wl-card-thumb-fallback {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  color: var(--c-text-muted, #757575);
 }
 
 .wl-card-name {
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* Tên hover --c-link qua link cha (anatomy fcard). */
+.wl-card-link:hover .wl-card-name {
+  color: var(--c-link, #f53d2d);
+}
+
 .wl-card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2, 8px);
 }
 
 .wl-card-price {
-  font-weight: 700;
-  color: var(--c-primary, #F53D2D);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--c-danger, #D0011B);
 }
 
+/* Sao text ★ giữ — fill --c-warning, track --star-track chỉ có vai trò khi
+   render star-fill (text đơn ★ không có phần rỗng); số + count muted 13px. */
 .wl-card-rating {
-  font-size: 12px;
+  font-size: 13px;
+  color: var(--c-text-muted, #757575);
+  white-space: nowrap;
+}
+
+.wl-card-stars {
+  color: var(--c-warning, #FE9C08);
+}
+
+/* Nút Xóa icon — hover nghiêm trọng hoá --c-danger (viền + icon). */
+.wl-card-remove:hover:not(:disabled) {
+  color: var(--c-danger, #D0011B);
+  border-color: var(--c-danger, #D0011B);
+}
+
+/* Empty state — card viền dashed (direction §4 Wishlist). */
+.wl-empty {
+  border: 1px dashed var(--c-border, #eeeeee);
+  border-radius: var(--radius-lg, 8px);
+  background: var(--c-surface, #ffffff);
+  padding: var(--space-7, 48px) var(--space-4, 16px);
+}
+
+.wl-empty .uk-empty__icon {
   color: var(--c-text-muted, #757575);
 }
 
@@ -208,6 +294,9 @@
 }
 
 .mr-card-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 700;
   color: var(--tint-success-text, #197A6D);
@@ -315,4 +404,697 @@
 .twofa-actions {
   display: flex;
   gap: 8px;
+}
+
+/* ── SF-4 (FI-394 T4) — profile + 2FA polish ─────────────────────────────── */
+/* h2 2FA chứa Badge "Đang bật/Đang tắt" — flex để badge thẳng hàng tâm tiêu
+   đề, wrap khi card hẹp (<720px 1 cột). Màu badge qua uk-badge (token sẵn). */
+.twofa-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+}
+
+.twofa-title .uk-badge {
+  flex: none;
+}
+
+/* ── SF-4 (FI-394) account side-nav ──────────────────────────────────────── */
+/* Pattern admin sidebar direction §2.5/§4 — border-left 3px active tint,
+   rộng 240, icon 18. Mọi màu qua var(--*); <600px collapse nav ngang scroll-x. */
+.acc-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-5, 24px);
+  align-items: start;
+  padding: var(--space-5, 24px) var(--space-4, 16px);
+}
+
+/* Chống grid blowout từ bảng/link dài ở cột content (min-width auto mặc định). */
+.acc-shell > * {
+  min-width: 0;
+}
+
+.acc-nav {
+  background: var(--c-surface, #ffffff);
+  border: 1px solid var(--c-border, #eeeeee);
+  border-radius: var(--radius-lg, 8px);
+  padding: var(--space-2, 8px);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, 0.06));
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acc-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 4px);
+  border-left: 3px solid transparent;
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  color: var(--c-text, #212121);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.acc-nav__link svg {
+  color: var(--c-text-muted, #757575);
+  flex: none;
+}
+
+.acc-nav__link:hover {
+  background: var(--wash-hover, #f5f5f5);
+  color: var(--c-link, #f53d2d);
+}
+
+.acc-nav__link--active,
+.acc-nav__link--active:hover {
+  color: var(--c-link, #f53d2d);
+  background: var(--tint-primary-bg, #fdeeee);
+  border-left: 3px solid var(--c-primary, #f53d2d);
+}
+
+.acc-nav__link--active svg,
+.acc-nav__link--active:hover svg {
+  color: inherit;
+}
+
+/* Cột content của affiliate page (thay wrapper auth-page — page này render
+   h1 + section + các card nối tiếp nhau, cần gap dọc đều). */
+.acc-content {
+  display: grid;
+  gap: var(--space-4, 16px);
+  align-content: start;
+}
+
+/* h1 trang (OrdersPage T1 — các page khác nâng cấp ở task của chúng). */
+.acc-page-title {
+  margin: 0 0 16px;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--c-text, #212121);
+}
+
+@media (max-width: 600px) {
+  .acc-shell {
+    grid-template-columns: 1fr;
+    padding: var(--space-4, 16px);
+  }
+
+  .acc-nav {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .acc-nav__link {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .acc-nav__link--active,
+  .acc-nav__link--active:hover {
+    border-left: none;
+    border-bottom: 2px solid var(--c-primary, #f53d2d);
+  }
+}
+
+/* ── SF-4 (FI-394 T3) — UserMenu + GuestLinks (AuthWidget) ───────────────── */
+/* Thay toàn bộ inline style + hover JS của AuthWidget; menu mở có animation
+   fade + translateY (keyframes surface-specific — direction §5.6 cho phép),
+   gate prefers-reduced-motion. Mọi màu qua var(--*). */
+
+.um-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.um-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--c-text, #212121);
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Caret ▲/▼ → Icon chevron-down; mở = rotate 180deg (transition token). */
+.um-caret {
+  display: inline-flex;
+  transition: transform var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.um-caret--open {
+  transform: rotate(180deg);
+}
+
+/* GuestLinks — link Đăng nhập (plain) + nút Đăng ký (outline primary). */
+.um-guest {
+  display: inline-flex;
+  gap: var(--space-3, 12px);
+  align-items: center;
+}
+
+.um-guest__login {
+  color: var(--c-text, #212121);
+  font-size: var(--text-md, 14px);
+  text-decoration: none;
+}
+
+.um-guest__register {
+  color: var(--c-primary, #F53D2D);
+  border: 1px solid var(--c-primary, #F53D2D);
+  border-radius: var(--radius-sm, 2px);
+  padding: 5px 12px;
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Menu panel — surface + border + radius + shadow-3, z theo token dropdown. */
+.um-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #eee);
+  border-radius: var(--radius-md, 4px);
+  box-shadow: var(--shadow-3, 0 8px 24px rgba(0, 0, 0, 0.16));
+  min-width: 200px;
+  z-index: var(--z-dropdown, 200);
+  padding: 4px;
+  display: block;
+  overflow: hidden;
+  animation: um-menu-in 140ms var(--ease-out, ease-out);
+}
+
+@keyframes um-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um-menu {
+    animation: none;
+  }
+
+  /* Hover-lift card (T5 order-card / T7 wl-card) — tắt cả transition lẫn
+     transform để người dùng reduce-motion không thấy lift. */
+  .order-card,
+  .wl-card {
+    transition: none;
+    transform: none;
+  }
+}
+
+.um-menu__item {
+  display: block;
+  padding: 9px 16px;
+  font-size: var(--text-md, 14px);
+  color: var(--c-text, #212121);
+  text-decoration: none;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.um-menu__item:hover {
+  background: var(--wash-hover, #f5f5f5);
+  color: var(--c-link, #f53d2d);
+}
+
+/* Roving focus qua .focus() là programmatic — Safari không vẽ focus mặc định.
+   Offset âm để outline nằm trong item (.um-menu overflow:hidden sẽ cắt phần
+   lấn ra ngoài). Convention ui-kit .uk-btn:focus-visible. */
+.um-menu__item:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: -2px;
+}
+
+/* Item danger (Đăng xuất) — tint đỏ family cancelled. */
+.um-menu__item--danger {
+  color: var(--c-danger, #D0011B);
+}
+
+.um-menu__item--danger:hover {
+  background: var(--pill-cancelled-bg, #FDEBEC);
+  color: var(--c-danger, #D0011B);
+}
+
+/* ── SF-4 (FI-394 T5) — OrdersPage: pill 6 trạng thái + order card ────────── */
+/* Pill direction §2.5: 11/800 ls .05 padding 3×9 full — màu qua 6 cặp
+   --pill-*-bg/text của tokens.css; FAILED tái dùng family cancelled (đỏ). */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--pill-pending-bg, #FFF4E0);
+  color: var(--pill-pending-text, #9A5B00);
+}
+
+.pill--pending {
+  background: var(--pill-pending-bg, #FFF4E0);
+  color: var(--pill-pending-text, #9A5B00);
+}
+
+.pill--paid {
+  background: var(--pill-paid-bg, #E3F0FF);
+  color: var(--pill-paid-text, #1677FF);
+}
+
+.pill--confirmed {
+  background: var(--pill-confirmed-bg, #E3F5F2);
+  color: var(--pill-confirmed-text, #1B8476);
+}
+
+.pill--shipped {
+  background: var(--pill-shipped-bg, #EEF0FB);
+  color: var(--pill-shipped-text, #4A4AC8);
+}
+
+.pill--delivered {
+  background: var(--pill-delivered-bg, #E7F6EC);
+  color: var(--pill-delivered-text, #1F7A45);
+}
+
+.pill--cancelled {
+  background: var(--pill-cancelled-bg, #FDEBEC);
+  color: var(--pill-cancelled-text, #C0151F);
+}
+
+.pill--failed {
+  background: var(--pill-cancelled-bg, #FDEBEC);
+  color: var(--pill-cancelled-text, #C0151F);
+}
+
+/* Order card — shadow-1 radius-md (Card primitive); hover lift −2px + shadow-2
+   (KHÔNG lên shadow-3 — direction §3.1: tile thường chỉ lên 2), --dur-base. */
+.order-card-list {
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+
+.order-card {
+  transition:
+    transform var(--dur-base, 180ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-base, 180ms) var(--ease-out, ease-out);
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2, 0 2px 8px rgba(0, 0, 0, 0.12));
+}
+
+.order-card__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.order-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+.order-card__id {
+  font-weight: 700;
+  color: var(--c-link, #F53D2D);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-1, 4px);
+}
+
+.order-card__meta {
+  font-size: var(--text-sm, 13px);
+  color: var(--c-text-muted, #757575);
+}
+
+.order-card__side {
+  text-align: right;
+  display: grid;
+  gap: var(--space-2, 6px);
+  justify-items: end;
+}
+
+.order-card__total {
+  font-weight: 800;
+  color: var(--c-danger, #D0011B);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── SF-4 (FI-394 T6) — OrderDetailPage decss + timeline ─────────────────── */
+/* 42 khối inline → od-*; timeline chấm tròn 10px + đường nối 1px --c-border
+   (direction §4 Account), mốc hoàn thành nền --c-success — KHÔNG thêm depth
+   mới (Card giữ shadow-1 sẵn có). Mọi màu qua var(--*). */
+
+.od-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.od-title {
+  margin: 0;
+  flex: 1;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--c-text, #212121);
+}
+
+.od-banner {
+  margin-bottom: var(--space-3, 12px);
+}
+
+.od-banner__text {
+  color: var(--c-text-muted, #757575);
+}
+
+.od-grid {
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+
+.od-meta-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+}
+
+.od-meta-detail {
+  color: var(--c-text-muted, #757575);
+  font-size: var(--text-sm, 13px);
+}
+
+.od-meta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  align-items: center;
+}
+
+/* Icon trong Button — .uk-btn__label chuyển inline-flex để icon + text thẳng
+   hàng tâm (không đụng ui-kit styles.css). */
+.uk-btn.od-btn-icon .uk-btn__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.od-section-title {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: 16px;
+}
+
+/* Totals — grid căn phải; Tổng cộng 16/700 + số tiền --c-danger (khớp
+   order-card__total T5 — consistency tổng tiền). */
+.od-totals {
+  margin-top: var(--space-3, 12px);
+  display: grid;
+  gap: var(--space-1, 4px);
+  justify-items: end;
+  font-size: var(--text-md, 14px);
+}
+
+.od-totals__total {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.od-totals__amount {
+  color: var(--c-danger, #D0011B);
+  font-variant-numeric: tabular-nums;
+}
+
+.od-address {
+  color: var(--c-text-muted, #757575);
+}
+
+.od-rma-list {
+  display: grid;
+  gap: 10px;
+}
+
+.od-rma-row {
+  display: flex;
+  gap: var(--space-2, 8px);
+  align-items: center;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--c-border, #eeeeee);
+  padding-top: var(--space-2, 8px);
+}
+
+.od-rma-meta {
+  font-size: var(--text-sm, 13px);
+}
+
+/* Timeline — ol li: dot 10px absolute-center + đường nối li+li::before 1px
+   chạy từ tâm dot trước tới dot hiện tại (dot z-1 đè line tại điểm gặp).
+   Variant: --success = mốc hoàn thành (terminal/cuối), --primary = event GHN,
+   --danger = mốc CANCELLED/FAILED (nền đỏ — đúng ngữ nghĩa). */
+.od-timeline {
+  list-style: none;
+  margin: var(--space-2, 8px) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+
+.od-timeline li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 20px;
+}
+
+.od-timeline li + li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: -17px;
+  width: 1px;
+  height: 27px;
+  background: var(--c-border, #eeeeee);
+}
+
+.od-timeline__dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--c-border, #eeeeee);
+}
+
+.od-timeline .od-timeline__item--success .od-timeline__dot {
+  background: var(--c-success, #26AA99);
+}
+
+.od-timeline .od-timeline__item--danger .od-timeline__dot {
+  background: var(--c-danger, #D0011B);
+}
+
+.od-timeline .od-timeline__item--primary .od-timeline__dot {
+  background: var(--c-primary, #F53D2D);
+}
+
+.od-timeline__time {
+  font-size: 12px;
+  color: var(--c-text-muted, #757575);
+  font-variant-numeric: tabular-nums;
+}
+
+.od-timeline__desc {
+  font-size: 13px;
+}
+
+/* Modal RMA/hủy — footer phải + form grid (footer buttons GIỮ nguyên logic). */
+.od-modal-footer {
+  display: flex;
+  gap: var(--space-2, 8px);
+  justify-content: flex-end;
+}
+
+.od-modal-text {
+  margin: 0;
+}
+
+.od-rma-form {
+  display: grid;
+  gap: var(--space-3, 12px);
+}
+
+.od-rma-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 6px 0;
+  justify-content: space-between;
+}
+
+.od-rma-item__qty {
+  color: var(--c-text-muted, #757575);
+}
+
+/* Lỗi chọn-số-lượng / lỗi API — role=alert block riêng (KHÔNG vào error prop
+   Textarea — error prop chỉ cho lỗi lý do). */
+.od-rma-error {
+  margin: 0;
+  color: var(--c-danger, #d63a2f);
+}
+
+/* Trạng thái lỗi + loading của page (Card bọc). */
+.od-error__msg {
+  margin: 0;
+}
+
+.od-error__back {
+  margin-top: var(--space-3, 12px);
+}
+
+/* ── SF-4 (FI-394 T9) — affiliate KPI + ledger Table + loyalty anchor ────── */
+/* KPI pattern direction §2.5/§4: label 11/700 uppercase tracking .08em muted,
+   value 23/800 tabular. Grid auto-fit — dùng chung affiliate stats + loyalty
+   stats (minmax 180 giữ KPI 1 dòng desktop, stack tự nhiên <600px). */
+.af-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.af-kpi__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-muted, #757575);
+}
+
+.af-kpi__value {
+  margin: var(--space-1, 4px) 0 0;
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--c-text, #212121);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Đơn vị 'điểm' sau số — nhỏ + muted, không đè value (không đụng ui-kit). */
+.af-kpi__unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-muted, #757575);
+}
+
+/* Đoạn văn thân (register/pending/suspended/ledgerEmpty/error loyalty) —
+   muted thay token chết --c-text-secondary (review G2 hand-off — token
+   KHÔNG tồn tại trong tokens.css). */
+.af-desc {
+  margin: 0 0 var(--space-3, 12px);
+  color: var(--c-text-muted, #757575);
+  line-height: 1.55;
+}
+
+/* Ref code 24/700 letter-spacing 4 tabular + hàng code/badge, link/copy
+   (decss inline flex). */
+.af-code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.af-code-row {
+  display: flex;
+  gap: var(--space-3, 12px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.af-link {
+  word-break: break-all;
+  flex: 1;
+  min-width: 240px;
+}
+
+/* Ledger — Table primitive (.uk-table); thêm transition hover (uk-table có
+   nền hover sẵn nhưng không transition) + tabular-nums cột số + mã đơn
+   link-tint 700 (direction §2.5 table: mã đơn --c-link 700 tabular). */
+.af-ledger tbody td {
+  transition: background-color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.af-ledger tbody tr:hover td {
+  background: var(--wash-hover, #f5f5f5);
+}
+
+.af-ledger td {
+  font-variant-numeric: tabular-nums;
+}
+
+.af-order-id {
+  color: var(--c-link, #f53d2d);
+  font-weight: 700;
+}
+
+.af-commission {
+  font-weight: 700;
+}
+
+/* Loyalty section — anchor #loyalty (scrollIntoView từ side-nav item
+   /account/affiliate#loyalty); title h2 marginTop 0 cũ → margin rule. */
+.af-loyalty__title {
+  margin: 0 0 var(--space-3, 12px);
+}
+
+.af-loyalty__error {
+  margin: 0;
+}
+
+/* ── SF-4 (FI-394 T11) — responsive audit <600px ─────────────────────────── */
+/* Audit: acc-shell collapse + acc-nav ngang (T1), account-grid 720px, af-kpis
+   auto-fit, wl-grid auto-fill minmax 200 — ĐÃ CÓ, giữ nguyên. Còn thiếu: */
+
+/* Auth card — full-width max-400 có sẵn; giảm padding dọc 48→24 cho mobile. */
+@media (max-width: 600px) {
+  .auth-page {
+    padding: var(--space-5, 24px) var(--space-4, 16px);
+  }
+
+  /* Bảng trong Card (od items / af ledger) — uk-table width:100% tự nén, chỉ
+     tràn khi tên/cột không break được; cho Card chứa table scroll-x (CSS thuần
+     qua :has — markup KHÔNG có .od-items-wrap, tsx GIỮ nguyên per T11 scope). */
+  .acc-shell .uk-card:has(> table.uk-table) {
+    overflow-x: auto;
+  }
 }

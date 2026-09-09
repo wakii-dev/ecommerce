@@ -43,9 +43,9 @@ test('CategoryTiles: tile + "Xem thêm" → route thật', async ({ page }) => {
   await page.goto(`${STOREFRONT}/vi`);
   const tiles = page.locator('.cat-grid');
 
-  // tile danh mục đầu (Điện Tử) → /vi/c/dien-tu
+  // tile danh mục đầu (seed hợp nhất: Làm Đẹp đứng đầu cat-grid) → /c/lam-dep
   await tiles.locator('.cat-tile').first().click();
-  await expect(page).toHaveURL(/\/c\/dien-tu$/);
+  await expect(page).toHaveURL(/\/c\/lam-dep$/);
   await page.goBack();
 
   // "Xem thêm →" → /vi/search (surface duyệt chung)
@@ -70,18 +70,20 @@ test('footer: mọi link điều hướng tới route thật (category + shell)'
   await expect(page.locator('.site-footer a[href="#"]')).toHaveCount(0);
 
   const seen = new Set<string>();
+  const targetRe = /^(\/c\/[a-z0-9-]+|\/cart|\/account(\/(orders|wishlist|reviews))?)$/;
   for (let i = 0; i < count; i += 1) {
     const link = footerLinks.nth(i);
     const href = (await link.getAttribute('href')) ?? '';
     expect(href).not.toBe('#');
     const label = (await link.textContent()) ?? '';
     await link.click();
-    await page.waitForLoadState('load');
+    // SPA nav (next/link) không bắn load-event mới — waitForLoadState + page.url()
+    // tức-thì đọc URL CŨ. Đợi đích bằng toHaveURL (auto-retry, function tuỳ chọn
+    // origin-agnostic vì shell link cross-origin :5703).
+    await expect(page).toHaveURL((u) => targetRe.test(pathnameOf(u)));
     const path = pathnameOf(page.url());
     // đích phải là route danh mục thật hoặc route shell thật
-    expect(path, `footer link "${label}" → ${path}`).toMatch(
-      /^(\/c\/[a-z0-9-]+|\/cart|\/account(\/(orders|wishlist|reviews))?)$/
-    );
+    expect(path, `footer link "${label}" → ${path}`).toMatch(targetRe);
     seen.add(path);
     await page.goBack();
     await expect(footerLinks).toHaveCount(count); // quay về home nguyên vẹn

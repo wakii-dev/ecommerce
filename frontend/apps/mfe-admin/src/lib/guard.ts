@@ -1,4 +1,6 @@
 // lib/guard.ts — logic guard + route resolver THUẦN (không React) để test node.
+import type { IconName } from '@ecommerce/ui-kit';
+import type { AdminIconName } from '../components/AdminIcon';
 
 export type AdminGuardState = 'guest' | 'forbidden' | 'ok';
 
@@ -78,6 +80,62 @@ export const ADMIN_NAV: ReadonlyArray<{ to: string; key: string }> = [
   // SF-14 (FI-324) append — RMA queue + loyalty adjust (D22)
   { to: '/admin/rma', key: 'admin.nav.rma' },
   { to: '/admin/loyalty', key: 'admin.nav.loyalty' }
+] as const;
+
+/** Icon nav: dùng lại catalog Icon.tsx của ui-kit, thiếu thì AdminIcon bù. */
+export type AdminNavIcon = IconName | AdminIconName;
+
+export interface AdminNavItem {
+  to: string;
+  key: string;
+  icon: AdminNavIcon;
+}
+
+export interface AdminNavGroup {
+  labelKey: string;
+  items: ReadonlyArray<AdminNavItem>;
+}
+
+/**
+ * Nav sidebar theo NHÓM (SF-5 FI-395 T2 — direction §2.5): Tổng quan · Sản
+ * phẩm · Đơn hàng · Khách hàng & tương tác · Hệ thống. Thứ tự item GIỮ thứ tự
+ * flat của ADMIN_NAV (activeNavIndex map page→index phía dưới vẫn khớp —
+ * /admin/orders/o-1 active Orders index 5).
+ * Count-badge active: BỎ (cần data fetch mới = logic mới — cấm theo plan §4).
+ */
+export const ADMIN_NAV_GROUPS: ReadonlyArray<AdminNavGroup> = [
+  {
+    labelKey: 'admin.nav.group.overview',
+    items: [{ to: '/admin/dashboard', key: 'admin.nav.dashboard', icon: 'grid' }]
+  },
+  {
+    labelKey: 'admin.nav.group.products',
+    items: [
+      { to: '/admin/products', key: 'admin.nav.products', icon: 'package' },
+      { to: '/admin/categories', key: 'admin.nav.categories', icon: 'folder' },
+      { to: '/admin/coupons', key: 'admin.nav.coupons', icon: 'ticket' }
+    ]
+  },
+  {
+    labelKey: 'admin.nav.group.orders',
+    items: [
+      { to: '/admin/orders', key: 'admin.nav.orders', icon: 'cart' },
+      { to: '/admin/rma', key: 'admin.nav.rma', icon: 'rotate-ccw' }
+    ]
+  },
+  {
+    labelKey: 'admin.nav.group.engagement',
+    items: [
+      { to: '/admin/reviews', key: 'admin.nav.reviews', icon: 'star' },
+      { to: '/admin/affiliates', key: 'admin.nav.affiliates', icon: 'user' },
+      { to: '/admin/newsletter', key: 'admin.nav.newsletter', icon: 'mail' },
+      { to: '/admin/loyalty', key: 'admin.nav.loyalty', icon: 'award' }
+    ]
+  },
+  {
+    labelKey: 'admin.nav.group.system',
+    items: [{ to: '/admin/audit', key: 'admin.nav.audit', icon: 'file-text' }]
+  }
 ] as const;
 
 /** Nav item nào active cho pathname (prefix match; /admin/products/x vẫn active Products). */

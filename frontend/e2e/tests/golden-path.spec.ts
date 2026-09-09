@@ -70,7 +70,7 @@ async function addFirstVariantToCart(page: import('@playwright/test').Page): Pro
 async function uiLogin(page: import('@playwright/test').Page, email: string, password: string): Promise<void> {
   await page.goto(`${SHELL}/login`);
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(password);
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
 }
@@ -124,7 +124,7 @@ test('3 — đăng ký user mới qua UI + đăng nhập', async ({ page }) => {
   await page.goto(`${SHELL}/register`);
   await page.getByLabel('Họ tên').fill('E2E Golden Tester');
   await page.getByLabel('Email').fill(uiUser.email);
-  await page.getByLabel('Mật khẩu').fill(uiUser.password);
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(uiUser.password);
   const [regResp] = await Promise.all([
     page.waitForResponse((r) => r.url().includes('/auth/register'), { timeout: 15_000 }).catch(() => null),
     page.getByRole('button', { name: /Đăng ký/ }).click()

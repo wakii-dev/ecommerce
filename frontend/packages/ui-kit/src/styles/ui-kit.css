@@ -682,11 +682,20 @@ button.uk-star {
 
 /* ── Skeleton ───────────────────────────────────────────────────────── */
 
+/* Shimmer (FI-391 T12 — hand-off §2.5): gradient sweep
+ * wash-hover → border → wash-hover, quét background-position
+ * 120% → −120%; token nên tự đúng màu ở dark cascade. */
 .uk-skeleton {
   display: block;
-  background: var(--c-border);
+  background: linear-gradient(
+    90deg,
+    var(--wash-hover) 25%,
+    var(--c-border) 50%,
+    var(--wash-hover) 75%
+  );
+  background-size: 240% 100%;
   border-radius: var(--radius-md);
-  animation: uk-skeleton-pulse 1.4s ease-in-out infinite;
+  animation: uk-skeleton-pulse var(--dur-shimmer) linear infinite;
 }
 
 .uk-skeleton--text {
@@ -705,13 +714,12 @@ button.uk-star {
 }
 
 @keyframes uk-skeleton-pulse {
-  0%,
-  100% {
-    opacity: 1;
+  0% {
+    background-position: 120% 0;
   }
 
-  50% {
-    opacity: 0.55;
+  100% {
+    background-position: -120% 0;
   }
 }
 
@@ -798,6 +806,564 @@ button.uk-star {
   gap: var(--space-3);
 }
 
+.uk-demo__col {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.uk-demo__themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.uk-demo__icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--space-3);
+}
+
+.uk-demo__icon {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  font-size: var(--text-xs);
+  text-align: center;
+  word-break: break-word;
+}
+
+.uk-demo__sk {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ── QuantityStepper (SF-1 FI-391) ──────────────────────────────────── */
+/* 3 khối dính liền trong khung chung: .uk-qty giữ border + radius +
+ * overflow hidden; input chỉ có viền dọc phân cách với 2 nút. */
+
+.uk-qty {
+  display: inline-flex;
+  height: 36px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  overflow: hidden;
+}
+
+.uk-qty__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  padding: 0;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    transform var(--dur-fast) var(--ease-pop);
+}
+
+.uk-qty__btn:hover:not(:disabled) {
+  background: var(--wash-hover);
+}
+
+.uk-qty__btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.uk-qty__value {
+  width: 44px;
+  border: none;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+  padding: 0;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.uk-qty__value::-webkit-outer-spin-button,
+.uk-qty__value::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.uk-qty__btn:disabled,
+.uk-qty__value:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Pagination (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.uk-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop);
+}
+
+.uk-page:hover {
+  background: var(--wash-hover);
+}
+
+.uk-page:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.uk-page--active,
+.uk-page--active:hover {
+  background: var(--c-primary);
+  border-color: transparent;
+  color: var(--c-surface);
+}
+
+.uk-page--dots,
+.uk-page--dots:hover {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+/* ── Breadcrumbs (SF-1 FI-391) ──────────────────────────────────────── */
+
+.uk-breadcrumbs {
+  font-family: var(--font-sans);
+}
+
+.uk-breadcrumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uk-breadcrumbs__item {
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+.uk-breadcrumbs__item a {
+  color: var(--c-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-pop);
+}
+
+.uk-breadcrumbs__item a:hover {
+  text-decoration: underline;
+}
+
+.uk-breadcrumbs__item [aria-current='page'] {
+  font-weight: 600;
+}
+
+.uk-breadcrumbs__sep {
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-text-muted);
+}
+
+/* ── IconButton (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--c-link);
+  font-family: var(--font-sans);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop),
+    transform var(--dur-fast) var(--ease-pop);
+}
+
+.uk-icon-btn:hover:not(:disabled) {
+  background: var(--wash-hover);
+}
+
+.uk-icon-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.uk-icon-btn--sm {
+  width: 28px;
+  height: 28px;
+}
+
+.uk-icon-btn--outline {
+  border-color: var(--c-border);
+}
+
+.uk-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uk-icon-btn:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ── Alert (SF-1 FI-391) ── tint theo variant: info=tint-primary-*,
+ * success=tint-success-*, warning=tint-new-*, danger=pill-cancelled-* ── */
+
+.uk-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: var(--radius-md);
+  background: var(--tint-primary-bg);
+  color: var(--tint-primary-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.uk-alert--success {
+  border-color: var(--tint-success-border);
+  background: var(--tint-success-bg);
+  color: var(--tint-success-text);
+}
+
+.uk-alert--warning {
+  border-color: var(--tint-new-border);
+  background: var(--tint-new-bg);
+  color: var(--tint-new-text);
+}
+
+.uk-alert--danger {
+  border-color: var(--pill-cancelled-bg);
+  background: var(--pill-cancelled-bg);
+  color: var(--pill-cancelled-text);
+}
+
+.uk-alert__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.uk-alert__content {
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.uk-alert__title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.uk-alert__close {
+  border: none;
+  padding: 0 var(--space-1);
+  background: transparent;
+  color: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-pop);
+}
+
+.uk-alert__close:hover {
+  opacity: 0.7;
+}
+
+/* ── Checkbox / Radio (SF-1 FI-391) ── input visually-hidden NHƯNG
+ * focusable (opacity 0, không display:none) — box custom 18×18. ── */
+
+.uk-check,
+.uk-radio {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+.uk-check__input,
+.uk-radio__input {
+  position: absolute;
+  z-index: 1; /* review-G2 P1: input vẽ TRÊN box (relative) — box chiếm click vùng 18×18 nếu để auto */
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.uk-check__box,
+.uk-radio__box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  transition: background-color var(--dur-fast) var(--ease-pop),
+    border-color var(--dur-fast) var(--ease-pop),
+    box-shadow var(--dur-fast) var(--ease-pop);
+}
+
+.uk-radio__box {
+  border-radius: var(--radius-full);
+}
+
+.uk-check__input:checked + .uk-check__box,
+.uk-radio__input:checked + .uk-radio__box {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+/* checkmark: chữ L (border-right/bottom) rotate 45deg — không svg */
+.uk-check__input:checked + .uk-check__box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border-right: 2px solid var(--c-surface);
+  border-bottom: 2px solid var(--c-surface);
+  transform: rotate(45deg);
+}
+
+/* chấm tròn giữa box radio */
+.uk-radio__input:checked + .uk-radio__box::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+}
+
+.uk-check__input[aria-invalid='true'] + .uk-check__box,
+.uk-radio__input[aria-invalid='true'] + .uk-radio__box {
+  border-color: var(--c-danger);
+}
+
+.uk-check__input:focus-visible + .uk-check__box,
+.uk-radio__input:focus-visible + .uk-radio__box {
+  box-shadow: 0 0 0 3px var(--tint-primary-bg);
+}
+
+.uk-check__input:disabled + .uk-check__box,
+.uk-radio__input:disabled + .uk-radio__box {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uk-check__label,
+.uk-radio__label {
+  font-size: var(--text-sm);
+  color: var(--c-text);
+}
+
+/* ── RadioGroup (SF-1 FI-391) ───────────────────────────────────────── */
+
+.uk-radio-group {
+  display: grid;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+}
+
+.uk-radio-group__options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* ── Textarea (SF-1 FI-391) ─────────────────────────────────────────── */
+
+.uk-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 80px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uk-textarea::placeholder {
+  color: var(--c-text-muted);
+}
+
+.uk-textarea:focus-visible {
+  outline: none;
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 3px var(--c-focus);
+}
+
+.uk-textarea--error {
+  border-color: var(--c-danger);
+}
+
+.uk-textarea--error:focus-visible {
+  box-shadow: 0 0 0 3px var(--c-danger);
+}
+
+/* ── Stepper (SF-1 FI-391 — hand-off §2.4) ── connector: li::before track
+ * + li::after fill scaleX; segment sang step --done được fill. ── */
+
+.uk-stepper {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-sans);
+}
+
+.uk-stepper__step {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.uk-stepper__step + .uk-stepper__step {
+  margin-left: 48px;
+}
+
+.uk-stepper__step + .uk-stepper__step::before,
+.uk-stepper__step + .uk-stepper__step::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -31px;
+  width: 48px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+.uk-stepper__step + .uk-stepper__step::before {
+  background: var(--c-border);
+  transform: translateY(-50%);
+}
+
+.uk-stepper__step + .uk-stepper__step::after {
+  background: var(--c-success);
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
+  transition: transform 350ms var(--ease-pop);
+}
+
+.uk-stepper__step--done:not(:first-child)::after {
+  transform: translateY(-50%) scaleX(1);
+}
+
+.uk-stepper__dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid var(--c-border);
+  border-radius: var(--radius-full);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease-pop),
+    border-color var(--dur-base) var(--ease-pop),
+    box-shadow var(--dur-base) var(--ease-pop),
+    transform var(--dur-base) var(--ease-pop);
+}
+
+.uk-stepper__dot:disabled {
+  cursor: default;
+}
+
+.uk-stepper__dot:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.uk-stepper__step--done .uk-stepper__dot {
+  border-color: var(--c-success);
+  background: var(--c-success);
+  color: transparent; /* ẩn số — hiện tick ::after */
+  font-size: 0;
+}
+
+.uk-stepper__step--done .uk-stepper__dot::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid var(--c-surface);
+  border-bottom: 2px solid var(--c-surface);
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.uk-stepper__step--current .uk-stepper__dot {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+  color: var(--c-surface);
+  box-shadow: 0 0 0 5px var(--tint-primary-bg);
+  transform: scale(1.08);
+}
+
 /* ── Dark (FI-368 T2) — badge ĐẶC chữ trắng không đạt AA trên nền sáng
  * (#FE9C08 2.11 · #2FD5BE 1.85 · #FF5A5A 3.06) → chữ tối --c-on-accent.
  * Light giữ nguyên (danger #D0011B × trắng = 6.36:1 đạt). */
@@ -805,4 +1371,97 @@ button.uk-star {
 [data-theme='dark'] .uk-badge--success,
 [data-theme='dark'] .uk-badge--danger {
   color: var(--c-on-accent);
+}
+
+/* ── Icon (SF-1 FI-391) ─────────────────────────────────────────────── */
+
+.uk-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ── Skeleton compositions (SF-1 FI-391 — hand-off §2.5) ────────────── */
+
+.uk-sk-card,
+.uk-sk-list {
+  width: 100%;
+}
+
+.uk-sk-card__thumb {
+  /* height:auto từ inline style của composition — aspect giữ thumb vuông */
+  aspect-ratio: 1 / 1;
+}
+
+.uk-sk-card__body,
+.uk-sk-list__text {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.uk-sk-card__body {
+  padding-top: var(--space-2);
+}
+
+.uk-sk-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* text variant mặc định có margin-bottom — compositions dùng grid gap */
+.uk-sk-card .uk-skeleton,
+.uk-sk-table .uk-skeleton,
+.uk-sk-list .uk-skeleton {
+  margin-bottom: 0;
+}
+
+.uk-sk-table {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.uk-sk-table__row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  height: 38px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.uk-sk-table__cell .uk-skeleton {
+  width: 100%;
+}
+
+/* ── Scroll reveal (SF-1 FI-391 — hand-off §3.2) ── class gắn BẰNG JS qua
+ * useReveal: mount → `uk-reveal uk-reveal--pending`, intersect đầu → bỏ
+ * `--pending` (transition chạy về trạng thái thường). Không JS / IO /
+ * reduced-motion → không class nào, nội dung hiện sẵn. */
+.uk-reveal {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+}
+
+.uk-reveal--pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+/* ── prefers-reduced-motion global (SF-1 FI-391 — hand-off §3.3) ────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .uk-reveal--pending {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildAddItemPayload } from '../components/pdp/AddToCart';
 import type { Category } from '../lib/catalog-api';
-import { categoryPathById, collectOptions, jsonLdFor, pickVariant, priceWithDelta } from '../lib/pdp';
+import { breadcrumbJsonld, categoryPathById, collectOptions, jsonLdFor, pickVariant, priceWithDelta } from '../lib/pdp';
 
 /** Variant fixture tối giản (options + delta) — phần PDP helpers chỉ dùng 2 trường này. */
 function variant(id: string, options: Record<string, string>, priceDelta?: number) {
@@ -93,6 +93,37 @@ describe('jsonLdFor', () => {
     expect(rendered).toContain('\\u003c');
     // Escape chỉ ở tầng chuỗi script — JSON vẫn parse về đúng giá trị gốc.
     expect(JSON.parse(rendered.replace(/\\u003c/g, '<')).name).toBe('X </script><img src=x onerror=alert(1)>');
+  });
+});
+
+describe('breadcrumbJsonld', () => {
+  const items = [
+    { name: 'Trang chủ', path: '/' },
+    { name: 'Điện Tử', path: '/c/dien-tu' },
+    { name: 'Điện Thoại', path: '/c/dien-thoai' },
+  ];
+
+  it('BreadcrumbList + ListItem position 1..n + item = URL absolute origin+path (item cuối = trang hiện tại)', () => {
+    const parsed = JSON.parse(breadcrumbJsonld(items, 'http://test.local')) as Record<string, any>;
+    expect(parsed['@type']).toBe('BreadcrumbList');
+    expect(parsed.itemListElement).toEqual([
+      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'http://test.local/' },
+      { '@type': 'ListItem', position: 2, name: 'Điện Tử', item: 'http://test.local/c/dien-tu' },
+      { '@type': 'ListItem', position: 3, name: 'Điện Thoại', item: 'http://test.local/c/dien-thoai' },
+    ]);
+  });
+
+  it('P0 XSS: tên danh mục chứa `</script>` → chuỗi trả về KHÔNG còn raw `<` (escape <) mà JSON.parse vẫn đúng', () => {
+    // Tên danh mục là admin-enter — page nhúng thẳng chuỗi này vào script tag.
+    const raw = breadcrumbJsonld(
+      [{ name: 'X </script><img src=x onerror=alert(1)>', path: '/c/x' }],
+      'http://test.local',
+    );
+    expect(raw).not.toContain('<'); // không thể đóng sớm thẻ script
+    expect(raw).toContain('\\u003c');
+    // `<` là escape chuẩn JSON — parse trực tiếp ra đúng giá trị gốc.
+    const parsed = JSON.parse(raw) as Record<string, any>;
+    expect(parsed.itemListElement[0].name).toBe('X </script><img src=x onerror=alert(1)>');
   });
 });
 

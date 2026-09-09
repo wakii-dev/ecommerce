@@ -7,22 +7,18 @@ import StockAlertInput from './StockAlertInput';
 import VariantSelector from './VariantSelector';
 import { discountPercent, type ProductDetail } from '../../lib/catalog-api';
 import { formatVnd, type Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { priceWithDelta } from '../../lib/pdp';
 
 /**
  * Buy-box PDP (plan Task 13): vùng INFO tương tác — price-block Giá HIỂN THỊ
  * ĐỘNG theo variant (price + priceDelta), VariantSelector, AddToCart. Client
  * component NHƯNG vẫn SSR đầy đủ ra HTML (Next render client component lần
- * đầu trên server) — giá/CTA có mặt trong view-source.
+ * đầu trên server) — giá/CTA có mặt trong view-source. T12: copy trong
+ * lib/i18n (miền `pdp.buy*`).
  */
 
-const COPY = {
-  vi: { color: 'Màu', size: 'Size', note: 'Giá tốt mỗi ngày — hàng chính hãng 100%' },
-  en: { color: 'Color', size: 'Size', note: 'Great price every day — 100% authentic' },
-} as const;
-
 export default function PdpBuyBox({ product, locale }: { product: ProductDetail; locale: Locale }) {
-  const copy = COPY[locale];
   const [variantId, setVariantId] = useState<string | null>(null);
 
   // ID báo lên từ VariantSelector → tra ngược variant (match lại từ selection
@@ -41,13 +37,13 @@ export default function PdpBuyBox({ product, locale }: { product: ProductDetail;
           <s className="pdp-price-compare">{formatVnd(product.comparePrice)}</s>
         ) : null}
         {percent !== undefined ? <span className="pdp-price-pill">-{percent}%</span> : null}
-        <span className="pdp-price-note">{copy.note}</span>
+        <span className="pdp-price-note">{t(locale, 'pdp.buyNote')}</span>
       </div>
 
       <VariantSelector
         variants={product.variants}
-        colorLabel={copy.color}
-        sizeLabel={copy.size}
+        colorLabel={t(locale, 'pdp.buyColor')}
+        sizeLabel={t(locale, 'pdp.buySize')}
         onChange={onChange}
       />
 

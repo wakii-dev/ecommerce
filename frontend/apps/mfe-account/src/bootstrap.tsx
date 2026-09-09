@@ -1,6 +1,6 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 import { authStore, configureAuth } from '@ecommerce/auth';
-import AuthWidget from './AuthWidget';
+import { AuthMenu } from '@ecommerce/chrome';
 import OrdersNavLink from './pages/orders/OrdersNavLink';
 import AffiliateNavLink from './pages/affiliate/AffiliateNavLink';
 // FI-368 T11: page.css chỉ import ở main.tsx (standalone) — dưới shell remote
@@ -37,6 +37,15 @@ export function appNavigate(to: string): void {
   navigateRef?.(to);
 }
 
+/**
+ * Đăng ký TRỰC TIẾP chrome AuthMenu (SF-4 FI-401 — exit criteria P1): wrapper
+ * file ./AuthWidget.tsx ĐÃ XÓA (.um-* css về chrome.css sở hữu — page.css dọn
+ * dup). onNavigate=appNavigate GIỮ SPA-nav shell (logout → /login qua router).
+ */
+function AccountAuthWidget(): ReactElement {
+  return <AuthMenu onNavigate={appNavigate} />;
+}
+
 /** Shell gọi ĐÚNG 1 lần lúc boot (eager) — đăng ký auth widget + khôi phục phiên. */
 export function initAccountShell(ctx: ShellContext): void {
   navigateRef = ctx.navigate;
@@ -45,7 +54,7 @@ export function initAccountShell(ctx: ShellContext): void {
     identityBaseUrl: '',
     loginPath: '/login'
   });
-  ctx.HeaderSlots.register('right', 'account-auth', AuthWidget);
+  ctx.HeaderSlots.register('right', 'account-auth', AccountAuthWidget);
   // SF-9 (FI-319): link "Đơn hàng" — slot registry additive (widget từ pages/orders slice)
   ctx.HeaderSlots.register('right', 'orders-nav', OrdersNavLink);
   // SF-12 (FI-322): link "Affiliate" — slot registry additive (pages/affiliate slice)

@@ -1,0 +1,33 @@
+SF-4 PT6 — e2e subset trên rig 1-origin (FI-401) — 2026-09-09
+
+Rig: Next entry :3100 · shell :5273 · mfe-checkout :5185 · mfe-account :5186 · mfe-admin :5187
+Backend: shared main-checkout stack :8080 (không đụng — backend read-only).
+Boot env rig (bắt buộc, không ghi vào git):
+  - mfe-checkout: DEV_PORT=5185 + inline VITE_STRIPE_PUBLISHABLE_KEY (vite envDir=app dir,
+    root .env không được load → thiếu key = mock pay panel, golden-path test 5 fail)
+  - shell: DEV_PORT=5273 + VITE_STOREFRONT_URL= (rỗng → sfUrl '' same-origin;
+    unset → default http://localhost:3000 trỏ nhầm stack main trong mini-nav)
+  - next: SHELL_ORIGIN=:5273 REMOTE_CHECKOUT_URL=:5185 REMOTE_ACCOUNT_URL=:5186
+    REMOTE_ADMIN_URL=:5187 GATEWAY_URL=:8080, `pnpm exec next dev -p 3100`
+
+KẾT QUẢ (chạy trên rig cuối, sequential — recipe SF-1 QA):
+  nav-honesty.spec.ts   7 passed  (11.1s)  — footer locator `.site-footer a` match OK, không sửa spec
+  golden-path.spec.ts   8 passed  (27.4s)  — gồm test 0 hard-assert Stripe keys (pass), test 5
+    coupon WELCOME10 → Stripe PaymentElement mount → pay 4242 → CONFIRMED; test 6 Mailpit
+    cảm ơn + PDF; test 7 admin thấy đơn CONFIRMED (VERIFIED-STRIPE)
+
+2 BUG/ĐỆM RIG phát hiện + xử lý khi chạy:
+1. [CODE FIX — commit riêng] `app/[locale]/layout.tsx` import `initI18n` từ `@ecommerce/i18n`
+   ở SERVER component → init.ts (thiếu 'use client') kéo react-i18next vào bundle RSC →
+   500 "(0 , react.createContext) is not a function" khi boot /vi (regression từ c05bce7
+   PT2 layout swap; unit sweep không bắt vì không boot app). Fix: bỏ import + await khỏi
+   layout (init/changeLanguage đã có ở client gate ChromeShell; setChromeSite giữ — barrel
+   chrome an toàn trong RSC). Trade-off ghi ở layout comment: SSR chrome.* labels nhảy
+   key-thô → dịch sau hydration (header labels qua lib/i18n static dict vẫn dịch từ HTML đầu).
+2. [RIG — không sửa code] admin remote của main stack :5177 trả HTML fallback (200 text/html)
+   thay vì JS tại /remotes/admin/remoteEntry.js → browser dynamic import() fail
+   MF runtime-008 → golden-path test 7 fail "mfe-admin không chạy". Fix: boot mfe-admin
+   của worktree này :5187 (đúng convention FI-397) + trỏ REMOTE_ADMIN_URL.
+
+Env var rig edit local (untracked, không commit): root .env — NEXT_PUBLIC_SHELL_URL comment out,
+REMOTE_CHECKOUT_URL/REMOTE_ACCOUNT_URL → relative /remotes/* (backup /tmp/sf4-env-backup).

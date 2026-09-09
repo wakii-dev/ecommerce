@@ -10,7 +10,6 @@ const mfeConfig = defineMfeConfig({
   name: 'mfe_account',
   exposes: {
     './bootstrap': './src/bootstrap.tsx',
-    './AuthWidget': './src/AuthWidget.tsx',
     './LoginPage': './src/pages/LoginPage.tsx',
     './ForgotPasswordPage': './src/pages/ForgotPasswordPage.tsx',
     './ResetPasswordPage': './src/pages/ResetPasswordPage.tsx',

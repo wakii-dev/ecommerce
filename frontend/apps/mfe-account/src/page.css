@@ -531,137 +531,8 @@
   }
 }
 
-/* ── SF-4 (FI-394 T3) — UserMenu + GuestLinks (AuthWidget) ───────────────── */
-/* Thay toàn bộ inline style + hover JS của AuthWidget; menu mở có animation
-   fade + translateY (keyframes surface-specific — direction §5.6 cho phép),
-   gate prefers-reduced-motion. Mọi màu qua var(--*). */
-
-.um-root {
-  position: relative;
-  display: inline-flex;
-}
-
-.um-trigger {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--c-text, #212121);
-  font-size: var(--text-md, 14px);
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Caret ▲/▼ → Icon chevron-down; mở = rotate 180deg (transition token). */
-.um-caret {
-  display: inline-flex;
-  transition: transform var(--dur-fast, 140ms) var(--ease-out, ease-out);
-}
-
-.um-caret--open {
-  transform: rotate(180deg);
-}
-
-/* GuestLinks — link Đăng nhập (plain) + nút Đăng ký (outline primary). */
-.um-guest {
-  display: inline-flex;
-  gap: var(--space-3, 12px);
-  align-items: center;
-}
-
-.um-guest__login {
-  color: var(--c-text, #212121);
-  font-size: var(--text-md, 14px);
-  text-decoration: none;
-}
-
-.um-guest__register {
-  color: var(--c-primary, #F53D2D);
-  border: 1px solid var(--c-primary, #F53D2D);
-  border-radius: var(--radius-sm, 2px);
-  padding: 5px 12px;
-  font-size: var(--text-md, 14px);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-/* Menu panel — surface + border + radius + shadow-3, z theo token dropdown. */
-.um-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  background: var(--c-surface, #fff);
-  border: 1px solid var(--c-border, #eee);
-  border-radius: var(--radius-md, 4px);
-  box-shadow: var(--shadow-3, 0 8px 24px rgba(0, 0, 0, 0.16));
-  min-width: 200px;
-  z-index: var(--z-dropdown, 200);
-  padding: 4px;
-  display: block;
-  overflow: hidden;
-  animation: um-menu-in 140ms var(--ease-out, ease-out);
-}
-
-@keyframes um-menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .um-menu {
-    animation: none;
-  }
-
-  /* Hover-lift card (T5 order-card / T7 wl-card) — tắt cả transition lẫn
-     transform để người dùng reduce-motion không thấy lift. */
-  .order-card,
-  .wl-card {
-    transition: none;
-    transform: none;
-  }
-}
-
-.um-menu__item {
-  display: block;
-  padding: 9px 16px;
-  font-size: var(--text-md, 14px);
-  color: var(--c-text, #212121);
-  text-decoration: none;
-  transition:
-    background-color var(--dur-fast, 140ms) var(--ease-out, ease-out),
-    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
-}
-
-.um-menu__item:hover {
-  background: var(--wash-hover, #f5f5f5);
-  color: var(--c-link, #f53d2d);
-}
-
-/* Roving focus qua .focus() là programmatic — Safari không vẽ focus mặc định.
-   Offset âm để outline nằm trong item (.um-menu overflow:hidden sẽ cắt phần
-   lấn ra ngoài). Convention ui-kit .uk-btn:focus-visible. */
-.um-menu__item:focus-visible {
-  outline: 2px solid var(--c-focus);
-  outline-offset: -2px;
-}
-
-/* Item danger (Đăng xuất) — tint đỏ family cancelled. */
-.um-menu__item--danger {
-  color: var(--c-danger, #D0011B);
-}
-
-.um-menu__item--danger:hover {
-  background: var(--pill-cancelled-bg, #FDEBEC);
-  color: var(--c-danger, #D0011B);
-}
+/* ── SF-4 (FI-401): widget chrome AuthMenu — css .um-* chuyển về chrome.css
+   sở hữu (wrapper AuthWidget xóa, bootstrap đăng ký thẳng AuthMenu). ─────── */
 
 /* ── SF-4 (FI-394 T5) — OrdersPage: pill 6 trạng thái + order card ────────── */
 /* Pill direction §2.5: 11/800 ls .05 padding 3×9 full — màu qua 6 cặp
@@ -1096,5 +967,15 @@
      qua :has — markup KHÔNG có .od-items-wrap, tsx GIỮ nguyên per T11 scope). */
   .acc-shell .uk-card:has(> table.uk-table) {
     overflow-x: auto;
+  }
+}
+
+/* Reduced-motion (SF-4 restore — reviewer P1: block cũ bị cuốn theo cleanup
+   .um-*; .um-menu KHÔNG hoàn — chrome.css sở hữu port của nó) */
+@media (prefers-reduced-motion: reduce) {
+  .order-card,
+  .wl-card {
+    transition: none;
+    transform: none;
   }
 }

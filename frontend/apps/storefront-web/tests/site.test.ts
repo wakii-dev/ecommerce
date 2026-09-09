@@ -1,29 +1,13 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { shellUrl, siteUrl } from '../lib/site';
 
-const ENV_KEY = 'NEXT_PUBLIC_SHELL_URL';
-const ORIGINAL = process.env[ENV_KEY];
-
-describe('shellUrl (SF-3 1-origin)', () => {
-  afterEach(() => {
-    // save/restore env — không rò rỉ override sang test khác
-    if (ORIGINAL === undefined) delete process.env[ENV_KEY];
-    else process.env[ENV_KEY] = ORIGINAL;
-  });
-
-  it('default rỗng → same-origin relative (link qua entry :3000)', () => {
-    delete process.env[ENV_KEY];
+describe('shellUrl (SF-4 — same-origin tuyệt đối, kill-switch đã xóa)', () => {
+  it('luôn rỗng → link relative qua entry :3000', () => {
     expect(shellUrl()).toBe('');
   });
 
-  it('env override absolute → trả nguyên giá trị (kill-switch 2-origin)', () => {
-    process.env[ENV_KEY] = 'http://localhost:5173';
-    expect(shellUrl()).toBe('http://localhost:5173');
-  });
-
-  it('link shellUrl()+"/cart" với default KHÔNG sinh protocol-relative "//cart"', () => {
-    delete process.env[ENV_KEY];
+  it('link shellUrl()+"/cart" KHÔNG sinh protocol-relative "//cart"', () => {
     const cartHref = `${shellUrl()}/cart`;
     expect(cartHref).toBe('/cart');
     expect(cartHref.startsWith('//')).toBe(false);

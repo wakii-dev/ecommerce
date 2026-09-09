@@ -4,9 +4,10 @@ import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 
 import GaPageview from '../components/GaPageview';
-import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';
+import { THEME_BOOT_SCRIPT } from '@ecommerce/chrome';
 
 import '@ecommerce/ui-kit/tokens.css';
+import '@ecommerce/chrome/styles.css';
 import './app.css';
 
 /**

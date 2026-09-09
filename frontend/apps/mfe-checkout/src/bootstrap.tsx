@@ -1,7 +1,9 @@
-import type { ComponentType } from 'react';
+import { useState } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
-import CartBadge from './CartBadge';
-import { mergeGuestCart, readGuestToken } from './lib/cartApi';
+import { CartBadge as ChromeCartBadge } from '@ecommerce/chrome';
+import { fetchCart, mergeGuestCart, readGuestToken } from './lib/cartApi';
+import MiniCartDrawer from './MiniCartDrawer';
 // FI-368 T11: page.css chỉ import ở main.tsx (standalone) — dưới shell remote
 // không chạy main.tsx => page-specific css mất. Vite dedupe standalone.
 import './page.css';
@@ -51,10 +53,26 @@ function watchMergeOnLogin(): void {
   });
 }
 
+/**
+ * Đăng ký TRỰC TIẾP component chrome (SF-4 FI-401 — exit criteria P1):
+ * wrapper file ./CartBadge.tsx ĐÃ XÓA. Binding checkout-owned inline tại
+ * bootstrap (SF-1 design: checkout giữ data-access fetchCart + UI phụ
+ * MiniCartDrawer — chrome không copy GET/drawer). Registration id/slot GIỮ.
+ */
+function CheckoutCartBadge(): ReactElement {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  return (
+    <>
+      <ChromeCartBadge fetchCart={fetchCart} onOpen={() => setDrawerOpen(true)} />
+      {drawerOpen ? <MiniCartDrawer open onClose={() => setDrawerOpen(false)} /> : null}
+    </>
+  );
+}
+
 /** Shell gọi ĐÚNG 1 lần lúc boot (eager) — đăng ký CartBadge + merge watcher. */
 export function initCheckoutShell(ctx: ShellContext): void {
   navigateRef = ctx.navigate;
-  ctx.HeaderSlots.register('right', 'checkout-cart-badge', CartBadge);
+  ctx.HeaderSlots.register('right', 'checkout-cart-badge', CheckoutCartBadge);
   ctx.onRegistryChange?.();
   watchMergeOnLogin();
 }

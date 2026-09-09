@@ -162,17 +162,48 @@ start_jvm log           8088 services/log-service
 start_jvm affiliate     8092 services/affiliate-service
 start_jvm partner-api   8091 services/partner-api
 
-# ── 6. frontend (turbo dev --parallel: shell+account+checkout+admin+skeleton+next) ──
-if ! curl -sf -m 2 http://localhost:5173 >/dev/null; then
-  log "boot FE (turbo dev --parallel :5173-5178 + :3000)…"
+# ── 6. frontend — guard 2 chân (FI-400 D6): boot khi ≥1 leg chết; skip chỉ khi ─
+# CẢ HAI sống (entry + shell là 2 process riêng — nửa sống nửa chết vẫn phải
+# boot để leg chết dậy). env-aware: rig offset set DEV_ENTRY_URL/SHELL_ORIGIN.
+ENTRY_URL="${DEV_ENTRY_URL:-http://localhost:3000}"
+SHELL_DEV_URL="${SHELL_ORIGIN:-http://localhost:5173}"
+entry_up=0; shell_up=0
+if curl -sf -m 2 "$ENTRY_URL" >/dev/null; then entry_up=1; fi
+if curl -sf -m 2 "$SHELL_DEV_URL" >/dev/null; then shell_up=1; fi
+if [ "$entry_up" -eq 1 ] && [ "$shell_up" -eq 1 ]; then
+  log "FE đã sống — skip (entry $ENTRY_URL + shell $SHELL_DEV_URL cùng UP)"
+else
+  entry_state=down; shell_state=down
+  if [ "$entry_up" -eq 1 ]; then entry_state=up; fi
+  if [ "$shell_up" -eq 1 ]; then shell_state=up; fi
+  log "boot FE (entry $ENTRY_URL $entry_state / shell $SHELL_DEV_URL $shell_state)…"
   ( cd frontend && nohup pnpm turbo run dev --parallel > "$LOG_DIR/frontend.log" 2>&1 & echo $! > "$RUN_DIR/frontend.pid" )
   sleep 8
+  # health check entry — warn-only: Next chậm lên không fail script (backend đã xong)
+  if curl -sf -m 2 "$ENTRY_URL" >/dev/null; then
+    log "✓ entry $ENTRY_URL sống (1-origin)"
+  else
+    log "⚠ entry $ENTRY_URL chưa trả lời (Next :3000 chưa lên? xem .run/logs/frontend.log)"
+  fi
 fi
 
-cat <<'EOF'
+# banner: 1 URL entry + chế độ remotes (detect env — .env đã export ở đầu script;
+# REMOTE_* absolute = kill-switch 2-origin legacy; NEXT_PUBLIC_SHELL_URL = leak links)
+if [[ "${REMOTE_CHECKOUT_URL:-}" =~ ^http ]]; then
+  remotes_mode="2-origin legacy (REMOTE_*_URL absolute trong .env — đổi /remotes/<name> để vào 1-origin)"
+else
+  remotes_mode="1-origin (/remotes/* qua entry)"
+fi
+shell_warn=""
+if [ -n "${NEXT_PUBLIC_SHELL_URL:-}" ]; then
+  shell_warn=$'\n  ⚠ links storefront→shell cross-origin (NEXT_PUBLIC_SHELL_URL set) — bỏ trống .env để same-origin'
+fi
+cat <<EOF
 
 ✓ dev stack sống:
-  gateway(nav dev) :8080 · storefront-web :3000 · shell :5173 · checkout :5175
+  entry: $ENTRY_URL — 1 URL (storefront + shell routes + /admin)
+  remotes: $remotes_mode$shell_warn
+  gateway(nav dev) :8080 · entry :3000 · shell :5173 · checkout :5175
   account :5176 · admin :5177 · identity :8081 · catalog :8082 · cart :8083
   inventory :8084 · ordering :8085 · payment :8086 · notification :8087
   log :8088 · mongo-express :8089 · invoice :8090 · partner-api :8091

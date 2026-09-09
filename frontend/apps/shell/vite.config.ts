@@ -54,6 +54,14 @@ const SKELETON = process.env.REMOTE_SKELETON_URL;
 
 const mfeConfig = defineMfeConfig({
   name: 'shell_host',
+  // FI-402 fix-task (b): remoteEntry của HOST phải nằm dưới /assets/ —
+  // @module-federation/vite emit `remoteEntry.js` ở output root mặc định,
+  // chunk lazy (assets/*.js) import tĩnh `../remoteEntry.js` → resolve
+  // `/remoteEntry.js` origin-root mà gateway route shell-web KHÔNG có
+  // (predicate chỉ có /assets/**) → shell prod trắng trang. Path trong
+  // `filename` = host-only; remotes GIỮ default 'remoteEntry.js' (topology
+  // prod /remotes/<name>/remoteEntry.js của SF-3 không đổi). Zero-backend.
+  filename: 'assets/remoteEntry.js',
   remotes: {
     // Object form + type 'module' — remote của ta là Vite ESM entry; string
     // form `skeleton@url` mặc định type 'var' (chỉ cho remote global-format

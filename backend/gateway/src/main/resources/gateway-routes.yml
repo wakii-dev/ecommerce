@@ -110,9 +110,12 @@ spring:
       # Shell (Vite) giữ origin :5173 dev / nginx `frontend-web` profile full
       # (SHELL_WEB_ORIGIN). SPA pages: cart/checkout/account/admin/confirmation
       # + login/register (auth pages của mfe-account mount trong shell).
-      # LƯU Ý dev: asset Vite dev (/@vite/*, /src/*) KHÔNG route qua gateway —
-      # dev vào shell trực tiếp :5173; route split này chạy ĐẦY ĐỦ ở profile
-      # full (nginx serve dist). Không filter — nginx/vite serve paths gốc.
+      # LƯU Ý dev — cập nhật SF-3 (FI-400, ADR 0008): dev vào ENTRY :3000
+      # (storefront Next rewrites mirror predicate này + dev assets /@vite /
+      # /src /node_modules mà gateway vẫn KHÔNG route — Next proxy thẳng shell
+      # :5173). Shell :5173 chỉ chạm trực tiếp khi debug 2-origin (kill-switch).
+      # PREDICATE KHÔNG ĐỔI — route split này chạy ĐẦY ĐỦ ở profile full
+      # (nginx serve dist). Không filter — nginx/vite serve paths gốc.
         - id: shell-web                                   # SF-10 · shell :5173 / nginx
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
           predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]

@@ -129,6 +129,25 @@ Dừng stack: `make dev-stop` (kill theo PID — infra vẫn chạy) · chạy 1
 riêng lẻ: `make dev svc=catalog` (identity catalog cart inventory ordering
 payment notification log affiliate partner-api invoice gateway).
 
+**Dev 1-origin entry (SF-3 — [ADR 0008](docs/adr/0008-dev-one-origin-entry.md)):**
+`make dev` xong mở **MỘT URL `http://localhost:3000`** — storefront + mọi shell
+route (`/cart` `/checkout` `/account` `/login`…) + `/admin`, hết 2-URL dev.
+HMR sống cả 2 phía (Next + shell fast-refresh; remote edit → trang tự reload —
+giới hạn plugin MF, ADR 0008). Remotes load same-origin `/remotes/<name>/` qua
+entry — mirror prod Dockerfile.web. Kiến trúc chi tiết xem **Kiến trúc chạy**
+dưới đây — trong dev mọi route shell đi qua entry (Next rewrites proxy về
+:5173).
+
+| Port | App | Truy cập trực tiếp? |
+|---|---|---|
+| **:3000** | **entry** (Next front-router) | **URL duy nhất để vào** |
+| :5173 | shell Vite (MF host) | chỉ khi debug 2-origin |
+| :5175 · :5176 · :5177 · :5178 | checkout · account · admin · skeleton | chỉ khi debug 2-origin |
+
+Tắt 1-origin → 2-origin legacy: set `REMOTE_*_URL` + `NEXT_PUBLIC_SHELL_URL`
+absolute trong `.env` (banner `make dev` in chế độ hiện tại; `.env` cũ còn
+absolute → stack vẫn chạy nhưng ở chế độ legacy).
+
 **100% containerized:**
 
 ```bash

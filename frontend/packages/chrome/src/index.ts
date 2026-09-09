@@ -15,5 +15,7 @@ export {
 } from './theme';
 export type { Theme } from './theme';
 export { ThemeToggle } from './ThemeToggle';
+export { LocaleSwitcher } from './LocaleSwitcher';
+export { LANG_STORAGE_KEY, storedLang } from './lang';
 export { SessionBootProvider, ensureSession } from './session-boot';
 export type { SessionBootOptions } from './session-boot';

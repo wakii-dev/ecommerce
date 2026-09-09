@@ -11,7 +11,7 @@ import './header.css'; // vẫn style shell-owned: .shell-logo/.shell-search/.sh
 import App from './App';
 import { ShellNav } from './header/Header';
 import ShellSearch from './header/ShellSearch';
-import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots, ThemeToggle, setChromeSite } from '@ecommerce/chrome';
+import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots, ThemeToggle, setChromeSite, storedLang } from '@ecommerce/chrome';
 import { navigate } from './router';
 import { initGa } from './ga';
 import { injectLiveChat } from './livechat';
@@ -79,7 +79,9 @@ initGa();
 // của nó, không phải instance initI18n() đã nạp resources => header/Home
 // render raw key "nav.home". Bind CHẮC qua I18nextProvider (cùng pattern
 // AdminApp.tsx đã dùng).
-void initI18n().then((i18n) => {
+// Lang đã lưu (FI-398 T12, spec §3.9): storedLang() đọc 'ecommerce.lang'
+// (an toàn private mode → null) — reload giữ lựa chọn LocaleSwitcher.
+void initI18n({ lang: storedLang() ?? 'vi' }).then((i18n) => {
   createRoot(document.getElementById('root')!).render(
     <I18nextProvider i18n={i18n}>
       <App />

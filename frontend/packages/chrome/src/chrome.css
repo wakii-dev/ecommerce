@@ -145,3 +145,30 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ── LocaleSwitcher (FI-398 T12) — 2 nút nhỏ vi/en, tokens-only ──────────── */
+
+.chrome-locale-switcher {
+  display: inline-flex;
+  gap: var(--space-1, 4px);
+}
+
+.chrome-locale-switcher__btn {
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: var(--text-sm, 12px);
+  color: var(--c-text);
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md, 4px);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* Active lang — tint primary (subtle, khớp badge/pill family tokens). */
+.chrome-locale-switcher__btn[aria-pressed='true'] {
+  color: var(--tint-primary-text);
+  background: var(--tint-primary-bg);
+  border-color: var(--tint-primary-border);
+}

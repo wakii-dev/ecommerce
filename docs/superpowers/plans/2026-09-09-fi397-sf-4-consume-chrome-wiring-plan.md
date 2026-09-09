@@ -506,7 +506,7 @@ git commit -m "feat(sf4): xóa dup Header/Footer/ThemeToggle + theme canonical c
 - Modify: `frontend/apps/mfe-account/src/page.css` (dọn `.um-*` dup)
 - Modify: `frontend/apps/mfe-account/src/__tests__/userMenu.test.tsx` (re-point — P0-3)
 
-- [ ] **Step 3.1 — mfe-checkout `bootstrap.tsx`.** Thay import wrapper + thêm binding inline (imports css FI-368/SF-1 GIỮ NGUYÊN; `ShellContext`/`appNavigate`/`watchMergeOnLogin` GIỮ):
+- [x] **Step 3.1 — mfe-checkout `bootstrap.tsx`.** Thay import wrapper + thêm binding inline (imports css FI-368/SF-1 GIỮ NGUYÊN; `ShellContext`/`appNavigate`/`watchMergeOnLogin` GIỮ):
 
 ```tsx
 import { useState } from 'react';
@@ -542,9 +542,9 @@ Trong `initCheckoutShell` thay register (function component assign trực tiếp
   ctx.HeaderSlots.register('right', 'checkout-cart-badge', CheckoutCartBadge);
 ```
 
-- [ ] **Step 3.2 — Xóa `mfe-checkout/src/CartBadge.tsx`** (`git rm frontend/apps/mfe-checkout/src/CartBadge.tsx`).
+- [x] **Step 3.2 — Xóa `mfe-checkout/src/CartBadge.tsx`** (`git rm frontend/apps/mfe-checkout/src/CartBadge.tsx`).
 
-- [ ] **Step 3.3 — mfe-account `bootstrap.tsx`.** Thay `import AuthWidget from './AuthWidget';`:
+- [x] **Step 3.3 — mfe-account `bootstrap.tsx`.** Thay `import AuthWidget from './AuthWidget';`:
 
 ```tsx
 import { AuthMenu } from '@ecommerce/chrome';
@@ -572,14 +572,14 @@ Trong `initAccountShell` thay register:
   ctx.HeaderSlots.register('right', 'account-auth', AccountAuthWidget);
 ```
 
-- [ ] **Step 3.4 — Xóa `mfe-account/src/AuthWidget.tsx`; dọn `.um-*` trong `mfe-account/src/page.css`:**
+- [x] **Step 3.4 — Xóa `mfe-account/src/AuthWidget.tsx`; dọn `.um-*` trong `mfe-account/src/page.css`:**
 ```bash
 git rm frontend/apps/mfe-account/src/AuthWidget.tsx
 grep -n "^\.um-" frontend/apps/mfe-account/src/page.css
 ```
 Xóa TOÀN BỘ rule-block `.um-*` + `@keyframes um-menu-in` (P2-3 plan-critic — grep `^\.um-` không bắt keyframes; search thêm `um-` trong file cho chắc) — chrome.css sở hữu bản port (AuthMenu.tsx:29-30 chỉ dẫn). ⚠ GIỮ mọi rule KHÔNG phải `.um-*`/`um-menu-in` trong file.
 
-- [ ] **Step 3.5 — userMenu.test.tsx re-point (P0-3).** Mở file — thay:
+- [x] **Step 3.5 — userMenu.test.tsx re-point (P0-3).** Mở file — thay:
 ```tsx
 import AuthWidget from '../AuthWidget';
 ```
@@ -593,19 +593,19 @@ cd frontend/apps/mfe-account && pnpm vitest run
 ```
 Expected: xanh 7/7.
 
-- [ ] **Step 3.6 — Typecheck 2 MFE + shell (không import vỡ):**
+- [x] **Step 3.6 — Typecheck 2 MFE + shell (không import vỡ):**
 ```bash
 cd frontend/apps/mfe-checkout && pnpm lint && cd ../mfe-account && pnpm lint
 ```
 Expected: 0 lỗi.
 
-- [ ] **Step 3.7 — Grep evidence (exit criteria P1 — pattern import-only, spec §2.5 "trừ comment giải thích" — P1-1 plan-critic):**
+- [x] **Step 3.7 — Grep evidence (exit criteria P1 — pattern import-only, spec §2.5 "trừ comment giải thích" — P1-1 plan-critic):**
 ```bash
 grep -rnE "import .*from .*\./(CartBadge|AuthWidget)" frontend/apps/mfe-checkout/src frontend/apps/mfe-account/src
 ```
 Expected: **0 dòng** (import wrapper = 0; comment/docstring không tính). Lưu output (kể cả exit code) vào `docs/superpowers/evidence/sf-4/grep-zero-wrappers.txt`.
 
-- [ ] **Step 3.8 — Commit.**
+- [x] **Step 3.8 — Commit.**
 ```bash
 git add frontend/apps/mfe-checkout/src frontend/apps/mfe-account/src docs/superpowers/evidence/sf-4/grep-zero-wrappers.txt
 git commit -m "feat(sf4): bootstrap MFE đăng ký trực tiếp từ chrome — xóa wrapper CartBadge/AuthWidget (FI-401)"

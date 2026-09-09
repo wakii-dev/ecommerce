@@ -1,0 +1,29 @@
+SF-4 (FI-401) — PT3 Step 3.7 grep evidence: ZERO wrapper imports (exit criteria P1)
+
+Command (run từ worktree root sf-4-consume-chrome-wiring, branch wakii-dev/sf-4-consume-chrome-wiring):
+
+$ grep -rnE "import .*from .*\./(CartBadge|AuthWidget)" frontend/apps/mfe-checkout/src frontend/apps/mfe-account/src
+
+Output:
+(no output — 0 matching lines)
+
+Exit code: 1  (grep convention: 1 = no matches → 0 dòng wrapper import)
+
+Ý nghĩa (spec §2.5 exit criteria P1, pattern import-only — comment giải thích
+không tính): không còn file nào trong mfe-checkout/src hay mfe-account/src
+import wrapper ./CartBadge hay ./AuthWidget. Cả 2 wrapper file đã git rm:
+- frontend/apps/mfe-checkout/src/CartBadge.tsx
+- frontend/apps/mfe-account/src/AuthWidget.tsx
+
+Bootstrap đăng ký TRỰC TIẾP component chrome:
+- mfe-checkout bootstrap.tsx: CheckoutCartBadge (inline binding CheckoutCartBadge
+  = ChromeCartBadge fetchCart + MiniCartDrawer) → register('right','checkout-cart-badge')
+- mfe-account bootstrap.tsx: AccountAuthWidget (inline binding AuthMenu
+  onNavigate=appNavigate) → register('right','account-auth')
+
+Verify đi kèm (cùng commit):
+- mfe-account vitest: 9 files / 61 tests passed (userMenu.test.tsx 7/7 —
+  re-point <AuthMenu onNavigate={appNavigate} />)
+- pnpm lint (tsc --noEmit) mfe-checkout: exit 0; mfe-account: exit 0
+
+Date: 2026-09-09

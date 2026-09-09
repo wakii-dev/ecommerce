@@ -692,22 +692,22 @@ git commit -m "test(sf4): unit sweep xanh sau swap — storefront/chrome/mfe (FI
 **Rig (backend + shell + remotes + entry — TẤT CẢ FE từ worktree NÀY, port offset; chỉ infra+JVM backend share main checkout — backend read-only, contract đồng nhất):**
 - Next entry `:3100` · shell `:5273` (worktree này — P0-1 plan-critic: main's shell :5173 load i18n/chrome từ worktree CỦA NÓ → label-demo PT7.4 không thể "đổi cả 2 app" nếu dùng shell main; provenance remotes cũng chỉ chắc chắn với shell của worktree này) · remotes checkout/account `:5185/:5186` (code PT3).
 
-- [ ] **Step 6.1 — Sửa local `.env` (untracked, KHÔNG commit):** comment out `NEXT_PUBLIC_SHELL_URL` + đổi `REMOTE_CHECKOUT_URL`/`REMOTE_ACCOUNT_URL` thành relative `/remotes/checkout` // `/remotes/account` (1-origin mode — next.config đọc env khớp `^https?://` mới dùng absolute).
+- [x] **Step 6.1 — Sửa local `.env` (untracked, KHÔNG commit):** comment out `NEXT_PUBLIC_SHELL_URL` + đổi `REMOTE_CHECKOUT_URL`/`REMOTE_ACCOUNT_URL` thành relative `/remotes/checkout` // `/remotes/account` (1-origin mode — next.config đọc env khớp `^https?://` mới dùng absolute). *(ĐÃ LÀM — .env untracked, backup /tmp/sf4-env-backup)*
 
-- [ ] **Step 6.2 — Boot 2 remotes của worktree:**
+- [x] **Step 6.2 — Boot 2 remotes của worktree:** *(ĐÃ LÀM — ⚠ mfe-checkout PHẢI boot thêm inline `VITE_STRIPE_PUBLISHABLE_KEY=$(grep ... root .env)` — vite envDir = app dir nên root .env không được load; thiếu key → pay panel rơi mock, golden-path test 5 fail `.pay-panel iframe`)*
 ```bash
 cd frontend/apps/mfe-checkout && DEV_PORT=5185 nohup pnpm dev > /tmp/sf4-checkout.log 2>&1 &
 cd frontend/apps/mfe-account  && DEV_PORT=5186 nohup pnpm dev > /tmp/sf4-account.log 2>&1 &
 ```
-Expected: vite lên (log `Local: http://localhost:5185/remotes/checkout/`).
+Expected: vite lên (log `Local: http://localhost:5185/remotes/checkout/`). ✓
 
-- [ ] **Step 6.2b — Boot shell của worktree (P0-1 plan-critic):**
+- [x] **Step 6.2b — Boot shell của worktree (P0-1 plan-critic):** *(ĐÃ LÀM — ⚠ boot thêm `VITE_STOREFRONT_URL=` (rỗng) — unset thì shell default `sfUrl=http://localhost:3000` trỏ nhầm stack main trong mini-nav; rỗng → same-origin)*
 ```bash
 cd frontend/apps/shell && DEV_PORT=5273 nohup pnpm dev > /tmp/sf4-shell.log 2>&1 &
 ```
-Expected: vite `:5273`. (Shell code KHÔNG đổi trong SF-4 — nhưng phải chạy từ worktree này để i18n/chrome package + remote provenance là CỦA worktree: shell resolve remoteEntry relative `/remotes/<name>` theo page origin :3100 → rewrites → :5185/:5186 của mình.)
+Expected: vite `:5273`. ✓ (Shell code KHÔNG đổi trong SF-4 — nhưng phải chạy từ worktree này để i18n/chrome package + remote provenance là CỦA worktree: shell resolve remoteEntry relative `/remotes/<name>` theo page origin :3100 → rewrites → :5185/:5186 của mình.)
 
-- [ ] **Step 6.3 — Boot Next entry worktree:** (⚠ dev script hardcode `-p 3000` — dùng `pnpm exec next dev -p 3100`; inline env WIN trên .env file — rewrites đọc SHELL_ORIGIN/REMOTE_*_URL lúc boot)
+- [x] **Step 6.3 — Boot Next entry worktree:** *(ĐÃ LÀM — + `REMOTE_ADMIN_URL=http://localhost:5187` — admin remote của rig, xem 6.5)*
 ```bash
 cd frontend/apps/storefront-web && \
   SHELL_ORIGIN=http://localhost:5273 \
@@ -715,24 +715,24 @@ cd frontend/apps/storefront-web && \
   GATEWAY_URL=http://localhost:8080 \
   nohup pnpm exec next dev -p 3100 > /tmp/sf4-next.log 2>&1 &
 ```
-Mục tiêu: entry Listen `:3100`, rewrites /cart → :5273 (shell mình), /remotes/checkout → :5185, /remotes/account → :5186 (verify trong log + curl).
+Mục tiêu: entry Listen `:3100`, rewrites /cart → :5273 (shell mình), /remotes/checkout → :5185, /remotes/account → :5186 (verify trong log + curl). ✓
 
-- [ ] **Step 6.4 — Smoke bằng browser (Rule 0 — T1 DOM):** mở `http://localhost:3100/vi` — header chrome render (`chrome-header` trong DOM), /cart proxy về shell :5273 (shell mình) KHÔNG 404 (stack main checkout entry cũ bị 404 — rig mình phải đúng), /remotes/checkout/remoteEntry.js 200.
+- [x] **Step 6.4 — Smoke bằng browser (Rule 0 — T1 DOM):** mở `http://localhost:3100/vi` — header chrome render (`chrome-header` trong DOM), /cart proxy về shell :5273 (shell mình) KHÔNG 404 (stack main checkout entry cũ bị 404 — rig mình phải đúng), /remotes/checkout/remoteEntry.js 200. *(curl: chrome-header=1, /cart=200, remoteEntry=200 — ✓; tìm thấy + fix 1 bug boot: layout RSC import `@ecommerce/i18n` kéo react-i18next vào bundle RSC → 500 `createContext is not a function` — xem commit fix)*
 
-- [ ] **Step 6.5 — Run 2 specs (sequential — recipe SF-1 QA):**
+- [x] **Step 6.5 — Run 2 specs (sequential — recipe SF-1 QA):** *(KẾT QUẢ: nav-honesty 7/7 (11.1s) + golden-path 8/8 (27.4s) — XANH. 2 rig-fix phát hiện khi chạy: (1) layout RSC 500 — fix `[locale]/layout.tsx` bỏ initI18n khỏi server component (commit riêng); (2) admin remote main stack :5177 serve HTML fallback thay JS ở `/remotes/admin/remoteEntry.js` → browser import() fail runtime-008 → boot thêm mfe-admin WORKTREE NÀY :5187 + Next rewrite `REMOTE_ADMIN_URL=http://localhost:5187`)*
 ```bash
 cd frontend/e2e && E2E_STOREFRONT_URL=http://localhost:3100 E2E_SHELL_URL=http://localhost:3100 \
   pnpm playwright test tests/nav-honesty.spec.ts
 cd frontend/e2e && E2E_STOREFRONT_URL=http://localhost:3100 E2E_SHELL_URL=http://localhost:3100 \
   pnpm playwright test tests/golden-path.spec.ts
 ```
-Expected: XANH. ⚠ golden-path test 0 HARD-ASSERT Stripe keys trong root .env (golden-path.spec.ts:86-92 — thiếu = FAIL THẬT, KHÔNG skip; P2-4 plan-critic sửa nhận định sai). Root .env đã copy từ main checkout (đang chạy stripe e2e) — kỳ vọng đủ; nếu vẫn fail vì keys → report BLOCKED với evidence, KHÔNG sửa spec/skip test trong SF-4. Backend identity/cart từ main stack :8080.
-⚠ Nếu footer locator `.site-footer a` fail vì chrome markup — wrapper alias `site-footer--chrome` đã giữ class `site-footer` → locator vẫn match; chỉ sửa spec khi còn vỡ, đổi thành `.site-footer a, .chrome-site-footer a` + comment `SF-4 chrome footer`.
+Expected: XANH. ⚠ golden-path test 0 HARD-ASSERT Stripe keys trong root .env (golden-path.spec.ts:86-92 — thiếu = FAIL THẬT, KHÔNG skip; P2-4 plan-critic sửa nhận định sai). Root .env đã copy từ main checkout (đang chạy stripe e2e) — kỳ vọng đủ; nếu vẫn fail vì keys → report BLOCKED với evidence, KHÔNG sửa spec/skip test trong SF-4. Backend identity/cart từ main stack :8080. *(test 0 pass — keys đủ)*
+⚠ Nếu footer locator `.site-footer a` fail vì chrome markup — wrapper alias `site-footer--chrome` đã giữ class `site-footer` → locator vẫn match; chỉ sửa spec khi còn vỡ, đổi thành `.site-footer a, .chrome-site-footer a` + comment `SF-4 chrome footer`. *(KHÔNG cần — locator match ngay)*
 
-- [ ] **Step 6.6 — Evidence + commit (nếu sửa spec):**
+- [x] **Step 6.6 — Evidence + commit (nếu sửa spec):** *(spec KHÔNG đổi; commit = fix layout RSC + docs ticks; evidence `docs/superpowers/evidence/sf-4/e2e-subset.txt`)*
 ```bash
-git add frontend/e2e/tests/nav-honesty.spec.ts   # chỉ nếu có sửa
-git commit -m "test(sf4): e2e nav-honesty selector chrome footer (FI-401)"   # chỉ nếu có sửa
+git add frontend/e2e/tests/nav-honesty.spec.ts   # chỉ nếu có sửa — SKIP (không sửa)
+git commit -m "test(sf4): e2e nav-honesty selector chrome footer (FI-401)"   # chỉ nếu có sửa — SKIP
 ```
 
 ### Task PT7: GA/livechat evidence + walkthrough cross-app (bracket 4+9 — COORDINATOR, Rule 0)

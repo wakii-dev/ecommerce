@@ -617,7 +617,7 @@ git commit -m "feat(sf4): bootstrap MFE đăng ký trực tiếp từ chrome —
 - Modify: `frontend/apps/storefront-web/lib/site.ts`
 - Modify: `frontend/apps/storefront-web/tests/site.test.ts`
 
-- [ ] **Step 4.1 — `lib/site.ts`:** thay hàm `shellUrl()` + doc (GIỮ `siteUrl()` nguyên):
+- [x] **Step 4.1 — `lib/site.ts`:** thay hàm `shellUrl()` + doc (GIỮ `siteUrl()` nguyên):
 
 ```ts
 /**
@@ -632,7 +632,7 @@ export function shellUrl(): string {
 }
 ```
 
-- [ ] **Step 4.2 — `tests/site.test.ts`:** xóa case kill-switch + scaffolding ENV_KEY — file mới:
+- [x] **Step 4.2 — `tests/site.test.ts`:** xóa case kill-switch + scaffolding ENV_KEY — file mới:
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -657,14 +657,14 @@ describe('shellUrl (SF-4 — same-origin tuyệt đối, kill-switch đã xóa)'
 });
 ```
 
-- [ ] **Step 4.3 — Grep residue + run:**
+- [x] **Step 4.3 — Grep residue + run:**
 ```bash
 grep -rn "NEXT_PUBLIC_SHELL_URL" frontend --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v ".next"
 cd frontend/apps/storefront-web && pnpm vitest run tests/site.test.ts
 ```
 Expected: grep 0 hit trong code (docker-compose + .env.example GIỮ — không phải code); test 3/3 PASS.
 
-- [ ] **Step 4.4 — Commit.**
+- [x] **Step 4.4 — Commit.**
 ```bash
 git add frontend/apps/storefront-web/lib/site.ts frontend/apps/storefront-web/tests/site.test.ts
 git commit -m "chore(sf4): xóa NEXT_PUBLIC_SHELL_URL kill-switch chết — same-origin tuyệt đối (FI-401)"

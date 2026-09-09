@@ -1,0 +1,6 @@
+# SF-5 QA override #6: rabbitmq CHẠY EPHEMERAL (bỏ volume) — sau daemon crash
+# Docker VM để volume quyền hỏng (eacces trên .erlang.cookie kể cả volume mới).
+# Rig QA không cần durable rabbit — ephemeral sạch và ổn định hơn.
+services:
+  rabbitmq:
+    volumes: !override []

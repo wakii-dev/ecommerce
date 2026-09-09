@@ -71,10 +71,10 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 **Exit criteria:** unit test pass; grep không còn default absolute `:5173` trong site.ts; .env.example comment tự giải thích.
 
 ### Task T4 — docs ADR + README — dep T3
-- [ ] T4.1 `docs/adr/0008-dev-one-origin-entry.md`: quyết định D1-D6, probe evidence link, fallback 2-origin, prod note (rewrites dead-entry trong standalone manifest), auth-cookie lock target shift, R5 .env cũ (2 kênh: REMOTE_*_URL + NEXT_PUBLIC_SHELL_URL), note stale `docs/demo-script.md` (ngoài scope docs — post-merge sẽ cũ)
-- [ ] T4.2 README dev section: entry 1 URL + bảng port + cách tắt
-- [ ] T4.3 gateway-routes.yml comment-only cập nhật (dev vào entry :3000, giữ nguyên predicate)
-- [ ] T4.4 Commit `docs(sf3): adr 0008 + readme dev entry (FI-400)`
+- [x] T4.1 `docs/adr/0008-dev-one-origin-entry.md`: quyết định D1-D6, probe evidence link, fallback 2-origin, prod note (rewrites dead-entry trong standalone manifest), auth-cookie lock target shift, R5 .env cũ (2 kênh: REMOTE_*_URL + NEXT_PUBLIC_SHELL_URL), note stale `docs/demo-script.md` (ngoài scope docs — post-merge sẽ cũ)
+- [x] T4.2 README dev section: entry 1 URL + bảng port + cách tắt
+- [x] T4.3 gateway-routes.yml comment-only cập nhật (dev vào entry :3000, giữ nguyên predicate)
+- [x] T4.4 Commit `docs(sf3): adr 0008 + readme dev entry (FI-400)`
 
 **Exit criteria:** ADR đủ 6 quyết định + evidence; README nhất quán spec.
 

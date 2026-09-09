@@ -1,6 +1,6 @@
 # SF-6 convergence-qa — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Bằng chứng TOÀN HỆ THỐNG đồng bộ sau khi SF-1..5 merge về `story/fi390-uiux-elevation` (tip 8d775b8): consistency sweep, dark-mode 4-trạng-thái contrast sweep (scripted), reduced-motion sweep, responsive 375/768, keyboard-only flow, i18n parity vi/en (0 hardcoded P1), e2e FULL 14 specs xanh, unit tests toàn monorepo xanh, CLS đo home+PDP (< 0.1), visual walkthrough record 5 surfaces. SF-6 là QA độc lập: KHÔNG tự sửa code surface — sweep-fail → fix-task về SF sở hữu (ngoại lệ duy nhất: e2e specs).
 
@@ -69,80 +69,80 @@ Epic FI-390 claim "UI/UX elevation toàn hệ thống" — sau 5 merge, claim ch
 ### Task 0 — Rig boot + 3-gates verify (coordinator inline)
 - [x] Copy `.env` từ main checkout (sk/pk/whsec present)
 - [x] Probe ports free: 3101/5703/5705/5706/5707/5708
-- [ ] So whsec .env ≡ stripe-cli whsec (docker logs) + payment env có STRIPE_SECRET thật
-- [ ] Boot storefront :3101 (`pnpm --filter storefront-web exec next dev -p 3101`)
-- [ ] Boot checkout :5705, account :5706, admin :5707 (`pnpm --filter <app> exec vite --port N --strictPort` — .env trước boot)
-- [ ] Boot shell :5703 với REMOTE_CHECKOUT_URL/REMOTE_ACCOUNT_URL/REMOTE_ADMIN_URL/REMOTE_SKELETON_URL trỏ đúng
-- [ ] Health probe: gateway/storefront/shell/mailpit preflight xanh; seed user + admin login OK; WELCOME10 active (restore nếu off)
+- [x] So whsec .env ≡ stripe-cli whsec (docker logs) + payment env có STRIPE_SECRET thật
+- [x] Boot storefront :3101 (`pnpm --filter storefront-web exec next dev -p 3101`)
+- [x] Boot checkout :5705, account :5706, admin :5707 (`pnpm --filter <app> exec vite --port N --strictPort` — .env trước boot)
+- [x] Boot shell :5703 với REMOTE_CHECKOUT_URL/REMOTE_ACCOUNT_URL/REMOTE_ADMIN_URL/REMOTE_SKELETON_URL trỏ đúng
+- [x] Health probe: gateway/storefront/shell/mailpit preflight xanh; seed user + admin login OK; WELCOME10 active (restore nếu off)
 
 ### Task 1 — cross-surface-consistency-sweep (executor-A, static)
-- [ ] Grep `@keyframes` toàn apps/ → chỉ đúng 4 file page.css + ui-kit.css (epic §7.3)
-- [ ] Grep `prefers-reduced-motion` ≥ 1 hit toàn monorepo (epic §7.3)
-- [ ] Grep `<a href="/` apps/storefront-web → 0 hit (next/link generated loại); SortSelect không còn `window.location.assign` (epic §7.4) — SCOPE: check `SortSelect.tsx` riêng; `AddToCart.tsx` buyNow `window.location.assign(shellUrl()/cart)` là jump cross-app CỐ Ý — judge + ghi chú, không false-fail
-- [ ] `loading.tsx` + `error.tsx` tồn tại home/PLP/PDP/search; skeleton xuất hiện orders/wishlist/admin tables (epic §7.5 — check tồn tại file + grep Skeleton)
-- [ ] Emoji-icon trong JSX string literal/runtime (ThemeToggle "✓" nằm COMMENT — scope grep đúng; CartBadge/ThemeToggle/UserMenu/Confirmation hero/Wishlist = 0 emoji — epic §7.6)
-- [ ] Pill/badge tints: grep `--pill-*`/`--tint-*` usage nhất quán; hex trực tiếp ngoài var fallback → list (epic §7.9: .pay-warning/Newsletter/admin css 0 hex)
-- [ ] Icon SVG: 1 nguồn Icon component (grep inline `<svg` ngoài Icon.tsx → list ngoại lệ)
-- [ ] Report `docs/superpowers/qa/consistency-sweep.md` (pass/fail từng mục + evidence grep counts); fail → fix-task = comment epic FI-390 format `[SF-6 sweep] <surface> — <file> — <hành vi sai> → gán SF-N`
+- [x] Grep `@keyframes` toàn apps/ → chỉ đúng 4 file page.css + ui-kit.css (epic §7.3)
+- [x] Grep `prefers-reduced-motion` ≥ 1 hit toàn monorepo (epic §7.3)
+- [x] Grep `<a href="/` apps/storefront-web → 0 hit (next/link generated loại); SortSelect không còn `window.location.assign` (epic §7.4) — SCOPE: check `SortSelect.tsx` riêng; `AddToCart.tsx` buyNow `window.location.assign(shellUrl()/cart)` là jump cross-app CỐ Ý — judge + ghi chú, không false-fail
+- [x] `loading.tsx` + `error.tsx` tồn tại home/PLP/PDP/search; skeleton xuất hiện orders/wishlist/admin tables (epic §7.5 — check tồn tại file + grep Skeleton)
+- [x] Emoji-icon trong JSX string literal/runtime (ThemeToggle "✓" nằm COMMENT — scope grep đúng; CartBadge/ThemeToggle/UserMenu/Confirmation hero/Wishlist = 0 emoji — epic §7.6)
+- [x] Pill/badge tints: grep `--pill-*`/`--tint-*` usage nhất quán; hex trực tiếp ngoài var fallback → list (epic §7.9: .pay-warning/Newsletter/admin css 0 hex)
+- [x] Icon SVG: 1 nguồn Icon component (grep inline `<svg` ngoài Icon.tsx → list ngoại lệ)
+- [x] Report `docs/superpowers/qa/consistency-sweep.md` (pass/fail từng mục + evidence grep counts); fail → fix-task = comment epic FI-390 format `[SF-6 sweep] <surface> — <file> — <hành vi sai> → gán SF-N`
 
 ### Task 2 — dark-mode-4-state-contrast-sweep (executor-B, cần rig)
-- [ ] Viết `scripts/qa/contrast-sweep.mjs` (method §4.7 ở mục 4)
-- [ ] Matrix pages × 4 theme: home, PLP, PDP, cart, checkout 1-3, confirmation, account, orders, order-detail, admin dashboard/products/orders
-- [ ] Chạy → JSON evidence + `docs/superpowers/qa/dark-mode-contrast.md` verdict AA per element; fail-list → fix-task
+- [x] Viết `scripts/qa/contrast-sweep.mjs` (method §4.7 ở mục 4)
+- [x] Matrix pages × 4 theme: home, PLP, PDP, cart, checkout 1-3, confirmation, account, orders, order-detail, admin dashboard/products/orders
+- [x] Chạy → JSON evidence + `docs/superpowers/qa/dark-mode-contrast.md` verdict AA per element; fail-list → fix-task
 
 ### Task 3 — reduced-motion-sweep (executor-C, cần rig)
-- [ ] `scripts/qa/reduced-motion.mjs` — emulateMedia reduce; probe animation/transition durations + content-visible trên ken-burns/reveal/shimmer/drawer/toast, cả Next + Vite
-- [ ] Hero auto-rotate DỪNG HẲN khi reduced-motion (direction §3.3 — không chỉ tắt animation, autoplay phải off; chỉ arrows/dots/pause)
-- [ ] Report `docs/superpowers/qa/reduced-motion.md`; fail → fix-task comment epic (format như T1)
+- [x] `scripts/qa/reduced-motion.mjs` — emulateMedia reduce; probe animation/transition durations + content-visible trên ken-burns/reveal/shimmer/drawer/toast, cả Next + Vite
+- [x] Hero auto-rotate DỪNG HẲN khi reduced-motion (direction §3.3 — không chỉ tắt animation, autoplay phải off; chỉ arrows/dots/pause)
+- [x] Report `docs/superpowers/qa/reduced-motion.md`; fail → fix-task comment epic (format như T1)
 
 ### Task 4 — responsive-375-768-sweep (executor-C, cần rig)
-- [ ] Viewport 375 + 768 toàn surfaces: mobile nav, sticky ATC, grid 2-col, shell header wrap, checkout 1-col, account sidenav collapse, admin layout
-- [ ] Assert: không horizontal scroll (`document.documentElement.scrollWidth <= innerWidth + 1`), elements không clip chết
-- [ ] Report `docs/superpowers/qa/responsive-375-768.md` (+ screenshots bằng chứng)
+- [x] Viewport 375 + 768 toàn surfaces: mobile nav, sticky ATC, grid 2-col, shell header wrap, checkout 1-col, account sidenav collapse, admin layout
+- [x] Assert: không horizontal scroll (`document.documentElement.scrollWidth <= innerWidth + 1`), elements không clip chết
+- [x] Report `docs/superpowers/qa/responsive-375-768.md` (+ screenshots bằng chứng)
 
 ### Task 5 — a11y-keyboard-only-flow (executor-D, cần rig, SAU T7 — serialize mutation shared DB)
-- [ ] Keyboard-only SCRIPT (standalone `scripts/qa/keyboard-flow.mjs` — KHÔNG thêm spec vào tests/, giữ count 14): login → home → PDP (chọn variant) → thêm giỏ → drawer → checkout 3 bước → confirmation — không mouse
-- [ ] Focus order + focus-visible + ESC overlay + Tab ra được overlay (không trap) + stepper/tabs arrow-key + user menu
-- [ ] Report `docs/superpowers/qa/keyboard-flow.md` (bảng bước × phím × kết quả); fail → fix-task comment epic (format như T1)
+- [x] Keyboard-only SCRIPT (standalone `scripts/qa/keyboard-flow.mjs` — KHÔNG thêm spec vào tests/, giữ count 14): login → home → PDP (chọn variant) → thêm giỏ → drawer → checkout 3 bước → confirmation — không mouse
+- [x] Focus order + focus-visible + ESC overlay + Tab ra được overlay (không trap) + stepper/tabs arrow-key + user menu
+- [x] Report `docs/superpowers/qa/keyboard-flow.md` (bảng bước × phím × kết quả); fail → fix-task comment epic (format như T1)
 
 ### Task 6 — i18n-parity-sweep (executor-A, static)
-- [ ] Grep hardcode tiếng Việt trong JSX render (P1 = 0) — find+xargs, loại comment + test fixtures
-- [ ] Key parity vi↔en 2 hệ (storefront COPY + @ecommerce/i18n catalogs) — script diff 2 chiều → 0 lệch
-- [ ] aria-label keys parity
-- [ ] Report `docs/superpowers/qa/i18n-parity.md`
+- [x] Grep hardcode tiếng Việt trong JSX render (P1 = 0) — find+xargs, loại comment + test fixtures
+- [x] Key parity vi↔en 2 hệ (storefront COPY + @ecommerce/i18n catalogs) — script diff 2 chiều → 0 lệch
+- [x] aria-label keys parity
+- [x] Report `docs/superpowers/qa/i18n-parity.md`
 
 ### Task 7 — e2e-full-suite-selector-fix-testid (executor-E, cần rig, mutator DUY NHẤT của W2)
-- [ ] Chạy cả 14 specs (count giữ nguyên — T5 script nằm ngoài tests/): `E2E_STOREFRONT_URL=http://127.0.0.1:3101 E2E_SHELL_URL=http://localhost:5703 pnpm exec playwright test` (serial, retries 1)
-- [ ] Fix trong specs: SPA-race `waitForURL`/`toHaveURL` (nav-honesty footer/category), seed-order CategoryTiles, selector vỡ → data-testid fallback
-- [ ] Sweep-fail KHÔNG thuộc specs → fix-task về SF sở hữu (comment epic format như T1)
-- [ ] Re-run tới xanh (cap 2 vòng): vòng re-run PHẢI merge `story/fi390-uiux-elevation` (hoặc cherry-pick fix commit) vào sf-6 trước; fix chưa merge → BLOCKED-WAIT không đếm vòng; evidence full output → `docs/superpowers/qa/e2e-full.md` + epic comment
+- [x] Chạy cả 14 specs (count giữ nguyên — T5 script nằm ngoài tests/): `E2E_STOREFRONT_URL=http://127.0.0.1:3101 E2E_SHELL_URL=http://localhost:5703 pnpm exec playwright test` (serial, retries 1)
+- [x] Fix trong specs: SPA-race `waitForURL`/`toHaveURL` (nav-honesty footer/category), seed-order CategoryTiles, selector vỡ → data-testid fallback
+- [x] Sweep-fail KHÔNG thuộc specs → fix-task về SF sở hữu (comment epic format như T1)
+- [x] Re-run tới xanh (cap 2 vòng): vòng re-run PHẢI merge `story/fi390-uiux-elevation` (hoặc cherry-pick fix commit) vào sf-6 trước; fix chưa merge → BLOCKED-WAIT không đếm vòng; evidence full output → `docs/superpowers/qa/e2e-full.md` + epic comment
 
 ### Task 8 — unit-tests-monorepo-token-regression (executor-A, static)
-- [ ] vitest × các packages (ui-kit, i18n, shell, mfe-checkout, mfe-account, mfe-admin, storefront-web nếu có) — tất cả XANH
-- [ ] token-regression test pass (tokens v2 nguyên vẹn sau 5 merge)
-- [ ] pnpm-lock 0-diff (epic §7.10 — `git diff master..HEAD -- frontend/pnpm-lock.yaml` rỗng)
-- [ ] Report `docs/superpowers/qa/unit-tests.md` (số test/file per package); FAIL → fix-task về SF sở hữu package đỏ + re-run cap 2 vòng (cùng cơ chế sweep + re-sync worktree)
+- [x] vitest × các packages (ui-kit, i18n, shell, mfe-checkout, mfe-account, mfe-admin, storefront-web nếu có) — tất cả XANH
+- [x] token-regression test pass (tokens v2 nguyên vẹn sau 5 merge)
+- [x] pnpm-lock 0-diff (epic §7.10 — `git diff master..HEAD -- frontend/pnpm-lock.yaml` rỗng)
+- [x] Report `docs/superpowers/qa/unit-tests.md` (số test/file per package); FAIL → fix-task về SF sở hữu package đỏ + re-run cap 2 vòng (cùng cơ chế sweep + re-sync worktree)
 
 ### Task 9 — perf-cls-measure-font-skeleton (executor-F, cần rig YÊN — deps [T0, T2, T3, T4] xong, không chạy song song browser sweeps/e2e)
-- [ ] `scripts/qa/cls-measure.mjs`: CLS + LCP home + PDP (Playwright PerformanceObserver qua CDP/web-vitals pattern) — ghi nhận số + note dev-mode
-- [ ] Font check: computed font-family = Be Vietnam Pro trên 5 apps (eval computed style + screenshot)
-- [ ] Report `docs/superpowers/qa/cls-measure.md` (baseline main nếu lấy được; không → ghi nhận-only + note); CLS ≥ 0.1 → KHÔNG tick target, ghi số thật + fail-list
+- [x] `scripts/qa/cls-measure.mjs`: CLS + LCP home + PDP (Playwright PerformanceObserver qua CDP/web-vitals pattern) — ghi nhận số + note dev-mode
+- [x] Font check: computed font-family = Be Vietnam Pro trên 5 apps (eval computed style + screenshot)
+- [x] Report `docs/superpowers/qa/cls-measure.md` (baseline main nếu lấy được; không → ghi nhận-only + note); CLS ≥ 0.1 → KHÔNG tick target, ghi số thật + fail-list
 
 ### Task 10 — visual-walkthrough-record-signoff (coordinator, Rule 0, SAU T7 xanh + T9 — record trên hệ ĐÃ fix)
-- [ ] Record/screenshots 5 surfaces (storefront home/PLP/PDP, shell+cart/checkout, account, admin) cả light/dark + mobile 375 — Playwright rig pinned executablePath; lưu `docs/superpowers/qa/walkthrough/`
-- [ ] Shell header checklist ĐẦY ĐỦ (epic §7.8): logo + search + cart-badge + account menu (remote SF-4) — assert DOM + nhìn screenshot
-- [ ] Guest drawer preview (epic §7.11 — guest + logged-in): visual + DOM assert
-- [ ] COORDINATOR TỰ MỞ browser đi flow + NHÌN screenshots (không tin report agent)
-- [ ] Epic comment: link artifacts + số liệu; chuẩn bị final verify STORY-COMPLETE
+- [x] Record/screenshots 5 surfaces (storefront home/PLP/PDP, shell+cart/checkout, account, admin) cả light/dark + mobile 375 — Playwright rig pinned executablePath; lưu `docs/superpowers/qa/walkthrough/`
+- [x] Shell header checklist ĐẦY ĐỦ (epic §7.8): logo + search + cart-badge + account menu (remote SF-4) — assert DOM + nhìn screenshot
+- [x] Guest drawer preview (epic §7.11 — guest + logged-in): visual + DOM assert
+- [x] COORDINATOR TỰ MỞ browser đi flow + NHÌN screenshots (không tin report agent)
+- [x] Epic comment: link artifacts + số liệu; chuẩn bị final verify STORY-COMPLETE
 
 ### Task 11 — Independent review + merge + gate (coordinator, deps [T1..T10])
-- [ ] code-reviewer ĐỘC LẬP trên sweep scripts + reports + spec fixes → APPROVED
-- [ ] security-audit trên scripts (nếu có input handling/fetch)
-- [ ] verifier độc lập: từng dòng ACCEPTANCE context pack + epic §7 mechanical criteria (§7.3/7.4/7.5/7.8/7.10 nhắc lại)
-- [ ] Merge: parent → sf-6 trước → `orca worktree update-ref refs/heads/story/fi390-uiux-elevation` FULL refname + 2 ancestor guards; conflict improvements-log giữ CẢ HAI; no-ff
-- [ ] Post-merge smoke golden-path trên nhánh đích (bracket: smoke sau MỖI merge — merge của SF-6 cũng là merge)
-- [ ] Audit comment merge-hash + `task-update task_e31f0d6d281a completed` + worktree comment "merged <hash>"
-- [ ] GATE CỨNG `~/.claude/bin/story-verify sf-6` sạch → FI-396 Done (sau merge, trước Done)
+- [x] code-reviewer ĐỘC LẬP trên sweep scripts + reports + spec fixes → APPROVED
+- [x] security-audit trên scripts (nếu có input handling/fetch)
+- [x] verifier độc lập: từng dòng ACCEPTANCE context pack + epic §7 mechanical criteria (§7.3/7.4/7.5/7.8/7.10 nhắc lại)
+- [x] Merge: parent → sf-6 trước → `orca worktree update-ref refs/heads/story/fi390-uiux-elevation` FULL refname + 2 ancestor guards; conflict improvements-log giữ CẢ HAI; no-ff
+- [x] Post-merge smoke golden-path trên nhánh đích (bracket: smoke sau MỖI merge — merge của SF-6 cũng là merge)
+- [x] Audit comment merge-hash + `task-update task_e31f0d6d281a completed` + worktree comment "merged <hash>"
+- [x] GATE CỨNG `~/.claude/bin/story-verify sf-6` sạch → FI-396 Done (sau merge, trước Done)
 
 ## 6. Risks
 - **e2e flaky tầng seed/stock:** drain → re-seed trước suite; WELCOME10 toggle restore.

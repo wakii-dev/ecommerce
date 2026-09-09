@@ -61,7 +61,7 @@ Scaffold package mới + move registry + extract components (chrome sở hữu),
   - [x] T12 `locale-switcher-chrome` — LocaleSwitcher (**shell-model; KHÔNG drop-in storefront URL-locale — P1 critic; Next integration = SF-4**) + storedLang + main.tsx initI18n({lang: storedLang()}) + unit.
 - Wave 5 (widgets) — thứ tự T8→T9:
   - [x] T8 `cart-badge-widget-extract-checkout-wraps` — chrome CartBadge (fetchCart inject, CART_CHANGED_EVENT, onOpen) + checkout wrapper (drawer giữ) + bootstrap import chrome. Verify: unit count/event/subscribe; testid giữ.
-  - [ ] T9 `auth-menu-widget-extract-account-wraps` — chrome AuthMenu (keyboard GIỮ, logout từ auth, onNavigate) + account wrapper. Verify: unit menu/keyboard/testid/text vi.
+  - [x] T9 `auth-menu-widget-extract-account-wraps` — chrome AuthMenu (keyboard GIỮ, logout từ auth, onNavigate) + account wrapper. Verify: unit menu/keyboard/testid/text vi.
 - Wave 6 (hồ sơ hoàn thiện) — thứ tự T13→T14:
   - [ ] T13 `unit-tests-next-transpile-vite-both-singleton` — **test setup: initI18n + I18nextProvider chung (P1 critic)** + single-instance test (**SMOKE** — bằng chứng singleton thật = browser badge, P2 critic) + SSR 2 chế độ consolidate + chạy FULL vitest workspace (chrome+i18n xanh) + turbo build.
   - [ ] T14 `ui-kit-demo-chrome-showcase-badge-from-remote-evidence` — UiKitDemoPage thêm ChromeShowcase (SiteHeader mini, CartBadge stub, ThemeToggle, LocaleSwitcher, Footer) + badge-from-remote evidence (header shell badge trên cùng trang). **Verify (P0 critic): `pnpm -C frontend turbo run build` xanh + browser shell `:5673/ui-kit` (rig +500): ChromeShowcase render đủ 5 mảnh chrome VÀ badge header (đăng ký bởi mfe-checkout) hiện count — screenshot + evidence comment FI-398 + re-run full vitest SAU commit cuối.**

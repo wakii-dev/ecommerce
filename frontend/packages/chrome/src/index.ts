@@ -22,3 +22,5 @@ export type { SessionBootOptions } from './session-boot';
 export { CART_CHANGED_EVENT, cartBadgeCount } from './cart-badge';
 export type { CartBadgeCart } from './cart-badge';
 export { CartBadge } from './CartBadge';
+export { AuthMenu } from './AuthMenu';
+export type { AuthMenuProps } from './AuthMenu';

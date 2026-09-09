@@ -114,11 +114,14 @@ spring:
       # (storefront Next rewrites mirror predicate này + dev assets /@vite /
       # /src /node_modules mà gateway vẫn KHÔNG route — Next proxy thẳng shell
       # :5173). Shell :5173 chỉ chạm trực tiếp khi debug 2-origin (kill-switch).
-      # PREDICATE KHÔNG ĐỔI — route split này chạy ĐẦY ĐỦ ở profile full
-      # (nginx serve dist). Không filter — nginx/vite serve paths gốc.
+      # FI-402 finding #7: thêm /remoteEntry.js — shell prod host chunk tĩnh
+      # import `../remoteEntry.js` (root) — thiếu path này → 404 hop gateway,
+      # mọi shell page prod trắng (file có sẵn trong nginx shell/).
+      # Route split này chạy ĐẦY ĐỦ ở profile full (nginx serve dist).
+      # Không filter — nginx/vite serve paths gốc.
         - id: shell-web                                   # SF-10 · shell :5173 / nginx
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
-          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/favicon.ico,/favicon.svg" ]
+          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/remoteEntry.js,/favicon.ico,/favicon.svg" ]
       #
       # SF-13 (2026-09-07): ảnh sản phẩm MinIO (A3) — /media/products/<file>
       # public (không cần public-paths: ngoài /api/** thì anyExchange permitAll);

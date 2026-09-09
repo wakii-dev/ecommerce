@@ -90,6 +90,19 @@ PRODUCT_COUNT=$($PSQL_CAT "SELECT count(*) FROM products;")
 FLASH_COUNT=$($PSQL_CAT "SELECT count(*) FROM products WHERE flash_sale_ends_at > now();")
 log "catalog: $PRODUCT_COUNT products, $FLASH_COUNT flash đang chạy (+2 ngày từ boot)"
 
+# ── 3b. Default variant cho product chưa có variant (demo: checkout đòi
+# items[].variantId @NotNull — product variant-less kẹt flow mua hàng). Idempotent.
+DEFAULT_ADDED=$($PSQL_CAT "INSERT INTO product_variants (id, product_id, name_i18n, price, sku_code)
+SELECT gen_random_uuid(), p.id,
+       jsonb_build_object('vi','Mặc định','en','Default'), p.price,
+       LEFT('SKU-DEF-' || UPPER(REGEXP_REPLACE(p.slug_vi, '[^a-zA-Z0-9]', '', 'g')), 64)
+FROM products p
+WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id)
+ON CONFLICT DO NOTHING
+RETURNING 1;" | wc -l | tr -d ' ')
+NO_VARIANT=$($PSQL_CAT "SELECT count(*) FROM products p WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id);")
+log "default variants: +${DEFAULT_ADDED} (product còn thiếu variant: ${NO_VARIANT})"
+
 # ── 4. Orders CONFIRMED (guard idempotent: demo user chưa có đơn) ────────────
 USER_ID=$($PSQL_ID "SELECT id FROM users WHERE email='$DEMO_USER_EMAIL';")
 EXISTING=$($PSQL_ORD "SELECT count(*) FROM orders WHERE user_id='$USER_ID';" | tr -d ' ')

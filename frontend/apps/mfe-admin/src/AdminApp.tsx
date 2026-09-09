@@ -310,7 +310,7 @@ export default function AdminApp(): ReactElement {
       <div className="admin-guard">
         <EmptyState icon="🔐" title={t('admin.guard.forbiddenTitle')} description={t('admin.guard.standaloneGuest')} />
         <p>
-          <a className="admin-guard__login" href="http://localhost:5173/login?next=%2Fadmin">
+          <a className="admin-guard__login" href="/login?next=%2Fadmin">
             {t('admin.guard.loginViaShell')}
           </a>
         </p>

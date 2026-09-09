@@ -19,8 +19,10 @@ export interface ChromeSiteConfig {
 export type Locale = 'vi' | 'en';
 
 let siteCfg: Required<ChromeSiteConfig> = {
-  shellUrl: 'http://localhost:5173',
-  sfUrl: 'http://localhost:3000'
+  // Defaults same-origin '' (gateway mode — mọi nav qua cùng origin; host
+  // standalone muốn absolute thì setChromeSite() lúc bootstrap).
+  shellUrl: '',
+  sfUrl: ''
 };
 
 /** Merge config host (undefined = giữ nguyên — KHÔNG ghi đè default bằng undefined). */

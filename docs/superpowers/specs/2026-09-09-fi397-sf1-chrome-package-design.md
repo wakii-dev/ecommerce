@@ -108,8 +108,8 @@ Nhóm keys mới (string GIỮ nguyên text hiện có wherever exist — e2e lo
 6. AuthMenu: guest → 2 link + testid; user → menu mở, ArrowDown/Up wrap, ESC đóng + restore focus, logout gọi chuỗi auth logout → clearLocal → onNavigate.
 7. LocaleSwitcher: click en → `i18n.language` đổi + persist.
 8. session-boot: 2 lần gọi → 1 refresh (mock authStore.refresh); config first-call-wins.
-9. vite-preset test (packages/config) cập nhật expect có `@ecommerce/chrome`.
-10. i18n catalogs test (nếu có pattern) — chrome.* đủ vi+en song song (script so key-set 2 catalogs).
+9. vite-preset: KHÔNG thêm test vào packages/config — `SHARED_SINGLETONS` không export (anchor pack = ĐÚNG 1 dòng, không refactoring); singleton được chứng minh bằng single-instance test (mục 2) + runtime badge gate (ACCEPTANCE 2).
+10. i18n catalogs: chrome.* đủ vi+en song song (test so key-set 2 catalogs trong packages/chrome, không cần sửa packages/i18n).
 
 ## 6. ACCEPTANCE (pack — KHÔNG đổi)
 1. Shell render Header/Footer từ chrome (adapter) — visual GIỮ FI-390 (4 theme states; dev offset +500: shell 5673, remotes 5675-77, Next 3500 qua REMOTE_*_URL/PORT).

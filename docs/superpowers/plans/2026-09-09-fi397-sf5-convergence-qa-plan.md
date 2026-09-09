@@ -70,7 +70,7 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] Health: preflight 4 URL xanh trên rig A (entry :3400) · WELCOME10 ACTIVE (restore nếu off) · seed user login OK
 
 ### Task 1 — sync-matrix spec × 2 app (executor, code)
-- [ ] Viết `frontend/e2e/tests/session-sync-matrix.spec.ts` — 5 cases §4 (2FA TOTP node:crypto; OAuth error-path; 20-run cross-app)
+- [ ] Viết `frontend/e2e/tests/session-sync-matrix.spec.ts` — 5 cases §4 (2FA TOTP node:crypto + base32-decode tự viết; OAuth error-path; 20-run cross-app) + `recordVideo` context (sync demo VIDEO — ACCEPTANCE 1) + tiêu chí binary từng leg (≤1 POST + no-reload)
 - [ ] Chạy XANH trên rig A (same-origin :3400) — debug selector trong spec (ownership SF-5)
 - [ ] Chạy lại trên rig B isolated :8480 (prod-mode same-origin proof) — evidence `.run/` + report
 - [ ] Report `docs/superpowers/qa/sync-matrix.md` (bảng case × kết quả × evidence; fail app-surface → fix-task epic cap 2 vòng)
@@ -91,8 +91,9 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] Evidence full output → `docs/superpowers/qa/e2e-full.md` (bảng 15 specs × counts, zero-skip note Stripe)
 
 ### Task 5 — docker full regression isolated +400
+- [ ] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up
 - [ ] Rig B health từng container (17 services) + curl matrix qua :8480 (storefront `/`, shell `/cart`, `/admin`, `/api/identity` login, mailpit API :8425)
-- [ ] Golden flow COD qua :8480 (kèm /admin) — script/curl+Playwright evidence
+- [ ] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **prod-red = FAIL thật → fix-task SF sở hữu** (không phải documented limitation)
 - [ ] Sync-matrix spec chạy trên :8480 (chung Task 1 evidence)
 - [ ] Report `docs/superpowers/qa/docker-regression.md`; teardown `down -v` sau khi hết cần rig B
 
@@ -119,7 +120,7 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 ### Task 10 — walkthrough record + ADR roadmap (b) + sweeps evidence
 - [ ] Record/screens sync demo (2 tab 2 app login/logout tức thì) + toàn surfaces → `docs/superpowers/qa/walkthrough/` + `walkthrough-record.md` (user xem được, chuẩn bị STORY-COMPLETE)
 - [ ] ADR `docs/adr/0009-next-migration-roadmap.md`: thứ tự account→checkout, 7 blockers (appNavigate injection, authReady timing, singleton instance per origin, page.css, gateway/nginx routing, e2e re-verify, GA/theme boot contracts), exit criteria từng giai đoạn
-- [ ] Sweeps: pnpm-lock diff fork→HEAD rỗng; backend/contracts diff = comment-only gateway (ghi evidence raw vào `docs/superpowers/qa/sweeps.md`)
+- [ ] Sweeps: pnpm-lock diff fork→HEAD = **0 external dep mới** (chỉ workspace-link `packages/chrome` từ SF-1 — spec-critic P0); backend/contracts diff = comment-only gateway (deviation ghi tường minh + epic ratify trước verify); provenance `a9a8fad..master` backend rỗng (jars :8080 ≡ nhánh đích) — evidence raw vào `docs/superpowers/qa/sweeps.md`
 
 ### Task 11 — Independent review + merge + gate (coordinator — meta-steps, không checkbox)
 1. code-reviewer ĐỘC LẬP trên diff SF (specs + reports + ADR + env.ts) → APPROVED / CHANGES-REQUESTED (fix → re-review)

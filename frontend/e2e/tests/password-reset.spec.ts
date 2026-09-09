@@ -58,13 +58,13 @@ test('2 — forgot → Mailpit link → reset MK mới → login được', asyn
   // 4. MK cũ chết, MK mới sống (UI login)
   await page.goto(`${SHELL}/login`);
   await page.getByLabel('Email').fill(user.email);
-  await page.getByLabel('Mật khẩu').fill(user.password);
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(user.password);
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeVisible({
     timeout: 10_000
   }); // vẫn ở login = MK cũ chết
 
-  await page.getByLabel('Mật khẩu').fill('NewPass#2026');
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill('NewPass#2026');
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
 });

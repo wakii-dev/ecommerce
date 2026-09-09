@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { initI18n } from '@ecommerce/i18n';
+// SF-4 PT6 (FI-401): KHÔNG import @ecommerce/i18n ở server component — init.ts
+// (thiếu 'use client') kéo react-i18next vào bundle RSC, mà react-server runtime
+// không export createContext → 500 "(0 , react.createContext) is not a function"
+// khi boot /vi. init + changeLanguage locale chạy ở client gate ChromeShell
+// ('use client' — bundle SSR/browser đều hợp lệ). setChromeSite giữ ở đây: barrel
+// chrome trong RSC an toàn (module thuần + client-reference stub).
 import { setChromeSite } from '@ecommerce/chrome';
 
 import '@ecommerce/ui-kit/styles.css';
@@ -34,15 +39,16 @@ export function generateMetadata({ params }: { params: { locale: string } }): Me
 
 /**
  * Locale layout — SF-4 (FI-401): Header/Footer render từ @ecommerce/chrome
- * (SiteHeader props-slots + Footer) qua client gate ChromeShell. Server await
- * initI18n + changeLanguage URL locale (P0-2 — instance memoized first-call-
- * wins; request đầu tiên của mỗi locale vẫn dịch đúng) + setChromeSite
- * same-origin trên chrome instance SERVER (client gate tự gọi trên instance
- * browser — singleton per runtime). ChromeShell bọc client tree trong
+ * (SiteHeader props-slots + Footer) qua client gate ChromeShell. setChromeSite
+ * same-origin gọi ở server trước render; initI18n + changeLanguage URL locale
+ * chạy trong ChromeShell (P0-2 note PT6: server-await bị BỎ — react-i18next
+ * không vào được bundle RSC, xem comment import phía trên; SSR chrome.* labels
+ * nhảy key-thô→dịch sau hydration — trade-off chấp nhận, header labels qua
+ * lib/i18n static dict vẫn dịch từ HTML đầu). ChromeShell bọc client tree trong
  * SessionBootProvider; islands local giữ (SearchBar/LocaleSwitcher/
  * PwaRegister/LiveChat/ToastProvider).
  */
-export default async function LocaleLayout({
+export default function LocaleLayout({
   children,
   params,
 }: {
@@ -52,8 +58,6 @@ export default async function LocaleLayout({
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
   setChromeSite({ sfUrl: '', shellUrl: '' });
-  const i18n = await initI18n({ lang: locale });
-  if (i18n.language !== locale) await i18n.changeLanguage(locale);
   return (
     <ChromeShell locale={locale}>
       {/* ToastProvider (client boundary qua shim) cho mọi page-level consumer

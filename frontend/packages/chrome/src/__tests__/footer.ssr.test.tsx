@@ -11,6 +11,12 @@ import { Footer, setChromeSite } from '../index';
  * Override config trong test: shellUrl '' (pin shell host — same-origin
  * relative) + sfUrl Rig port để thấy rõ computation href.
  * i18n pattern Wave 3: initI18n() → useT đọc instance default (vi).
+ *
+ * Palette pin (spec §4 amendment a7e805d — review W4 P1): chrome.css đổi cách
+ * GHÉP màu footer (--chrome-footer-* legacy hex thay mapping token) — SSR
+ * KHÔNG đọc computed css nên markup KHÔNG đổi; các assert dưới đây chính là
+ * guard "class + style không đổi markup". Không test css values (ngoài tầm
+ * renderToStaticMarkup — thuộc browser evidence T14).
  */
 beforeAll(async () => {
   await initI18n();

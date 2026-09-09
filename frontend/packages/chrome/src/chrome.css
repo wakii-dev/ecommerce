@@ -83,17 +83,26 @@
   padding: 0 var(--space-4, 16px);
 }
 
-/* ── Footer (FI-398 T6) — port EXACT storefront app.css .site-footer*
-   (direction §2.2.5 FI-390: nền #212121, link #bbb hover accent) ─────────── */
+/* ── Footer (FI-398 T6; palette pin a7e805d) — port EXACT storefront app.css
+   .site-footer* (direction §2.2.5 FI-390: nền #212121, link #bbb hover accent) */
 
 .chrome-site-footer {
-  /* FI-390 ghi #212121 (storefront --footer-bg) = giá trị var(--c-text) light. */
-  background: var(--c-text);
-  /* FI-390 ghi #bbb — nearest token --c-text-muted (#757575), chênh lệch chấp
-     nhận được trong shell; SF-4 đối chiếu lại trên Next (storefront giữ bản
-     --footer-link riêng: #bbb light / #a0a0a0 dark). */
-  color: var(--c-text-muted);
+  /* GIÁ TRỊ LEGACY FI-390 §2.2.5 pin — cố ý KHÔNG dùng --c-text (flip dark →
+     footer sáng, FAIL AA 2.5:1); pin legacy = khớp storefront, contrast 8.4:1
+     light / 6.1:1 dark PASS AA 4.5:1 — spec §4 amendment a7e805d. Footer là
+     surface DUY NHẤT được exception hex; mọi màu khác chrome.css var(--*). */
+  --chrome-footer-bg: #212121;
+  --chrome-footer-link: #bbb;
+  --chrome-footer-heading: #ffffff;
+  background: var(--chrome-footer-bg);
+  color: var(--chrome-footer-link);
   margin-top: var(--space-7, 48px);
+}
+
+/* Dark storefront: link sáng hơn cho AA trên nền #212121 (bg GIỮ tối cả 2
+   theme — storefront app.css dark block chỉ đè --footer-link: #a0a0a0). */
+[data-theme='dark'] .chrome-site-footer {
+  --chrome-footer-link: #a0a0a0;
 }
 
 .chrome-site-footer__inner {
@@ -108,10 +117,7 @@
 }
 
 .chrome-site-footer h4 {
-  /* trắng trên footer #212121 (storefront literal #ffffff cả 2 theme) — token
-     #FFFFFF gần nhất = --c-surface; dark đảo chiều CÙNG nền footer
-     (--c-text dark sáng) nên vẫn đọc được. */
-  color: var(--c-surface);
+  color: var(--chrome-footer-heading);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -126,9 +132,7 @@
 }
 
 .chrome-site-footer a {
-  /* storefront --footer-link (#bbb) — same nearest-token exception như
-     .chrome-site-footer ở trên (FI-390; SF-4 đối chiếu lại). */
-  color: var(--c-text-muted);
+  color: var(--chrome-footer-link);
   font-size: 13px;
   text-decoration: none;
   line-height: 2;

@@ -717,7 +717,7 @@ cd frontend/apps/storefront-web && \
 ```
 Mục tiêu: entry Listen `:3100`, rewrites /cart → :5273 (shell mình), /remotes/checkout → :5185, /remotes/account → :5186 (verify trong log + curl).
 
-- [ ] **Step 6.4 — Smoke bằng browser (Rule 0 — T1 DOM):** mở `http://localhost:3100/vi` — header chrome render (`chrome-header` trong DOM), /cart proxy về shell :5173 KHÔNG 404 (stack main checkout entry cũ bị 404 — rig mình phải đúng), /remotes/checkout/remoteEntry.js 200.
+- [ ] **Step 6.4 — Smoke bằng browser (Rule 0 — T1 DOM):** mở `http://localhost:3100/vi` — header chrome render (`chrome-header` trong DOM), /cart proxy về shell :5273 (shell mình) KHÔNG 404 (stack main checkout entry cũ bị 404 — rig mình phải đúng), /remotes/checkout/remoteEntry.js 200.
 
 - [ ] **Step 6.5 — Run 2 specs (sequential — recipe SF-1 QA):**
 ```bash
@@ -766,7 +766,7 @@ Không có code change (GA/livechat giữ storefront-owned — spec §2.4). Coor
 |---|---|
 | pnpm-lock diff lan rộng | Chỉ importer storefront-web được phép; khác → dừng, review |
 | `.env` stale (NEXT_PUBLIC_SHELL_URL + REMOTE_* absolute) | PT6.1 sửa local .env (untracked) trước boot |
-| Port war với stack main checkout (:3000/:5173 sống) | Rig offset :3100/:5185/:5186 — KHÔNG kill stack main |
+| Port war với stack main checkout (:3000/:5173 sống) | Rig offset :3100/:5273/:5185/:5186 — KHÔNG kill stack main |
 | chrome layout SSR khác browser (singleton i18n) | Accepted limitation đã ghi; client changeLanguage tự sửa |
 | vitest include không chạy test mới | Test là `.test.ts` (P0-4) — nếu thêm .tsx phải đổi vitest.config (READ-ONLY) |
 | Shared worktree commit race | Chạy TUẦN TỰ PT1→PT7, không 2 executor cùng lúc |

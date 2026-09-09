@@ -41,7 +41,7 @@ Chạy TUẦN TỰ PT1→PT7 (shared worktree — commit race memory: serialize;
 - Modify: `frontend/apps/storefront-web/app/layout.tsx` (nguồn THEME_BOOT_SCRIPT + css order — P1-2)
 - Test (TDD — viết TRƯỚC): `frontend/apps/storefront-web/tests/chrome-layout.test.ts`
 
-- [ ] **Step 1.1 — Dep chrome (spec-critic P0-1).** Sửa `frontend/apps/storefront-web/package.json` — trong `dependencies` thêm (giữ alphabet: sau `@ecommerce/contracts`):
+- [x] **Step 1.1 — Dep chrome (spec-critic P0-1).** Sửa `frontend/apps/storefront-web/package.json` — trong `dependencies` thêm (giữ alphabet: sau `@ecommerce/contracts`):
 
 ```json
     "@ecommerce/chrome": "workspace:*",
@@ -53,7 +53,7 @@ cd frontend && pnpm install --prefer-offline
 ```
 Expected: install OK; `git diff --stat pnpm-lock.yaml` — CHỈ mục importers storefront-web đổi (0 package registry mới). ⚠ Nếu dev server đang chạy → restart (dep mới trong app = server stale, memory SF-1).
 
-- [ ] **Step 1.2 — Test TRƯỚC (TDD).** Tạo `frontend/apps/storefront-web/tests/chrome-layout.test.ts` (node env — KHÔNG cần docblock jsdom; KHÔNG dùng .tsx — vitest include chỉ `*.test.ts`, P0-4):
+- [x] **Step 1.2 — Test TRƯỚC (TDD).** Tạo `frontend/apps/storefront-web/tests/chrome-layout.test.ts` (node env — KHÔNG cần docblock jsdom; KHÔNG dùng .tsx — vitest include chỉ `*.test.ts`, P0-4):
 
 ```ts
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -119,7 +119,7 @@ describe('chrome layout swap (SF-4 pack item 7 — markup nguồn chrome)', () =
 Chạy: `cd frontend/apps/storefront-web && pnpm vitest run tests/chrome-layout.test.ts`
 Expected: **FAIL** — `Cannot find module '../components/ChromeShell'` (chưa tồn tại).
 
-- [ ] **Step 1.3 — ChromeShell.tsx.** Tạo `frontend/apps/storefront-web/components/ChromeShell.tsx`:
+- [x] **Step 1.3 — ChromeShell.tsx.** Tạo `frontend/apps/storefront-web/components/ChromeShell.tsx`:
 
 ```tsx
 'use client';
@@ -267,7 +267,7 @@ export default function ChromeShell({ locale, children }: { locale: Locale; chil
 }
 ```
 
-- [ ] **Step 1.4 — `[locale]/layout.tsx` swap.** Thay toàn bộ phần body render (giữ `generateMetadata` + DESCRIPTION nguyên):
+- [x] **Step 1.4 — `[locale]/layout.tsx` swap.** Thay toàn bộ phần body render (giữ `generateMetadata` + DESCRIPTION nguyên):
 
 ```tsx
 import type { Metadata } from 'next';
@@ -343,7 +343,7 @@ export default async function LocaleLayout({
 
 ⚠ `Footer`/`Header` imports CŨ xóa khỏi file này (PT2 xóa hẳn file component).
 
-- [ ] **Step 1.5 — root `app/layout.tsx` (P1-2 css order + boot script nguồn chrome).** 2 edit:
+- [x] **Step 1.5 — root `app/layout.tsx` (P1-2 css order + boot script nguồn chrome).** 2 edit:
   1. Xóa `import { THEME_BOOT_SCRIPT } from '../components/ThemeToggle';` — thay:
 
 ```tsx
@@ -358,10 +358,10 @@ import '@ecommerce/chrome/styles.css';
 import './app.css';
 ```
 
-- [ ] **Step 1.6 — Run test.** `cd frontend/apps/storefront-web && pnpm vitest run tests/chrome-layout.test.ts`
+- [x] **Step 1.6 — Run test.** `cd frontend/apps/storefront-web && pnpm vitest run tests/chrome-layout.test.ts`
 Expected: **PASS 4/4** (labels dịch nhờ initI18n sync-data — probe `t()` cùng tick "Trang chủ").
 
-- [ ] **Step 1.7 — Commit.**
+- [x] **Step 1.7 — Commit.**
 ```bash
 git add frontend/apps/storefront-web/package.json frontend/pnpm-lock.yaml \
   frontend/apps/storefront-web/components/ChromeShell.tsx \

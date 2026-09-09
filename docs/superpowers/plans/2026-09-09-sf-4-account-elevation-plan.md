@@ -1,6 +1,6 @@
 # SF-4 account-elevation — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`[x]` / `[ ]` Markdown task syntax) for tracking.
 
 **Goal:** Account MFE elevation theo hướng B "Chợ Sôi Động 2.0" — side-nav thống nhất 6 mục + active state + responsive collapse; auth flows validate realtime + password toggle; UserMenu keyboard-OK (role=menu); skeleton thay mọi "Đang tải…"; OrderDetail decss 42 khối inline → page.css + ui-kit Table/Modal/Textarea + timeline GHN; wishlist/myreviews/affiliate/loyalty polish; i18n hard-code vi → keys `account.*` additive-only. Zero backend, zero route change, zero logic-auth change.
 

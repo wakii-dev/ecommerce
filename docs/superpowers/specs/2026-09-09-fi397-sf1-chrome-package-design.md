@@ -62,7 +62,7 @@ frontend/packages/chrome/
 - Server render registry rỗng → chỉ props links (deterministic).
 - Shell adapter (`apps/shell/src/header/Header.tsx` — **final state**, SF-4 không đụng): mỏng — `ShellNav` (giữ shell-owned, dùng router `Link`) + render `<SiteHeader row2={<ShellMiniNav/>}/>`. DOM/class giữ anatomy FI-393 T2 hiện có (`.chrome-header` mới thay `.shell-header` — chrome.css port ĐÚNG giá trị từ `header.css`, tokens-only).
 
-### 3.3 Footer (port, server-safe)
+### 3.3 Footer (port, 'use client' — SSR qua server render của Next)
 - `'use client'` (cùng lý do P0 SiteHeader — useT). Cấu trúc port từ `apps/storefront-web/components/Footer.tsx` (2 cột: Danh mục 5 slug seed, Tài khoản 5 link shell) — labels `chrome.footer.*` (string vi/en mirror EXACT storefront `lib/i18n` footer.*), href qua `chrome/site.ts` helpers (`sfUrl(localePath(...))`, `shellUrl(...)`) — cross-origin ĐÚNG như hiện trạng, SF-3 flip same-origin sau.
 - **Self-contained CSS**: KHÔNG phụ thuộc `.container` của storefront app.css (P1 critic — shell không có class này) — chrome.css sở hữu `.chrome-container` port giá trị 1240px/padding 16 (direction §2).
 - KHÔNG port NewsletterForm (storefront-owned client island — không trong phạm vi "Footer port"; SF-4 quyết khi swap layout).
@@ -75,7 +75,7 @@ frontend/packages/chrome/
 - FLAG (không sửa hôm nay): `ShellSearch.sfUrl` + storefront `lib/site.ts` vẫn tồn tại — dedup call-sites của chúng thuộc SF-3/SF-4.
 
 ### 3.5 ThemeToggle (canonical)
-- Port từ shell `ThemeToggle.tsx`. Key canonical **`ecommerce.theme`** (đã là key duy nhất trên cả 3 vị trí hiện có: shell toggle, shell index.html boot, storefront lib/theme.ts — **đã probe, KHÔNG có key khác** → không cần read-order migration; ghi chú giữ phòngunsupported key: lần toggle đầu ghi đè về canonical theo logic `storedThemeValue()` hiện có).
+- Port từ shell `ThemeToggle.tsx`. Key canonical **`ecommerce.theme`** (đã là key duy nhất trên cả 3 vị trí hiện có: shell toggle, shell index.html boot, storefront lib/theme.ts — **đã probe, KHÔNG có key khác** → không cần read-order migration; ghi chú giữ phòng unsupported key: lần toggle đầu ghi đè về canonical theo logic `storedThemeValue()` hiện có).
 - Export: `THEME_STORAGE_KEY`, `THEME_BOOT_SCRIPT` (string — 1 nguồn, nội dung khớp boot script shell index.html hiện có), `resolveTheme`, `storedThemeValue`, component `ThemeToggle` ('use client', class `.chrome-icon-btn` port từ `.shell-icon-btn`, labels `chrome.theme.*` — text vi GIỮ nguyên e2e-safe).
 - Shell `main.tsx` đổi import sang chrome; **xóa** `apps/shell/src/ThemeToggle.tsx` (orphan do thay đổi SF-1 tạo ra — main.tsx là consumer duy nhất, đã probe). `shell/index.html` inline boot GIỮ NGUYÊN (file không trong touch map; SF-4 flip sang chrome export khi layout swap — FLAG drift window nhỏ, cùng literal nên zero behavioral drift).
 

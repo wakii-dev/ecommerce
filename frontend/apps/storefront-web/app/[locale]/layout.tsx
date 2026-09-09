@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import { initI18n } from '@ecommerce/i18n';
+import { setChromeSite } from '@ecommerce/chrome';
+
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/tokens.css';
 
-import Footer from '../../components/Footer';
-import Header from '../../components/Header';
+import ChromeShell from '../../components/ChromeShell';
 import LiveChat from '../../components/LiveChat';
 import PwaRegister from '../../components/PwaRegister';
 import { ToastProvider } from '../../components/ui-kit';
@@ -31,13 +33,16 @@ export function generateMetadata({ params }: { params: { locale: string } }): Me
 }
 
 /**
- * Locale layout — shell Header/main/Footer. SF-8 sửa build vỡ có sẵn:
- * <html>/<body> + font chuyển lên root app/layout.tsx (Next ≥14.2 bắt buộc
- * root layout vì app/not-found.tsx — pattern i18n chuẩn; chi tiết trong
- * app/layout.tsx). Guard locale lạ giữ nguyên — not-found render trong
- * root layout.
+ * Locale layout — SF-4 (FI-401): Header/Footer render từ @ecommerce/chrome
+ * (SiteHeader props-slots + Footer) qua client gate ChromeShell. Server await
+ * initI18n + changeLanguage URL locale (P0-2 — instance memoized first-call-
+ * wins; request đầu tiên của mỗi locale vẫn dịch đúng) + setChromeSite
+ * same-origin trên chrome instance SERVER (client gate tự gọi trên instance
+ * browser — singleton per runtime). ChromeShell bọc client tree trong
+ * SessionBootProvider; islands local giữ (SearchBar/LocaleSwitcher/
+ * PwaRegister/LiveChat/ToastProvider).
  */
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
   params,
 }: {
@@ -46,18 +51,19 @@ export default function LocaleLayout({
 }) {
   const locale = resolveLocale(params.locale);
   if (!locale) notFound();
+  setChromeSite({ sfUrl: '', shellUrl: '' });
+  const i18n = await initI18n({ lang: locale });
+  if (i18n.language !== locale) await i18n.changeLanguage(locale);
   return (
-    <>
-      <Header locale={locale} />
+    <ChromeShell locale={locale}>
       {/* ToastProvider (client boundary qua shim) cho mọi page-level consumer
           useToast (hiện tại: CopyButton coupons — T10). Region toast render
           cuối layout — không chiếm layout flow. */}
       <ToastProvider>
         <main>{children}</main>
       </ToastProvider>
-      <Footer locale={locale} />
       <PwaRegister />
       <LiveChat />
-    </>
+    </ChromeShell>
   );
 }

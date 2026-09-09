@@ -50,7 +50,7 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 - [x] T1.1 Finalize next.config.mjs rewrites (giữ probe config, dest default 5173/5175-78 qua D3 normalize)
 - [x] T1.2 shell vite.config.ts final (entry relative default, proxy `/remotes/<name>` prefix-preserving, spaFallback exempt, DEV_PORT default 5173)
 - [x] T1.3 4 remote vite.config.ts final (base + DEV_PORT + hmr.clientPort + strictPort)
-- [ ] T1.4 Commit atomic `feat(sf3): one-origin entry — rewrites + base-relative remotes (FI-400)`
+- [x] T1.4 Commit atomic `feat(sf3): one-origin entry — rewrites + base-relative remotes (FI-400)`
 
 **Exit criteria:** (a) re-boot rig +600 NHƯ T0.2 (giữ env offset SHELL_ORIGIN/REMOTE_*_URL absolute) + 4 gates browser PASS với config đã finalize; (b) D3 defaults (không env) verify bằng code-inspect + banner sandbox CHỈ — TUYỆT ĐỐI KHÔNG boot default ports (:3000/:5173 đang bị stack session khác giữ — cấm theo P0 constraint); tsc --noEmit shell + remotes pass.
 
@@ -85,7 +85,6 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 - [ ] T5.4 shellUrl links: hover/click header cart/account từ trang Next → URL `/cart` `/account` (không `//cart`, không absolute)
 - [ ] T5.5 e2e subset qua rig: golden-path + nav-honesty + auth-cookie (env E2E_STOREFRONT_URL/E2E_SHELL_URL=:3600) — PASS
 - [ ] T5.6 Commit evidence + plan tick + **teardown rig receipt** (lsof :3600/:5773/:5775-78 sạch trước merge — tránh port-war chéo worktree)
-- [ ] T5.5 Commit evidence + plan tick
 
 **Exit criteria:** từng dòng ACCEPTANCE context pack §30-39 có evidence tương ứng; e2e subset xanh.
 

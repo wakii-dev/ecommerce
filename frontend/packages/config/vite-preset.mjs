@@ -81,8 +81,17 @@ export function defineMfeConfig({ name, filename = 'remoteEntry.js', exposes, re
         filename,
         exposes,
         remotes,
-        shared: { ...SHARED_SINGLETONS, ...shared }
+        shared: { ...SHARED_SINGLETONS, ...shared },
+        // SF-3 (FI-400) 1-origin dev entry: bật HMR remote — strategy
+        // 'full-reload' (probe FI-400: native/react-refresh KHÔNG deliver cho
+        // module load qua federation runtime vào host page; full-reload là
+        // cơ chế cross-federation chính thức của plugin — relay Node-to-Node
+        // ws://clientPort bypass entry, remote edit → trang shell tự reload).
+        // Không bật → plugin bỏ qua toàn bộ plumbing remote-HMR (check
+        // isRemoteHmrEnabled đứng trước mọi setup).
+        dev: { remoteHmr: 'full-reload' }
       }),
+      // SF-2 (FI-399): redirect 127.0.0.1 → localhost trên mọi MFE dev server
       redirect127ToLocalhostPlugin()
     ]
   });

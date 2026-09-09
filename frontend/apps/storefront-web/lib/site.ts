@@ -8,11 +8,13 @@ export function siteUrl(): string {
 }
 
 /**
- * Origin của SHELL (cart/checkout/account là trang shell Vite MF — KHÔNG phải
- * route Next; link relative '/cart' 404 trên mọi dev topology — code-review
- * SF-6 P1). env NEXT_PUBLIC_SHELL_URL (Next: chỉ NEXT_PUBLIC_* expose client),
- * default http://localhost:5173 theo .env.example. Đọc lúc gọi như siteUrl.
+ * Origin của SHELL (cart/checkout/account là trang shell Vite MF). SF-3
+ * (FI-400) 1-origin: default '' → link `shellUrl()+'/cart'` = `/cart`, đi qua
+ * entry :3000 (Next rewrites proxy về shell Vite). env NEXT_PUBLIC_SHELL_URL
+ * (Next: chỉ NEXT_PUBLIC_* expose client) giữ làm override — set absolute =
+ * kill-switch chế độ 2-origin legacy cho links. Đọc lúc gọi như siteUrl
+ * (không snapshot import-time) để unit test override được.
  */
 export function shellUrl(): string {
-  return process.env.NEXT_PUBLIC_SHELL_URL || 'http://localhost:5173';
+  return process.env.NEXT_PUBLIC_SHELL_URL || '';
 }

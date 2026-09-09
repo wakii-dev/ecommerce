@@ -85,8 +85,8 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] Ghi gap (nếu có) → fix-task epic; không tự sửa
 
 ### Task 3 — 127-redirect verify matrix
-- [ ] curl -I matrix §4 trên rig A (:3400 Next middleware + :5573 vite plugin) — path+query giữ, `/_next` + `/@vite` + static KHÔNG redirect, localhost không loop
-- [ ] Report `docs/superpowers/qa/gateway-regression.md` (phần redirect — artifact DUY NHẤT, plan-critic P2#8) — evidence raw curl
+- [x] curl -I matrix §4 trên rig A (:3400 Next middleware + :5573 vite plugin) — path+query giữ, `/_next` + `/@vite` + static KHÔNG redirect, localhost không loop
+- [x] Report `docs/superpowers/qa/gateway-regression.md` (phần redirect — artifact DUY NHẤT, plan-critic P2#8) — evidence raw curl
 
 ### Task 4 — e2e FULL suite (14 + sync-matrix)
 - [ ] 1 lệnh toàn suite trên rig A: `E2E_STOREFRONT_URL=http://localhost:3400 E2E_SHELL_URL=http://localhost:3400 pnpm exec playwright test` (cd frontend/e2e; serial workers=1, retries 1)
@@ -101,9 +101,9 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] Report `docs/superpowers/qa/docker-regression.md` — gồm 2 finding (PG 53300 cold-boot race + keys mount thiếu 4 service) + override QA recipe + verdict nguyên trạng vs override; teardown KHÔNG ở đây (chuyển Task 6 cuối — plan-critic P1#3)
 
 ### Task 6 — gateway-routes regression check
-- [ ] Diff check: `git diff a9a8fad..HEAD -- backend/gateway/src/main/resources/gateway-routes.yml` comment-only (routes/predicates/filters identical — dùng `grep -vE '^\s*#'` so) + `infra/nginx/frontend-web.conf` rỗng + compose khác override-sf2 (thêm từ SF-2, không sửa base)
-- [ ] Functional: route matrix curl qua gateway isolated :8480 khớp bảng routes (storefront/shell/admin/api/media)
-- [ ] Report phần gateway trong `docs/superpowers/qa/gateway-regression.md`
+- [x] Diff check: `git diff a9a8fad..HEAD -- backend/gateway/src/main/resources/gateway-routes.yml` comment-only (routes/predicates/filters identical — dùng `grep -vE '^\s*#'` so) + `infra/nginx/frontend-web.conf` rỗng + compose khác override-sf2 (thêm từ SF-2, không sửa base)
+- [x] Functional: route matrix curl qua gateway isolated :8480 khớp bảng routes (storefront/shell/admin/api/media)
+- [x] Report phần gateway trong `docs/superpowers/qa/gateway-regression.md`
 - [ ] TEARDOWN rig B `docker compose -p fi397sf5 down -v` (SAU KHI Task 5+6 xong hẳn — plan-critic P1#3)
 
 ### Task 7 — chrome cross-host visual consistency + theme legacy-key
@@ -113,8 +113,8 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [ ] Report `docs/superpowers/qa/visual-consistency.md`; lệch visual → fix-task SF-1/SF-4 cap 2 vòng
 
 ### Task 8 — unit tests monorepo
-- [ ] vitest toàn packages/apps (chrome, auth, i18n, ui-kit, shell, mfe-*, storefront-web) — toàn XANH, đếm per package
-- [ ] Report `docs/superpowers/qa/unit-tests.md`; FAIL → fix-task SF sở hữu package đỏ (cap 2 vòng)
+- [x] vitest toàn packages/apps (chrome, auth, i18n, ui-kit, shell, mfe-*, storefront-web) — toàn XANH, đếm per package
+- [x] Report `docs/superpowers/qa/unit-tests.md`; FAIL → fix-task SF sở hữu package đỏ (cap 2 vòng)
 
 ### Task 9 — perf sanity double-inclusion gate (SAU CÙNG — rig A dừng ở cb1 trước mọi build)
 - [ ] **Dừng toàn bộ rig A** (next dev :3400, shell :5573, remotes :5585/:5586/:5577/:5578) + probe ports free — plan-critic P0#1 (`next build` phá `next dev` đang sống)

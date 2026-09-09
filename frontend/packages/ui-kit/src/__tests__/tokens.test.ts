@@ -19,14 +19,14 @@ function countDef(token: string, value: string): number {
   return (css.match(pattern) ?? []).length;
 }
 
-describe('tokens.css — direction A §1.1 màu gốc (storefront + admin + dark)', () => {
+describe('tokens.css — direction A §1.1 màu gốc (storefront + admin + dark + admin-dark)', () => {
   it('primary/hover/danger/warning/success/accent đúng hex §1.1', () => {
     expect(countDef('--c-primary', '#F53D2D')).toBeGreaterThanOrEqual(2); // storefront + admin (+dark)
     expect(countDef('--c-primary-hover', '#CB1B00')).toBe(2); // light themes; dark #FF6B54
     expect(countDef('--c-danger', '#D0011B')).toBe(2);
-    expect(countDef('--c-warning', '#FE9C08')).toBe(3); // cả dark giữ nguyên
+    expect(countDef('--c-warning', '#FE9C08')).toBe(4); // cả dark + admin-dark giữ nguyên
     expect(countDef('--c-success', '#26AA99')).toBe(2);
-    expect(countDef('--c-accent', '#FFD839')).toBe(3);
+    expect(countDef('--c-accent', '#FFD839')).toBe(4); // cả dark + admin-dark giữ nguyên
   });
 
   it('bg/surface/text/muted/border đúng hex §1.1 (light)', () => {
@@ -117,16 +117,44 @@ describe('tokens.css — §1.7 status pill palette (admin)', () => {
 });
 
 describe('tokens.css — dark theme (FI-368 T2 contrast AA)', () => {
-  it('dark nền/chữ + biến contrast mới có mặt đủ 3 theme', () => {
+  it('dark nền/chữ + biến contrast mới có mặt đủ 4 theme', () => {
     expect(css).toContain("[data-theme='dark']");
-    expect(countDef('--c-on-accent', '#212121')).toBe(3); // FI-368: chữ trên accent/warning/success
+    expect(countDef('--c-on-accent', '#212121')).toBe(4); // FI-368: chữ trên accent/warning/success (3 theme cũ + admin-dark)
     expect(countDef('--c-link', '#F53D2D')).toBe(2); // light = nguyên primary
-    expect(countDef('--c-link', '#FF6B54')).toBe(1); // dark: AA 4.5:1 trên surface
+    expect(countDef('--c-link', '#FF6B54')).toBe(2); // dark + admin-dark: AA 4.5:1 trên surface
   });
 
   it('dark muted/border đúng giá trị đã verify contrast', () => {
-    expect(countDef('--c-text-muted', '#9E9E9E')).toBe(1); // 6.22:1 surface
-    expect(countDef('--c-border', '#2C2C2C')).toBe(1);
-    expect(countDef('--c-danger', '#FF5A5A')).toBe(1); // 5.45:1 surface
+    expect(countDef('--c-text-muted', '#9E9E9E')).toBe(2); // 6.22:1 surface (dark + admin-dark)
+    expect(countDef('--c-border', '#2C2C2C')).toBe(2);
+    expect(countDef('--c-danger', '#FF5A5A')).toBe(2); // 5.45:1 surface (dark + admin-dark)
+  });
+});
+
+describe('tokens v2 — SF-1 FI-391 (hand-off §1.2-§1.5)', () => {
+  it('motion durations + easing §1.2 — chỉ :root/storefront (theme khác cascade)', () => {
+    expect(countDef('--dur-fast', '140ms')).toBe(1);
+    expect(countDef('--dur-base', '180ms')).toBe(1);
+    expect(countDef('--dur-slow', '260ms')).toBe(1);
+    expect(countDef('--ease-pop', 'cubic-bezier(0.34, 1.4, 0.4, 1)')).toBe(1);
+  });
+
+  it('z-index + breakpoints §1.2 — 1 lần (:root); @media không đọc var()', () => {
+    expect(countDef('--z-toast', '400')).toBe(1);
+    expect(countDef('--bp-md', '960px')).toBe(1);
+  });
+
+  it('gradient + CTA shadow §1.3 — family FI-310 §1.8 (hex nguyên văn hand-off)', () => {
+    expect(css).toContain('--grad-cta: linear-gradient(90deg, #F53D2D, #FF7A45);');
+    expect(countDef('--shadow-cta', '0 4px 12px rgba(245, 61, 45, 0.35)')).toBe(1);
+    expect(countDef('--shadow-cta-hover', '0 6px 18px rgba(245, 61, 45, 0.45)')).toBe(1);
+  });
+
+  it('admin-dark §1.5 — bg hex mới duy nhất + shadow = bộ dark §1.4 (×2: dark + admin-dark)', () => {
+    expect(countDef('--c-bg', '#0F0F0F')).toBe(1); // hex mới duy nhất của elevation
+    // admin-dark KHÔNG cascade từ dark (khác giá trị attribute) → shadow re-declare ×2
+    expect(countDef('--shadow-1', '0 1px 2px rgba(0, 0, 0, 0.4)')).toBe(2);
+    expect(countDef('--shadow-2', '0 2px 8px rgba(0, 0, 0, 0.5)')).toBe(2);
+    expect(countDef('--shadow-3', '0 8px 24px rgba(0, 0, 0, 0.6)')).toBe(2);
   });
 });

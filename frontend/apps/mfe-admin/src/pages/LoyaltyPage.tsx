@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { authStore } from '@ecommerce/auth';
 import { executeRequest, type ApiClientOptions, type RouteDef } from '@ecommerce/contracts';
-import { Badge, Button, Card, Input, Skeleton, Table, useToast, formatPrice } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Pagination, Skeleton, useToast, formatPrice } from '@ecommerce/ui-kit';
 import { useT } from '@ecommerce/i18n';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
+import { useClientSort } from '../lib/tableSort';
+import type { SortAccessor } from '../lib/tableSort';
 
 /**
  * LoyaltyPage (SF-14, FI-324, D22): tra cứu + chỉnh điểm thủ công LIVE.
@@ -54,11 +58,18 @@ export default function LoyaltyPage(): ReactElement {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [adjustPoints, setAdjustPoints] = useState('');
   const [adjustNote, setAdjustNote] = useState('');
+  // Ledger load theo server page (size = pageSize) — khai báo sớm để mutation
+  // closure dưới đây đọc được pageSize khi refetch sau adjust.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const lookup = useMutation({
-    mutationFn: (id: string) =>
-      executeRequest(affiliateOptions(), LOOKUP_ROUTE, { userId: id, page: 1, size: 10 }) as
-        unknown as Promise<AdminLoyaltyResponse>,
+    mutationFn: (input: { id: string; size: number }) =>
+      executeRequest(affiliateOptions(), LOOKUP_ROUTE, {
+        userId: input.id,
+        page: 1,
+        size: input.size
+      }) as unknown as Promise<AdminLoyaltyResponse>,
     onSuccess: () => setLookupError(null),
     onError: () => setLookupError(t('admin.loyalty.notFound'))
   });
@@ -72,7 +83,7 @@ export default function LoyaltyPage(): ReactElement {
       toast.toast(t('admin.loyalty.adjustDone'), { variant: 'success' });
       setAdjustPoints('');
       setAdjustNote('');
-      if (userId) lookup.mutate(userId);
+      if (userId) lookup.mutate({ id: userId, size: pageSize });
     },
     onError: (error) => toast.toast(String(error), { variant: 'danger' })
   });
@@ -85,7 +96,7 @@ export default function LoyaltyPage(): ReactElement {
       return;
     }
     setUserId(id);
-    lookup.mutate(id);
+    lookup.mutate({ id, size: pageSize });
   };
 
   const onAdjustSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -100,6 +111,53 @@ export default function LoyaltyPage(): ReactElement {
   };
 
   const data = lookup.data;
+
+  const { sort, sortedRows, toggleSort } = useClientSort<LedgerEntry>(data?.ledger ?? []);
+  const onSortToggle = (key: string, accessor: SortAccessor<LedgerEntry>): void => {
+    // sort→slice trên toàn bộ ledger đã load → trang hiện tại vẫn hợp lệ khi sort
+    toggleSort(key, accessor);
+  };
+  const ledgerCount = data?.ledger.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(ledgerCount / pageSize));
+  // render-clamp: lookup mới/adjust refetch co ledger → page cũ có thể vượt
+  // totalPages (bảng trắng) — clamp lúc render, không effect.
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = useMemo(
+    () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sortedRows, safePage, pageSize]
+  );
+
+  const columns = [
+    {
+      key: 'createdAt',
+      header: t('admin.common.date'),
+      sortValue: (row: LedgerEntry) => row.createdAt,
+      render: (row: LedgerEntry) => new Date(row.createdAt).toLocaleString('vi-VN')
+    },
+    {
+      key: 'type',
+      header: t('admin.common.status'),
+      sortValue: (row: LedgerEntry) => row.type,
+      render: (row: LedgerEntry) => (
+        <Badge variant={row.type === 'EARN' ? 'success' : row.type === 'REDEEM' ? 'warning' : 'neutral'}>
+          {row.type}
+        </Badge>
+      )
+    },
+    {
+      key: 'points',
+      header: t('admin.loyalty.adjustPoints'),
+      align: 'right' as const,
+      sortValue: (row: LedgerEntry) => row.points,
+      render: (row: LedgerEntry) => (
+        <span style={{ color: row.points >= 0 ? 'var(--c-success, #189e47)' : 'var(--c-danger, #d63a2f)', fontWeight: 700 }}>
+          {row.points >= 0 ? `+${row.points}` : row.points}
+        </span>
+      )
+    },
+    { key: 'orderId', header: t('admin.rma.colOrder'), render: (row: LedgerEntry) => (row.orderId ? `#${row.orderId.slice(0, 8).toUpperCase()}` : '—') },
+    { key: 'note', header: t('admin.loyalty.adjustNote'), render: (row: LedgerEntry) => row.note ?? '—' }
+  ];
 
   return (
     <div>
@@ -134,22 +192,24 @@ export default function LoyaltyPage(): ReactElement {
 
       {data && (
         <div style={{ display: 'grid', gap: 16 }}>
+          {/* Balance tiles — KPI pattern §2.5 (SF-5 FI-395); 3 tile → giữ
+              auto-fit grid (admin-kpi-row cố định 4 cột sẽ hụt 1 ô) */}
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-            <Card>
-              <p className="admin-hint">{t('admin.loyalty.balance')}</p>
-              <h2 style={{ margin: 0 }} data-testid="loyalty-balance">
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">{t('admin.loyalty.balance')}</div>
+              <div className="admin-kpi__value" data-testid="loyalty-balance">
                 {data.account.balance.toLocaleString('vi-VN')} đ
-              </h2>
+              </div>
             </Card>
-            <Card>
-              <p className="admin-hint">{t('admin.loyalty.totalEarned')}</p>
-              <h2 style={{ margin: 0 }} data-testid="loyalty-total-earned">
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">{t('admin.loyalty.totalEarned')}</div>
+              <div className="admin-kpi__value" data-testid="loyalty-total-earned">
                 {data.account.totalEarned.toLocaleString('vi-VN')} đ
-              </h2>
+              </div>
             </Card>
-            <Card>
-              <p className="admin-hint">≈ VND</p>
-              <h2 style={{ margin: 0 }}>{formatPrice(data.account.balance * 100)}</h2>
+            <Card className="admin-kpi">
+              <div className="admin-kpi__label">≈ VND</div>
+              <div className="admin-kpi__value">{formatPrice(data.account.balance * 100)}</div>
             </Card>
           </div>
 
@@ -182,35 +242,38 @@ export default function LoyaltyPage(): ReactElement {
             </form>
           </Card>
 
-          <Table<LedgerEntry>
-            columns={[
-              { key: 'createdAt', header: t('admin.common.date'), render: (row) => new Date(row.createdAt).toLocaleString('vi-VN') },
-              {
-                key: 'type',
-                header: t('admin.common.status'),
-                render: (row) => (
-                  <Badge variant={row.type === 'EARN' ? 'success' : row.type === 'REDEEM' ? 'warning' : 'neutral'}>
-                    {row.type}
-                  </Badge>
-                )
-              },
-              {
-                key: 'points',
-                header: t('admin.loyalty.adjustPoints'),
-                render: (row) => (
-                  <span style={{ color: row.points >= 0 ? 'var(--c-success, #189e47)' : 'var(--c-danger, #d63a2f)', fontWeight: 700 }}>
-                    {row.points >= 0 ? `+${row.points}` : row.points}
-                  </span>
-                )
-              },
-              { key: 'orderId', header: t('admin.rma.colOrder'), render: (row) => (row.orderId ? `#${row.orderId.slice(0, 8).toUpperCase()}` : '—') },
-              { key: 'note', header: t('admin.loyalty.adjustNote'), render: (row) => row.note ?? '—' }
-            ]}
-            rows={data.ledger}
+          <DataTable<LedgerEntry>
+            columns={columns}
+            rows={pagedRows}
             rowKey={(row) => row.id}
-            empty={t('admin.loyalty.ledger')}
+            empty={<EmptyState icon="⭐" title={t('admin.loyalty.ledger')} />}
             caption={t('admin.common.total', { count: data.total })}
+            sort={sort}
+            onSortToggle={onSortToggle}
           />
+          <div className="admin-pagination">
+            <PageSizeSelect
+              value={pageSize}
+              onChange={(n) => {
+                setPage(1);
+                setPageSize(n);
+              }}
+              label={t('admin.common.pageSize')}
+            />
+            <span>
+              {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
+              {t('admin.common.total', { count: ledgerCount })}
+            </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
+          </div>
         </div>
       )}
     </div>

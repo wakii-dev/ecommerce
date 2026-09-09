@@ -3,28 +3,8 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 
-const COPY = {
-  vi: {
-    title: 'Đăng ký nhận tin',
-    desc: 'Nhận khuyến mãi và flash deal mới nhất.',
-    placeholder: 'Email của bạn',
-    submit: 'Đăng ký',
-    loading: 'Đang gửi…',
-    ok: 'Đã đăng ký! Kiểm tra email chào mừng nhé.',
-    already: 'Email này đã được đăng ký từ trước.',
-    error: 'Có lỗi xảy ra — thử lại.'
-  },
-  en: {
-    title: 'Newsletter',
-    desc: 'Get the latest promos and flash deals.',
-    placeholder: 'Your email',
-    submit: 'Subscribe',
-    loading: 'Sending…',
-    ok: 'Subscribed! Check your welcome email.',
-    already: 'This email is already subscribed.',
-    error: 'Something went wrong — try again.'
-  }
-} as const;
+import type { Locale } from '../lib/format';
+import { t } from '../lib/i18n';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,9 +12,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Newsletter form (SF-13 A8) — client island trong Footer; POST
  * `/api/identity/newsletter` qua Next rewrite. status subscribed/already
  * → thông báo tương ứng (dup KHÔNG double email — backend no-op).
+ * FI-392 T11: style qua class `.nl-*` (app.css) — màu chỉ qua var(--*)
+ * (§5 Cấm: cấm hex trực tiếp trong css). T12: copy trong lib/i18n
+ * (miền `newsletter`).
  */
-export default function NewsletterForm({ locale }: { locale: string }): ReactElement {
-  const copy = COPY[locale === 'en' ? 'en' : 'vi'];
+export default function NewsletterForm({ locale }: { locale: Locale }): ReactElement {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'already' | 'error'>('idle');
 
@@ -57,51 +39,35 @@ export default function NewsletterForm({ locale }: { locale: string }): ReactEle
 
   return (
     <div>
-      <h3 className="footer-heading">{copy.title}</h3>
-      <p style={{ color: '#bbb', fontSize: 13 }}>{copy.desc}</p>
+      <h3 className="footer-heading">{t(locale, 'newsletter.title')}</h3>
+      <p className="nl-desc">{t(locale, 'newsletter.desc')}</p>
       {state === 'ok' || state === 'already' ? (
-        <div role="status" data-testid="newsletter-msg" style={{ color: '#7ed957', fontSize: 13 }}>
-          {state === 'ok' ? copy.ok : copy.already}
+        <div role="status" data-testid="newsletter-msg" className="nl-msg nl-msg--ok">
+          {state === 'ok' ? t(locale, 'newsletter.ok') : t(locale, 'newsletter.already')}
         </div>
       ) : (
-        <form onSubmit={onSubmit} noValidate style={{ display: 'flex', gap: 8, maxWidth: 320 }}>
+        <form onSubmit={onSubmit} noValidate className="nl-form">
           <input
             type="email"
             name="newsletter-email"
-            placeholder={copy.placeholder}
+            placeholder={t(locale, 'newsletter.placeholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             data-testid="newsletter-email"
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: '1px solid #444',
-              background: '#222',
-              color: '#fff',
-              fontSize: 13
-            }}
+            className="nl-input"
           />
           <button
             type="submit"
             disabled={state === 'loading'}
             data-testid="newsletter-submit"
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: 'none',
-              background: '#F53D2D',
-              color: '#fff',
-              fontSize: 13,
-              cursor: 'pointer'
-            }}
+            className="nl-submit"
           >
-            {state === 'loading' ? copy.loading : copy.submit}
+            {state === 'loading' ? t(locale, 'newsletter.loading') : t(locale, 'newsletter.submit')}
           </button>
         </form>
       )}
       {state === 'error' ? (
-        <div role="alert" style={{ color: '#ff7b6b', fontSize: 13 }}>{copy.error}</div>
+        <div role="alert" className="nl-msg nl-msg--error">{t(locale, 'newsletter.error')}</div>
       ) : null}
     </div>
   );

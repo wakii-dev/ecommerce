@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Input, Select, Skeleton, Table } from '@ecommerce/ui-kit';
+import { Badge, Button, Input, Pagination, Select } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { downloadAdminFile } from '../lib/download';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
 import { orderingApi } from '../lib/api';
 import { dayKeyOf, formatDateTime, formatVnd } from '../lib/format';
 import type { OrderStatusValue, AdminOrder } from '../lib/types';
@@ -18,8 +20,6 @@ const STATUSES: ReadonlyArray<OrderStatusValue> = [
   'CANCELLED',
   'FAILED'
 ];
-
-const PAGE_SIZE = 10;
 
 /** Pill trạng thái §1.7 — palette --pill-* riêng từng enum (6 màu), FAILED
  * chung family CANCELLED (danger). Thay Badge generic 4 màu trước đây. */
@@ -42,15 +42,16 @@ export default function OrdersPage(): ReactElement {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const ordersQuery = useQuery({
-    queryKey: ['admin-orders', status, q.trim(), page],
+    queryKey: ['admin-orders', status, q.trim(), page, pageSize],
     queryFn: async () => {
       const res = await orderingApi().adminListOrders({
         ...(status ? { status } : {}),
         ...(q.trim() ? { q: q.trim() } : {}),
         page,
-        size: PAGE_SIZE
+        size: pageSize
       });
       return res as { items: AdminOrder[]; page: number; size: number; total: number };
     }
@@ -69,12 +70,13 @@ export default function OrdersPage(): ReactElement {
   }, [ordersQuery.data, fromDate, toDate]);
 
   const total = ordersQuery.data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const columns = [
     {
       key: 'id',
       header: t('admin.orders.order'),
+      sortValue: (row: AdminOrder) => row.id,
       render: (row: AdminOrder) => (
         <div>
           <div className='admin-order-code'>#{row.id.slice(0, 8)}</div>
@@ -85,6 +87,7 @@ export default function OrdersPage(): ReactElement {
     {
       key: 'customer',
       header: t('admin.orders.customer'),
+      sortValue: (row: AdminOrder) => row.address.fullName,
       render: (row: AdminOrder) => (
         <div>
           <div>{row.address.fullName}</div>
@@ -96,12 +99,14 @@ export default function OrdersPage(): ReactElement {
       key: 'items',
       header: t('admin.orders.itemsCount'),
       align: 'right' as const,
+      sortValue: (row: AdminOrder) => row.items.reduce((sum, l) => sum + l.qty, 0),
       render: (row: AdminOrder) => row.items.reduce((sum, l) => sum + l.qty, 0)
     },
     {
       key: 'total',
       header: t('admin.orders.total'),
       align: 'right' as const,
+      sortValue: (row: AdminOrder) => row.total,
       render: (row: AdminOrder) => <strong className='admin-money'>{formatVnd(row.total)}</strong>
     },
     {
@@ -117,6 +122,7 @@ export default function OrdersPage(): ReactElement {
     {
       key: 'status',
       header: t('admin.common.status'),
+      sortValue: (row: AdminOrder) => row.status,
       render: (row: AdminOrder) => statusBadge(row.status, t)
     },
     {
@@ -189,29 +195,38 @@ export default function OrdersPage(): ReactElement {
             setToDate(e.target.value);
           }}
         />
+        <PageSizeSelect
+          value={pageSize}
+          onChange={(n) => {
+            setPage(1);
+            setPageSize(n);
+          }}
+          label={t('admin.common.pageSize')}
+        />
       </div>
 
       {ordersQuery.isLoading ? (
-        <Skeleton variant='rect' height={200} />
+        <DataTable loading columns={columns} rows={[]} />
       ) : (
-        <Card>
-          <Table columns={columns} rows={rows} rowKey={(row) => row.id} empty={t('admin.orders.empty')} />
-        </Card>
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+          empty={t('admin.orders.empty')}
+        />
       )}
 
       <div className='admin-pagination'>
-        <Button size='sm' variant='secondary' disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-          ← {t('admin.common.prev')}
-        </Button>
+        {/* Pagination primitive client mode (FI-395 T4) — tự ẩn totalPages ≤ 1. */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p)}
+          label={t('admin.common.pagination')}
+          prevLabel={t('admin.common.prev')}
+          nextLabel={t('admin.common.next')}
+        />
         <span>{t('admin.common.pageOf', { page, total: totalPages })}</span>
-        <Button
-          size='sm'
-          variant='secondary'
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          {t('admin.common.next')} →
-        </Button>
       </div>
     </div>
   );

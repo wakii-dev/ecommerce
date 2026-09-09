@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { TWOFA_CHALLENGE_KEY, verify2fa } from '../api';
 import { appNavigate } from '../bootstrap';
+import { safeNextPath } from '../lib/nextPath';
 import '../page.css';
 
 /**
@@ -11,7 +13,10 @@ import '../page.css';
  * verify → accessToken vào store → /account. Không có challenge → về /login.
  */
 export default function TwoFactorPage(): ReactElement {
+  const { t } = useT();
   const [code, setCode] = useState('');
+  const [fieldError, setFieldError] = useState<string | undefined>();
+  const [touched, setTouched] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const challenge = sessionStorage.getItem(TWOFA_CHALLENGE_KEY) ?? '';
@@ -20,24 +25,39 @@ export default function TwoFactorPage(): ReactElement {
     if (!challenge) appNavigate('/login');
   }, [challenge]);
 
+  // SF-4 T2: validate realtime on-blur — regex GIỮ nguyên logic cũ:
+  // hợp lệ khi 6 chữ số (app authenticator) hoặc 8 ký tự (mã dự phòng).
+  const validateCode = (value: string): string | undefined =>
+    /^\d{6}$/.test(value.trim()) || value.trim().length === 8 ? undefined : t('account.auth.errCodeInvalid');
+
+  const onBlurCode = (value: string): void => {
+    setTouched(true);
+    setFieldError(validateCode(value));
+  };
+
+  const onChangeCode = (value: string): void => {
+    setCode(value);
+    if (touched) setFieldError(validateCode(value));
+  };
+
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setBanner(null);
-    if (!/^\d{6}$/.test(code.trim()) && code.trim().length !== 8) {
-      setBanner('Nhập mã 6 số (app authenticator) hoặc mã dự phòng 8 ký tự');
-      return;
-    }
+    setTouched(true);
+    const error = validateCode(code);
+    setFieldError(error);
+    if (error) return;
     setLoading(true);
     verify2fa(challenge, code.trim())
       .then(() => {
         sessionStorage.removeItem(TWOFA_CHALLENGE_KEY);
-        appNavigate('/account');
+        appNavigate(safeNextPath(window.location.search, '/account'));
       })
       .catch((err: unknown) => {
         setBanner(
           err instanceof Error && err.name === 'ApiErrorClient'
             ? (err as Error & { detail?: string }).detail || err.message
-            : 'Xác thực không thành công — thử lại'
+            : t('account.auth.errTwofaFailed')
         );
       })
       .finally(() => setLoading(false));
@@ -46,7 +66,7 @@ export default function TwoFactorPage(): ReactElement {
   return (
     <div className="auth-page">
       <Card className="auth-card">
-        <h1 className="auth-title">Xác thực hai lớp</h1>
+        <h1 className="auth-title">{t('account.auth.twofaTitle')}</h1>
         {banner ? (
           <div className="auth-error" role="alert">
             {banner}
@@ -54,16 +74,18 @@ export default function TwoFactorPage(): ReactElement {
         ) : null}
         <form onSubmit={onSubmit} noValidate>
           <Input
-            label="Mã xác thực"
+            label={t('account.auth.code')}
             name="code"
             autoComplete="one-time-code"
             inputMode="numeric"
-            placeholder="123456 hoặc mã dự phòng"
+            placeholder={t('account.auth.phCode')}
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            error={fieldError}
+            onBlur={(e) => onBlurCode(e.target.value)}
+            onChange={(e) => onChangeCode(e.target.value)}
           />
           <Button type="submit" variant="primary" fullWidth loading={loading}>
-            Xác nhận
+            {t('account.auth.confirm')}
           </Button>
         </form>
       </Card>

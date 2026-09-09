@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { authStore } from '@ecommerce/auth';
-import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { Button, Card, Icon, Input, Skeleton, Stepper } from '@ecommerce/ui-kit';
 import { formatPrice } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate } from '../bootstrap';
 import { useCart } from '../lib/useCart';
 import { removeCartItem } from '../lib/cartApi';
@@ -21,6 +22,7 @@ import {
 } from '../lib/orderingApi';
 import { mountPaymentElement, confirmPayment, type MountedPayment } from '../lib/stripePay';
 import { readAffiliateRef } from '../lib/affiliateRef';
+import { clearCarryCoupon, getCarryCoupon, setCarryCoupon } from '../lib/couponCarry';
 import '../page.css';
 
 /**
@@ -34,6 +36,9 @@ import '../page.css';
 
 const SHIPPING_FEE = Number(import.meta.env.VITE_SHIPPING_FLAT_FEE ?? 25000); // fallback env
 const PHONE_RE = /^(0|\+84)[\s.-]?(\d[\s.-]?){8,10}$/;
+// FI-393 T8 — ảnh summary thiếu src → svg placeholder (như CartPage T4)
+const IMG_FALLBACK =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%23fafafa"/></svg>';
 
 function useAuthState(): boolean {
   const [authed, setAuthed] = useState(authStore.isAuthenticated());
@@ -53,24 +58,45 @@ const EMPTY_ADDRESS: Address = {
   city: ''
 };
 
-function validateAddress(a: Address): Partial<Record<keyof Address, string>> {
-  const errors: Partial<Record<keyof Address, string>> = {};
-  if (a.fullName.trim().length < 2) errors.fullName = 'Nhập họ tên người nhận';
-  if (!PHONE_RE.test(a.phone.trim())) errors.phone = 'Số điện thoại không hợp lệ';
-  if (a.line1.trim().length < 4) errors.line1 = 'Nhập số nhà + tên đường';
-  if (!a.ward.trim()) errors.ward = 'Nhập phường/xã';
-  if (!a.district.trim()) errors.district = 'Nhập quận/huyện';
-  if (!a.city.trim()) errors.city = 'Nhập tỉnh/thành phố';
-  return errors;
+// FI-393 T7 — rule từng field tách khỏi validateAddress (message lấy từ
+// catalog `checkout.step1.<name>.error` lúc render — component giữ i18n).
+const FIELD_NAMES = ['fullName', 'phone', 'line1', 'ward', 'district', 'city'] as const;
+
+// FI-393 review-G3 — export để unit-test được (pure, không đụng React).
+export function fieldInvalid(name: keyof Address, value: string): boolean {
+  switch (name) {
+    case 'fullName':
+      return value.trim().length < 2;
+    case 'phone':
+      return !PHONE_RE.test(value.trim());
+    case 'line1':
+      return value.trim().length < 4;
+    default:
+      return !value.trim(); // ward / district / city
+  }
 }
+
+// autoComplete chuẩn WHATWG (T7) — fullName→name, phone→tel, address-level*.
+const FIELD_AUTO_COMPLETE: Record<keyof Address, string> = {
+  fullName: 'name',
+  phone: 'tel',
+  line1: 'address-line1',
+  ward: 'address-level3',
+  district: 'address-level2',
+  city: 'address-level1'
+};
 
 export default function CheckoutPage(): ReactElement {
   const authed = useAuthState();
-  const { cart } = useCart();
+  const { cart, loading: cartLoading } = useCart();
+  const { t } = useT();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [address, setAddress] = useState<Address>(EMPTY_ADDRESS);
   const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof Address, string>>>({});
+  // FI-393 T7 — touched per field: lỗi hiện ngay khi blur (hoặc sau submit),
+  // không đợi submit toàn form; onChange re-validate nếu field đã touched.
+  const [touched, setTouched] = useState<Partial<Record<keyof Address, boolean>>>({});
 
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState<number | null>(null);
@@ -151,17 +177,25 @@ export default function CheckoutPage(): ReactElement {
     mountedRef.current = null;
   }, []);
 
-  const applyCoupon = async (): Promise<void> => {
-    if (!couponCode.trim() || couponChecking) return;
+  /** FI-393 T5 — apply coupon (nút "Áp dụng" step-3 KHÔNG đổi, hoặc auto-apply
+   *  mã carry từ cart). Trả true khi áp OK để caller (carry) biết đường clear.
+   *  Success → setCarryCoupon luôn (giữ carry fresh khi user cart↔checkout). */
+  const applyCoupon = useCallback(async (rawCode?: string): Promise<boolean> => {
+    const code = (rawCode ?? couponCode).trim();
+    if (!code || couponChecking) return false;
     setCouponChecking(true);
+    let ok = false;
     try {
-      const result = await validateCoupon(couponCode, subtotal);
+      const result = await validateCoupon(code, subtotal);
       if (result.valid) {
         setCouponDiscount(result.discount);
+        setCouponCode(code);
         setCouponError(null);
+        setCarryCoupon(code);
+        ok = true;
       } else {
         setCouponDiscount(null);
-        setCouponError(result.message ?? 'Mã không hợp lệ');
+        setCouponError(result.message ?? t('checkout.coupon.invalid'));
       }
     } catch (err) {
       setCouponDiscount(null);
@@ -169,7 +203,24 @@ export default function CheckoutPage(): ReactElement {
     } finally {
       setCouponChecking(false);
     }
-  };
+    return ok;
+  }, [couponCode, couponChecking, subtotal, t]);
+
+  // FI-393 T5 — coupon carry từ cart: khi cart ĐÃ LOAD (subtotal thật —
+  // validate với subtotal 0 sẽ sai minOrder) và chưa có coupon nào áp → tự
+  // apply mã carry đúng 1 LẦN (ref — cart đổi tiếp không apply lại). Fail
+  // (hết hạn/minOrder) → couponError hiển thị như apply thủ công + clear
+  // carry NGAY (stale code không re-error mỗi lần vào checkout).
+  const carryTriedRef = useRef(false);
+  useEffect(() => {
+    if (carryTriedRef.current || !cart) return;
+    carryTriedRef.current = true;
+    const carried = getCarryCoupon();
+    if (!carried || couponDiscount !== null) return;
+    void applyCoupon(carried).then((ok) => {
+      if (!ok) clearCarryCoupon();
+    });
+  }, [cart, couponDiscount, applyCoupon]);
 
   const clearCartAfterSuccess = useCallback(async (): Promise<void> => {
     // Stub chưa có server persist giỏ sau order — xóa line khả dụng (contract
@@ -191,6 +242,7 @@ export default function CheckoutPage(): ReactElement {
     } catch {
       // storage full — confirmation page sẽ hiện empty state
     }
+    clearCarryCoupon(); // FI-393 T5 — đơn xong: mã đã tiêu thụ, carry hết hiệu lực
     await clearCartAfterSuccess();
     appNavigate('/order/confirmation');
   }, [clearCartAfterSuccess]);
@@ -286,7 +338,7 @@ export default function CheckoutPage(): ReactElement {
         <h1 className="page-title">Thanh toán</h1>
         <Card>
           <div className="pay-warning" role="status">
-            Bạn cần{' '}
+            {t('checkout.guestGate.prefix')}{' '}
             <a
               href="/login"
               onClick={(e) => {
@@ -295,11 +347,34 @@ export default function CheckoutPage(): ReactElement {
               }}
               style={{ color: 'var(--c-primary, #F53D2D)' }}
             >
-              đăng nhập
+              {t('checkout.guestGate.ctaLink')}
             </a>{' '}
-            để thanh toán. Giỏ hàng của bạn vẫn được giữ lại sau khi đăng nhập.
+            {t('checkout.guestGate.middle')}
           </div>
         </Card>
+      </div>
+    );
+  }
+
+  // ── FI-393 T8 — cart đang load (chưa có data): skeleton, KHÔNG rơi vào
+  //    empty-state (guard orderPhase không đổi — phase vẫn 'idle' lúc mount).
+  if (cartLoading && !cart) {
+    return (
+      <div className="cart-page">
+        <h1 className="page-title">{t('checkout.title')}</h1>
+        <div className="checkout-grid">
+          <Card>
+            <Skeleton variant="text" />
+            <Skeleton variant="rect" className="skeleton-line" />
+            <Skeleton variant="rect" className="skeleton-line" />
+          </Card>
+          <Card className="cart-summary">
+            <Skeleton variant="text" />
+            <Skeleton variant="text" />
+            <Skeleton variant="text" />
+            <Skeleton variant="text" />
+          </Card>
+        </div>
       </div>
     );
   }
@@ -308,134 +383,138 @@ export default function CheckoutPage(): ReactElement {
   if (availableItems.length === 0 && orderPhase === 'idle') {
     return (
       <div className="cart-page">
-        <h1 className="page-title">Thanh toán</h1>
+        <h1 className="page-title">{t('checkout.title')}</h1>
         <Card>
-          <p>Không có sản phẩm khả dụng để thanh toán.</p>
-          <Button onClick={() => appNavigate('/cart')}>Về giỏ hàng</Button>
+          <p>{t('checkout.noAvailableItems')}</p>
+          <Button onClick={() => appNavigate('/cart')}>{t('checkout.empty.back')}</Button>
         </Card>
       </div>
     );
   }
 
+  // FI-393 T7 — message lỗi 1 field (catalog) — undefined khi field hợp lệ.
+  const validateField = (name: keyof Address, value: string): string | undefined =>
+    fieldInvalid(name, value) ? t(`checkout.step1.${name}.error`) : undefined;
+
   const onAddressSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const errors = validateAddress(address);
+    const errors: Partial<Record<keyof Address, string>> = {};
+    for (const name of FIELD_NAMES) {
+      const message = validateField(name, address[name]);
+      if (message) errors[name] = message;
+    }
     setAddressErrors(errors);
+    // submit = chạm tất cả field → toàn bộ lỗi hiện như trước (same error set)
+    setTouched({ fullName: true, phone: true, line1: true, ward: true, district: true, city: true });
     if (Object.keys(errors).length === 0) setStep(2);
   };
 
-  const field = (
-    name: keyof Address,
-    label: string,
-    placeholder: string
-  ): ReactElement => (
+  const field = (name: keyof Address): ReactElement => (
     <Input
-      label={label}
+      label={t(`checkout.step1.${name}.label`)}
       name={name}
       value={address[name]}
-      placeholder={placeholder}
-      error={addressErrors[name]}
-      onChange={(e) => setAddress((prev) => ({ ...prev, [name]: e.target.value }))}
+      placeholder={t(`checkout.step1.${name}.placeholder`)}
+      error={touched[name] ? addressErrors[name] : undefined}
+      inputMode={name === 'phone' ? 'tel' : undefined}
+      autoComplete={FIELD_AUTO_COMPLETE[name]}
+      onBlur={() => {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setAddressErrors((prev) => ({ ...prev, [name]: validateField(name, address[name]) }));
+      }}
+      onChange={(e) => {
+        const value = e.target.value;
+        setAddress((prev) => ({ ...prev, [name]: value }));
+        if (touched[name]) {
+          setAddressErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
+        }
+      }}
     />
   );
 
   return (
     <div className="cart-page">
-      <h1 className="page-title">Thanh toán</h1>
+      <h1 className="page-title">{t('checkout.title')}</h1>
 
-      <ol className="stepper" aria-label="Các bước thanh toán">
-        {([1, 2, 3] as const).map((num) => {
-          const labels = { 1: 'Địa chỉ', 2: 'Vận chuyển', 3: 'Thanh toán' } as const;
-          const state =
-            step === num ? ' stepper-item--active' : step > num ? ' stepper-item--done' : '';
-          return (
-            <li
-              key={num}
-              className={`stepper-item${state}`}
-              role={step > num ? 'button' : undefined}
-              tabIndex={step > num ? 0 : undefined}
-              onClick={step > num ? () => setStep(num) : undefined}
-            >
-              <span className="stepper-num">{step > num ? '✓' : num}</span>
-              {labels[num]}
-            </li>
-          );
-        })}
-      </ol>
+      {/* FI-393 T6 — Stepper primitive (ui-kit): nút thật keyboard/roving,
+          disable future steps; click chỉ quay lại bước TRƯỚC (i+1 < step). */}
+      <Stepper
+        steps={[
+          { key: 'address', label: t('checkout.stepper.address') },
+          { key: 'shipping', label: t('checkout.stepper.shipping') },
+          { key: 'payment', label: t('checkout.stepper.payment') }
+        ]}
+        current={step - 1}
+        onStepClick={(i) => {
+          if (i + 1 < step) setStep((i + 1) as 1 | 2 | 3);
+        }}
+        label={t('checkout.stepper.label')}
+      />
 
       <div className="checkout-grid">
         <Card>
           {step === 1 && (
             <form onSubmit={onAddressSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Địa chỉ nhận hàng</h2>
-              {field('fullName', 'Họ tên người nhận', 'Nguyen Van A')}
-              {field('phone', 'Số điện thoại', '0901234567')}
-              {field('line1', 'Số nhà + đường', '12 Nguyen Hue')}
-              {field('ward', 'Phường/xã', 'Ben Nghe')}
-              {field('district', 'Quận/huyện', 'Quan 1')}
-              {field('city', 'Tỉnh/thành phố', 'TP. Hồ Chí Minh')}
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.step1.title')}</h2>
+              {field('fullName')}
+              {field('phone')}
+              {field('line1')}
+              {field('ward')}
+              {field('district')}
+              {field('city')}
               <Button type="submit" variant="primary">
-                Tiếp tục — chọn vận chuyển
+                {t('checkout.continueShipping')}
               </Button>
             </form>
           )}
 
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Phương thức vận chuyển</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.step2.title')}</h2>
               {methodsLoading ? (
-                <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>Đang tải phí vận chuyển…</p>
+                <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>{t('checkout.loadingFee')}</p>
               ) : methods.length === 0 ? (
                 <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>
-                  Không tải được phí vận chuyển — thử quay lại bước địa chỉ.
+                  {t('checkout.feeLoadFail')}
                 </p>
               ) : (
                 methods.map((method) => (
+                  // FI-393 T8 — shipping card (direction §2.4): hover lift,
+                  // selected viền primary + tint + check tròn góc trên-phải.
+                  // Radio native GIỮ trong label (a11y) — ẩn thị giác.
                   <label
                     key={method.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: 12,
-                      cursor: 'pointer',
-                      border:
-                        methodId === method.id
-                          ? '1px solid var(--c-primary, #F53D2D)'
-                          : '1px solid var(--c-border, #EEE)',
-                      borderRadius: 4
-                    }}
+                    className={`shipping-card${methodId === method.id ? ' shipping-card--selected' : ''}`}
                   >
-                    <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input
-                        type="radio"
-                        name="shippingMethod"
-                        value={method.id}
-                        checked={methodId === method.id}
-                        onChange={() => setMethodId(method.id)}
-                        aria-label={method.name}
-                      />
-                      <span>
-                        <strong>{method.name}</strong>
-                        <div className="summary-note">
-                          Dự kiến {method.etaDays} ngày
-                          {method.id.startsWith('ghn:') ? ' — phí GHN theo địa chỉ' : ' (flat-fee)'}
-                        </div>
+                    <input
+                      type="radio"
+                      name="shippingMethod"
+                      className="visually-hidden"
+                      value={method.id}
+                      checked={methodId === method.id}
+                      onChange={() => setMethodId(method.id)}
+                      aria-label={method.name}
+                    />
+                    <span className="shipping-card__body">
+                      <strong>{method.name}</strong>
+                      <span className="shipping-card__eta">{t('checkout.eta', { days: method.etaDays })}</span>
+                      <span className="summary-note">
+                        {method.id.startsWith('ghn:') ? t('checkout.ghnNote') : t('checkout.flatNote')}
                       </span>
                     </span>
-                    <strong style={{ color: 'var(--c-primary, #F53D2D)' }}>
-                      {formatPrice(method.fee)}
-                    </strong>
+                    <strong className="shipping-card__fee">{formatPrice(method.fee)}</strong>
+                    <span className="shipping-card__check" aria-hidden="true">
+                      <Icon name="check" size={12} />
+                    </span>
                   </label>
                 ))
               )}
               <div className="checkout-actions">
                 <Button variant="secondary" onClick={() => setStep(1)}>
-                  ← Quay lại địa chỉ
+                  {t('checkout.backAddress')}
                 </Button>
                 <Button variant="primary" onClick={() => setStep(3)}>
-                  Tiếp tục — thanh toán
+                  {t('checkout.continuePayment')}
                 </Button>
               </div>
             </div>
@@ -443,12 +522,12 @@ export default function CheckoutPage(): ReactElement {
 
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Mã giảm giá</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.coupon.title')}</h2>
               {couponDiscount !== null ? (
                 <div className="coupon-applied">
                   <span>
-                    <strong>{couponCode.trim().toUpperCase()}</strong> — giảm{' '}
-                    {formatPrice(couponDiscount)}
+                    <strong>{couponCode.trim().toUpperCase()}</strong> —{' '}
+                    {t('checkout.coupon.applied', { amount: formatPrice(couponDiscount) })}
                   </span>
                   <button
                     type="button"
@@ -456,23 +535,24 @@ export default function CheckoutPage(): ReactElement {
                     onClick={() => {
                       setCouponDiscount(null);
                       setCouponCode('');
+                      clearCarryCoupon(); // FI-393 T5 — gỡ thủ công → carry cũng hết
                     }}
                   >
-                    Gỡ
+                    {t('checkout.coupon.remove')}
                   </button>
                 </div>
               ) : (
                 <>
                   <div className="coupon-box">
                     <Input
-                      label="Mã giảm giá"
+                      label={t('checkout.coupon.label')}
                       name="coupon"
                       placeholder="WELCOME10"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                     />
                     <Button variant="secondary" disabled={couponChecking} onClick={() => void applyCoupon()}>
-                      {couponChecking ? 'Đang kiểm tra…' : 'Áp dụng'}
+                      {couponChecking ? t('checkout.coupon.checking') : t('checkout.coupon.apply')}
                     </Button>
                   </div>
                   {couponError ? (
@@ -483,12 +563,17 @@ export default function CheckoutPage(): ReactElement {
                 </>
               )}
 
-              <h2 style={{ margin: 0, fontSize: 18 }}>Điểm thưởng</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.points.title')}</h2>
               {pointsBalance !== null && pointsBalance > 0 ? (
                 maxPoints > 0 ? (
                   <div className="coupon-box" data-testid="points-box">
                     <Input
-                      label={`Dùng điểm (có ${pointsBalance.toLocaleString('vi-VN')} điểm · tối đa ${maxPoints.toLocaleString('vi-VN')} ≈ ${formatPrice(maxPoints * POINT_VND)})`}
+                      // FI-393 T7 — label ngắn 1 dòng (key checkout.points.label);
+                      // chi tiết balance đã có trong pill "Dùng N điểm" phía dưới.
+                      label={t('checkout.points.label', {
+                        max: maxPoints.toLocaleString('vi-VN'),
+                        value: formatPrice(maxPoints * POINT_VND)
+                      })}
                       name="usePoints"
                       type="number"
                       min={0}
@@ -500,32 +585,39 @@ export default function CheckoutPage(): ReactElement {
                         setUsePoints(Math.max(0, Math.min(maxPoints, Math.trunc(value))));
                       }}
                     />
+                    {/* FI-393 review-G3 — label ngắn T7 đã bỏ số dư → hiện lại
+                        balance dưới input points (display-only). */}
+                    <div className="summary-note">
+                      {t('checkout.points.balance', { points: pointsBalance.toLocaleString('vi-VN') })}
+                    </div>
                     {effectivePoints > 0 && (
                       <div className="coupon-applied">
                         <span>
-                          Dùng <strong>{effectivePoints.toLocaleString('vi-VN')}</strong> điểm — giảm{' '}
-                          {formatPrice(pointsDiscountValue)}
+                          {t('checkout.points.use', {
+                            points: effectivePoints.toLocaleString('vi-VN'),
+                            amount: formatPrice(pointsDiscountValue)
+                          })}
                         </span>
                         <button type="button" className="cart-line-remove" onClick={() => setUsePoints(0)}>
-                          Gỡ
+                          {t('checkout.points.remove')}
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
                   <p className="summary-note" style={{ margin: 0 }}>
-                    Đơn hiện tại chưa dùng được điểm (giá trị hàng sau giảm giá phải ≥ {formatPrice(POINT_VND)}).
+                    {t('checkout.points.notEligible', { amount: formatPrice(POINT_VND) })}
                   </p>
                 )
               ) : (
                 <p className="summary-note" style={{ margin: 0 }}>
-                  Bạn có {pointsBalance === 0 ? '0 điểm' : 'chưa có điểm'} — mua hàng CONFIRMED sẽ nhận 1% điểm.
+                  {pointsBalance === 0 ? t('checkout.points.none') : t('checkout.points.noPoints')}
                 </p>
               )}
 
-              <h2 style={{ margin: 0, fontSize: 18 }}>Thanh toán</h2>
-              <div className="pay-methods" role="radiogroup" aria-label="Phương thức thanh toán">
-                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.payment.title')}</h2>
+              <div className="pay-methods" role="radiogroup" aria-label={t('checkout.payment.title')}>
+                <label className={`pay-method${paymentMethod === 'stripe' ? ' pay-method--selected' : ''}`}>
                   <input
                     type="radio"
                     name="payment-method"
@@ -535,9 +627,9 @@ export default function CheckoutPage(): ReactElement {
                     onChange={() => setPaymentMethod('stripe')}
                     data-testid="payment-method-stripe"
                   />
-                  <span>Thẻ quốc tế (Stripe)</span>
+                  <span>{t('checkout.payment.stripe')}</span>
                 </label>
-                <label className="pay-method" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className={`pay-method${paymentMethod === 'cod' ? ' pay-method--selected' : ''}`}>
                   <input
                     type="radio"
                     name="payment-method"
@@ -547,18 +639,24 @@ export default function CheckoutPage(): ReactElement {
                     onChange={() => setPaymentMethod('cod')}
                     data-testid="payment-method-cod"
                   />
-                  <span>COD — Thanh toán khi nhận hàng</span>
+                  <span>{t('checkout.payment.cod')}</span>
                 </label>
               </div>
               {paymentMethod === 'cod' ? (
                 <div className="cod-note" role="note" data-testid="cod-note">
-                  Kiểm tra hàng và thanh toán tiền mặt khi nhận — đơn được xác nhận ngay.
+                  {t('checkout.codNote')}
                 </div>
               ) : null}
               {payUnavailable ? (
                 <div className="pay-warning" role="status">
-                  ⚠ Đơn <strong data-testid="pending-order-id">{created?.order.id}</strong> đã tạo nhưng chưa
-                  mount được form thẻ (thiếu <code>VITE_STRIPE_PUBLISHABLE_KEY</code>). Vào{' '}
+                  ⚠{' '}
+                  {/* catalog prefix nhúng {{id}} — testid bọc RIÊNG id qua
+                      visually-hidden (textContent = đúng id cho SF-6), câu hiển
+                      thị lấy từ key prefix; i18n pkg READ-ONLY nên không tách key */}
+                  <span className="visually-hidden" data-testid="pending-order-id">
+                    {created?.order.id}
+                  </span>
+                  {t('checkout.payUnavailable.prefix', { id: created?.order.id })}{' '}
                   <a
                     href="/account/orders"
                     onClick={(e) => {
@@ -567,9 +665,9 @@ export default function CheckoutPage(): ReactElement {
                     }}
                     style={{ color: 'var(--c-primary, #F53D2D)' }}
                   >
-                    Đơn hàng của tôi
+                    {t('checkout.payUnavailable.ctaLink')}
                   </a>{' '}
-                  để thanh toán — đơn chưa trả sẽ tự hủy sau 30 phút.
+                  {t('checkout.payUnavailable.suffix')}
                 </div>
               ) : (
                 <div ref={payRef} className="pay-panel" />
@@ -583,12 +681,13 @@ export default function CheckoutPage(): ReactElement {
               {orderPhase === 'idle' ? (
                 <Button
                   variant="primary"
+                  className="btn-order"
                   onClick={() => void placeOrder()}
                   data-testid="place-order-btn"
                 >
                   {paymentMethod === 'cod'
-                    ? `Đặt hàng COD — ${formatPrice(total)}`
-                    : `Kiểm tra & tạo đơn — ${formatPrice(total)}`}
+                    ? t('checkout.placeOrder.cod', { total: formatPrice(total) })
+                    : t('checkout.placeOrder.card', { total: formatPrice(total) })}
                 </Button>
               ) : payUnavailable || paymentMethod === 'cod' ? null : (
                 <Button
@@ -596,12 +695,12 @@ export default function CheckoutPage(): ReactElement {
                   disabled={orderPhase !== 'awaiting-card' || !elementReady}
                   onClick={() => void payWithCard()}
                 >
-                  {orderPhase === 'confirming' ? 'Đang xử lý thẻ…' : 'Thanh toán bằng thẻ'}
+                  {orderPhase === 'confirming' ? t('checkout.payingCard') : t('checkout.payByCard')}
                 </Button>
               )}
               <div className="checkout-actions">
                 <Button variant="secondary" onClick={() => setStep(2)}>
-                  ← Quay lại vận chuyển
+                  {t('checkout.backShipping')}
                 </Button>
               </div>
             </div>
@@ -609,45 +708,49 @@ export default function CheckoutPage(): ReactElement {
         </Card>
 
         <Card className="cart-summary">
-          <h2 style={{ margin: 0, fontSize: 18 }}>Đơn hàng</h2>
+          <h2 style={{ margin: 0, fontSize: 18 }}>{t('checkout.summary.title')}</h2>
           {availableItems.map((item) => (
-            <div className="summary-row" key={item.id}>
-              <span>
-                {item.name ?? 'Sản phẩm'} × {item.qty}
+            // FI-393 T8 — line có ảnh 56px + qty badge; .summary-row GIỮ trên row
+            <div className="summary-row summary-item" key={item.id}>
+              <span className="summary-item__thumb">
+                <img src={item.image || IMG_FALLBACK} alt={item.name ?? 'Sản phẩm'} />
+                <span className="summary-item__qty">{item.qty}</span>
               </span>
-              <span>{formatPrice(item.lineTotal)}</span>
+              <span className="summary-item__name">{item.name ?? 'Sản phẩm'}</span>
+              <span className="summary-item__price">{formatPrice(item.lineTotal)}</span>
             </div>
           ))}
           <hr className="summary-divider" />
           <div className="summary-row">
-            <span>Tạm tính</span>
+            <span>{t('checkout.summary.subtotal')}</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
           {discount > 0 && (
             <div className="summary-row summary-row--discount">
-              <span>Giảm giá</span>
+              <span>{t('checkout.summary.discount')}</span>
               <span className="summary-value">−{formatPrice(discount)}</span>
             </div>
           )}
           {pointsDiscountValue > 0 && (
             <div className="summary-row summary-row--discount" data-testid="summary-points">
-              <span>Điểm thưởng ({effectivePoints.toLocaleString('vi-VN')})</span>
+              <span>{t('checkout.summary.points', { points: effectivePoints.toLocaleString('vi-VN') })}</span>
               <span className="summary-value">−{formatPrice(pointsDiscountValue)}</span>
             </div>
           )}
           <div className="summary-row">
             {/* SF-3 honesty-pass (ADR 0006 D15-3): phí phẳng — nhãn trung thực,
                 không giả vờ báo giá GHN thời gian thực. */}
-            <span>Phí vận chuyển (phí tiêu chuẩn)</span>
+            <span>{t('checkout.summary.shipping')}</span>
             <span>{formatPrice(selectedFee)}</span>
           </div>
           <hr className="summary-divider" />
           <div className="summary-row summary-row--total">
-            <span>Tổng cộng</span>
+            <span>{t('checkout.summary.total')}</span>
             <span>{formatPrice(total)}</span>
           </div>
           <div className="summary-note">
-            Địa chỉ: {[address.line1, address.ward, address.district, address.city].filter(Boolean).join(', ') || '—'}
+            {t('checkout.summary.shipTo')}{' '}
+            {[address.line1, address.ward, address.district, address.city].filter(Boolean).join(', ') || '—'}
           </div>
         </Card>
       </div>

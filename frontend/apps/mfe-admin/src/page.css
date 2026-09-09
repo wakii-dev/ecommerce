@@ -49,9 +49,14 @@
   gap: 2px;
 }
 
+/* Nav item: icon 18 + label cùng hàng (icon kế thừa currentColor → active
+   theo --c-link của --active tự động) — MỘT block duy nhất (review G1 P2:
+   trước đây bị tách 2 nơi display:block/flex). */
 .admin-nav-link {
-  display: block;
-  padding: 11px 16px; /* §2.6 nav item 11px 16px, 14px/600 */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 10px 16px; /* §2.5 nav item 10px 16px, 14px/600 */
   border-left: 3px solid transparent;
   color: var(--c-text-muted, #757575);
   text-decoration: none;
@@ -124,10 +129,64 @@
   margin: 0 auto;
 }
 
-.admin-booting,
-.admin-guard {
+/* ── Guard / error states (SF-5 FI-395) ─────────────────────────────── */
+.admin-booting {
   padding: var(--space-8, 64px) var(--space-4, 16px);
   color: var(--c-text-muted, #757575);
+}
+
+/* Guest/forbidden — card elevated 480px căn giữa (surface + border +
+   radius-lg + shadow-1), EmptyState bên trong tự center (uk-empty grid). */
+.admin-guard {
+  max-width: 480px;
+  margin: var(--space-8, 64px) auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #e5e7eb);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-1);
+}
+
+/* Icon 403 — tint circle thay emoji (size 28 trong vòng 56px) */
+.admin-guard__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
+  color: var(--tint-primary-text);
+}
+
+/* Elevation: title 18px/800 lớn hơn text-base/700 mặc định của uk-empty */
+.admin-guard .uk-empty__title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* Link sang shell login — Button-like tint-primary, hover nhấc nhẹ */
+.admin-guard__login {
+  display: inline-block;
+  margin-top: var(--space-4, 16px);
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: var(--radius-md, 8px);
+  color: var(--tint-primary-text);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    transform var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.admin-guard__login:hover {
+  background: var(--wash-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
 }
 
 /* ── Page header pattern (title + actions) ───────────────────────────── */
@@ -163,7 +222,7 @@
 .admin-form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-4, 16px);
+  gap: var(--space-5, 24px); /* T6: thoáng hơn space-4 cho form dài */
 }
 
 .admin-form-grid .admin-form-field--full {
@@ -187,19 +246,12 @@
   color: var(--c-text-muted, #757575);
 }
 
-.admin-error-text {
+/* Audit/Newsletter render role="alert" qua .admin-error — cùng typography
+   danger với .admin-error-text (T10 unify) */
+.admin-error-text,
+.admin-error {
   font-size: 12px;
   color: var(--c-danger, #d0011b);
-}
-
-.admin-badge-mock {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  border: 1px dashed var(--c-text-muted, #757575);
-  color: var(--c-text-muted, #757575);
-  border-radius: 999px;
-  padding: 1px 8px;
 }
 
 /* ── Pagination ──────────────────────────────────────────────────────── */
@@ -233,9 +285,46 @@
   display: grid;
   grid-template-columns: 1.2fr 1.2fr 1.4fr 0.8fr 0.8fr auto;
   gap: var(--space-2, 8px);
-  align-items: end;
-  padding-block: var(--space-2, 8px);
+  align-items: center; /* T6: hàng thấp — căn giữa thay vì đáy */
+  padding-block: var(--space-3, 12px); /* T6: ranh giới hàng rõ hơn */
   border-bottom: 1px dashed var(--c-border, #e5e7eb);
+}
+
+/* Tránh viền đôi: hàng cuối kề ngay nút "+ Thêm" — bỏ gạch dashed cuối */
+.admin-variant-row:last-child {
+  border-bottom: none;
+}
+
+/* ── Upload dropzone (product form — images tab) — VISUAL ONLY: cùng input
+   file ẩn + cùng click flow + cùng testid 'upload-image' (FI-395 T6) ── */
+.admin-upload-dropzone {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-4, 16px) var(--space-5, 24px);
+  border: 1.5px dashed var(--tint-primary-border, #fbc8c2);
+  border-radius: var(--radius-md, 4px);
+  background: transparent;
+  color: var(--c-text-muted, #757575);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.admin-upload-dropzone:hover:not(:disabled) {
+  background: var(--tint-primary-bg, #fff1f0);
+  color: var(--c-text, #212121);
+}
+
+.admin-upload-dropzone:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 /* ── Order detail ────────────────────────────────────────────────────── */
@@ -267,6 +356,54 @@
   font-size: 15px;
 }
 
+/* ── Order timeline (SF-5 FI-395) — direction §4: chấm tròn 10px + đường
+   1px --c-border, mốc hoàn thành (event mới nhất) nền --c-success ────── */
+.admin-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-timeline__item {
+  position: relative;
+  display: flex;
+  gap: var(--space-3, 12px);
+  padding-bottom: var(--space-4, 16px);
+}
+
+.admin-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+/* Đường nối dọc tâm dot (5px) trừ nửa stroke (0.5px) — chỉ giữa 2 item */
+.admin-timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 14px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--c-border);
+}
+
+.admin-timeline__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 4px; /* căn dòng status 13px/600 */
+  border-radius: var(--radius-full);
+  background: var(--c-border);
+}
+
+.admin-timeline__item--latest .admin-timeline__dot {
+  background: var(--c-success);
+}
+
+.admin-timeline__status {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ── Dashboard KPI + charts ──────────────────────────────────────────── */
 /* §2.6 khối dữ liệu admin: bo --radius-md (uk-card mặc định --radius-lg) */
 .admin-body .uk-card {
@@ -275,6 +412,28 @@
 
 .admin-kpi {
   padding: var(--space-4, 16px);
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--dur-base, 180ms) var(--ease-out, ease-out),
+    box-shadow var(--dur-base, 180ms) var(--ease-out, ease-out);
+}
+
+/* Top accent tint — điểm nhấn nhẹ theo direction §2.5 (tint-primary) */
+.admin-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--tint-primary-border, #fbc8c2);
+}
+
+/* Hover cascade §3.1 — tile nhỏ chỉ lên shadow-2 (không nhảy 1→3) */
+.admin-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2, 0 2px 8px rgba(0, 0, 0, 0.12));
 }
 
 .admin-kpi-row {
@@ -285,10 +444,10 @@
 }
 
 .admin-kpi__label {
-  font-size: 11px; /* §2.6 label 11px/700 uppercase ls 1px */
+  font-size: 11px; /* §2.5 label 11px/700 uppercase ls .08em */
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
   color: var(--c-text-muted, #757575);
 }
 
@@ -304,7 +463,7 @@
   display: inline-block;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em; /* §2.5 pill 11/800 ls .05 padding 3×9 */
   padding: 3px 9px;
   border-radius: var(--radius-full, 999px);
   vertical-align: middle;
@@ -359,6 +518,11 @@
   fill: var(--c-primary, #f53d2d);
 }
 
+/* Tooltip cursor — dải hover sau cột/cột bar tô wash cho khớp row-hover */
+.admin-chart .recharts-tooltip-cursor {
+  fill: var(--wash-hover, #fafafa);
+}
+
 /* ── T9 responsive ≤900px: admin sidebar collapse → strip ngang scroll-x
    (direction §4: dưới 900px sidebar chuyển ngang) ── */
 @media (max-width: 900px) {
@@ -379,6 +543,19 @@
 
   .admin-side__brand {
     white-space: nowrap;
+  }
+
+  /* User trong strip ngang: margin-top:auto pin dọc vô nghĩa + nowrap links
+     chèn ép — đổi thành item cuối hàng, đẩy phải bằng margin-left:auto
+     (review G1 P2). */
+  .admin-side__user {
+    margin-top: 0;
+    margin-left: auto;
+    flex-shrink: 0; /* reviewer P2 (FI-395): nav scroll-x chèn ép user — giữ nguyên khối */
+    white-space: nowrap;
+    border-top: none;
+    border-left: 1px solid var(--c-border);
+    padding-top: 0;
   }
 
   .admin-side__nav {
@@ -418,4 +595,200 @@
   .admin-order-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Sidebar groups + icons (SF-5 FI-395) ────────────────────────────── */
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Direction §2.5: group label 11px uppercase tracking .12em muted */
+.admin-nav-group__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--c-text-muted);
+  margin: var(--space-4, 16px) var(--space-3, 12px) var(--space-1, 4px);
+}
+
+.admin-nav-group:first-child .admin-nav-group__label {
+  margin-top: 0;
+}
+
+.admin-nav-link__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* User block cuối sidebar — direction §2.5 border-top */
+.admin-side__user {
+  margin-top: auto; /* đẩy xuống đáy sidebar */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+  padding: var(--space-4, 16px) var(--space-2, 8px) 0;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px;
+}
+
+.admin-side__user-name {
+  font-weight: 600;
+  color: var(--c-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-side__user-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-link);
+  background: var(--tint-primary-bg);
+  border: 1px solid var(--tint-primary-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* ≤900px strip ngang: giữ flat scroll — group item xếp hàng, ẩn label */
+@media (max-width: 900px) {
+  .admin-nav-group {
+    flex-direction: row;
+  }
+
+  .admin-nav-group__label {
+    display: none;
+  }
+}
+
+/* ── DataTable: sticky/sort/hover + page-size (SF-5 FI-395) ──────────── */
+.admin-table-block {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  overflow: auto;
+  max-height: none;
+}
+
+.admin-table {
+  width: 100%;
+}
+
+/* Direction §2.5: thead sticky top 0, nền surface, shadow 0 1px 0 border;
+   th 11/700 uppercase tracking .08em muted */
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--c-surface);
+  box-shadow: 0 1px 0 var(--c-border);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+/* Nút sort trong th — reset button, kế thừa typography th */
+.admin-th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.admin-th-sort:hover {
+  color: var(--c-link);
+}
+
+/* Mũi tên 9px — none muted, asc/desc primary (desc xoay 180) */
+.admin-th-sort__arrow {
+  font-size: 9px;
+  display: inline-block;
+  transition: transform var(--dur-fast) var(--ease-pop),
+    color var(--dur-fast) var(--ease-pop);
+}
+
+.admin-th-sort__arrow--none {
+  color: var(--c-text-muted);
+}
+
+.admin-th-sort__arrow--asc {
+  color: var(--c-primary);
+}
+
+.admin-th-sort__arrow--desc {
+  color: var(--c-primary);
+  transform: rotate(180deg);
+}
+
+/* Align center — ui-kit chỉ có uk-table__right; center admin-local */
+.admin-table th.admin-table__center,
+.admin-table td.admin-table__center {
+  text-align: center;
+}
+
+/* Direction §2.5: row hover nền --wash-hover chuyển --dur-fast */
+.admin-table tbody td {
+  transition: background var(--dur-fast) var(--ease-pop);
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--wash-hover);
+}
+
+/* ── Page-size selector — direction §2.5: nhóm nút padding 5×11,
+   active nền primary chữ trắng (pattern uk-btn--primary) ────────────── */
+.admin-pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-pagesize__label {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.admin-pagesize__btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 11px;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-pop),
+    color var(--dur-fast) var(--ease-pop);
+}
+
+.admin-pagesize__btn:hover {
+  background: var(--wash-hover);
+}
+
+.admin-pagesize__btn--active,
+.admin-pagesize__btn--active:hover {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: var(--c-surface);
+  font-weight: 700;
 }

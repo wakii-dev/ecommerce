@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useT } from '@ecommerce/i18n';
-import { Badge, Button, Card, Modal, Skeleton, useToast } from '@ecommerce/ui-kit';
+import { Badge, Button, Card, Icon, Modal, Skeleton, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { orderingApi } from '../lib/api';
 import { downloadAdminInvoice } from '../lib/invoice';
@@ -89,18 +89,18 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
             ← {t('admin.orders.title')}
           </Button>
           <Button variant='secondary' onClick={() => void onDownloadInvoice()}>
-            ⬇ {t('admin.orders.invoice')}
+            <Icon name='external' size={16} /> {t('admin.orders.invoice')}
           </Button>
           {/* State machine §3.6 — ship/deliver/cancel, KHÔNG có nút confirm
               (PENDING→PAID là webhook Stripe, không phải admin action). */}
           {canShip(order.status) && (
             <Button disabled={transition.isPending} onClick={() => transition.mutate({ action: 'ship' })}>
-              🚚 {t('admin.orders.ship')}
+              <Icon name='package' size={16} /> {t('admin.orders.ship')}
             </Button>
           )}
           {canDeliver(order.status) && (
             <Button disabled={transition.isPending} onClick={() => transition.mutate({ action: 'deliver' })}>
-              ✓ {t('admin.orders.deliver')}
+              <Icon name='check' size={16} /> {t('admin.orders.deliver')}
             </Button>
           )}
           {canCancel(order.status) && (
@@ -109,7 +109,7 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
               disabled={transition.isPending}
               onClick={() => setConfirmingCancel(true)}
             >
-              ✕ {t('admin.orders.cancel')}
+              <Icon name='x' size={16} /> {t('admin.orders.cancel')}
             </Button>
           )}
         </div>
@@ -190,11 +190,19 @@ export default function OrderDetailPage({ id }: OrderDetailPageProps): ReactElem
           </Card>
           <Card>
             <h3>{t('admin.orders.timeline')}</h3>
-            <ol style={{ margin: 0, paddingInlineStart: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* SF-5 FI-395 §4: timeline = dot 10px + line 1px c-border; event
+                mới nhất (đầu sau reverse) dot nền c-success. Data/logic giữ. */}
+            <ol className='admin-timeline'>
               {[...order.timeline].reverse().map((event, i) => (
-                <li key={i}>
-                  <div style={{ fontSize: 13 }}>{t(`admin.status.${event.status}`)}</div>
-                  <div className='admin-hint'>{formatDateTime(event.at)}</div>
+                <li
+                  key={i}
+                  className={i === 0 ? 'admin-timeline__item admin-timeline__item--latest' : 'admin-timeline__item'}
+                >
+                  <span className='admin-timeline__dot' aria-hidden='true' />
+                  <div>
+                    <div className='admin-timeline__status'>{t(`admin.status.${event.status}`)}</div>
+                    <div className='admin-hint'>{formatDateTime(event.at)}</div>
+                  </div>
                 </li>
               ))}
             </ol>

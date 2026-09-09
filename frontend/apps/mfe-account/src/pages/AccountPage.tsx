@@ -2,18 +2,28 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { Badge, Button, Card, Input } from '@ecommerce/ui-kit';
 import { authStore, useAuth } from '@ecommerce/auth';
+import { useT } from '@ecommerce/i18n';
 import { fetchProfile, updateProfile } from '../api';
 import type { MeProfile } from '../api';
 import TwoFactorSection from './twofa/TwoFactorSection';
+import { AccountLayout } from '../AccountLayout';
 import { appNavigate, authReady } from '../bootstrap';
 import '../page.css';
 
+// Định dạng phone vi: 0 hoặc +84, theo 8-10 chữ số. Optional field — rỗng hợp lệ.
+// Normalize trước validate lẫn submit: data legacy có khoảng trắng/chấm/gạch/
+// ngoặc ('0901 234 567') không bị chặn — lưu về dạng chữ số liền.
+const PHONE_RE = /^(0|\+84)\d{8,10}$/;
+const normalizePhone = (value: string): string => value.replace(/[\s.\-()]/g, '');
+
 export default function AccountPage(): ReactElement {
+  const { t } = useT();
   const { user } = useAuth();
   const [profile, setProfile] = useState<MeProfile | null>(null);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; phone?: string }>({});
+  const [touched, setTouched] = useState<{ fullName?: boolean; phone?: boolean }>({});
   const [banner, setBanner] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,17 +57,42 @@ export default function AccountPage(): ReactElement {
     };
   }, []);
 
+  // SF-4 T4: validate realtime on-blur — pattern trang auth (T2): validateField
+  // thuần string, error hiện khi field đã chạm (blur/submit), onChange sau chạm
+  // re-validate. Phone optional — rỗng hợp lệ, có nhập thì phải khớp format vi.
+  const validateField = (field: 'fullName' | 'phone', value: string): string | undefined => {
+    if (field === 'fullName') return value.trim().length >= 1 ? undefined : t('account.profile.fullNameRequired');
+    if (value.trim() === '') return undefined;
+    return PHONE_RE.test(normalizePhone(value.trim())) ? undefined : t('account.profile.phoneInvalid');
+  };
+
+  const onBlurField = (field: 'fullName' | 'phone', value: string): void => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  };
+
+  const onChangeField = (field: 'fullName' | 'phone', value: string): void => {
+    if (field === 'fullName') setFullName(value);
+    else setPhone(value);
+    if (touched[field]) setFieldErrors((prev) => ({ ...prev, [field]: validateField(field, value) }));
+  };
+
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setBanner(null);
     setSaved(false);
-    const errors: { fullName?: string } = {};
-    if (fullName.trim().length < 1) errors.fullName = 'Vui lòng nhập họ tên';
+    // Submit = validate tất cả + touch tất cả (pattern T2). API shape GIỮ nguyên.
+    const errors: { fullName?: string; phone?: string } = {
+      fullName: validateField('fullName', fullName),
+      phone: validateField('phone', phone)
+    };
+    setTouched({ fullName: true, phone: true });
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (errors.fullName || errors.phone) return;
 
     setLoading(true);
-    updateProfile({ fullName, phone: phone.trim() === '' ? null : phone.trim() })
+    const normalizedPhone = normalizePhone(phone.trim());
+    updateProfile({ fullName, phone: normalizedPhone === '' ? null : normalizedPhone })
       .then((me) => {
         // Profile claim trong JWT cũ không đổi — cập nhật state cục bộ;
         // tên trên header (đọc từ token) áp ở lần refresh sau.
@@ -72,7 +107,7 @@ export default function AccountPage(): ReactElement {
         setBanner(
           err instanceof Error && err.name === 'ApiErrorClient'
             ? (err as Error & { detail?: string }).detail || err.message
-            : 'Có lỗi xảy ra — thử lại'
+            : t('account.profile.errorGeneric')
         );
       })
       .finally(() => setLoading(false));
@@ -80,27 +115,35 @@ export default function AccountPage(): ReactElement {
 
   const email = profile?.email ?? user?.email ?? '—';
   const role = profile?.roles?.[0] ?? user?.roles?.[0] ?? 'CUSTOMER';
+  // Role badge: tint + label theo role; giá trị lạ → fallback raw role (neutral).
+  const ROLE_BADGE: Record<string, { variant: 'neutral' | 'primary'; labelKey: string }> = {
+    CUSTOMER: { variant: 'neutral', labelKey: 'account.profile.roleCustomer' },
+    ADMIN: { variant: 'primary', labelKey: 'account.profile.roleAdmin' }
+  };
+  const roleMeta = ROLE_BADGE[role] ?? { variant: 'neutral' as const, labelKey: '' };
 
   return (
-    <div className="auth-page">
+    <AccountLayout active="account">
       <div className="account-grid">
         <Card className="account-info">
-          <h1 className="auth-title">Tài khoản</h1>
+          <h1 className="auth-title">{t('account.profile.title')}</h1>
           <dl className="account-rows">
             <div className="account-row">
-              <dt>Email</dt>
+              <dt>{t('account.profile.email')}</dt>
               <dd>{email}</dd>
             </div>
             <div className="account-row">
-              <dt>Vai trò</dt>
+              <dt>{t('account.profile.role')}</dt>
               <dd>
-                <Badge variant="primary">{role}</Badge>
+                <Badge variant={roleMeta.variant}>
+                  {roleMeta.labelKey ? t(roleMeta.labelKey) : role}
+                </Badge>
               </dd>
             </div>
           </dl>
         </Card>
         <Card className="account-form-card">
-          <h2 className="auth-subtitle">Thông tin cá nhân</h2>
+          <h2 className="auth-subtitle">{t('account.profile.personalInfo')}</h2>
           {banner ? (
             <div className="auth-error" role="alert">
               {banner}
@@ -108,30 +151,34 @@ export default function AccountPage(): ReactElement {
           ) : null}
           {saved ? (
             <div className="auth-saved" role="status">
-              Đã lưu
+              {t('account.profile.saved')}
             </div>
           ) : null}
           <form onSubmit={onSubmit} noValidate>
             <Input
-              label="Họ tên"
+              label={t('account.profile.fullName')}
               type="text"
               name="fullName"
               autoComplete="name"
               value={fullName}
               error={fieldErrors.fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onBlur={(e) => onBlurField('fullName', e.target.value)}
+              onChange={(e) => onChangeField('fullName', e.target.value)}
             />
             <Input
-              label="Số điện thoại"
+              label={t('account.profile.phone')}
               type="tel"
               name="phone"
+              inputMode="tel"
               autoComplete="tel"
-              placeholder="0901234567"
+              placeholder={t('account.profile.phonePlaceholder')}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              error={fieldErrors.phone}
+              onBlur={(e) => onBlurField('phone', e.target.value)}
+              onChange={(e) => onChangeField('phone', e.target.value)}
             />
             <Button type="submit" variant="primary" loading={loading}>
-              Lưu
+              {t('account.profile.save')}
             </Button>
           </form>
         </Card>
@@ -143,6 +190,6 @@ export default function AccountPage(): ReactElement {
           }}
         />
       </div>
-    </div>
+    </AccountLayout>
   );
 }

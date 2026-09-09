@@ -89,7 +89,7 @@ test('payment fail → FAILED + stock released + coupon reusable', async ({ page
   // ── login UI + add to cart ──
   await page.goto(`${SHELL}/login`);
   await page.getByLabel('Email').fill(user.email);
-  await page.getByLabel('Mật khẩu').fill(user.password);
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(user.password);
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
   // về PDP bằng URL trực tiếp (goBack không restore tab/state — live-verify r2)

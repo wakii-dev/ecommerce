@@ -1,5 +1,8 @@
+import Link from 'next/link';
+
 import { categoryGradient, type Category } from '../../lib/catalog-api';
 import { localePath, type Locale } from '../../lib/format';
+import { t } from '../../lib/i18n';
 
 /**
  * Category tiles (direction §2.2.3) — grid 6 cột (≤900px: 3), tile gradient
@@ -9,6 +12,10 @@ import { localePath, type Locale } from '../../lib/format';
  *
  * Public CategoryDto KHÔNG có icon (seed backend có nhưng không expose) →
  * emoji map theo slug gốc (khớp icon seed), thiếu → cycle theo vị trí.
+ *
+ * Honesty: count 11px muted (§2.2.3) KHÔNG render — Category DTO (catalogSchema
+ * "Category": id, slug, slugEn, name, parentId, children) không có
+ * `productCount` → không bịa số.
  */
 
 const EMOJI_BY_SLUG: ReadonlyArray<readonly [RegExp, string]> = [
@@ -33,10 +40,10 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
   if (categories.length === 0) return null;
 
   return (
-    <section className="cat-section" aria-label="Danh mục nổi bật">
+    <section className="cat-section" aria-label={t(locale, 'home.categoriesTitle')}>
       <div className="cat-grid">
         {categories.map((category, index) => (
-          <a
+          <Link
             key={category.id}
             className="cat-tile"
             href={localePath(`/c/${category.slug}`, locale)}
@@ -46,13 +53,13 @@ export default function CategoryTiles({ categories, locale }: { categories: Cate
               {emojiFor(category.slug, index)}
             </span>
             <span className="cat-name">{category.name}</span>
-          </a>
+          </Link>
         ))}
         {/* Trang "tất cả danh mục" chưa có → /search là surface duyệt chung
             (empty-q có gợi ý từ khóa, không phải dead end). */}
-        <a className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
-          {locale === 'en' ? 'See more →' : 'Xem thêm →'}
-        </a>
+        <Link className="cat-tile cat-tile--more" href={localePath('/search', locale)}>
+          {t(locale, 'home.seeMoreTile')}
+        </Link>
       </div>
     </section>
   );

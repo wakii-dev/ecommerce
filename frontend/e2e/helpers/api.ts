@@ -111,23 +111,25 @@ export async function mailpitAttachmentNames(id: string): Promise<string[]> {
 // ── Postgres helper (cleanup state spec — pattern mongoEventLogCount) ──────
 
 export async function pgExec(db: string, sql: string): Promise<string> {
-  const { execSync } = await import('node:child_process');
+  const { execFileSync } = await import('node:child_process');
   const path = require('node:path') as typeof import('node:path');
   const repoRoot = path.resolve(__dirname, '../../..');
   // SF-5 (FI-402): rig isolate chạy compose project riêng — E2E_PG_CONTAINER
   // trỏ thẳng container postgres của rig (docker exec không cần project).
   // Mặc định giữ hành vi cũ (compose exec trên stack chính).
   const container = process.env.E2E_PG_CONTAINER;
-  const cmd = container
-    ? `docker exec ${container} psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`
-    : `docker compose exec -T postgres psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`;
-  return execSync(cmd, { encoding: 'utf8', cwd: repoRoot }).trim();
+  // FI-402 security P2: execFileSync arg-array — SQL/identifiers không đi qua
+  // /bin/sh (chống command-injection footgun khi spec pass dữ liệu động).
+  const { args, cmd } = container
+    ? { args: ['exec', container, 'psql', '-U', 'postgres', '-d', db, '-tAc', sql], cmd: 'docker' }
+    : { args: ['compose', 'exec', '-T', 'postgres', 'psql', '-U', 'postgres', '-d', db, '-tAc', sql], cmd: 'docker' };
+  return execFileSync(cmd, args, { encoding: 'utf8', cwd: repoRoot }).trim();
 }
 
 // ── Mongo event_log (§5.8) — qua mongosh trong container ───────────────────
 
 export async function mongoEventLogCount(eventType?: string): Promise<number> {
-  const { execSync } = await import('node:child_process');
+  const { execFileSync } = await import('node:child_process');
   const filter = eventType ? `db.event_log.countDocuments({eventType:'${eventType}'})` : 'db.event_log.countDocuments({})';
   // repo root từ __dirname (frontend/e2e/helpers → ../../..) — process.cwd()
   // lệch khi chạy qua make e2e (code-review P1)

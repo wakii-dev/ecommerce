@@ -5,16 +5,24 @@ import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/fonts';
+import '@ecommerce/chrome/styles.css';
 import './base.css';
-import './header.css';
+import './header.css'; // vẫn style shell-owned: .shell-logo/.shell-search/.shell-mininav* (chrome.css KHÔNG dup)
 import App from './App';
 import { ShellNav } from './header/Header';
 import ShellSearch from './header/ShellSearch';
-import { HeaderSlots } from './header/HeaderSlots';
+import { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots, ThemeToggle, setChromeSite, storedLang } from '@ecommerce/chrome';
 import { navigate } from './router';
 import { initGa } from './ga';
-import ThemeToggle from './ThemeToggle';
 import { injectLiveChat } from './livechat';
+
+// Site helpers chrome (FI-398 T6, spec §3.4 — pin P1 critic): shell KHÔNG có
+// env self-URL → shellUrl '' = same-origin relative (link /cart đúng ở mọi
+// port kể cả rig +500); sfUrl từ env (unset → default http://localhost:3000).
+setChromeSite({
+  sfUrl: import.meta.env.VITE_STOREFRONT_URL as string | undefined,
+  shellUrl: ''
+});
 
 // Chip kiểm chứng React singleton (Task 14): shell gắn bản React CỦA MÌNH lên
 // window TRƯỚC khi module nào của remote được nạp (import động chạy sau
@@ -43,7 +51,7 @@ injectLiveChat();
 // down (catch chỉ warn — auth widget tạm vắng). Khi registry đổi, remote gọi
 // onRegistryChange → dispatch event → App.tsx bump re-render Header.
 const onHeaderSlotsChanged = (): void => {
-  window.dispatchEvent(new CustomEvent('ecommerce:header-slots-changed'));
+  window.dispatchEvent(new CustomEvent(HEADER_SLOTS_CHANGED_EVENT));
 };
 import('account/bootstrap')
   .then((m) => m.initAccountShell({ HeaderSlots, navigate, onRegistryChange: onHeaderSlotsChanged }))
@@ -71,7 +79,9 @@ initGa();
 // của nó, không phải instance initI18n() đã nạp resources => header/Home
 // render raw key "nav.home". Bind CHẮC qua I18nextProvider (cùng pattern
 // AdminApp.tsx đã dùng).
-void initI18n().then((i18n) => {
+// Lang đã lưu (FI-398 T12, spec §3.9): storedLang() đọc 'ecommerce.lang'
+// (an toàn private mode → null) — reload giữ lựa chọn LocaleSwitcher.
+void initI18n({ lang: storedLang() ?? 'vi' }).then((i18n) => {
   createRoot(document.getElementById('root')!).render(
     <I18nextProvider i18n={i18n}>
       <App />

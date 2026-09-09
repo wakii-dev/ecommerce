@@ -1,39 +1,37 @@
 {
-  "name": "@ecommerce/mfe-admin",
+  "name": "@ecommerce/chrome",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/chrome.css"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
     "@ecommerce/auth": "workspace:*",
-    "@ecommerce/chrome": "workspace:*",
-    "@ecommerce/contracts": "workspace:*",
     "@ecommerce/i18n": "workspace:*",
-    "@ecommerce/ui-kit": "workspace:*",
-    "@tanstack/react-query": "catalog:",
-    "i18next": "catalog:",
+    "@ecommerce/ui-kit": "workspace:*"
+  },
+  "peerDependencies": {
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "react-i18next": "catalog:",
-    "recharts": "^2.15.0"
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@ecommerce/config": "workspace:*",
-    "@module-federation/vite": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "catalog:",
+    "i18next": "catalog:",
     "jsdom": "catalog:",
+    "react-i18next": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

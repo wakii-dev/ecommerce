@@ -1,0 +1,306 @@
+/* chrome component styles — CHỈ var(--*), không hex thuần (fallback var(--token, legacy) kế thừa từ nguồn được phép — spec §4), KHÔNG url() (gotcha FI-390: shared css qua MF dev → spa-fallback HTML → resource error) */
+
+/* SiteHeader (FI-398 T4) — port values EXACT từ shell header.css (FI-393 T2
+   anatomy direction §2.1 FI-390, wrap KHÔNG redesign). Shell-owned classes
+   (.shell-logo/.shell-search/.shell-mininav*) KHÔNG port — vẫn do shell
+   header.css style (file giữ load, giá trị giống hệt → zero drift). */
+
+.chrome-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 100);
+  background: var(--c-bg);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Hàng 1: logo | search | actions ─────────────────────────────────── */
+
+.chrome-header__row1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5, 24px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+}
+
+/* Slot 'center' không grow (Slot div inline-style chỉ flex inline) — search
+   chiếm giữa nhờ rule này (critic-P2: registry contract không đổi). */
+.chrome-header__row1 [data-slot='center'] {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* ── Hàng 2: mini-nav nền primary (direction §2.1) ───────────────────── */
+
+.chrome-header__row2 {
+  background: var(--c-primary);
+}
+
+/* Icon-btn 42×42 (direction §2.1 actions) — port .shell-icon-btn (giá trị
+   EXACT; shell AuthWidget inline-styled không đụng class này). */
+.chrome-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--c-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 4px);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.chrome-icon-btn:hover {
+  color: var(--c-link);
+  background: var(--wash-hover);
+}
+
+/* Nhãn ẩn cho icon-only button (theme.dark/light) — visible cho SR. */
+.chrome-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* .chrome-container (FI-398 T4 placeholder — Footer T6 dùng, spec §3.3 P1
+   critic self-contained): 1240px/padding 16 — values từ .chrome-header__row1
+   (token --space-4 fallback px). KHÔNG phụ thuộc .container storefront. */
+.chrome-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--space-4, 16px);
+}
+
+/* ── Footer (FI-398 T6; palette pin a7e805d) — port EXACT storefront app.css
+   .site-footer* (direction §2.2.5 FI-390: nền #212121, link #bbb hover accent) */
+
+.chrome-site-footer {
+  /* GIÁ TRỊ LEGACY FI-390 §2.2.5 pin — cố ý KHÔNG dùng --c-text (flip dark →
+     footer sáng, FAIL AA 2.5:1); pin legacy = khớp storefront, contrast 8.4:1
+     light / 6.1:1 dark PASS AA 4.5:1 — spec §4 amendment a7e805d. Footer là
+     surface DUY NHẤT được exception hex; mọi màu khác chrome.css var(--*). */
+  --chrome-footer-bg: #212121;
+  --chrome-footer-link: #bbb;
+  --chrome-footer-heading: #ffffff;
+  background: var(--chrome-footer-bg);
+  color: var(--chrome-footer-link);
+  margin-top: var(--space-7, 48px);
+}
+
+/* Dark storefront: link sáng hơn cho AA trên nền #212121 (bg GIỮ tối cả 2
+   theme — storefront app.css dark block chỉ đè --footer-link: #a0a0a0). */
+[data-theme='dark'] .chrome-site-footer {
+  --chrome-footer-link: #a0a0a0;
+}
+
+.chrome-site-footer__inner {
+  display: grid;
+  /* Storefront 3 track (2 cột link + newsletter SF-13) — chrome KHÔNG có
+     newsletter (SF-4 quyết khi swap) → track 3 rỗng, vị trí 2 cột link giữ
+     nguyên visual. 900px → 2 cột như storefront. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6, 32px);
+  padding-top: var(--space-6, 32px);
+  padding-bottom: var(--space-6, 32px);
+}
+
+.chrome-site-footer h4 {
+  color: var(--chrome-footer-heading);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 var(--space-3, 12px);
+}
+
+.chrome-site-footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chrome-site-footer a {
+  color: var(--chrome-footer-link);
+  font-size: 13px;
+  text-decoration: none;
+  line-height: 2;
+  /* §2.2.5: muted → accent hover, nhịp nhanh (direction §3.2) */
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.chrome-site-footer a:hover {
+  color: var(--c-accent);
+}
+
+@media (max-width: 900px) {
+  .chrome-site-footer__inner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── LocaleSwitcher (FI-398 T12) — 2 nút nhỏ vi/en, tokens-only ──────────── */
+
+.chrome-locale-switcher {
+  display: inline-flex;
+  gap: var(--space-1, 4px);
+}
+
+.chrome-locale-switcher__btn {
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  font-size: var(--text-sm, 12px);
+  color: var(--c-text);
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md, 4px);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+/* Active lang — tint primary (subtle, khớp badge/pill family tokens). */
+.chrome-locale-switcher__btn[aria-pressed='true'] {
+  color: var(--tint-primary-text);
+  background: var(--tint-primary-bg);
+  border-color: var(--tint-primary-border);
+}
+
+/* ── AuthMenu (FI-398 T9) — port EXACT mfe-account page.css .um-* (SF-4
+   FI-394 T3; spec §3.7: chrome.css sở hữu bản port, account page.css GIỮ bộ
+   cũ cho standalone — dup tạm F4 đã duyệt, SF-4 dọn khi xóa wrapper).
+   Mọi giá trị đã tokens-first với fallback hex như nguồn — không có hex thuần
+   → không cần exception comment. Menu animation fade + translateY (keyframes
+   surface-specific — direction §5.6 cho phép), gate prefers-reduced-motion.
+   KHÔNG port .order-card/.wl-card trong media block nguồn — class
+   account-page-specific, chrome không có. ─────────────────────────────────── */
+
+.um-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.um-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--c-text, #212121);
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Caret ▲/▼ → Icon chevron-down; mở = rotate 180deg (transition token). */
+.um-caret {
+  display: inline-flex;
+  transition: transform var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.um-caret--open {
+  transform: rotate(180deg);
+}
+
+/* GuestLinks — link Đăng nhập (plain) + nút Đăng ký (outline primary). */
+.um-guest {
+  display: inline-flex;
+  gap: var(--space-3, 12px);
+  align-items: center;
+}
+
+.um-guest__login {
+  color: var(--c-text, #212121);
+  font-size: var(--text-md, 14px);
+  text-decoration: none;
+}
+
+.um-guest__register {
+  color: var(--c-primary, #F53D2D);
+  border: 1px solid var(--c-primary, #F53D2D);
+  border-radius: var(--radius-sm, 2px);
+  padding: 5px 12px;
+  font-size: var(--text-md, 14px);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Menu panel — surface + border + radius + shadow-3, z theo token dropdown. */
+.um-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #eee);
+  border-radius: var(--radius-md, 4px);
+  box-shadow: var(--shadow-3, 0 8px 24px rgba(0, 0, 0, 0.16));
+  min-width: 200px;
+  z-index: var(--z-dropdown, 200);
+  padding: 4px;
+  display: block;
+  overflow: hidden;
+  animation: um-menu-in 140ms var(--ease-out, ease-out);
+}
+
+@keyframes um-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um-menu {
+    animation: none;
+  }
+}
+
+.um-menu__item {
+  display: block;
+  padding: 9px 16px;
+  font-size: var(--text-md, 14px);
+  color: var(--c-text, #212121);
+  text-decoration: none;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease-out),
+    color var(--dur-fast, 140ms) var(--ease-out, ease-out);
+}
+
+.um-menu__item:hover {
+  background: var(--wash-hover, #f5f5f5);
+  color: var(--c-link, #f53d2d);
+}
+
+/* Roving focus qua .focus() là programmatic — Safari không vẽ focus mặc định.
+   Offset âm để outline nằm trong item (.um-menu overflow:hidden sẽ cắt phần
+   lấn ra ngoài). Convention ui-kit .uk-btn:focus-visible. */
+.um-menu__item:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: -2px;
+}
+
+/* Item danger (Đăng xuất) — tint đỏ family cancelled. */
+.um-menu__item--danger {
+  color: var(--c-danger, #D0011B);
+}
+
+.um-menu__item--danger:hover {
+  background: var(--pill-cancelled-bg, #FDEBEC);
+  color: var(--c-danger, #D0011B);
+}

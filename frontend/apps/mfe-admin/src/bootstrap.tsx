@@ -1,5 +1,10 @@
 import type { ComponentType } from 'react';
 import { configureAuth } from '@ecommerce/auth';
+// SF-1 FI-391: ui-kit css cả 2 biên MF (FI-368 T11 — remote standalone qua
+// bootstrap không chạy main.tsx; dưới shell dedupe vô hại với import của host).
+import '@ecommerce/ui-kit/tokens.css';
+import '@ecommerce/ui-kit/styles.css';
+import '@ecommerce/ui-kit/fonts';
 
 export type SlotKey = 'left' | 'center' | 'right';
 

@@ -1,0 +1,102 @@
+[
+  {
+    "name": "sf-home-light",
+    "url": "http://127.0.0.1:3101/"
+  },
+  {
+    "name": "sf-home-dark",
+    "url": "http://127.0.0.1:3101/"
+  },
+  {
+    "name": "sf-plp-light",
+    "url": "http://127.0.0.1:3101/c/dien-tu"
+  },
+  {
+    "name": "sf-plp-dark",
+    "url": "http://127.0.0.1:3101/c/dien-tu"
+  },
+  {
+    "name": "sf-pdp-light",
+    "url": "http://127.0.0.1:3101/p/dien-tu-bulk-38"
+  },
+  {
+    "name": "sf-pdp-dark",
+    "url": "http://127.0.0.1:3101/p/dien-tu-bulk-38"
+  },
+  {
+    "name": "sf-search-light",
+    "url": "http://127.0.0.1:3101/search?q=xiaomi"
+  },
+  {
+    "name": "sf-coupons-light",
+    "url": "http://127.0.0.1:3101/coupons"
+  },
+  {
+    "name": "shell-home-light",
+    "url": "http://localhost:5703/"
+  },
+  {
+    "name": "shell-home-dark",
+    "url": "http://localhost:5703/"
+  },
+  {
+    "name": "shell-cart-light",
+    "url": "http://localhost:5703/cart"
+  },
+  {
+    "name": "shell-cart-dark",
+    "url": "http://localhost:5703/cart"
+  },
+  {
+    "name": "shell-drawer-light",
+    "url": "http://localhost:5703/cart"
+  },
+  {
+    "name": "shell-checkout-light",
+    "url": "http://localhost:5703/checkout"
+  },
+  {
+    "name": "shell-checkout-dark",
+    "url": "http://localhost:5703/checkout"
+  },
+  {
+    "name": "account-orders-light",
+    "url": "http://localhost:5703/account/orders"
+  },
+  {
+    "name": "account-orders-dark",
+    "url": "http://localhost:5703/account/orders"
+  },
+  {
+    "name": "admin-dashboard-admin",
+    "url": "http://localhost:5707/"
+  },
+  {
+    "name": "admin-dashboard-admin-dark",
+    "url": "http://localhost:5707/"
+  },
+  {
+    "name": "admin-products-admin",
+    "url": "http://localhost:5707/products"
+  },
+  {
+    "name": "admin-products-admin-dark",
+    "url": "http://localhost:5707/products"
+  },
+  {
+    "name": "admin-orders-admin",
+    "url": "http://localhost:5707/orders"
+  },
+  {
+    "name": "mobile-sf-home-375",
+    "url": "http://127.0.0.1:3101/"
+  },
+  {
+    "name": "mobile-sf-pdp-375-sticky",
+    "url": "http://127.0.0.1:3101/p/dien-thoai-xiaomi-redmi-13c"
+  },
+  {
+    "name": "mobile-shell-cart-375",
+    "url": "http://localhost:5703/cart"
+  }
+]

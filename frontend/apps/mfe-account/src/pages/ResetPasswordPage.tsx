@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
-import { Button, Card, Input } from '@ecommerce/ui-kit';
+import { Button, Card, Icon, IconButton, Input } from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { appNavigate } from '../bootstrap';
+import { EyeIcon } from '../components/EyeIcon';
 import '../page.css';
 
 /**
@@ -10,21 +12,37 @@ import '../page.css';
  * 401 token sai/hết hạn/đã dùng (problem+json detail).
  */
 export default function ResetPasswordPage(): ReactElement {
+  const { t } = useT();
   const [token] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '');
   const [password, setPassword] = useState('');
   const [fieldError, setFieldError] = useState<string | undefined>();
+  const [touched, setTouched] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // SF-4 T2: validate realtime on-blur (pattern per-page).
+  const validatePassword = (value: string): string | undefined =>
+    value.length >= 8 ? undefined : t('account.auth.errPasswordMin8');
+
+  const onBlurPassword = (value: string): void => {
+    setTouched(true);
+    setFieldError(validatePassword(value));
+  };
+
+  const onChangePassword = (value: string): void => {
+    setPassword(value);
+    if (touched) setFieldError(validatePassword(value));
+  };
+
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setBanner(null);
-    if (password.length < 8) {
-      setFieldError('Mật khẩu tối thiểu 8 ký tự');
-      return;
-    }
-    setFieldError(undefined);
+    setTouched(true);
+    const error = validatePassword(password);
+    setFieldError(error);
+    if (error) return;
     setLoading(true);
     fetch('/api/identity/password/reset', {
       method: 'POST',
@@ -37,10 +55,12 @@ export default function ResetPasswordPage(): ReactElement {
           return;
         }
         const body = (await res.json().catch(() => null)) as { detail?: string } | null;
-        setBanner(res.status === 401 ? body?.detail || 'Token không hợp lệ hoặc đã hết hạn' : 'Có lỗi xảy ra — thử lại');
+        setBanner(
+          res.status === 401 ? body?.detail || t('account.auth.errTokenInvalid') : t('account.auth.errGeneric')
+        );
       })
       .catch(() => {
-        setBanner('Có lỗi xảy ra — thử lại');
+        setBanner(t('account.auth.errGeneric'));
       })
       .finally(() => setLoading(false));
   };
@@ -48,11 +68,12 @@ export default function ResetPasswordPage(): ReactElement {
   return (
     <div className="auth-page">
       <Card className="auth-card">
-        <h1 className="auth-title">Đặt lại mật khẩu</h1>
+        <h1 className="auth-title">{t('account.auth.resetTitle')}</h1>
         {done ? (
           <>
-            <div className="auth-error" role="status" data-testid="reset-success" style={{ background: '#eefcf0', color: '#1b7a34' }}>
-              Đổi mật khẩu thành công! Mọi phiên đăng nhập cũ đã bị đăng xuất.
+            <div className="auth-ok" role="status" data-testid="reset-success">
+              <Icon name="check" size={16} />
+              <span>{t('account.auth.resetSuccess')}</span>
             </div>
             <p className="auth-switch">
               <a
@@ -62,13 +83,13 @@ export default function ResetPasswordPage(): ReactElement {
                   appNavigate('/login');
                 }}
               >
-                Đăng nhập bằng mật khẩu mới
+                {t('account.auth.loginWithNewPassword')}
               </a>
             </p>
           </>
         ) : !token ? (
           <div className="auth-error" role="alert" data-testid="reset-missing-token">
-            Thiếu token đặt lại mật khẩu. Hãy mở link trong email chúng tôi đã gửi.
+            {t('account.auth.resetMissingToken')}
           </div>
         ) : (
           <>
@@ -78,19 +99,33 @@ export default function ResetPasswordPage(): ReactElement {
               </div>
             ) : null}
             <form onSubmit={onSubmit} noValidate>
-              <Input
-                label="Mật khẩu mới"
-                type="password"
-                name="newPassword"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                value={password}
-                error={fieldError}
-                data-testid="reset-password-input"
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="pw-field">
+                <Input
+                  label={t('account.auth.newPassword')}
+                  type={showPassword ? 'text' : 'password'}
+                  name="newPassword"
+                  autoComplete="new-password"
+                  placeholder={t('account.auth.phPassword')}
+                  value={password}
+                  error={fieldError}
+                  data-testid="reset-password-input"
+                  onBlur={(e) => onBlurPassword(e.target.value)}
+                  onChange={(e) => onChangePassword(e.target.value)}
+                />
+                <IconButton
+                  className="pw-toggle"
+                  aria-label={t(showPassword ? 'account.auth.hidePassword' : 'account.auth.showPassword')}
+                  aria-pressed={showPassword}
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                >
+                  <EyeIcon off={showPassword} />
+                </IconButton>
+              </div>
               <Button type="submit" variant="primary" fullWidth loading={loading} data-testid="reset-submit">
-                Đặt lại mật khẩu
+                {t('account.auth.resetPassword')}
               </Button>
             </form>
           </>

@@ -1,19 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import {
-  Badge,
-  Button,
-  Card,
-  Input,
-  Modal,
-  Select,
-  Skeleton,
-  Table,
-  useToast
-} from '@ecommerce/ui-kit';
+import { Badge, Button, Card, EmptyState, Input, Modal, Pagination, Select, useToast } from '@ecommerce/ui-kit';
+import { DataTable } from '../components/DataTable';
+import { PageSizeSelect } from '../components/PageSizeSelect';
+import { useClientSort } from '../lib/tableSort';
+import type { SortAccessor } from '../lib/tableSort';
 import { formatDateTime, formatVnd } from '../lib/format';
 import {
   adminCreateCoupon,
@@ -137,10 +131,28 @@ export default function CouponsPage(): ReactElement {
 
   const rows = couponsQuery.data ?? [];
 
+  // Load-all → sort client (useClientSort) rồi slice trang hiện tại
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { sort, sortedRows, toggleSort } = useClientSort<CouponRow>(rows);
+  const onSortToggle = (key: string, accessor: SortAccessor<CouponRow>): void => {
+    // sort→slice trên toàn bộ rows đã load → trang hiện tại vẫn hợp lệ khi sort
+    toggleSort(key, accessor);
+  };
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  // render-clamp: delete/refetch co rows → page cũ có thể vượt totalPages
+  // (bảng trắng + "Trang 2/1") — clamp lúc render, không effect.
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = useMemo(
+    () => sortedRows.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sortedRows, safePage, pageSize]
+  );
+
   const columns = [
     {
       key: 'code',
       header: t('admin.coupons.code'),
+      sortValue: (row: CouponRow) => row.code,
       render: (row: CouponRow) => (
         <div>
           <div style={{ fontWeight: 700, letterSpacing: '0.02em' }}>{row.code}</div>
@@ -162,6 +174,7 @@ export default function CouponsPage(): ReactElement {
       key: 'value',
       header: t('admin.coupons.value'),
       align: 'right' as const,
+      sortValue: (row: CouponRow) => row.value,
       render: (row: CouponRow) => (row.type === 'PERCENT' ? `${row.value}%` : formatVnd(row.value))
     },
     {
@@ -197,6 +210,7 @@ export default function CouponsPage(): ReactElement {
     {
       key: 'status',
       header: t('admin.common.status'),
+      sortValue: (row: CouponRow) => (row.active ? 1 : 0),
       render: (row: CouponRow) => (
         <Button
           size='sm'
@@ -360,18 +374,43 @@ export default function CouponsPage(): ReactElement {
       )}
 
       {couponsQuery.isLoading ? (
-        <Skeleton variant='rect' height={200} />
+        <DataTable loading columns={columns} rows={[]} />
       ) : couponsQuery.isError ? (
         <p className='admin-error-text'>{t('admin.common.loadFail')}</p>
       ) : (
-        <Card>
-          <Table
+        <>
+          <DataTable
             columns={columns}
-            rows={rows}
+            rows={pagedRows}
             rowKey={(row) => row.code}
-            empty={t('admin.coupons.empty')}
+            empty={<EmptyState icon='🎫' title={t('admin.coupons.empty')} />}
+            sort={sort}
+            onSortToggle={onSortToggle}
           />
-        </Card>
+          <div className='admin-pagination'>
+            <PageSizeSelect
+              value={pageSize}
+              onChange={(n) => {
+                setPage(1);
+                setPageSize(n);
+              }}
+              label={t('admin.common.pageSize')}
+            />
+            <span>
+              {t('admin.common.pageOf', { page: safePage, total: totalPages })} —{' '}
+              {t('admin.common.total', { count: rows.length })}
+            </span>
+            {/* Pagination primitive client mode (FI-395 review-G2) — tự ẩn totalPages ≤ 1. */}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={t('admin.common.pagination')}
+              prevLabel={t('admin.common.prev')}
+              nextLabel={t('admin.common.next')}
+            />
+          </div>
+        </>
       )}
 
       <Modal open={deleting !== null} onClose={() => setDeleting(null)} title={t('admin.common.delete')}>

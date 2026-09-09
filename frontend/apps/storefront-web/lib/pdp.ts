@@ -114,3 +114,31 @@ export function jsonLdFor(product: JsonLdInput, locale: Locale, origin: string):
   }
   return jsonLd;
 }
+
+/** 1 bậc breadcrumb — path ĐÃ qua localePath theo locale của trang. */
+export interface BreadcrumbItem {
+  name: string;
+  path: string;
+}
+
+/**
+ * BreadcrumbList JSON-LD (schema.org, T14) — trả CHUỖI JSON đã escape `<` →
+ * `<` để page nhúng thẳng vào script tag: tên danh mục là admin-enter
+ * nên `</script>` trong name không được đóng sớm thẻ script (stored XSS —
+ * cùng pattern Product JSON-LD ở page.tsx, security-P2 FI-391). JSON vẫn
+ * parse đúng sau revert (`<` là escape chuẩn của JSON.stringify).
+ * Item cuối = trang hiện tại; position 1..n; item = URL absolute origin+path.
+ */
+export function breadcrumbJsonld(items: readonly BreadcrumbItem[], origin: string): string {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: `${origin}${item.path}`,
+    })),
+  };
+  return JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+}

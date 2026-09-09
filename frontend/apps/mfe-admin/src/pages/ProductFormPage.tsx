@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient, type CatalogClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, Input, Select, Skeleton, Tabs, useToast } from '@ecommerce/ui-kit';
+import { Button, Card, Icon, Input, Select, Skeleton, Tabs, useToast } from '@ecommerce/ui-kit';
 import { appNavigate } from '../bootstrap';
 import { catalogApi } from '../lib/api';
 import {
@@ -571,14 +571,23 @@ export default function ProductFormPage({ id }: ProductFormPageProps): ReactElem
                     e.target.value = '';
                   }}
                 />
-                <Button
-                  variant='secondary'
+                {/* Dropzone-STYLE visual (FI-395 T6) — KHÔNG đổi logic: cùng
+                    input[type=file] ẩn ở trên, cùng click flow, cùng testid
+                    'upload-image' (e2e setInputFiles + tr hasText phụ thuộc). */}
+                <button
+                  type='button'
+                  className='admin-upload-dropzone'
                   disabled={uploadImage.isPending}
                   onClick={() => fileInputRef.current?.click()}
                   data-testid='upload-image'
                 >
-                  {uploadImage.isPending ? t('admin.products.uploadingImage') : t('admin.products.uploadImage')}
-                </Button>
+                  <Icon name='plus' size={18} />
+                  <span>
+                    {uploadImage.isPending
+                      ? t('admin.products.uploadingImage')
+                      : t('admin.products.uploadImage')}
+                  </span>
+                </button>
               </div>
             </div>
           )}

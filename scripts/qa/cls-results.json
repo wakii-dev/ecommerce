@@ -1,0 +1,64 @@
+{
+  "baseline-master-3000": {
+    "http://localhost:3000/p/dien-thoai-xiaomi-redmi-13c": {
+      "cls": 0,
+      "shiftCount": 0,
+      "lcpMs": 284,
+      "fontBody": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "fontHeading": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "title": "Điện Thoại Xiaomi Redmi 13C | Shop VN"
+    }
+  },
+  "sf6-merged-3101": {
+    "http://localhost:3101/": {
+      "cls": 0,
+      "shiftCount": 0,
+      "lcpMs": 256,
+      "fontBody": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "fontHeading": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "title": "Shop VN — Chợ sôi động"
+    },
+    "http://localhost:3101/p/dien-thoai-xiaomi-redmi-13c": {
+      "cls": 0.0039,
+      "shiftCount": 1,
+      "lcpMs": 152,
+      "fontBody": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "fontHeading": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "title": "Điện Thoại Xiaomi Redmi 13C | Shop VN"
+    }
+  },
+  "sf6-font-vite-apps": {
+    "http://localhost:5703/": {
+      "cls": 0.0074,
+      "shiftCount": 3,
+      "lcpMs": 332,
+      "fontBody": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "fontHeading": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "title": "shell — ecommerce MF harness"
+    },
+    "http://localhost:5705/": {
+      "cls": 0,
+      "shiftCount": 0,
+      "lcpMs": 288,
+      "fontBody": "Times",
+      "fontHeading": null,
+      "title": "Giỏ hàng — mfe-checkout"
+    },
+    "http://localhost:5706/": {
+      "cls": 0,
+      "shiftCount": 0,
+      "lcpMs": 136,
+      "fontBody": "Times",
+      "fontHeading": "\"Be Vietnam Pro\", -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "title": "Tài khoản — mfe-account"
+    },
+    "http://localhost:5707/": {
+      "cls": 0.0193,
+      "shiftCount": 1,
+      "lcpMs": 688,
+      "fontBody": "Times",
+      "fontHeading": null,
+      "title": "Quản trị — mfe-admin"
+    }
+  }
+}

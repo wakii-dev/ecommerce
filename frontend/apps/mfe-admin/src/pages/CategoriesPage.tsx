@@ -3,7 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiErrorClient } from '@ecommerce/contracts';
 import { useT } from '@ecommerce/i18n';
-import { Button, Card, Input, Modal, Select, Skeleton, useToast } from '@ecommerce/ui-kit';
+import { Button, Card, EmptyState, Input, Modal, Select, Skeleton, useToast } from '@ecommerce/ui-kit';
 import { catalogApi } from '../lib/api';
 import type { AdminCategoryNode } from '../lib/adminTypes';
 import {
@@ -270,7 +270,7 @@ export default function CategoriesPage(): ReactElement {
       ) : treeQuery.isError ? (
         <p className='admin-error-text'>{t('admin.common.loadFail')}</p>
       ) : (treeQuery.data ?? []).length === 0 ? (
-        <p className='admin-hint'>{t('admin.categories.empty')}</p>
+        <EmptyState icon='🗂️' title={t('admin.categories.empty')} />
       ) : (
         <Card>
           <TreeRows

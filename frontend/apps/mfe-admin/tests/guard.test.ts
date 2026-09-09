@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADMIN_NAV,
+  ADMIN_NAV_GROUPS,
   activeNavIndex,
   resolveAdminRoute,
   resolveGuardState
@@ -68,5 +70,20 @@ describe('activeNavIndex', () => {
 
   it('order detail vẫn active nav Orders (5)', () => {
     expect(activeNavIndex('/admin/orders/o-1')).toBe(5);
+  });
+});
+
+describe('ADMIN_NAV_GROUPS ↔ ADMIN_NAV parity (review G1 P1)', () => {
+  it('set `to` khớp CHÍNH XÁC (không thiếu/thừa/typo) + key khớp theo `to`', () => {
+    const navByTo = new Map(ADMIN_NAV.map((item) => [item.to, item]));
+    const groupTos = ADMIN_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.to));
+    expect([...groupTos].sort()).toEqual([...navByTo.keys()].sort());
+    for (const group of ADMIN_NAV_GROUPS) {
+      for (const item of group.items) {
+        expect(item.key, `key của ${item.to} phải khớp entry ADMIN_NAV cùng \`to\``).toBe(
+          navByTo.get(item.to)?.key
+        );
+      }
+    }
   });
 });

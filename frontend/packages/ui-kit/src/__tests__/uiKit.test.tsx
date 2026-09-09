@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { formatPrice, Price } from '../components/Price';
 import { StarRating } from '../components/StarRating';
@@ -7,7 +7,27 @@ import { Button } from '../components/Button';
 import { Tabs } from '../components/Tabs';
 import { Skeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { Pagination } from '../components/Pagination';
+import { QuantityStepper } from '../components/QuantityStepper';
 import { ToastProvider } from '../components/Toast';
+import {
+  Breadcrumbs,
+  breadcrumbJsonld
+} from '../components/Breadcrumbs';
+import { IconButton } from '../components/IconButton';
+import type { IconButtonProps } from '../components/IconButton';
+import { Alert } from '../components/Alert';
+import { Checkbox } from '../components/Checkbox';
+import { Radio, RadioGroup } from '../components/Radio';
+import { Textarea } from '../components/Textarea';
+import { Stepper } from '../components/Stepper';
+import { ICON_PATHS, Icon } from '../components/Icon';
+import type { IconName } from '../components/Icon';
+import {
+  ListSkeleton,
+  ProductCardSkeleton,
+  TableSkeleton
+} from '../components/skeletons';
 
 /** ICU vi-VN dùng NBSP (U+00A0) hoặc narrow NBSP (U+202F) trước ký hiệu ₫ */
 const normalizeSpace = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
@@ -136,6 +156,112 @@ describe('Skeleton / EmptyState', () => {
   });
 });
 
+describe('Skeleton compositions — SSR (FI-391 T12)', () => {
+  it('TableSkeleton rows=3 cols=4 → 3 hàng × 4 cell + role=table aria-busy', () => {
+    const html = renderToStaticMarkup(<TableSkeleton rows={3} cols={4} />);
+    expect(count(html, 'uk-sk-table__row')).toBe(3);
+    expect(count(html, 'uk-sk-table__cell')).toBe(12);
+    expect(html).toContain('role="table"');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('aria-label="Đang tải dữ liệu"');
+    expect(html).not.toContain('<table');
+  });
+
+  it('ProductCardSkeleton compose Skeleton primitive thật (rect + text + giá 60%)', () => {
+    const html = renderToStaticMarkup(<ProductCardSkeleton />);
+    expect(html).toContain('uk-sk-card');
+    expect(html).toContain('uk-skeleton uk-skeleton--rect');
+    expect(count(html, 'uk-skeleton--text')).toBe(3); // 2 dòng text + dòng giá
+    expect(html).toContain('uk-sk-card__price');
+    expect(html).toContain('width:60%');
+  });
+
+  it('ListSkeleton count override → đúng số hàng circle 40 + 2 dòng text', () => {
+    const html = renderToStaticMarkup(<ListSkeleton count={2} />);
+    expect(count(html, 'uk-sk-list__item')).toBe(2);
+    expect(count(html, 'uk-skeleton--circle')).toBe(2);
+    expect(count(html, 'uk-sk-list__text')).toBe(2);
+    expect(count(html, 'uk-skeleton--text')).toBe(4);
+  });
+});
+
+describe('QuantityStepper', () => {
+  it('role=group + aria-label mặc định đúng (group/input/2 nút) + input value + min/max', () => {
+    const html = renderToStaticMarkup(
+      <QuantityStepper value={3} onChange={() => {}} />
+    );
+    expect(html).toContain('role="group"');
+    expect(count(html, 'aria-label="Số lượng"')).toBe(2); // group + input
+    expect(html).toContain('aria-label="Tăng số lượng"');
+    expect(html).toContain('aria-label="Giảm số lượng"');
+    expect(html).toContain('value="3"');
+    expect(html).toContain('min="1"');
+    expect(html).toContain('max="99"');
+    // glyph − là &minus; (U+2212), không phải hyphen
+    expect(html).toContain('−');
+  });
+
+  it('clamp cận: value=1 → nút − disabled; value=99 → nút + disabled', () => {
+    const atMin = renderToStaticMarkup(
+      <QuantityStepper value={1} onChange={() => {}} />
+    );
+    expect(atMin).toContain('aria-label="Giảm số lượng" disabled');
+    expect(atMin).not.toContain('aria-label="Tăng số lượng" disabled');
+    const atMax = renderToStaticMarkup(
+      <QuantityStepper value={99} onChange={() => {}} />
+    );
+    expect(atMax).toContain('aria-label="Tăng số lượng" disabled');
+    expect(atMax).not.toContain('aria-label="Giảm số lượng" disabled');
+  });
+
+  it('prop disabled → cả 2 nút + input đều disabled', () => {
+    const html = renderToStaticMarkup(
+      <QuantityStepper value={2} onChange={() => {}} disabled />
+    );
+    expect(count(html, 'disabled')).toBe(3);
+  });
+});
+
+describe('Pagination — SSR', () => {
+  const href = (p: number) => `/c/ao-thun?page=${p}`;
+
+  it('URL mode: <a href> đúng pageHref(2) khi page=2 + aria-current + rel prev/next', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={2} totalPages={12} pageHref={href} />
+    );
+    expect(html).toContain('href="/c/ao-thun?page=2"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('rel="prev"');
+    expect(html).toContain('rel="next"');
+    expect(html).toContain('aria-label="Phân trang"');
+    expect(html).not.toContain('<button');
+  });
+
+  it('client mode: render <button>, không có href', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={2} totalPages={12} onPageChange={() => {}} />
+    );
+    expect(html).toContain('<button');
+    expect(html).not.toContain('<a ');
+    expect(html).not.toContain('href=');
+  });
+
+  it('totalPages=1 → markup rỗng (null)', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={1} totalPages={1} onPageChange={() => {}} />
+    );
+    expect(html).toBe('');
+  });
+
+  it('totalPages>7 → window xuất hiện ellipsis …', () => {
+    const html = renderToStaticMarkup(
+      <Pagination page={4} totalPages={12} onPageChange={() => {}} />
+    );
+    expect(html).toContain('…');
+    expect(html).toContain('uk-page--dots');
+  });
+});
+
 describe('ToastProvider', () => {
   it('render region + không crash khi không có toast', () => {
     const html = renderToStaticMarkup(
@@ -146,5 +272,324 @@ describe('ToastProvider', () => {
     expect(html).toContain('uk-toast-region');
     expect(html).toContain('children');
     expect(html).not.toContain('uk-toast uk-toast--');
+  });
+});
+
+describe('Breadcrumbs', () => {
+  const items = [
+    { label: 'Trang chủ', href: '/' },
+    { label: 'Danh mục', href: '/c' },
+    { label: 'Áo thun' }
+  ];
+
+  it('nav aria-label + item cuối span aria-current="page" + item giữa <a>', () => {
+    const html = renderToStaticMarkup(<Breadcrumbs items={items} />);
+    expect(html).toContain('aria-label="Bạn đang ở:"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/c"');
+    // item cuối là span, không phải link
+    expect(html).toContain('<span aria-current="page">Áo thun</span>');
+    // separator li aria-hidden giữa các item
+    expect(html).toContain('uk-breadcrumbs__sep');
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('item giữa KHÔNG href → span thường', () => {
+    const html = renderToStaticMarkup(
+      <Breadcrumbs items={[{ label: 'A' }, { label: 'B', href: '/b' }, { label: 'C' }]} />
+    );
+    expect(html).toContain('<span>A</span>');
+  });
+
+  it('breadcrumbJsonld — JSON hợp lệ BreadcrumbList, Position 1-based', () => {
+    const jsonld = breadcrumbJsonld(items);
+    // FI-391 security-P2: chuỗi nhúng vào <script> không được chứa '<' raw
+    expect(jsonld).not.toContain('<');
+    const parsed = JSON.parse(jsonld) as {
+      '@context': string;
+      '@type': string;
+      itemListElement: { '@type': string; position: number; name: string; item?: string }[];
+    };
+    expect(parsed['@context']).toBe('https://schema.org');
+    expect(parsed['@type']).toBe('BreadcrumbList');
+    expect(parsed.itemListElement).toHaveLength(3);
+    expect(parsed.itemListElement[0]).toEqual({
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Trang chủ',
+      item: '/'
+    });
+    // item cuối không href → không có field item
+    expect(parsed.itemListElement[2]).toEqual({
+      '@type': 'ListItem',
+      position: 3,
+      name: 'Áo thun'
+    });
+  });
+
+  it('breadcrumbJsonld escape < — label chứa </script> không breakout script tag', () => {
+    const malicious = '</script><img src=x onerror=alert(1)>';
+    const jsonld = breadcrumbJsonld([
+      { label: malicious, href: '/x' },
+      { label: 'An toàn' }
+    ]);
+    // không còn '<' raw nào trong output → an toàn nhúng <script type="application/ld+json">
+    expect(jsonld).not.toContain('<');
+    // JSON.parse khôi phục đúng chuỗi gốc — dữ liệu không mất mát
+    const parsed = JSON.parse(jsonld) as { itemListElement: { name: string }[] };
+    expect(parsed.itemListElement[0]?.name).toBe(malicious);
+  });
+});
+
+describe('IconButton', () => {
+  it('aria-label + class size/variant default md/ghost', () => {
+    const html = renderToStaticMarkup(<IconButton aria-label="Đóng">×</IconButton>);
+    expect(html).toContain('class="uk-icon-btn uk-icon-btn--md uk-icon-btn--ghost"');
+    expect(html).toContain('aria-label="Đóng"');
+    expect(html).toContain('type="button"');
+  });
+
+  it('size/variant props → class tương ứng', () => {
+    const html = renderToStaticMarkup(
+      <IconButton aria-label="Thêm" size="sm" variant="outline">
+        +
+      </IconButton>
+    );
+    expect(html).toContain('uk-icon-btn--sm');
+    expect(html).toContain('uk-icon-btn--outline');
+  });
+
+  it('thiếu aria-label → console.error dev-warn nhưng vẫn render (không crash)', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // mô phỏng consumer JS bỏ qua type bắt buộc
+    const badProps = { children: '×' } as unknown as IconButtonProps;
+    const html = renderToStaticMarkup(<IconButton {...badProps} />);
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    expect(html).toContain('uk-icon-btn');
+    errSpy.mockRestore();
+  });
+});
+
+describe('Alert', () => {
+  it('4 variant → class tint tương ứng', () => {
+    for (const variant of ['info', 'success', 'warning', 'danger'] as const) {
+      const html = renderToStaticMarkup(<Alert variant={variant}>Nội dung</Alert>);
+      expect(html).toContain(`uk-alert--${variant}`);
+    }
+  });
+
+  it('default info + role: danger → alert, còn lại → status', () => {
+    expect(renderToStaticMarkup(<Alert>Nội dung</Alert>)).toContain(
+      'role="status"'
+    );
+    for (const variant of ['info', 'success', 'warning'] as const) {
+      expect(renderToStaticMarkup(<Alert variant={variant}>x</Alert>)).toContain(
+        'role="status"'
+      );
+    }
+    expect(renderToStaticMarkup(<Alert variant="danger">x</Alert>)).toContain(
+      'role="alert"'
+    );
+  });
+
+  it('dismissible → nút × aria-label default; title/icon render', () => {
+    const html = renderToStaticMarkup(
+      <Alert
+        variant="danger"
+        title="Thanh toán thất bại"
+        icon="!"
+        dismissible
+      >
+        Thử lại sau.
+      </Alert>
+    );
+    expect(html).toContain('aria-label="Đóng thông báo"');
+    expect(html).toContain('uk-alert__close');
+    expect(html).toContain('uk-alert__title');
+    expect(html).toContain('Thanh toán thất bại');
+    expect(html).toContain('!');
+  });
+
+  it('dismissLabel override theo ui.alert.dismiss surface truyền vào', () => {
+    const html = renderToStaticMarkup(
+      <Alert dismissible dismissLabel="Tắt cảnh báo">x</Alert>
+    );
+    expect(html).toContain('aria-label="Tắt cảnh báo"');
+  });
+});
+
+describe('Checkbox', () => {
+  it('label htmlFor khớp id input + aria-describedby khi error (error ưu tiên hint)', () => {
+    const html = renderToStaticMarkup(
+      <Checkbox label="Đồng ý điều khoản" error="Bắt buộc chọn" />
+    );
+    const inputId = html.match(/id="([^"]+)"/)?.[1] ?? '';
+    expect(inputId).not.toBe('');
+    expect(html).toContain(`for="${inputId}"`);
+    expect(html).toContain(`aria-describedby="${inputId}-error"`);
+    expect(html).toContain(`id="${inputId}-error"`);
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain('-hint"');
+  });
+
+  it('hint khi không error + checked render (defaultChecked) + aria-invalid khi error', () => {
+    const ok = renderToStaticMarkup(
+      <Checkbox label="A" hint="Gợi ý" defaultChecked />
+    );
+    expect(ok).toContain('-hint"');
+    // SSR serialize defaultChecked → attr checked=""
+    expect(ok).toContain('checked=""');
+    expect(ok).not.toContain('aria-invalid');
+    const errHtml = renderToStaticMarkup(<Checkbox label="B" error="Lỗi" />);
+    expect(errHtml).toContain('aria-invalid="true"');
+  });
+});
+
+describe('Radio / RadioGroup', () => {
+  it('name xuyên group qua Context — input name attr = group name', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" label="Thanh toán">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/name="payment"/g) ?? []).length).toBe(2);
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('aria-labelledby');
+    expect(html).not.toContain('name="undefined"');
+  });
+
+  it('Radio trong group KHÔNG truyền name vẫn nhận name qua Context', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="ship">
+        <Radio value="standard" />
+      </RadioGroup>
+    );
+    expect(html).toContain('name="ship"');
+  });
+
+  it('controlled: group value="momo" → radio momo checked, cod không', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" value="momo">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain('checked="" value="momo"');
+  });
+
+  it('uncontrolled: defaultValue="cod" → defaultChecked đúng radio (SSR serialize thành checked="")', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" defaultValue="cod">
+        <Radio value="cod" label="COD" />
+        <Radio value="momo" label="MoMo" />
+      </RadioGroup>
+    );
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain('checked="" value="cod"');
+  });
+
+  it('group error → .uk-error role=alert + aria-describedby trên radiogroup', () => {
+    const html = renderToStaticMarkup(
+      <RadioGroup name="payment" error="Chọn một phương thức">
+        <Radio value="cod" />
+      </RadioGroup>
+    );
+    expect(html).toContain('role="alert"');
+    const groupId = html.match(/aria-describedby="([^"]+)"/)?.[1] ?? '';
+    expect(groupId).not.toBe('');
+    expect(html).toContain(`id="${groupId}"`);
+    expect(html).not.toContain('aria-invalid="true"');
+  });
+});
+
+describe('Textarea', () => {
+  it('label htmlFor khớp id + class uk-textarea + aria-invalid khi error', () => {
+    const html = renderToStaticMarkup(
+      <Textarea label="Ghi chú" placeholder="..." error="Quá ngắn" />
+    );
+    const taId = html.match(/id="([^"]+)"/)?.[1] ?? '';
+    expect(taId).not.toBe('');
+    expect(html).toContain(`for="${taId}"`);
+    expect(html).toContain('uk-textarea--error');
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain(`aria-describedby="${taId}-error"`);
+    expect(html).toContain('role="alert"');
+  });
+
+  it('không error + có hint → aria-describedby trỏ hint, uk-field wrapper', () => {
+    const html = renderToStaticMarkup(
+      <Textarea label="Ghi chú" hint="Tùy chọn" defaultValue="abc" />
+    );
+    expect(html).not.toContain('uk-textarea--error');
+    expect(html).not.toContain('aria-invalid');
+    expect(html).toContain('-hint"');
+    expect(html).toContain('class="uk-field"');
+  });
+});
+
+describe('Icon — SSR', () => {
+  const NAMES = Object.keys(ICON_PATHS) as IconName[];
+
+  it('đủ 22 name trong catalog + loop render không throw', () => {
+    expect(NAMES).toHaveLength(22);
+    for (const name of NAMES) {
+      expect(() => renderToStaticMarkup(<Icon name={name} />)).not.toThrow();
+    }
+  });
+
+  it('default: aria-hidden="true" (decorative) + size 20 + stroke attrs', () => {
+    const html = renderToStaticMarkup(<Icon name="cart" />);
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toContain('role="img"');
+    expect(html).toContain('width="20"');
+    expect(html).toContain('height="20"');
+    expect(html).toContain('stroke-width="1.8"');
+    expect(html).toContain('viewBox="0 0 24 24"');
+  });
+
+  it('title → role="img" + <title>, không còn aria-hidden', () => {
+    const html = renderToStaticMarkup(<Icon name="heart" title="Yêu thích" />);
+    expect(html).toContain('role="img"');
+    expect(html).toContain('<title>Yêu thích</title>');
+    expect(html).not.toContain('aria-hidden');
+  });
+
+  it('size prop → width/height attr', () => {
+    const html = renderToStaticMarkup(<Icon name="check" size={32} />);
+    expect(html).toContain('width="32"');
+    expect(html).toContain('height="32"');
+  });
+});
+
+describe('Stepper — SSR', () => {
+  const STEPS = [
+    { key: 'cart', label: 'Giỏ hàng' },
+    { key: 'pay', label: 'Thanh toán' },
+    { key: 'confirm', label: 'Xác nhận' }
+  ];
+
+  it('aria-current="step" đúng vị trí + class --done/--current + aria-label số thứ tự', () => {
+    const html = renderToStaticMarkup(
+      <Stepper steps={STEPS} current={1} onStepClick={() => {}} />
+    );
+    expect(html).toContain('aria-label="Tiến trình"');
+    expect((html.match(/aria-current="step"/g) ?? []).length).toBe(1);
+    expect(html).toContain('aria-current="step" aria-label="2. Thanh toán"');
+    expect(html).toContain('uk-stepper__step--done');
+    expect(html).toContain('uk-stepper__step--current');
+    expect(html).not.toContain('aria-label="1. Giỏ hàng" aria-current');
+  });
+
+  it('future disabled; done click-able chỉ khi có onStepClick', () => {
+    const withClick = renderToStaticMarkup(
+      <Stepper steps={STEPS} current={1} onStepClick={() => {}} />
+    );
+    expect(withClick).toContain('aria-label="3. Xác nhận" disabled');
+    expect(withClick).not.toContain('aria-label="1. Giỏ hàng" disabled');
+    const noClick = renderToStaticMarkup(<Stepper steps={STEPS} current={1} />);
+    expect((noClick.match(/ disabled/g) ?? []).length).toBe(3);
   });
 });

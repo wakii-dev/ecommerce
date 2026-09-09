@@ -52,7 +52,7 @@ async function uiLogin(
 ): Promise<void> {
   await page.goto(`${SHELL}/login`);
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Mật khẩu').fill(password);
+  await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(password);
   await page.getByRole('button', { name: /Đăng nhập/ }).click();
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
 }

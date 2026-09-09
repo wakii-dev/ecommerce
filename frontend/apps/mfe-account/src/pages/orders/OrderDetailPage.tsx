@@ -1,11 +1,26 @@
-// pages/orders/OrderDetailPage.tsx — chi tiết đơn (SF-9 file-slice; SF-14 append):
-// items + địa chỉ + timeline trạng thái + Hủy đơn (PENDING, confirm dialog)
-// + Tải hóa đơn PDF (CONFIRMED+ — D18)
+// pages/orders/OrderDetailPage.tsx — chi tiết đơn (SF-9 file-slice; SF-14 append;
+// SF-4 FI-394 T6): items + địa chỉ + timeline trạng thái + Hủy đơn (PENDING,
+// confirm dialog) + Tải hóa đơn PDF (CONFIRMED+ — D18)
 // + Tracking vận đơn (SF-14 D22: GHN/flat) + Tạo yêu cầu trả hàng RMA.
+// T6: 42 khối inline → class .od-* (page.css); items <table> tay → ui-kit Table;
+// nút back ← → IconButton + Icon; i18n hard-code vi → account.order.*.
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
-import { Badge, Button, Card, Modal } from '@ecommerce/ui-kit';
+import {
+  Badge,
+  Button,
+  Card,
+  Icon,
+  IconButton,
+  ListSkeleton,
+  Modal,
+  QuantityStepper,
+  Table,
+  Textarea
+} from '@ecommerce/ui-kit';
+import { useT } from '@ecommerce/i18n';
 import { authStore } from '@ecommerce/auth';
+import { AccountLayout } from '../../AccountLayout';
 import { appNavigate, authReady } from '../../bootstrap';
 import { StatusBadge, formatDateTime, formatVnd } from './OrdersPage';
 import {
@@ -20,15 +35,18 @@ import {
   type TrackingResponse
 } from './ordersApi';
 
-const RMA_STATUS_LABEL: Record<string, string> = {
-  REQUESTED: 'Chờ xử lý',
-  APPROVED: 'Đã duyệt',
-  RECEIVED: 'Đã nhận hàng',
-  REFUNDED: 'Đã hoàn tiền',
-  REJECTED: 'Bị từ chối'
+/** Map RMA status → suffix key account.order.rmaStatus.* (giá trị vi khớp
+ *  RMA_STATUS_LABEL cũ: requested 'Chờ xử lý'… rejected 'Bị từ chối'). */
+const RMA_STATUS_KEY: Record<string, string> = {
+  REQUESTED: 'requested',
+  APPROVED: 'approved',
+  RECEIVED: 'received',
+  REFUNDED: 'refunded',
+  REJECTED: 'rejected'
 };
 
-export default function OrderDetailPage({ id }: { id: string }): ReactElement {
+function OrderDetailContent({ id }: { id: string }): ReactElement {
+  const { t } = useT();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -66,7 +84,7 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
         .catch((err: unknown) => {
           if (!alive) return;
           const status = (err as { status?: number }).status;
-          setError(status === 404 ? 'Không tìm thấy đơn hàng' : err instanceof Error ? err.message : 'Có lỗi xảy ra');
+          setError(status === 404 ? t('account.order.notFound') : err instanceof Error ? err.message : t('account.order.errorGeneric'));
         });
     });
     return () => {
@@ -81,11 +99,11 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
       .then((updated) => {
         setOrder(updated);
         setConfirmCancel(false);
-        setBanner('Đã hủy đơn — tồn kho và mã giảm giá (nếu có) sẽ được hoàn lại.');
+        setBanner(t('account.order.cancelSuccess'));
       })
       .catch((err: unknown) => {
         setConfirmCancel(false);
-        setBanner(err instanceof Error ? err.message : 'Hủy đơn thất bại');
+        setBanner(err instanceof Error ? err.message : t('account.order.cancelFail'));
       })
       .finally(() => setCancelling(false));
   };
@@ -93,8 +111,14 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
   const onDownloadInvoice = (): void => {
     if (!order) return;
     setBanner(null);
+    // FI-394 verifier P1-2: module ordersApi thuần (không hook được) → lỗi nhận
+    // diện qua err.name 'InvoiceDownloadError' + status → key hóa banner tại đây.
     downloadInvoicePdf(order).catch((err: unknown) => {
-      setBanner(err instanceof Error ? err.message : 'Tải hóa đơn thất bại');
+      if (err instanceof Error && err.name === 'InvoiceDownloadError') {
+        setBanner(t('account.order.invoiceError', { status: (err as Error & { status?: number }).status }));
+      } else {
+        setBanner(err instanceof Error ? err.message : t('account.order.invoiceFail'));
+      }
     });
   };
 
@@ -113,11 +137,11 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
       .filter(([, qty]) => qty > 0)
       .map(([lineId, qty]) => ({ lineId, qty }));
     if (lines.length === 0) {
-      setRmaError('Chọn ít nhất 1 sản phẩm muốn trả');
+      setRmaError(t('account.order.rmaErrorEmpty'));
       return;
     }
     if (!rmaReason.trim()) {
-      setRmaError('Nhập lý do trả hàng');
+      setRmaError(t('account.order.rmaErrorReason'));
       return;
     }
     setRmaSubmitting(true);
@@ -126,10 +150,10 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
       .then((rma) => {
         setRmas((prev) => [rma, ...prev]);
         setRmaModal(false);
-        setBanner('Đã gửi yêu cầu trả hàng — chờ quản trị viên duyệt. Xem tiến trình bên dưới.');
+        setBanner(t('account.order.rmaSuccess'));
       })
       .catch((err: unknown) => {
-        setRmaError(err instanceof Error ? err.message : 'Không tạo được yêu cầu trả hàng');
+        setRmaError(err instanceof Error ? err.message : t('account.order.rmaFail'));
       })
       .finally(() => setRmaSubmitting(false));
   };
@@ -137,103 +161,123 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
   if (error) {
     return (
       <Card>
-        <p style={{ margin: 0 }}>{error}</p>
-        <Button variant="secondary" onClick={() => appNavigate('/account/orders')} style={{ marginTop: 12 }}>
-          ← Về danh sách đơn
+        <p className="od-error__msg">{error}</p>
+        <Button variant="secondary" className="od-error__back" onClick={() => appNavigate('/account/orders')}>
+          {t('account.order.backToList')}
         </Button>
       </Card>
     );
   }
 
   if (!order) {
+    // FI-394 verifier P1-1: skeleton nhất quán OrdersPage (T5) — loading MỌI
+    // trang account; key account.order.loading giữ làm aria-label.
     return (
       <Card>
-        <p style={{ margin: 0, color: 'var(--c-text-secondary, #666)' }}>Đang tải đơn hàng…</p>
+        <div role="status" aria-label={t('account.order.loading')}>
+          <ListSkeleton count={3} />
+        </div>
       </Card>
     );
   }
 
   const invoiceAvailable = ['CONFIRMED', 'SHIPPED', 'DELIVERED'].includes(order.status);
   const hasActiveRma = rmas.some((r) => r.status !== 'REFUNDED' && r.status !== 'REJECTED');
-  const rmaStatusLabel = (status: string): string => RMA_STATUS_LABEL[status] ?? status;
+  const rmaStatusLabel = (status: string): string => {
+    const key = RMA_STATUS_KEY[status];
+    return key ? t(`account.order.rmaStatus.${key}`) : status;
+  };
 
   return (
     <div data-testid="order-detail">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <Button variant="ghost" onClick={() => appNavigate('/account/orders')}>←</Button>
-        <h1 style={{ margin: 0, flex: 1 }}>Đơn #{order.id.slice(0, 8).toUpperCase()}</h1>
+      <div className="od-head">
+        <IconButton
+          variant="ghost"
+          size="sm"
+          aria-label={t('account.order.backToList')}
+          onClick={() => appNavigate('/account/orders')}
+        >
+          <Icon name="chevron-left" size={16} />
+        </IconButton>
+        <h1 className="od-title">{t('account.order.title', { id: order.id.slice(0, 8).toUpperCase() })}</h1>
         <StatusBadge status={order.status} />
       </div>
 
       {banner && (
-        <Card style={{ marginBottom: 12 }}>
-          <span style={{ color: 'var(--c-text-secondary, #555)' }}>{banner}</span>
+        <Card className="od-banner">
+          <span className="od-banner__text">{banner}</span>
         </Card>
       )}
 
-      <div style={{ display: 'grid', gap: 'var(--space-3, 12px)' }}>
+      <div className="od-grid">
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <div className="od-meta-row">
             <div>
-              <div>Đặt lúc {formatDateTime(order.createdAt)}</div>
-              <div style={{ color: 'var(--c-text-secondary, #666)', fontSize: 'var(--text-sm, 13px)' }}>
-                Thanh toán: {order.paymentMethod === 'stripe' ? 'Stripe' : 'COD'} · Vận chuyển:{' '}
-                {order.shippingMethod === 'express' ? 'Giao hàng nhanh' : 'Giao hàng tiêu chuẩn'}
-                {order.trackingCode ? ` · Mã vận đơn: ${order.trackingCode}` : ''}
+              <div>{t('account.order.orderedAt', { at: formatDateTime(order.createdAt) })}</div>
+              <div className="od-meta-detail">
+                {t('account.order.payment')}: {order.paymentMethod === 'stripe' ? 'Stripe' : 'COD'} ·{' '}
+                {t('account.order.shipping')}:{' '}
+                {order.shippingMethod === 'express' ? t('account.order.shippingExpress') : t('account.order.shippingStd')}
+                {order.trackingCode ? ` · ${t('account.order.trackingCode')}: ${order.trackingCode}` : ''}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="od-meta-actions">
               {invoiceAvailable && (
-                <Button onClick={onDownloadInvoice}>Tải hóa đơn PDF</Button>
+                <Button className="od-btn-icon" onClick={onDownloadInvoice}>
+                  <Icon name="external" size={16} />
+                  {t('account.order.invoice')}
+                </Button>
               )}
               {order.status === 'DELIVERED' && !hasActiveRma && (
-                <Button variant="secondary" data-testid="rma-create" onClick={openRmaModal}>
-                  Trả hàng / hoàn tiền
+                <Button variant="secondary" className="od-btn-icon" data-testid="rma-create" onClick={openRmaModal}>
+                  <Icon name="package" size={16} />
+                  {t('account.order.rmaCreate')}
                 </Button>
               )}
               {order.status === 'PENDING' && (
-                <Button variant="danger" onClick={() => setConfirmCancel(true)}>Hủy đơn</Button>
+                <Button variant="danger" onClick={() => setConfirmCancel(true)}>{t('account.order.cancel')}</Button>
               )}
             </div>
           </div>
         </Card>
 
         <Card>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Sản phẩm</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-md, 14px)' }}>
-            <tbody>
-              {order.items.map((item) => (
-                <tr key={item.id} style={{ borderTop: '1px solid var(--c-border, #EEE)' }}>
-                  <td style={{ padding: '8px 4px' }}>{item.name}</td>
-                  <td style={{ padding: '8px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>×{item.qty}</td>
-                  <td style={{ padding: '8px 4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {formatVnd(item.lineTotal)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ marginTop: 12, display: 'grid', gap: 4, justifyItems: 'end', fontSize: 'var(--text-md, 14px)' }}>
-            <span>Tạm tính: {formatVnd(order.subtotal)}</span>
+          <h2 className="od-section-title">{t('account.order.items')}</h2>
+          <Table
+            columns={[
+              { key: 'name', header: t('account.order.items') },
+              { key: 'qty', header: t('account.order.qty'), render: (item) => `×${item.qty}` },
+              {
+                key: 'lineTotal',
+                header: t('account.order.lineTotal'),
+                align: 'right',
+                render: (item) => formatVnd(item.lineTotal)
+              }
+            ]}
+            rows={order.items}
+            rowKey={(item) => item.id}
+          />
+          <div className="od-totals">
+            <span>{t('account.order.subtotal')}: {formatVnd(order.subtotal)}</span>
             {order.discount > 0 && (
               <span>
-                Giảm giá{order.couponCode ? ` (${order.couponCode})` : ''}: −{formatVnd(order.discount)}
+                {t('account.order.discount')}{order.couponCode ? ` (${order.couponCode})` : ''}: −{formatVnd(order.discount)}
               </span>
             )}
             {!!order.pointsDiscount && order.pointsDiscount > 0 && (
-              <span data-testid="points-discount">Điểm thưởng: −{formatVnd(order.pointsDiscount)}</span>
+              <span data-testid="points-discount">{t('account.order.pointsDiscount')}: −{formatVnd(order.pointsDiscount)}</span>
             )}
-            <span>Phí vận chuyển: {formatVnd(order.shippingFee)}</span>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>
-              Tổng cộng: <span style={{ color: 'var(--c-primary, #F53D2D)' }}>{formatVnd(order.total)}</span>
+            <span>{t('account.order.shippingFee')}: {formatVnd(order.shippingFee)}</span>
+            <span className="od-totals__total">
+              {t('account.order.total')}: <span className="od-totals__amount">{formatVnd(order.total)}</span>
             </span>
           </div>
         </Card>
 
         <Card>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Địa chỉ nhận hàng</h2>
+          <h2 className="od-section-title">{t('account.order.address')}</h2>
           <div>{order.address.fullName} · {order.address.phone}</div>
-          <div style={{ color: 'var(--c-text-secondary, #666)' }}>
+          <div className="od-address">
             {[order.address.line1, order.address.ward, order.address.district, order.address.city]
               .filter(Boolean)
               .join(', ')}
@@ -241,49 +285,47 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
         </Card>
 
         <Card>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Vận chuyển</h2>
+          <h2 className="od-section-title">{t('account.order.shippingSection')}</h2>
           {tracking ? (
             <div data-testid="tracking-block">
               <div>
-                Mã vận đơn: <strong>{tracking.trackingCode}</strong> · Đơn vị:{' '}
-                {tracking.carrier === 'flat' ? 'Giao hàng tiêu chuẩn' : tracking.carrier} · Trạng
-                thái: {tracking.status === 'delivered' ? 'Đã giao' : tracking.status === 'in_transit' ? 'Đang vận chuyển' : 'Đang chuẩn bị'}
+                {t('account.order.trackingCode')}: <strong>{tracking.trackingCode}</strong> ·{' '}
+                {t('account.order.carrierLabel')}:{' '}
+                {tracking.carrier === 'flat' ? t('account.order.trackingCarrierFlat') : tracking.carrier} ·{' '}
+                {t('account.order.statusLabel')}:{' '}
+                {tracking.status === 'delivered'
+                  ? t('account.order.trackingStatusDelivered')
+                  : tracking.status === 'in_transit'
+                    ? t('account.order.trackingStatusTransit')
+                    : t('account.order.trackingStatusPreparing')}
               </div>
               {tracking.events && tracking.events.length > 0 && (
-                <ol style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gap: 4 }}>
+                <ol className="od-timeline">
                   {tracking.events.map((event, index) => (
-                    <li key={`${event.at}-${index}`} style={{ fontSize: 'var(--text-sm, 13px)' }}>
-                      {event.at && <Badge variant="neutral">{event.at}</Badge>} {event.description}
+                    <li key={`${event.at}-${index}`} className="od-timeline__item--primary">
+                      <span className="od-timeline__dot" aria-hidden="true" />
+                      <span className="od-timeline__time">{event.at}</span>
+                      <span className="od-timeline__desc">{event.description}</span>
                     </li>
                   ))}
                 </ol>
               )}
             </div>
           ) : (
-            <div style={{ color: 'var(--c-text-secondary, #666)' }}>
+            <div className="od-address">
               {order.trackingCode
-                ? `Mã vận đơn: ${order.trackingCode}`
-                : 'Chưa có mã vận đơn — hiển thị sau khi shop đóng gói.'}
+                ? `${t('account.order.trackingCode')}: ${order.trackingCode}`
+                : t('account.order.noTracking')}
             </div>
           )}
         </Card>
 
         {rmas.length > 0 && (
           <Card>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>Yêu cầu trả hàng</h2>
-            <div style={{ display: 'grid', gap: 10 }} data-testid="rma-list">
+            <h2 className="od-section-title">{t('account.order.rmaSection')}</h2>
+            <div className="od-rma-list" data-testid="rma-list">
               {rmas.map((rma) => (
-                <div
-                  key={rma.id}
-                  style={{
-                    display: 'flex',
-                    gap: 8,
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    borderTop: '1px solid var(--c-border, #EEE)',
-                    paddingTop: 8
-                  }}
-                >
+                <div key={rma.id} className="od-rma-row">
                   <Badge
                     variant={
                       rma.status === 'REFUNDED'
@@ -295,9 +337,10 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
                   >
                     {rmaStatusLabel(rma.status)}
                   </Badge>
-                  <span style={{ fontSize: 'var(--text-sm, 13px)' }}>
-                    {rma.lines.reduce((sum, line) => sum + line.qty, 0)} món · “{rma.reason}”
-                    {rma.refundAmount ? ` · hoàn ${formatVnd(rma.refundAmount)}` : ''}
+                  <span className="od-rma-meta">
+                    {t('account.order.rmaSummary', { count: rma.lines.reduce((sum, line) => sum + line.qty, 0) })} · “
+                    {rma.reason}”
+                    {rma.refundAmount ? ` · ${t('account.order.refund', { amount: formatVnd(rma.refundAmount) })}` : ''}
                   </span>
                 </div>
               ))}
@@ -306,14 +349,27 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
         )}
 
         <Card>
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>Tiến trình đơn hàng</h2>
-          <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-            {order.timeline.map((entry, index) => (
-              <li key={`${entry.status}-${index}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Badge variant="neutral">{formatDateTime(entry.at)}</Badge>
-                <StatusBadge status={entry.status} />
-              </li>
-            ))}
+          <h2 className="od-section-title">{t('account.order.timeline')}</h2>
+          <ol className="od-timeline">
+            {order.timeline.map((entry, index) => {
+              // Mốc hoàn thành: trạng thái terminal (DELIVERED/CANCELLED) hoặc
+              // entry cuối cùng (mới nhất) → dot --c-success; còn lại --c-border.
+              // Ngoại lệ: CANCELLED/FAILED → dot --c-danger (đỏ — đúng ngữ nghĩa),
+              // CANCELLED tuy terminal nhưng KHÔNG phải "hoàn thành tốt đẹp".
+              const danger = entry.status === 'CANCELLED' || entry.status === 'FAILED';
+              const terminal = entry.status === 'DELIVERED' || entry.status === 'CANCELLED';
+              const done = terminal || index === order.timeline.length - 1;
+              return (
+                <li
+                  key={`${entry.status}-${index}`}
+                  className={danger ? 'od-timeline__item--danger' : done ? 'od-timeline__item--success' : undefined}
+                >
+                  <span className="od-timeline__dot" aria-hidden="true" />
+                  <span className="od-timeline__time">{formatDateTime(entry.at)}</span>
+                  <StatusBadge status={entry.status} />
+                </li>
+              );
+            })}
           </ol>
         </Card>
       </div>
@@ -321,19 +377,20 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
       <Modal
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}
-        title="Hủy đơn hàng?"
+        title={t('account.order.cancelModalTitle')}
         footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setConfirmCancel(false)}>Giữ đơn</Button>
+          <div className="od-modal-footer">
+            <Button variant="secondary" onClick={() => setConfirmCancel(false)}>
+              {t('account.order.keepOrder')}
+            </Button>
             <Button variant="danger" disabled={cancelling} onClick={onCancelConfirmed}>
-              {cancelling ? 'Đang hủy…' : 'Hủy đơn'}
+              {cancelling ? t('account.order.cancelling') : t('account.order.confirmCancel')}
             </Button>
           </div>
         }
       >
-        <p style={{ margin: 0 }}>
-          Đơn #{order.id.slice(0, 8).toUpperCase()} chưa được thanh toán. Hủy xong tồn kho sẽ được nhả lại
-          và bạn không thể hoàn tác.
+        <p className="od-modal-text">
+          {t('account.order.cancelModalBody', { id: order.id.slice(0, 8).toUpperCase() })}
         </p>
       </Modal>
 
@@ -341,56 +398,63 @@ export default function OrderDetailPage({ id }: { id: string }): ReactElement {
       <Modal
         open={rmaModal}
         onClose={() => setRmaModal(false)}
-        title="Tạo yêu cầu trả hàng"
+        title={t('account.order.rmaModalTitle')}
         footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setRmaModal(false)}>Đóng</Button>
+          <div className="od-modal-footer">
+            <Button variant="secondary" onClick={() => setRmaModal(false)}>
+              {t('account.order.close')}
+            </Button>
             <Button variant="primary" disabled={rmaSubmitting} data-testid="rma-submit" onClick={submitRma}>
-              {rmaSubmitting ? 'Đang gửi…' : 'Gửi yêu cầu'}
+              {rmaSubmitting ? t('account.order.rmaSubmitting') : t('account.order.rmaSubmit')}
             </Button>
           </div>
         }
       >
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div className="od-rma-form">
           <div>
             {order.items.map((item) => (
-              <div
-                key={item.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', justifyContent: 'space-between' }}
-              >
+              <div key={item.id} className="od-rma-item">
                 <span>
-                  {item.name} <span style={{ color: 'var(--c-text-secondary, #666)' }}>×{item.qty}</span>
+                  {item.name} <span className="od-rma-item__qty">×{item.qty}</span>
                 </span>
-                <input
-                  type="number"
+                {/* min 0 (KHÔNG forced min 1 — cho phép bỏ chọn món), max = qty
+                    của món; clamp 0..item.qty do QuantityStepper tự xử lý. */}
+                <QuantityStepper
                   min={0}
                   max={item.qty}
                   value={rmaQty[item.id] ?? 0}
-                  aria-label={`Số lượng trả ${item.name}`}
-                  style={{ width: 64, padding: '4px 6px' }}
-                  onChange={(e) =>
-                    setRmaQty((prev) => ({
-                      ...prev,
-                      [item.id]: Math.max(0, Math.min(item.qty, Number(e.target.value) || 0))
-                    }))
-                  }
+                  label={t('account.order.rmaQty', { name: item.name })}
+                  onChange={(next) => setRmaQty((prev) => ({ ...prev, [item.id]: next }))}
                 />
               </div>
             ))}
           </div>
-          <textarea
-            placeholder="Lý do trả hàng (sai mẫu, lỗi sản phẩm…) — trong 7 ngày kể từ khi nhận hàng"
+          <Textarea
+            label={t('account.order.rmaReason')}
+            placeholder={t('account.order.rmaReasonPlaceholder')}
             value={rmaReason}
             rows={3}
-            aria-label="Lý do trả hàng"
-            style={{ width: '100%', padding: 8, boxSizing: 'border-box' }}
+            maxLength={500}
+            hint={t('account.order.rmaCount', { count: rmaReason.length })}
+            error={rmaError === t('account.order.rmaErrorReason') ? rmaError : undefined}
             onChange={(e) => setRmaReason(e.target.value)}
           />
-          {rmaError && (
-            <p role="alert" style={{ margin: 0, color: 'var(--c-danger, #d63a2f)' }}>{rmaError}</p>
+          {/* Lỗi chọn-số-lượng / lỗi API → block role=alert riêng (error prop
+              Textarea chỉ nhận lỗi liên quan lý do). */}
+          {rmaError && rmaError !== t('account.order.rmaErrorReason') && (
+            <p role="alert" className="od-rma-error">{rmaError}</p>
           )}
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** SF-4 (FI-394 T1): side-nav layout bọc toàn bộ trạng thái page (kể cả loading/error). */
+export default function OrderDetailPage({ id }: { id: string }): ReactElement {
+  return (
+    <AccountLayout active="orders">
+      <OrderDetailContent id={id} />
+    </AccountLayout>
   );
 }

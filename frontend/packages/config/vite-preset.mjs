@@ -30,6 +30,39 @@ const SHARED_SINGLETONS = {
   '@ecommerce/chrome': { singleton: true, requiredVersion: false }
 };
 
+// FI-399: 127.0.0.1 vs localhost = 2 cookie host — dev mở bằng 127.0.0.1 sẽ vỡ
+// session sync. Redirect 308 về localhost giữ port/path/query (proxy /api không
+// đổi — redirect xảy ra trước). ws upgrade (HMR) không redirect. PRE middleware
+// — chạy trước spa-fallback/transform (plugin order = mfeConfig.plugins rồi app
+// plugins; configureServer hook chạy theo thứ tự plugin).
+function redirect127ToLocalhostPlugin() {
+  return {
+    name: 'redirect-127-to-localhost',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.headers.upgrade === 'websocket') return next();
+        const host = req.headers.host ?? '';
+        // URL-parse (security-audit P2-1): chặn userinfo smuggling
+        // (Host: 127.0.0.1:5573@evil.com — slice prefix sẽ sinh Location với
+        // authority evil.com). Port CHỈ nhận ^:\\d+$ (regex neo cũng chặn
+        // 127.0.0.10).
+        let hostName = '';
+        let port = '';
+        try {
+          const parsed = new URL(`http://${host}`);
+          hostName = parsed.hostname;
+          port = /^\d+$/.test(parsed.port) ? `:${parsed.port}` : ''; // URL.port là digits (không ':')
+        } catch {
+          return next();
+        }
+        if (hostName !== '127.0.0.1') return next();
+        res.writeHead(308, { Location: `http://localhost${port}${req.url ?? '/'}` });
+        res.end();
+      });
+    }
+  };
+}
+
 /**
  * @param {object} opts
  * @param {string} opts.name        Tên remote duy nhất (vd 'mfe_storefront')
@@ -58,7 +91,9 @@ export function defineMfeConfig({ name, filename = 'remoteEntry.js', exposes, re
         // Không bật → plugin bỏ qua toàn bộ plumbing remote-HMR (check
         // isRemoteHmrEnabled đứng trước mọi setup).
         dev: { remoteHmr: 'full-reload' }
-      })
+      }),
+      // SF-2 (FI-399): redirect 127.0.0.1 → localhost trên mọi MFE dev server
+      redirect127ToLocalhostPlugin()
     ]
   });
 }

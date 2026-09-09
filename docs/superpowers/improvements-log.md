@@ -84,6 +84,11 @@
 - **`orca worktree update-ref` KHÔNG tồn tại** — playbook "update-ref FULL refname + 2 ancestor guards" là `git update-ref --stdin` với `verify` lines (destination ref + branch tip), không phải orca CLI command.
 - ** Contrast sweep: `getComputedStyle().backgroundColor` không thấy linear-gradient** — element nền gradient phải parse color-stop từ `backgroundImage`; và probe node TEXT thật (anchor cha có thể giữ default-blue trong khi `.logo-word` con render đúng). Lesson cho mọi contrast/a11y script sau.
 
+## SF-2 session-sync (FI-399) — 2026-09-09
+- **Context packs FI-397 commit nhầm nhánh** — `fi397-sf-{1..5}.md` + epic spec nằm ở master `56cd136`, KHÔNG trên `story/fi397-unify-frontend` → SF launch prompt trỏ file không tồn tại; phải `git show <commit>:<path>` đọc. Story CREATE nên commit docs lên NHÁNH STORY.
+- **e2e preflight hardcode chặn rig isolate** — `helpers/env.ts` MAILPIT_API `:8025` không có env override + probe storefront `:3000` → gate trên port-shifted rig phải đáp ứng bằng hạ tầng (mailpit main/standalone) vì file thuộc SF-3 boundary. Cân nhắc: thêm env override cho MAILPIT_API (SF-3 sở hữu).
+- **`nextUrl.hostname` = BIND address** — `next dev -H 0.0.0.0` normalize `nextUrl.hostname` → `0.0.0.0` (không phải host client) → host-based guard phải đọc **Host header** (`new URL('http://'+host).hostname`). Gotcha cho mọi middleware/plugin logic dựa trên host.
+- **`orchestration task-create --deps` nhận JSON array các TASK ID** (không phải title) — capture id từ kết quả create trước.
 ## 2026-09-09 — SF-3 (FI-400)
 - **MỚI — Next path-to-regexp chặn adjacency `@` đầu path:** rewrite source `/@:path*` KHÔNG match `/@vite/client` (404 im lặng, log chỉ thấy GET 404); dạng tách segment `/@vite/:path*`, `/@id/:path*`, `/@fs/:path*`, `/@react-refresh` hoạt động. Proxy Vite-dev qua Next rewrites cần đủ 4 prefix đó + `/src/**`, `/node_modules/**`, `/index.html` (module html-proxy — thiếu làm checkout submit đứng), `/remotes/<name>/:path*` giữ prefix.
 - **MỚI — next.config.mjs load-once:** đổi rewrites phải restart `next dev`; dev-stack/rig script phải restart Next sau khi sửa config, không chỉ reload trang.

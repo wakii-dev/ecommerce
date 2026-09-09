@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { redirectHost127 } from './lib/host-redirect';
+import { hostnameFromHostHeader, redirectHost127 } from './lib/host-redirect';
 import { rewriteTarget } from './lib/locale-rewrite';
 import {
   nextAffiliateCookieAction,
@@ -24,7 +24,9 @@ import {
 export async function middleware(request: NextRequest) {
   // FI-399: 127.0.0.1 → localhost (cookie host) — giữ path+query (?ref vẫn qua
   // capture ở hop sau). 308 giữ method. Đặt TRƯỚC affiliate/locale.
-  const localhost = redirectHost127(request.nextUrl.hostname);
+  // ⚠ Đọc Host HEADER (host client thật dùng) — `nextUrl.hostname` là BIND
+  // address của server (vd `0.0.0.0` khi `next dev -H 0.0.0.0`) → guard miss.
+  const localhost = redirectHost127(hostnameFromHostHeader(request.headers.get('host')));
   if (localhost) {
     const target = request.nextUrl.clone();
     target.hostname = localhost;

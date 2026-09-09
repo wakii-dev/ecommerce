@@ -674,12 +674,12 @@ git commit -m "chore(sf4): xóa NEXT_PUBLIC_SHELL_URL kill-switch chết — sam
 
 **Files:** sửa test vỡ (nếu còn) — không thêm test mới (chrome-layout đã có ở PT1).
 
-- [ ] **Step 5.1 — Storefront full suite:** `cd frontend/apps/storefront-web && pnpm vitest run` — Expected xanh toàn bộ.
-- [ ] **Step 5.2 — Chrome package (phải vẫn xanh — KHÔNG đụng):** `cd frontend/packages/chrome && pnpm vitest run` — Expected xanh.
-- [ ] **Step 5.3 — mfe-account + mfe-checkout + i18n + auth:** `pnpm vitest run` từng package — Expected xanh (userMenu re-point từ PT3).
-- [ ] **Step 5.4 — Typecheck các app đụng:** storefront-web + mfe-checkout + mfe-account `pnpm lint` — Expected 0 lỗi. Shell KHÔNG đổi file nào → verify `git diff --name-only` không có apps/shell.
-- [ ] **Step 5.5 — Evidence:** lưu tóm tắt kết quả (số test/file) vào `docs/superpowers/evidence/sf-4/unit-sweep.txt`.
-- [ ] **Step 5.6 — Commit (nếu có fix):**
+- [x] **Step 5.1 — Storefront full suite:** `cd frontend/apps/storefront-web && pnpm vitest run` — Expected xanh toàn bộ.
+- [x] **Step 5.2 — Chrome package (phải vẫn xanh — KHÔNG đụng):** `cd frontend/packages/chrome && pnpm vitest run` — Expected xanh.
+- [x] **Step 5.3 — mfe-account + mfe-checkout + i18n + auth:** `pnpm vitest run` từng package — Expected xanh (userMenu re-point từ PT3).
+- [x] **Step 5.4 — Typecheck các app đụng:** storefront-web + mfe-checkout + mfe-account `pnpm lint` — Expected 0 lỗi. Shell KHÔNG đổi file nào → verify `git diff --name-only` không có apps/shell.
+- [x] **Step 5.5 — Evidence:** lưu tóm tắt kết quả (số test/file) vào `docs/superpowers/evidence/sf-4/unit-sweep.txt`.
+- [x] **Step 5.6 — Commit (nếu có fix):** *(sweep xanh 402/402 — 0 fix → commit-fix SKIPPED; evidence + ticks qua docs commit)*
 ```bash
 git add -A frontend/apps frontend/packages
 git commit -m "test(sf4): unit sweep xanh sau swap — storefront/chrome/mfe (FI-401)"

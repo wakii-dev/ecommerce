@@ -1,0 +1,29 @@
+SF-4 (FI-401) — PT5 unit sweep toàn workspace frontend
+Date: 2026-09-09
+Worktree: /Users/hoivu/orca/workspaces/ecommerce/sf-4-consume-chrome-wiring
+Branch: wakii-dev/sf-4-consume-chrome-wiring
+Baseline: sau PT1-PT3 + PT4 (commit b8f5d51 — NEXT_PUBLIC_SHELL_URL kill-switch xóa)
+
+vitest run — per-suite (cd <dir> && pnpm vitest run, sequential):
+  storefront-web   Test Files 19 passed (19)   Tests 174 passed (174)
+  packages/chrome  Test Files 13 passed (13)   Tests  78 passed (78)
+  packages/i18n    Test Files  1 passed (1)    Tests   6 passed (6)
+  packages/auth    Test Files  6 passed (6)    Tests  42 passed (42)
+  mfe-account      Test Files  9 passed (9)    Tests  61 passed (61)
+  mfe-checkout     Test Files  6 passed (6)    Tests  41 passed (41)
+  ─────────────────────────────────────────────────────────────────
+  TOTAL            54 test files               402 tests — XANH TOÀN BỘ
+
+Typecheck (pnpm lint = tsc --noEmit) — 0 errors từng app:
+  storefront-web   OK
+  mfe-checkout     OK
+  mfe-account      OK
+
+apps/shell probe: KHÔNG có unit test tồn tại (không dir tests/, không file
+*.test.* dưới src/) — shell: 0 unit test, khớp verification matrix pack
+ACCEPTANCE 5 ("shell: 0 unit test tồn tại — probe").
+
+Kết quả: sweep XANH — 0 test vỡ, 0 fix cần thiết → Step 5.6 commit-fix
+SKIPPED (không có file code/test đổi; evidence + plan ticks qua docs commit).
+git diff --name-only (worktree): sạch — 0 file đổi; 0 apps/shell files trong
+toàn bộ phần mở rộng branch SF-4 (diff story/fi397-unify-frontend...HEAD).

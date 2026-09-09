@@ -1,26 +1,33 @@
-# SF-6 T10 — Visual walkthrough record (FI-396, Rule 0)
+# SF-5 walkthrough record (FI-402)
 
-- Ngày: 2026-09-09 · Record: `scripts/qa/walkthrough-record.mjs` + re-shoot admin qua shell login · Video: `walkthrough/video/*.webm` · Manifest: `walkthrough/manifest.json` (25 shots desktop+mobile)
-- **Coordinator TỰ mở + tự nhìn từng screenshot chính** (không tin report agent) — Rule 0.
+> Rule 0: coordinator TỰ mở browser đi flow + TỰ nhìn screenshots — không tin report agent. Evidence: `docs/superpowers/qa/walkthrough/` · Video sync demo: `.run/sf5-sync-video/` + copy ở walkthrough/ · Rig: dev entry :3400 (Rig A) + isolated :8480 (Rig B).
 
-## Surfaces đã record (5/5)
+## 1. One-origin golden path (T2) — entry :3400, không đổi port
 
-| Surface | Shots | Verdict nhìn bằng mắt |
-|---|---|---|
-| storefront (home/PLP/PDP/search/coupons) | sf-*.png ×11 | Đúng direction B: hero ken-burns + kicker + CTA accent; flash sale countdown; PLP 2-col @375; PDP sticky ATC <600 |
-| shell + cart/checkout | shell-*.png ×8 | Header §7.8 ĐỦ: logo + search (viền 2px primary) + cart-badge + account menu ("Nguyen ∨" logged-in shot `keyboard/13-checkout-s3.png`, "Admin ∨" `admin-dashboard-*.png`); mini-cart drawer guest hoạt động (§7.11) |
-| checkout 3 bước (keyboard walkthrough T5) | `keyboard/11-15.png` | Stepper ✓✓3; payment card selected; summary CÓ ảnh sản phẩm + Tổng đỏ; đặt đơn COD 201 → confirmation + CTA về home |
-| account | account-orders-*.png ×2 + `keyboard/03.png` | Orders render, side-nav layout |
-| admin (login qua shell /login → shell-mounted) | admin-*-admin(-dark).png ×6 | Sidebar group + icon + active state §2.5; KPI tabular; charts dark sạch; 4 trạng thái theme đủ |
+Flow: home → PLP → PDP → cart → checkout → confirmation → account + /admin.
 
-## 4 trạng thái theme (storefront/admin × light/dark)
-Đủ matrix: `sf-*-light/dark`, `admin-*-admin/admin-dark` — dark sạch trên home/flash/admin dashboard (trừ real-bug đã adjudicate: theme-toggle chip sáng — thấy đúng trong `sf-home-dark.png` góc header).
+| # | Bước | URL | Evidence | Kết quả |
+|---|---|---|---|---|
+| 1 | Home SSR chrome | `/vi` | walkthrough/t2-01-home.png | __PENDING__ |
+| 2 | PLP | `/c/...` | walkthrough/t2-02-plp.png | __PENDING__ |
+| 3 | PDP + add-to-cart | `/p/...` | walkthrough/t2-03-pdp.png | __PENDING__ |
+| 4 | Cart (shell route qua entry) | `/cart` | walkthrough/t2-04-cart.png | __PENDING__ |
+| 5 | Checkout | `/checkout` | walkthrough/t2-05-checkout.png | __PENDING__ |
+| 6 | Confirmation | `/order/confirmation/...` | walkthrough/t2-06-confirmation.png | __PENDING__ |
+| 7 | Account | `/account` | walkthrough/t2-07-account.png | __PENDING__ |
+| 8 | /admin (layout riêng full-bleed, KHÔNG chrome) | `/admin` | walkthrough/t2-08-admin.png | __PENDING__ |
+| 9 | HMR re-verify (remoteEntry 200 + ws vite-hmr clientPort) | — | remoteEntry + `__mf_hmr` metadata **200 qua entry :3400**; ws `vite-hmr`: shell :5573 `/` OPEN · checkout :5585 `/remotes/checkout/` OPEN · account :5586 `/remotes/account/` OPEN (probe node:crypto-free WebSocket subprotocol `vite-hmr` — 10:5x 09-09) | ✅ PASS |
 
-## Mobile 375
-`mobile-sf-home-375.png`, `mobile-sf-pdp-375-sticky.png` (sticky ATC bar ✓), `mobile-shell-cart-375.png` (F1 overflow shell đã adjudicate FAIL SF-3 — ảnh `rule0-shell-home-375.png`).
+## 2. Sync demo (T1) — video + evidence
 
-## Sign-off notes
-- Video webm lưu tại `walkthrough/video/` (context chính: storefront → shell/cart/drawer/checkout → account → admin, light+dark).
-- 18 ảnh keyboard-flow (`walkthrough/keyboard/`) = bằng chứng bổ sung flow mua hàng + focus states.
-- Các bug nhìn thấy trong record = ĐÚNG những gì đã adjudicate (theme-toggle dark, uk-btn dark label ở login, shell @375 overflow) — không phát hiện thêm visual mới ngoài notes P2 (breadcrumb separator '>' raw @375, shell header Arial controls).
-- Kết luận: **walkthrough PASS với known-bugs đã fix-task** — user xem video + shots để sign-off cuối (STORY-COMPLETE).
+Login/logout lan tức thì 2 tab 2 app, không reload, không spurious logout (20-run):
+- Video: __PENDING__ (recordVideo từ session-sync-matrix.spec)
+- Bảng case × verdict: `docs/superpowers/qa/sync-matrix.md`
+
+## 3. Chrome cross-host consistency (T7)
+
+Screenshots 4 trạng thái × 2 host + results.json: `walkthrough/chrome-consistency/` — verdict `visual-consistency.md`.
+
+## 4. Chuẩn bị STORY-COMPLETE
+
+Epic cần: link artifacts (mục này) + ADR 0009 + findings epic comment + merge hash.

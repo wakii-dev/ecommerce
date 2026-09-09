@@ -24,11 +24,16 @@ export interface SyncMessage {
   [key: string]: unknown;
 }
 
+/** Kind của failure refresh gần nhất (P1#2 FI-399 review — gate retry-once). */
+export type RefreshFailureKind = '401' | 'other' | null;
+
 /** Store shape session-sync cần (AuthStore thỏa structurally — không import runtime). */
 export interface AuthSyncStore {
   isAuthenticated(): boolean;
   subscribe(listener: () => void): () => void;
   refresh(): Promise<boolean>;
+  /** P1#2: kind failure của lần refresh CUỐI — retry-once CHỈ khi '401'. */
+  getLastRefreshFailure?: () => RefreshFailureKind;
 }
 
 export interface SyncBus {
@@ -106,6 +111,9 @@ export function createProductionBus(): SyncBus | null {
   });
 }
 
+/** Types mà storage fallback nhận (whitelist — P0 FI-399 review): mọi type khác bị BỎ. */
+const STORAGE_FALLBACK_TYPES = new Set<string>([AUTH_CHANGED, REFRESH_START, REFRESH_DONE]);
+
 /** Bus storage sentinel — tách ra để test DI (storage + listener target fake). */
 export function createStorageFallbackBus(
   storage: Storage,
@@ -115,18 +123,30 @@ export function createStorageFallbackBus(
   const offListen = listen((e) => {
     if (e.key !== SENTINEL_KEY || !e.newValue) return;
     try {
-      const parsed = JSON.parse(e.newValue) as { v?: unknown };
+      const parsed = JSON.parse(e.newValue) as { v?: unknown; type?: unknown };
       if (parsed.v !== 1) return; // version lạ — tương lai mới xử
+      // P0 (FI-399 review): GIỮ type gốc trong sentinel — handler cũ gán cứng
+      // AUTH_CHANGED cho mọi post (kể cả handshake refresh-start/done) → mỗi
+      // handshake tới receiver như auth-changed → refresh → post handshake tiếp
+      // → exponential refresh storm (700K refresh/800ms từ 1 login).
+      const type = typeof parsed.type === 'string' ? parsed.type : AUTH_CHANGED; // v1 bare (không type) = auth-changed (backwards-compat)
+      if (!STORAGE_FALLBACK_TYPES.has(type)) return;
+      const message: SyncMessage = { type };
+      for (const fn of subs) fn(message);
     } catch {
       return; // value rác — bỏ qua
     }
-    const message: SyncMessage = { type: AUTH_CHANGED };
-    for (const fn of subs) fn(message);
   });
   return {
-    post() {
-      // value KHÔNG mang message/token — chỉ là "có sự thay đổi auth" signal.
-      const sentinel = { v: 1, t: Date.now(), n: Math.random().toString(36).slice(2) };
+    post(message) {
+      // Sentinel mang TYPE của message (không mang token) — receiver phân biệt
+      // auth-changed (refresh) với handshake start/done (chỉ set flag).
+      const sentinel = {
+        v: 1,
+        t: Date.now(),
+        n: Math.random().toString(36).slice(2),
+        type: message.type
+      };
       try {
         storage.setItem(SENTINEL_KEY, JSON.stringify(sentinel));
       } catch {
@@ -217,6 +237,15 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 /** Wrap store.refresh = coordinatedRefresh; giữ bản gốc để stop() restore. */
 function wrapRefresh(ctx: SyncCtx): void {
   const target = ctx.store as AuthSyncStore & { refresh: RefreshFn };
+  // INVARIANT re-entrancy: Web Locks KHÔNG re-entrant — prototype refresh
+  // (originalRefresh) POST thẳng, KHÔNG BAO GIỜ gọi this.refresh()/
+  // this.fetch() trong khi đang giữ lock (fetch() 401-path đi qua
+  // ensureRefreshed → refreshPromise — vẫn OK vì holder không await nó).
+  if (Object.prototype.hasOwnProperty.call(target, 'refresh')) {
+    // P2 (FI-399 review): start 2 lần trên cùng store sẽ chain-wrap → mỗi
+    // refresh chạy 2 tầng coordination — fail loud thay vì wrap câm.
+    throw new Error('[auth] createSessionSync: store.refresh đã bị wrap (start 2 lần?)');
+  }
   ctx.originalRefresh = target.refresh; // prototype method (chưa bị wrap)
   target.refresh = () => coordinatedRefresh(ctx);
   ctx.refreshWrapped = true;
@@ -243,17 +272,32 @@ async function coordinatedRefresh(ctx: SyncCtx): Promise<boolean> {
   if (locks && typeof locks.query === 'function') {
     try {
       const snapshot = await locks.query();
-      contender = (snapshot.held?.length ?? 0) > 0;
+      // P2 (FI-399 review): đếm theo TÊN lock của mình — holder của lock KHÁC
+      // (lock khác origin-app) không phải contender refresh auth.
+      contender = (snapshot.held ?? []).some((l) => l.name === LOCK_NAME);
     } catch {
       contender = true; // không đo được — an toàn là trên (retry enabled)
     }
   }
   const runInside = () => refreshWithConditionalRetry(ctx, { fallback, contender });
   if (locks) {
+    // P1#3 (FI-399 review): phân biệt CALLBACK throw (refresh tự lỗi —vd
+    // refreshUrl misconfigured) với ACQUISITION lỗi. Callback throw → rethrow
+    // NGUYÊN — chạy lại unlocked = POST thứ 2 vô nghĩa/đỡ vòng lặp.
+    let callbackThrew = false;
+    const guardedInside = async (): Promise<boolean> => {
+      try {
+        return await runInside();
+      } catch (e) {
+        callbackThrew = true;
+        throw e;
+      }
+    };
     try {
-      return await locks.request(LOCK_NAME, { ifAvailable: false }, runInside);
-    } catch {
-      // locks API lỗi giữa chừng — chạy không lock, retry enabled (an toàn)
+      return await locks.request(LOCK_NAME, { ifAvailable: false }, guardedInside);
+    } catch (e) {
+      if (callbackThrew) throw e; // lỗi của callback — nguyên trạng, KHÔNG rerun
+      // locks API lỗi giữa chừng (acquisition) — chạy không lock, retry enabled (an toàn)
       return refreshWithConditionalRetry(ctx, { fallback: true, contender: true });
     }
   }
@@ -283,9 +327,15 @@ async function refreshWithConditionalRetry(
   const attempt = (): Promise<boolean> => ctx.originalRefresh!.call(ctx.store);
   const first = await attempt();
   if (first) return true;
-  // 401 KHÔNG có bằng chứng rotate lúc mình chờ = cookie thật chết (expiry/
-  // revoke/logout app khác) — logout đã xảy ra trong original, KHÔNG retry.
+  // Retry CHỈ khi (fallback||contender) — không bằng chứng rotate lúc mình chờ
+  // = cookie thật chết (expiry/revoke/logout app khác) → logout đã xảy ra
+  // trong original, KHÔNG retry (spec §2.3).
   if (!flags.fallback && !flags.contender) return false;
+  // P1#2 (FI-399 review): retry CHỈ trên 401 — network throw/500/timeout/
+  // body sai KHÔNG thể là "cookie cũ vừa bị replace bởi rotate mới" → không
+  // retry, logout nguyên trạng ở attempt 1 (đúng spec §2.3 `status===401`).
+  const kind = ctx.store.getLastRefreshFailure?.() ?? null;
+  if (kind !== '401') return false;
   // Retry ĐÚNG 1 lần (quyết định epic) — vẫn trong lock này.
   const timeoutMs = ctx.deps.fetchTimeoutMs ?? 10_000;
   await sleep(Math.min(ctx.deps.backoffMs ?? 400, timeoutMs));

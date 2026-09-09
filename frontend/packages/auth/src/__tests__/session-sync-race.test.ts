@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AuthStore, authStore } from '../AuthStore';
-import { createSessionSync } from '../session-sync';
+import { LOCK_NAME, createSessionSync } from '../session-sync';
 // LockManager là DOM global type (lib.dom) — không import từ session-sync.
 
 const REFRESH_URL = '/api/identity/auth/refresh';
@@ -79,11 +79,15 @@ function makeLockManagerMock(): LockManager & { busyForTest(): boolean } {
   };
   return {
     busyForTest: () => busy,
-    query: async () => ({ held: busy ? [{ name: 'x' }] : [], pending: [] }),
+    // held mang ĐÚNG tên lock của mình — production code đo contender bằng
+    // `held.some(l => l.name === LOCK_NAME)` (P2 FI-399 review).
+    query: async () => ({ held: busy ? [{ name: LOCK_NAME, mode: 'exclusive' }] : [], pending: [] }),
     request: (_name: string, _opts: unknown, cb: () => Promise<unknown>) =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         queue.push(() => {
-          Promise.resolve(cb()).then(resolve, resolve).finally(() => {
+          // Giống Web Locks thật: callback reject → promise của request REJECT
+          // (không resolve-with-error) — coordination dựa phân biệt này (P1#3).
+          Promise.resolve(cb()).then(resolve, reject).finally(() => {
             busy = false;
             pump();
           });
@@ -248,6 +252,49 @@ describe('401-retry-once CÓ ĐIỀU KIỆN (spec §2.3)', () => {
     expect(Date.now() - t0, 'không contender → KHÔNG chờ backoff 400ms').toBeLessThan(200);
     expect(log).toHaveLength(1);
     expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('fallback mode + network error (fetch throw) → ĐÚNG 1 POST, KHÔNG retry — chỉ 401 mới retry (P1#2 review)', async () => {
+    const hub = new BroadcastHub();
+    const store = new AuthStore();
+    let posts = 0;
+    store.configureAuth({
+      refreshUrl: REFRESH_URL,
+      fetchImpl: vi.fn(async (): Promise<Response> => {
+        posts += 1;
+        throw new TypeError('fetch failed'); // network error — KHÔNG phải 401
+      })
+    });
+    const sync = createSessionSync(store, {
+      bus: hub.connect(),
+      locks: null, // fallback mode — flag cho phép retry, nhưng kind ≠ '401'
+      backoffMs: 5,
+      jitterRange: [0, 0]
+    });
+    sync.start();
+    store.setToken(makeJwt('u1'));
+
+    await expect(store.refresh()).resolves.toBe(false);
+    expect(posts, 'network error → logout nguyên trạng ở attempt 1, KHÔNG POST lần 2').toBe(1);
+    expect(store.getLastRefreshFailure(), 'kind được đo = other (không phải 401)').toBe('other');
+    expect(store.isAuthenticated()).toBe(false);
+  });
+});
+
+describe('locks callback throw vs acquisition error (P1#3 FI-399 review)', () => {
+  it('callback throw (refreshUrl misconfig) → rethrow NGUYÊN, KHÔNG chạy lại unlocked (đúng 1 attempt)', async () => {
+    const hub = new BroadcastHub();
+    const locks = makeLockManagerMock();
+    const store = new AuthStore(); // KHÔNG configureAuth → refresh() throw refreshUrl
+    const spy = vi.spyOn(AuthStore.prototype, 'refresh');
+    try {
+      const sync = createSessionSync(store, { bus: hub.connect(), locks, backoffMs: 5, jitterRange: [0, 0] });
+      sync.start();
+      await expect(store.refresh()).rejects.toThrow(/refreshUrl/);
+      expect(spy, 'callback throw → rethrow — không fallback rerun (attempt thứ 2)').toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

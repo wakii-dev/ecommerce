@@ -10,8 +10,13 @@ ra login/logout 1 tab không lan tab khác; 127.0.0.1 vs localhost = 2 cookie ho
 
 ## Decision
 1. **Channel**: BroadcastChannel `ecommerce.auth` (primary) + localStorage
-   sentinel `ecommerce.auth-sync` (fallback, value `{v:1,t,n}` — n = nonce để
-   storage event luôn fire khi 2 transition cùng ms; KHÔNG token trong message).
+   sentinel `ecommerce.auth-sync` (fallback, value `{v:1,t,n,type}` — n = nonce để
+   storage event luôn fire khi 2 transition cùng ms; `type` = type của message
+   được post (P0 FI-399 review: sentinel không mang type thì mọi post bị nhận
+   thành `auth-changed` → handshake start/done tự gây refresh → exponential
+   storm); receiver CHỈ nhận whitelist `auth-changed|refresh-start|refresh-done`,
+   sentinel v1 bare (không type, bản cũ) = `auth-changed`; KHÔNG token trong
+   message).
 2. **Broadcast transition-only**: chỉ khi isAuthenticated() FLIP auth↔unauth
    (subscriber-diff trên authStore). Refresh rotate token (authed→authed) không
    broadcast → chặn BC loop N-tab. Receiver nhận `auth-changed` → refresh()
@@ -27,13 +32,18 @@ ra login/logout 1 tab không lan tab khác; 127.0.0.1 vs localhost = 2 cookie ho
    xong (timeout 5s) — **best-effort**, message-crossing 2 tab start cùng lúc
    KHÔNG được serialize đầy đủ (khai báo rõ; Web Locks là path chuẩn).
 4. **401-refresh retry ĐÚNG 1 lần** sau backoff 400ms, BÊN TRONG lock, CHỈ khi
-   có bằng chứng rotate có thể xảy ra lúc mình chờ: (a) đang fallback mode, hoặc
-   (b) navigator.locks.query() thấy holder khác lúc đo contention. Không
-   contender + không fallback → 401 là cookie thật chết → logout NGAY (1 POST,
-   không backoff) — guest boot không bị thuế 2 POST + 400ms authReady.
-   (Edge: `locks.request()` throw giữa chừng — API lỗi, không giữ được lock —
-   chạy KHÔNG lock với {fallback:true, contender:true} = retry enabled, an toàn
-   là trên.)
+   (fallback || contender) **VÀ** failure của attempt 1 là HTTP 401 (P1#2 FI-399
+   review: network throw/500/timeout/body sai không phải evidence rotate →
+   KHÔNG retry, logout nguyên trạng ở attempt 1) — contender = có bằng chứng
+   rotate có thể xảy ra lúc mình chờ: (a) đang fallback mode, hoặc
+   (b) navigator.locks.query() thấy holder khác CỦA CHÍNH lock này
+   (`held.some(l => l.name === LOCK_NAME)`). Không contender + không fallback →
+   401 là cookie thật chết → logout NGAY (1 POST, không backoff) — guest boot
+   không bị thuế 2 POST + 400ms authReady.
+   (Edge: `locks.request()` throw giữa chừng vì API lỗi (KHÔNG phải callback
+   refresh throw — P1#3: callback throw rethrow nguyên, không chạy lại
+   unlocked) — chạy KHÔNG lock với {fallback:true, contender:true} = retry
+   enabled, an toàn là trên.)
 5. **Timeout**: POST refresh mang AbortSignal.timeout(10s) — fetch treo không
    giữ lock vô hạn (lock là coupling cross-tab mới).
 6. **SSR-guard**: mọi Web API chạm sau `typeof window === 'undefined'` return —

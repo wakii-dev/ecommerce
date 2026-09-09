@@ -114,10 +114,14 @@ export async function pgExec(db: string, sql: string): Promise<string> {
   const { execSync } = await import('node:child_process');
   const path = require('node:path') as typeof import('node:path');
   const repoRoot = path.resolve(__dirname, '../../..');
-  return execSync(
-    `docker compose exec -T postgres psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`,
-    { encoding: 'utf8', cwd: repoRoot }
-  ).trim();
+  // SF-5 (FI-402): rig isolate chạy compose project riêng — E2E_PG_CONTAINER
+  // trỏ thẳng container postgres của rig (docker exec không cần project).
+  // Mặc định giữ hành vi cũ (compose exec trên stack chính).
+  const container = process.env.E2E_PG_CONTAINER;
+  const cmd = container
+    ? `docker exec ${container} psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`
+    : `docker compose exec -T postgres psql -U postgres -d ${db} -tAc "${sql.replace(/"/g, '\"')}"`;
+  return execSync(cmd, { encoding: 'utf8', cwd: repoRoot }).trim();
 }
 
 // ── Mongo event_log (§5.8) — qua mongosh trong container ───────────────────

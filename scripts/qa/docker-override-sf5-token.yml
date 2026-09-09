@@ -1,0 +1,9 @@
+# SF-5 QA override #3: CATALOG_API_TOKEN cho ordering (re-price 401 — finding
+# rig-only). Token = admin JWT mint từ identity ISOLATED (:8480) — DB api_keys
+# riêng nên token main-stack không dùng được. TTL theo JWT_ACCESS_TTL — session
+# QA dài cần re-mint (dev-stack có loop; container mode chưa có — finding #9
+# gộp vào epic comment: full-profile thiếu cơ chế mint token nội bộ).
+services:
+  ordering-service:
+    environment:
+      CATALOG_API_TOKEN: eyJraWQiOiJpZGVudGl0eS0xIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiIyMjMyYjA2OS04NGE4LTRjZmEtOTM0Yy1hMzkyYmQxYjAyMzkiLCJyb2xlIjoiQURNSU4iLCJyb2xlcyI6WyJBRE1JTiJdLCJmdWxsTmFtZSI6IkFkbWluIERlbW8iLCJleHAiOjE3ODg5NTM4ODksImlhdCI6MTc4ODk1Mjk4OSwiZW1haWwiOiJhZG1pbkBkZW1vLnZuIn0.cq3bv6x2PaROIzUkz99ZOKhRtWy3rz8G0BVKHBevowsllft0bbEcNwKLSEPVOGfFsNRk2Ng_7RMwSKhMhkRSQ8_PeHZD5ged_Wp-XlvBhQNkGK1at0ObrOXKaadYrSTZA7e9xCyd_sQxZz9XTmAb1qID8draf6JoSHcfRNxQuJFlSBv1srPTFEcFsJSOqMGuPxMLbRcQuxvbrMqAQ6DmOyazachgUNCwHSKxVGg6G6CJb6gMGoxybtw6mneGMsUcZSqwAejo1-lW1if_sRh0ky58-KxOKTVCGHAsn8a_a_94eNsFGoQvFxkc5Z7ND6uuk1UtkxtiyXqusb_W5zW9xA

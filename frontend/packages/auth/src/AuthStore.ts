@@ -3,6 +3,8 @@
 // XSS không đọc được token). Refresh dựa vào cookie httpOnly do identity
 // service set — client không bao giờ chạm refresh token.
 
+import { createSessionSync, type SessionSyncHandle } from './session-sync';
+
 export interface AuthUser {
   id: string;
   email?: string;
@@ -19,6 +21,8 @@ export interface AuthConfig {
   identityBaseUrl?: string;
   /** Inject fetch cho test / SSR client riêng. Mặc định global fetch. */
   fetchImpl?: typeof fetch;
+  /** Timeout 1 POST refresh (ms) — default 10s. Fetch treo không được giữ cross-tab lock. */
+  fetchTimeoutMs?: number;
 }
 
 type AuthListener = () => void;
@@ -61,7 +65,7 @@ function toUser(payload: Record<string, unknown>): AuthUser | null {
   return user;
 }
 
-class AuthStore {
+export class AuthStore {
   private accessToken: string | null = null;
   private user: AuthUser | null = null;
   private config: AuthConfig = { refreshUrl: '' };
@@ -140,7 +144,8 @@ class AuthStore {
     try {
       const res = await this.doFetch(this.config.refreshUrl, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        signal: AbortSignal.timeout(this.config.fetchTimeoutMs ?? 10_000)
       });
       if (!res.ok) {
         this.logout();
@@ -206,6 +211,17 @@ class AuthStore {
 
 export const authStore = new AuthStore();
 
+let sessionSyncHandle: SessionSyncHandle | null = null;
+
+/** Browser: start ĐÚNG 1 lần dù configureAuth gọi bao nhiêu lần (shell host + remotes đều gọi). */
+function ensureSessionSyncStarted(): void {
+  if (typeof window === 'undefined') return; // SSR/Node — lazy, không chạm Web API
+  if (sessionSyncHandle) return;
+  sessionSyncHandle = createSessionSync(authStore);
+  sessionSyncHandle.start();
+}
+
 export function configureAuth(config: Partial<AuthConfig>): void {
   authStore.configureAuth(config);
+  ensureSessionSyncStarted();
 }

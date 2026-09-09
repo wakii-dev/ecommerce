@@ -36,7 +36,7 @@ T3, T4 song song được sau T1 (không đụng auth pkg). T7 chạy sau CÙNG.
 - Modify: `frontend/packages/auth/src/AuthStore.ts` (export class + configureAuth auto-start + AbortSignal.timeout trên POST refresh)
 - Test command: `cd frontend && pnpm --filter @ecommerce/auth test`
 
-- [ ] **Step 1.1: Viết test FAIL trước — `__tests__/session-sync.test.ts`**
+- [x] **Step 1.1: Viết test FAIL trước — `__tests__/session-sync.test.ts`**
 
 ```ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -246,7 +246,7 @@ describe('session-sync — handshake message không tự gây refresh (luật re
 });
 ```
 
-- [ ] **Step 1.2: Viết test FAIL — `__tests__/ssr-guard.test.ts`** (node env mặc định của package; Node CÓ BroadcastChannel native → phải spy thay trước khi import)
+- [x] **Step 1.2: Viết test FAIL — `__tests__/ssr-guard.test.ts`** (node env mặc định của package; Node CÓ BroadcastChannel native → phải spy thay trước khi import)
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
@@ -290,12 +290,12 @@ describe('session-sync SSR-guard (Node thuần — không window)', () => {
 });
 ```
 
-- [ ] **Step 1.3: Chạy verify FAIL**
+- [x] **Step 1.3: Chạy verify FAIL**
 
 Run: `cd frontend && pnpm --filter @ecommerce/auth test 2>&1 | tail -20`
 Expected: FAIL — `Cannot find module '../session-sync'` (hoặc `createSessionSync is not a function`).
 
-- [ ] **Step 1.4: Implement `src/session-sync.ts`**
+- [x] **Step 1.4: Implement `src/session-sync.ts`**
 
 ```ts
 // session-sync (FI-399) — đồng bộ session đa tab cùng origin.
@@ -498,7 +498,7 @@ export function createSessionSync(store: AuthSyncStore, deps: SessionSyncDeps = 
 }
 ```
 
-- [ ] **Step 1.5: Implement AuthStore.ts changes** (3 chỗ — KHÔNG đụng logic refresh/logout hiện có ngoài thêm signal)
+- [x] **Step 1.5: Implement AuthStore.ts changes** (3 chỗ — KHÔNG đụng logic refresh/logout hiện có ngoài thêm signal)
 
 (a) `class AuthStore` → `export class AuthStore` (AuthStore.ts:64 — additive cho test DI Task 2).
 
@@ -542,12 +542,12 @@ export function configureAuth(config: Partial<AuthConfig>): void {
 
 (import đặt lên đầu file với các import hiện có; 3 khối code (b)/(c) đặt đúng vị trí.)
 
-- [ ] **Step 1.6: Chạy verify PASS**
+- [x] **Step 1.6: Chạy verify PASS**
 
 Run: `cd frontend && pnpm --filter @ecommerce/auth test`
 Expected: ALL PASS (test cũ authStore.test.ts + api.test.ts vẫn xanh — setToken/logout behavior không đổi).
 
-- [ ] **Step 1.7: Commit**
+- [x] **Step 1.7: Commit**
 
 ```bash
 git add frontend/packages/auth/src/session-sync.ts frontend/packages/auth/src/AuthStore.ts \

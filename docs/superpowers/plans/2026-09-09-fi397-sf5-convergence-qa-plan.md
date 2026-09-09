@@ -89,16 +89,16 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] Report `docs/superpowers/qa/gateway-regression.md` (phần redirect — artifact DUY NHẤT, plan-critic P2#8) — evidence raw curl
 
 ### Task 4 — e2e FULL suite (14 + sync-matrix)
-- [ ] 1 lệnh toàn suite trên rig A: `E2E_STOREFRONT_URL=http://localhost:3400 E2E_SHELL_URL=http://localhost:3400 pnpm exec playwright test` (cd frontend/e2e; serial workers=1, retries 1)
-- [ ] Fail thuộc specs → fix trong specs (SPA-race/seed-order/selector) — cap 2 vòng; fail code surface → fix-task epic
-- [ ] Evidence full output → `docs/superpowers/qa/e2e-full.md` (bảng 15 specs × counts, zero-skip note Stripe) — **file TỒN TẠI từ FI-396: APPEND section mới với header `## SF-5 FI-402 (2026-09-09)`, KHÔNG xóa audit trail story cũ** (plan-critic round-2 P2#2, dùngsame cho unit-tests.md + walkthrough-record.md)
+- [x] 1 lệnh toàn suite trên rig A: `E2E_STOREFRONT_URL=http://localhost:3400 E2E_SHELL_URL=http://localhost:3400 pnpm exec playwright test` (cd frontend/e2e; serial workers=1, retries 1)
+- [x] Fail thuộc specs → fix trong specs (SPA-race/seed-order/selector) — cap 2 vòng; fail code surface → fix-task epic
+- [x] Evidence full output → `docs/superpowers/qa/e2e-full.md` (bảng 15 specs × counts, zero-skip note Stripe) — **file TỒN TẠI từ FI-396: APPEND section mới với header `## SF-5 FI-402 (2026-09-09)`, KHÔNG xóa audit trail story cũ** (plan-critic round-2 P2#2, dùngsame cho unit-tests.md + walkthrough-record.md)
 
 ### Task 5 — docker full regression isolated +400
-- [ ] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up (STAGGER + keys override + **net override `scripts/qa/docker-override-sf5-net.yml`** — xem Task 0); nếu rig B từ Task 0 còn sống + sạch → reuse, không buộc rebuild (plan-critic round-2 P2#1)
-- [ ] Rig B health từng container (17 services) + curl matrix qua :8480 (storefront `/`, shell `/cart`, `/admin`, `/api/identity` login, mailpit API :8425)
-- [ ] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **prod-red = FAIL thật → fix-task SF sở hữu** (không phải documented limitation)
-- [ ] Sync-matrix spec chạy trên :8480 — tick cùng Task 1 evidence (không chạy 2 lần, plan-critic P2#6)
-- [ ] Report `docs/superpowers/qa/docker-regression.md` — gồm 2 finding (PG 53300 cold-boot race + keys mount thiếu 4 service) + override QA recipe + verdict nguyên trạng vs override; teardown KHÔNG ở đây (chuyển Task 6 cuối — plan-critic P1#3)
+- [x] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up (STAGGER + keys override + **net override `scripts/qa/docker-override-sf5-net.yml`** — xem Task 0); nếu rig B từ Task 0 còn sống + sạch → reuse, không buộc rebuild (plan-critic round-2 P2#1)
+- [x] Rig B health từng container (17 services) + curl matrix qua :8480 (storefront `/`, shell `/cart`, `/admin`, `/api/identity` login, mailpit API :8425)
+- [x] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **prod-red = FAIL thật → fix-task SF sở hữu** (không phải documented limitation)
+- [x] Sync-matrix spec chạy trên :8480 — tick cùng Task 1 evidence (không chạy 2 lần, plan-critic P2#6)
+- [x] Report `docs/superpowers/qa/docker-regression.md` — gồm 2 finding (PG 53300 cold-boot race + keys mount thiếu 4 service) + override QA recipe + verdict nguyên trạng vs override; teardown KHÔNG ở đây (chuyển Task 6 cuối — plan-critic P1#3)
 
 ### Task 6 — gateway-routes regression check
 - [x] Diff check: `git diff a9a8fad..HEAD -- backend/gateway/src/main/resources/gateway-routes.yml` comment-only (routes/predicates/filters identical — dùng `grep -vE '^\s*#'` so) + `infra/nginx/frontend-web.conf` rỗng + compose khác override-sf2 (thêm từ SF-2, không sửa base)
@@ -117,15 +117,15 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] Report `docs/superpowers/qa/unit-tests.md`; FAIL → fix-task SF sở hữu package đỏ (cap 2 vòng)
 
 ### Task 9 — perf sanity double-inclusion gate (SAU CÙNG — rig A dừng ở cb1 trước mọi build)
-- [ ] **Dừng toàn bộ rig A** (next dev :3400, shell :5573, remotes :5585/:5586/:5577/:5578) + probe ports free — plan-critic P0#1 (`next build` phá `next dev` đang sống)
-- [ ] `vite build` shell + `next build` storefront trong worktree
-- [ ] Scan chunks cho chrome marker: 1 app KHÔNG được ≥2 bản độc lập (FAIL → fix-task SF-1 singleton config)
-- [ ] Report `docs/superpowers/qa/perf-sanity.md` (marker dùng + số chunk + verdict binary)
+- [x] **Dừng toàn bộ rig A** (next dev :3400, shell :5573, remotes :5585/:5586/:5577/:5578) + probe ports free — plan-critic P0#1 (`next build` phá `next dev` đang sống)
+- [x] `vite build` shell + `next build` storefront trong worktree
+- [x] Scan chunks cho chrome marker: 1 app KHÔNG được ≥2 bản độc lập (FAIL → fix-task SF-1 singleton config)
+- [x] Report `docs/superpowers/qa/perf-sanity.md` (marker dùng + số chunk + verdict binary)
 
 ### Task 10 — walkthrough record + ADR roadmap (b) + sweeps evidence
-- [ ] Record/screens sync demo (2 tab 2 app login/logout tức thì — video từ Task 1 recordVideo) + toàn surfaces → `docs/superpowers/qa/walkthrough/` + `walkthrough-record.md` (user xem được, chuẩn bị STORY-COMPLETE); dùng evidence đã capture ở Task 1/2/7 — nếu surface đổi sau khi capture (sweep-fix merge) → boot lại rig A trước khi record (plan-critic P2#9)
-- [ ] ADR `docs/adr/0009-next-migration-roadmap.md`: thứ tự account→checkout, 7 blockers (appNavigate injection, authReady timing, singleton instance per origin, page.css, gateway/nginx routing, e2e re-verify, GA/theme boot contracts), exit criteria từng giai đoạn
-- [ ] Sweeps FINAL (append raw evidence vào `docs/superpowers/qa/sweeps.md` đã viết ở Task 0): pnpm-lock diff fork→HEAD = **0 external dep mới** (chỉ workspace-link `packages/chrome` từ SF-1 — spec-critic P0); backend/contracts diff = comment-only gateway (deviation ghi tường minh + epic ratify trước verify); provenance `a9a8fad..master` backend rỗng (jars :8080 ≡ nhánh đích)
+- [x] Record/screens sync demo (2 tab 2 app login/logout tức thì — video từ Task 1 recordVideo) + toàn surfaces → `docs/superpowers/qa/walkthrough/` + `walkthrough-record.md` (user xem được, chuẩn bị STORY-COMPLETE); dùng evidence đã capture ở Task 1/2/7 — nếu surface đổi sau khi capture (sweep-fix merge) → boot lại rig A trước khi record (plan-critic P2#9)
+- [x] ADR `docs/adr/0009-next-migration-roadmap.md`: thứ tự account→checkout, 7 blockers (appNavigate injection, authReady timing, singleton instance per origin, page.css, gateway/nginx routing, e2e re-verify, GA/theme boot contracts), exit criteria từng giai đoạn
+- [x] Sweeps FINAL (append raw evidence vào `docs/superpowers/qa/sweeps.md` đã viết ở Task 0): pnpm-lock diff fork→HEAD = **0 external dep mới** (chỉ workspace-link `packages/chrome` từ SF-1 — spec-critic P0); backend/contracts diff = comment-only gateway (deviation ghi tường minh + epic ratify trước verify); provenance `a9a8fad..master` backend rỗng (jars :8080 ≡ nhánh đích)
 
 ### Task 11 — Independent review + merge + gate (coordinator — meta-steps, không checkbox)
 1. code-reviewer ĐỘC LẬP trên diff SF (specs + reports + ADR + env.ts) → APPROVED / CHANGES-REQUESTED (fix → re-review)

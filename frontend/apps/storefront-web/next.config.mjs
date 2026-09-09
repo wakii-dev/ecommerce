@@ -62,6 +62,8 @@ const nextConfig = {
       { source: '/@fs/:path*', destination: `${SHELL}/@fs/:path*` },
       { source: '/@react-refresh', destination: `${SHELL}/@react-refresh` },
       { source: '/src/:path*', destination: `${SHELL}/src/:path*` },
+      // inline-script module của shell index.html (vite html-proxy)
+      { source: '/index.html', destination: `${SHELL}/index.html` },
       { source: '/node_modules/:path*', destination: `${SHELL}/node_modules/:path*` },
       { source: '/assets/:path*', destination: `${SHELL}/assets/:path*` },
       { source: '/favicon.ico', destination: `${SHELL}/favicon.ico` },

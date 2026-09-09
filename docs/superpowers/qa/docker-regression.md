@@ -19,6 +19,9 @@
 | 1 | P1 | cart/catalog/inventory/log crash-loop JwtDecoder | `JWT_PUBLIC_KEY_PATH=../infra/keys/...` path dev-host; không volume mount (identity có mount nên sống) | `docker-override-sf5-keys.yml`: mount `/keys` + env đúng | mount `./infra/keys:/keys:ro` cho 4 service |
 | 2 | P1 | 53300 too many clients, 5 JVM chết lúc cold boot | 10 JVM × Hikari (10 conn) + flyway > max_connections=100 | stagger boot 2 đợt | `-c max_connections=300` + depends_on hợp lý |
 | 3 | **P0** | container DNS `postgres` round-robin giữa stack chính & isolated | base compose fix `name: ecommerce-net` dùng CHUNG mọi project; override-sf2 đổi port+container_name nhưng KHÔNG alias DNS | `docker-override-sf5-net.yml`: network riêng `fi397sf5-net` cho toàn services | bỏ `name:` cứng (compose tự prefix per-project) hoặc docs bắt buộc override network khi isolate |
+| 11 | P1 | ordering re-price **502 "Catalog ... 401"** sau 15' uptime; CATALOG_API_TOKEN trống trong container | compose truyền `${CATALOG_API_TOKEN:-}` từ host .env (rỗng) — dev-stack mint+re-mint loop chỉ phủ HOST JVM, container mode KHÔNG có cơ chế mint | `docker-override-sf5-identity-ttl.yml` (TTL 3600) + `remint-catalog-token.sh` (mint admin JWT từ identity isolate → recreate ordering) | compose cần entrypoint/init container mint token, hoặc catalog chấp nhận service-auth nội bộ (m2m token) |
+| 12 | P1 | identity **login 500** trong container mode | identity-service block KHÔNG set `RABBITMQ_HOST` → yml fallback `localhost` → trỏ chính container (dev-host mode không lộ vì localhost = host rabbit) | thêm `RABBITMQ_HOST=rabbitmq` vào override #4 | thêm `RABBITMQ_HOST: rabbitmq` vào identity-service environment trong compose |
+| 13 | P2 | ES bị OOM-kill (exit 137) lặp lại khi 2 full stack chạy song song | Docker VM memory giới hạn + 2×(ES+10 JVM+infra) | restart ES trước e2e; stop mongo-express | không phải compose — note tài nguyên; single-stack chạy OK |
 
 ## 3. Prod-mode regression qua entry :8480
 

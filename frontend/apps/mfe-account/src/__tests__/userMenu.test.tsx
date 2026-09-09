@@ -7,13 +7,18 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initI18n } from '@ecommerce/i18n';
-import { useAuth } from '@ecommerce/auth';
+import { logout, useAuth } from '@ecommerce/auth';
 import AuthWidget from '../AuthWidget';
-import { logout } from '../api';
 import { appNavigate } from '../bootstrap';
 
-vi.mock('@ecommerce/auth', () => ({ useAuth: vi.fn() }));
-vi.mock('../api', () => ({ logout: vi.fn(() => Promise.resolve()) }));
+// FI-398 T13: AuthWidget nguồn chrome AuthMenu — logout giờ import TỪ
+// '@ecommerce/auth' (account api.ts chỉ re-export cùng nguồn) → spy logout
+// phải mock ở '@ecommerce/auth' (spread actual giữ phần còn lại của package);
+// mock cũ '../api' không còn nằm trên path AuthMenu gọi (spy mù → test đỏ).
+vi.mock('@ecommerce/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@ecommerce/auth')>();
+  return { ...actual, useAuth: vi.fn(), logout: vi.fn(() => Promise.resolve()) };
+});
 vi.mock('../bootstrap', () => ({ appNavigate: vi.fn() }));
 
 const mockClearLocal = vi.fn();

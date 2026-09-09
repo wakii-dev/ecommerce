@@ -79,11 +79,11 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 **Exit criteria:** ADR đủ 6 quyết định + evidence; README nhất quán spec.
 
 ### Task T5 — evidence + walkthrough + e2e subset — dep T4
-- [ ] T5.1 Golden path walkthrough 1-URL (browser thật, Rule 0): home→PLP→PDP→add-to-cart→cart→checkout guest→confirmation→account + `/admin` layout riêng — screenshots từng màn → `docs/superpowers/walkthroughs/fi400-*`
-- [ ] T5.2 HMR evidence cuối: sửa 1 file remote + 1 file Next trên rig → hot update (screenshot before/after)
-- [ ] T5.3 remoteEntry same-origin network evidence (acceptance #4): network tab `/remotes/<name>/remoteEntry.js` URL KHÔNG kèm `:5175/5176/5177` — screenshot network panel
-- [ ] T5.4 shellUrl links: hover/click header cart/account từ trang Next → URL `/cart` `/account` (không `//cart`, không absolute)
-- [ ] T5.5 e2e subset qua rig: golden-path + nav-honesty + auth-cookie (env E2E_STOREFRONT_URL/E2E_SHELL_URL=:3600) — PASS
+- [x] T5.1 Golden path walkthrough 1-URL (browser thật, Rule 0): home→PLP→PDP→add-to-cart→cart→checkout guest→confirmation→account + `/admin` layout riêng — screenshots từng màn → `docs/superpowers/walkthroughs/fi400-*`
+- [x] T5.2 HMR evidence cuối: sửa 1 file remote + 1 file Next trên rig → hot update (screenshot before/after)
+- [x] T5.3 remoteEntry same-origin network evidence (acceptance #4): network tab `/remotes/<name>/remoteEntry.js` URL KHÔNG kèm `:5175/5176/5177` — screenshot network panel
+- [x] T5.4 shellUrl links: hover/click header cart/account từ trang Next → URL `/cart` `/account` (không `//cart`, không absolute)
+- [x] T5.5 e2e subset qua rig: golden-path + nav-honesty + auth-cookie (env E2E_STOREFRONT_URL/E2E_SHELL_URL=:3600) — PASS
 - [ ] T5.6 Commit evidence + plan tick + **teardown rig receipt** (lsof :3600/:5773/:5775-78 sạch trước merge — tránh port-war chéo worktree)
 
 **Exit criteria:** từng dòng ACCEPTANCE context pack §30-39 có evidence tương ứng; e2e subset xanh.

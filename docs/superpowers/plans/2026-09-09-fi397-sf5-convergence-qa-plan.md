@@ -71,11 +71,11 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] Health: preflight 4 URL xanh trên rig A (entry :3400) · WELCOME10 ACTIVE (restore nếu off) · seed user login OK
 
 ### Task 1 — sync-matrix spec × 2 app (executor, code; coordinator CHỈ dispatch khi rig B health xanh — plan-critic P2#7)
-- [ ] Thêm override `MAILPIT_API` vào `frontend/e2e/helpers/env.ts` (1 dòng — plan-critic P0#2, ownership SF-5)
-- [ ] Viết `frontend/e2e/tests/session-sync-matrix.spec.ts` — 5 cases §4 (2FA TOTP node:crypto + base32-decode tự viết; OAuth error-path; 20-run cross-app) + `recordVideo` context (sync demo VIDEO — ACCEPTANCE 1) + tiêu chí binary từng leg (≤1 POST + no-reload)
-- [ ] Chạy XANH trên rig A (same-origin :3400) — debug selector trong spec (ownership SF-5)
-- [ ] Chạy lại trên rig B isolated :8480 (prod-mode same-origin proof) — evidence `.run/` + report
-- [ ] Report `docs/superpowers/qa/sync-matrix.md` (bảng case × kết quả × evidence; fail app-surface → fix-task epic cap 2 vòng)
+- [x] Thêm override `MAILPIT_API` vào `frontend/e2e/helpers/env.ts` (1 dòng — plan-critic P0#2, ownership SF-5)
+- [x] Viết `frontend/e2e/tests/session-sync-matrix.spec.ts` — 5 cases §4 (2FA TOTP node:crypto + base32-decode tự viết; OAuth error-path; 20-run cross-app) + `recordVideo` context (sync demo VIDEO — ACCEPTANCE 1) + tiêu chí binary từng leg (≤1 POST + no-reload)
+- [x] Chạy XANH trên rig A (same-origin :3400) — debug selector trong spec (ownership SF-5)
+- [ ] Chạy lại trên rig B isolated :8480 (prod-mode same-origin proof) — evidence `.run/` + report *(đã chạy 09-09 — RED: shell prod :8480 không boot, gateway thiếu route `/remoteEntry.js` → fix-task ngoài boundary SF-5, chi tiết sync-matrix.md §Finding; tick lại sau khi fix merge + re-run)*
+- [x] Report `docs/superpowers/qa/sync-matrix.md` (bảng case × kết quả × evidence; fail app-surface → fix-task epic cap 2 vòng)
 
 ### Task 2 — one-origin golden-path walkthrough (coordinator, Rule 0)
 - [ ] Đi flow trên rig A entry :3400: home→PLP→PDP→cart→checkout guest COD→confirmation→account (không đổi port) + /admin (layout admin RIÊNG full-bleed, KHÔNG chrome wrap) — coordinator TỰ nhìn

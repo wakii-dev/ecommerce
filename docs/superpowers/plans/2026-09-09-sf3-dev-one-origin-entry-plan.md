@@ -84,7 +84,7 @@ T0 probe ──→ T1 implement-config ──→ ┬─ T2 dev-stack/dev-stop
 - [x] T5.3 remoteEntry same-origin network evidence (acceptance #4): network tab `/remotes/<name>/remoteEntry.js` URL KHÔNG kèm `:5175/5176/5177` — screenshot network panel
 - [x] T5.4 shellUrl links: hover/click header cart/account từ trang Next → URL `/cart` `/account` (không `//cart`, không absolute)
 - [x] T5.5 e2e subset qua rig: golden-path + nav-honesty + auth-cookie (env E2E_STOREFRONT_URL/E2E_SHELL_URL=:3600) — PASS
-- [ ] T5.6 Commit evidence + plan tick + **teardown rig receipt** (lsof :3600/:5773/:5775-78 sạch trước merge — tránh port-war chéo worktree)
+- [x] T5.6 Commit evidence + plan tick + **teardown rig receipt** (lsof :3600/:5773/:5775-78 sạch trước merge — tránh port-war chéo worktree)
 
 **Exit criteria:** từng dòng ACCEPTANCE context pack §30-39 có evidence tương ứng; e2e subset xanh.
 

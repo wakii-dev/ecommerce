@@ -60,7 +60,7 @@ Scaffold package mới + move registry + extract components (chrome sở hữu),
   - [x] T6 `footer-chrome-port` — site.ts (setChromeSite/shellUrl/sfUrl/localePath; **shell host call pin: `setChromeSite({ sfUrl: VITE_STOREFRONT_URL, shellUrl: '' })` — P1 critic**) + Footer ('use client', self-contained `.chrome-container`) + App.tsx render non-admin (F1 — comment epic) + SSR test.
   - [x] T12 `locale-switcher-chrome` — LocaleSwitcher (**shell-model; KHÔNG drop-in storefront URL-locale — P1 critic; Next integration = SF-4**) + storedLang + main.tsx initI18n({lang: storedLang()}) + unit.
 - Wave 5 (widgets) — thứ tự T8→T9:
-  - [ ] T8 `cart-badge-widget-extract-checkout-wraps` — chrome CartBadge (fetchCart inject, CART_CHANGED_EVENT, onOpen) + checkout wrapper (drawer giữ) + bootstrap import chrome. Verify: unit count/event/subscribe; testid giữ.
+  - [x] T8 `cart-badge-widget-extract-checkout-wraps` — chrome CartBadge (fetchCart inject, CART_CHANGED_EVENT, onOpen) + checkout wrapper (drawer giữ) + bootstrap import chrome. Verify: unit count/event/subscribe; testid giữ.
   - [ ] T9 `auth-menu-widget-extract-account-wraps` — chrome AuthMenu (keyboard GIỮ, logout từ auth, onNavigate) + account wrapper. Verify: unit menu/keyboard/testid/text vi.
 - Wave 6 (hồ sơ hoàn thiện) — thứ tự T13→T14:
   - [ ] T13 `unit-tests-next-transpile-vite-both-singleton` — **test setup: initI18n + I18nextProvider chung (P1 critic)** + single-instance test (**SMOKE** — bằng chứng singleton thật = browser badge, P2 critic) + SSR 2 chế độ consolidate + chạy FULL vitest workspace (chrome+i18n xanh) + turbo build.

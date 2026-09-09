@@ -19,3 +19,6 @@ export { LocaleSwitcher } from './LocaleSwitcher';
 export { LANG_STORAGE_KEY, storedLang } from './lang';
 export { SessionBootProvider, ensureSession } from './session-boot';
 export type { SessionBootOptions } from './session-boot';
+export { CART_CHANGED_EVENT, cartBadgeCount } from './cart-badge';
+export type { CartBadgeCart } from './cart-badge';
+export { CartBadge } from './CartBadge';

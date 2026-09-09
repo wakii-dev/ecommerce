@@ -3,5 +3,6 @@
 
 export { HEADER_SLOTS_CHANGED_EVENT, HeaderSlots } from './header-slots';
 export type { SlotKey } from './header-slots';
+export { SiteHeader } from './SiteHeader';
 export { SessionBootProvider, ensureSession } from './session-boot';
 export type { SessionBootOptions } from './session-boot';

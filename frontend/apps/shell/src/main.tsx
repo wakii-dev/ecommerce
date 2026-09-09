@@ -5,8 +5,9 @@ import { initI18n } from '@ecommerce/i18n';
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/ui-kit/styles.css';
 import '@ecommerce/ui-kit/fonts';
+import '@ecommerce/chrome/styles.css';
 import './base.css';
-import './header.css';
+import './header.css'; // vẫn style shell-owned: .shell-logo/.shell-search/.shell-mininav* (chrome.css KHÔNG dup)
 import App from './App';
 import { ShellNav } from './header/Header';
 import ShellSearch from './header/ShellSearch';

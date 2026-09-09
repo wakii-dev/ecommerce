@@ -1,1 +1,84 @@
 /* chrome component styles — CHỈ var(--*), KHÔNG hex, KHÔNG url() (gotcha FI-390: shared css qua MF dev → spa-fallback HTML → resource error) */
+
+/* SiteHeader (FI-398 T4) — port values EXACT từ shell header.css (FI-393 T2
+   anatomy direction §2.1 FI-390, wrap KHÔNG redesign). Shell-owned classes
+   (.shell-logo/.shell-search/.shell-mininav*) KHÔNG port — vẫn do shell
+   header.css style (file giữ load, giá trị giống hệt → zero drift). */
+
+.chrome-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 100);
+  background: var(--c-bg);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Hàng 1: logo | search | actions ─────────────────────────────────── */
+
+.chrome-header__row1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5, 24px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+}
+
+/* Slot 'center' không grow (Slot div inline-style chỉ flex inline) — search
+   chiếm giữa nhờ rule này (critic-P2: registry contract không đổi). */
+.chrome-header__row1 [data-slot='center'] {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* ── Hàng 2: mini-nav nền primary (direction §2.1) ───────────────────── */
+
+.chrome-header__row2 {
+  background: var(--c-primary);
+}
+
+/* Icon-btn 42×42 (direction §2.1 actions) — port .shell-icon-btn (giá trị
+   EXACT; shell AuthWidget inline-styled không đụng class này). */
+.chrome-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--c-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md, 4px);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.chrome-icon-btn:hover {
+  color: var(--c-link);
+  background: var(--wash-hover);
+}
+
+/* Nhãn ẩn cho icon-only button (theme.dark/light) — visible cho SR. */
+.chrome-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* .chrome-container (FI-398 T4 placeholder — Footer T6 dùng, spec §3.3 P1
+   critic self-contained): 1240px/padding 16 — values từ .chrome-header__row1
+   (token --space-4 fallback px). KHÔNG phụ thuộc .container storefront. */
+.chrome-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--space-4, 16px);
+}

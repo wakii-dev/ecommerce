@@ -164,7 +164,7 @@ if [ "${REVIEW_EXISTS:-0}" -eq 0 ]; then
   $PSQL_CAT "INSERT INTO reviews (id,product_id,user_id,user_name,rating,title,content,status,verified)
   SELECT gen_random_uuid(), p.id, u.uid, 'Nguyen Van Demo', 5,
     'Âm hay, đeo êm', 'Đã mua qua demo — đúng như mô tả, pin trâu. Sẽ ủng hộ tiếp.', 'APPROVED', TRUE
-  FROM (SELECT id product_id FROM products WHERE name->>'vi' ILIKE 'Tai nghe%' LIMIT 1) p
+  FROM (SELECT id FROM products WHERE name->>'vi' ILIKE 'Tai nghe%' LIMIT 1) p
   CROSS JOIN (SELECT '$USER_ID'::uuid uid) u
   ON CONFLICT (user_id, product_id) DO NOTHING;
   UPDATE products SET rating_avg = 5.0, rating_count = 1

@@ -9,6 +9,8 @@ services:
   postgres:
     image: postgres:16
     container_name: ecommerce-postgres
+    # full mode: 11 JVM pools + seed — default 100 quá thấp (seed fail "too many clients")
+    command: postgres -c max_connections=300
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -170,12 +172,15 @@ services:
     profiles:
       - full
     environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # JWT keys (patch FI-397 demo)
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_catalog
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
       ELASTICSEARCH_URI: http://elasticsearch:9200
       CATALOG_MINIO_ENABLED: "true"       # SF-13 A3 — upload MinIO (review G1)
       CATALOG_MINIO_ENDPOINT: http://minio:9000
+    volumes:
+      - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8082"   # internal — gateway (full profile) gọi qua service name
     depends_on:
@@ -229,10 +234,13 @@ services:
     profiles:
       - full
     environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # JWT keys (patch FI-397 demo)
       REDIS_HOST: redis
       # enrichment gọi service khác qua service name (full profile)
       CATALOG_BASE_URL: http://catalog-service:8082
       INVENTORY_BASE_URL: http://inventory-service:8084
+    volumes:
+      - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8083"   # internal — gateway (full profile) gọi qua service name
     depends_on:
@@ -346,8 +354,11 @@ services:
     profiles:
       - full
     environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # JWT keys (patch FI-397 demo)
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_inventory
       RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8084"
     depends_on:
@@ -421,9 +432,12 @@ services:
     profiles:
       - full
     environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # JWT keys (patch FI-397 demo)
       MONGO_URI: mongodb://mongo:27017
       MONGO_DATABASE: db_log
       RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8088"
     depends_on:

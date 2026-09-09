@@ -31,6 +31,10 @@ describe('hostnameFromHostHeader — Host header là nguồn sự thật', () =>
     expect(hostnameFromHostHeader('127.0.0.1')).toBe('127.0.0.1');
     expect(hostnameFromHostHeader('localhost:5573')).toBe('localhost');
   });
+  it('userinfo smuggling (security-audit P2-2) → rỗng — guard không fire', () => {
+    expect(hostnameFromHostHeader('evil.com@127.0.0.1:5573')).toBe('');
+    expect(hostnameFromHostHeader('127.0.0.1:5573@evil.com')).toBe('');
+  });
   it('IPv6 bracket + header thiếu/sai format → rỗng (không redirect)', () => {
     expect(hostnameFromHostHeader('[::1]:3000')).toBe('[::1]');
     expect(hostnameFromHostHeader(null)).toBe('');

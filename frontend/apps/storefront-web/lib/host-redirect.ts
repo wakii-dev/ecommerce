@@ -15,7 +15,7 @@ export function redirectHost127(hostname: string): 'localhost' | null {
  * Header thiếu/sai format → rỗng (không redirect).
  */
 export function hostnameFromHostHeader(host: string | null): string {
-  if (!host) return '';
+  if (!host || host.includes('@')) return ''; // '@' = userinfo smuggling (P2-2 security-audit)
   try {
     return new URL(`http://${host}`).hostname;
   } catch {

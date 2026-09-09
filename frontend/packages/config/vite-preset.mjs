@@ -41,9 +41,20 @@ function redirect127ToLocalhostPlugin() {
       server.middlewares.use((req, res, next) => {
         if (req.headers.upgrade === 'websocket') return next();
         const host = req.headers.host ?? '';
-        // Regex neo — startsWith('127.0.0.1') sẽ nhầm cả 127.0.0.10 / 127.0.0.100
-        if (!/^127\.0\.0\.1(:|$)/.test(host)) return next();
-        const port = host.slice('127.0.0.1'.length); // ':5573' | ''
+        // URL-parse (security-audit P2-1): chặn userinfo smuggling
+        // (Host: 127.0.0.1:5573@evil.com — slice prefix sẽ sinh Location với
+        // authority evil.com). Port CHỈ nhận ^:\\d+$ (regex neo cũng chặn
+        // 127.0.0.10).
+        let hostName = '';
+        let port = '';
+        try {
+          const parsed = new URL(`http://${host}`);
+          hostName = parsed.hostname;
+          port = /^\d+$/.test(parsed.port) ? `:${parsed.port}` : ''; // URL.port là digits (không ':')
+        } catch {
+          return next();
+        }
+        if (hostName !== '127.0.0.1') return next();
         res.writeHead(308, { Location: `http://localhost${port}${req.url ?? '/'}` });
         res.end();
       });

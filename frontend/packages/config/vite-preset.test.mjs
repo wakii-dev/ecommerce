@@ -72,6 +72,11 @@ describe('redirect-127-to-localhost plugin (FI-399)', () => {
     captured({ method: 'GET', headers: { host: 'localhost:5573' }, url: '/' }, makeRes(), () => { nexted = true; });
     expect(nexted).toBe(true);
 
+    // userinfo smuggling (security-audit P2-1) → KHÔNG redirect, next()
+    nextedPrefix = false;
+    captured({ method: 'GET', headers: { host: '127.0.0.1:5573@evil.com' }, url: '/' }, makeRes(), () => { nextedPrefix = true; });
+    expect(nextedPrefix, 'host chứa userinfo → bỏ qua, không tạo Location authority lạ').toBe(true);
+
     // ws upgrade (HMR) → next() — không redirect websocket
     nexted = false;
     captured({ method: 'GET', headers: { host: '127.0.0.1:5573', upgrade: 'websocket' }, url: '/' }, makeRes(), () => { nexted = true; });

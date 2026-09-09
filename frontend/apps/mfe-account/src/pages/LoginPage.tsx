@@ -3,6 +3,7 @@ import type { FormEvent, ReactElement } from 'react';
 import { Button, Card, Input } from '@ecommerce/ui-kit';
 import { login, oauthProviders } from '../api';
 import { appNavigate } from '../bootstrap';
+import { safeNextPath } from '../lib/nextPath';
 import '../page.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -65,15 +66,19 @@ export default function LoginPage(): ReactElement {
     if (Object.keys(errors).length > 0) return;
 
     setLoading(true);
+    const nextPath = safeNextPath(window.location.search, '/account');
     login({ email, password })
       .then((result) => {
         if (result.kind === 'ok') {
-          appNavigate('/account');
+          // Honor ?next= (vd admin gate :5177 gửi /login?next=%2Fadmin) —
+          // local path đã sanitize, không hợp lệ thì về /account.
+          appNavigate(nextPath);
           return;
         }
         // SF-15: 2FA bật — giữ challenge (single-use) cho trang nhập mã.
         sessionStorage.setItem('ecommerce.2fa.challenge', result.challengeToken);
-        appNavigate('/login/2fa');
+        // Forward next qua 2FA để landing sau verify vẫn đúng đích ban đầu.
+        appNavigate(`/login/2fa?next=${encodeURIComponent(nextPath)}`);
       })
       .catch((err: unknown) => {
         // Duck-type thay vì instanceof — @ecommerce/contracts không phải shared

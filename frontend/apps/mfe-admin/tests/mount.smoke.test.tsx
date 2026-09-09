@@ -91,8 +91,12 @@ describe('AdminApp mount smoke (jsdom)', () => {
     );
     render(<AdminApp />);
     await waitFor(() => {
-      expect(screen.getByText('admin.guard.forbiddenTitle')).toBeTruthy();
+      // i18n phải dịch được (initI18n đăng ký initReactI18next) — không chấp nhận key thô
+      expect(screen.getByText('Không có quyền')).toBeTruthy();
     });
+    // Link đăng nhập sang shell — next=%2Fadmin để login xong quay lại admin
+    const loginLink = screen.getByRole('link', { name: 'Đăng nhập qua shell' }) as HTMLAnchorElement;
+    expect(loginLink.href).toBe('http://localhost:5173/login?next=%2Fadmin');
     // Không có sidebar nav
     expect(screen.queryByRole('navigation')).toBeNull();
   });

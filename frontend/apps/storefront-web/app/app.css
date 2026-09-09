@@ -77,6 +77,56 @@ img {
   padding-bottom: var(--space-3);
 }
 
+/* ── SF-4 (FI-401): chrome SiteHeader scaffolding ⇒ storefront geometry ──
+   Header element mang .chrome-header + .site-header — app.css import SAU
+   chrome.css nên values .site-header thắng (bg --c-surface). Bridge chỉ
+   xử lý geometry row1/slot mà chrome.css không biết (container 1280,
+   y-padding, responsive wrap của storefront). */
+.site-header .chrome-header__row1 {
+  max-width: 1280px; /* .container storefront (chrome default 1240) */
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  /* Search xuống dòng riêng — slot center (chứa .search-wrap) nhận vai trò
+     .header-main wrap cũ. */
+  .site-header .chrome-header__row1 {
+    flex-wrap: wrap;
+  }
+
+  .site-header .chrome-header__row1 [data-slot='center'] {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  /* ≤600px .header-main gap co còn space-3 (app.css:2765-2767) — class cũ mất
+     theo DOM, bridge sang row1 (P1-3 plan-critic — không bridge = header 375px
+     giữ gap 24px, chật). */
+  .site-header .chrome-header__row1 {
+    gap: var(--space-3);
+  }
+}
+
+/* ── SF-4: footer band — chrome Footer (nguồn) + newsletter island ────────
+   Wrapper .site-footer--chrome neutralize double margin/padding với
+   .chrome-site-footer (cùng bg #212121) — newsletter nằm trong band. */
+.site-footer--chrome {
+  margin-top: var(--space-7);
+  padding: 0;
+}
+
+.site-footer--chrome .chrome-site-footer {
+  margin-top: 0;
+}
+
+.site-footer--chrome .site-footer__newsletter {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-6);
+}
+
 .logo {
   display: flex;
   align-items: center;

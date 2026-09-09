@@ -379,13 +379,13 @@ git commit -m "feat(sf4): layout swap chrome — ChromeShell gate + SiteHeader s
 - Modify: `app/app.css` (bridge nhỏ, tokens-only)
 - Modify: `tests/theme.test.ts` (re-point chrome)
 
-- [ ] **Step 2.1 — Verify import còn lại trước xóa:**
+- [x] **Step 2.1 — Verify import còn lại trước xóa:**
 ```bash
 grep -rn "components/Header\|components/Footer\|components/ThemeToggle\|lib/theme" frontend/apps/storefront-web --include="*.tsx" --include="*.ts" | grep -v node_modules | grep -v ".next"
 ```
 Expected: ĐÚNG 2 hit (P2-1 plan-critic): `components/ThemeToggle.tsx:8` (tự import lib/theme — sẽ bị xóa cùng lô) + `tests/theme.test.ts` (re-point ở Step 2.2). Layout đã swap ở PT1.
 
-- [ ] **Step 2.2 — theme.test.ts re-point chrome** (contract giữ — chrome theme.ts là port EXACT):
+- [x] **Step 2.2 — theme.test.ts re-point chrome** (contract giữ — chrome theme.ts là port EXACT):
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -415,7 +415,7 @@ describe('resolveTheme (SF-15 dark mode — canonical chrome SF-4)', () => {
 });
 ```
 
-- [ ] **Step 2.3 — Css bridge vào `app/app.css`** (chèn NGAY SAU block `.header-main`, giữ tokens-only):
+- [x] **Step 2.3 — Css bridge vào `app/app.css`** (chèn NGAY SAU block `.header-main`, giữ tokens-only):
 
 ```css
 /* ── SF-4 (FI-401): chrome SiteHeader scaffolding ⇒ storefront geometry ──
@@ -469,7 +469,7 @@ describe('resolveTheme (SF-15 dark mode — canonical chrome SF-4)', () => {
 }
 ```
 
-- [ ] **Step 2.4 — Xóa 4 file:**
+- [x] **Step 2.4 — Xóa 4 file:**
 ```bash
 git rm frontend/apps/storefront-web/components/Header.tsx \
   frontend/apps/storefront-web/components/Footer.tsx \
@@ -477,19 +477,19 @@ git rm frontend/apps/storefront-web/components/Header.tsx \
   frontend/apps/storefront-web/lib/theme.ts
 ```
 
-- [ ] **Step 2.5 — Run toàn bộ storefront suite:**
+- [x] **Step 2.5 — Run toàn bộ storefront suite:**
 ```bash
 cd frontend/apps/storefront-web && pnpm vitest run
 ```
 Expected: xanh (theme.test re-point + chrome-layout mới + các test cũ không đụng markup header/footer). ⚠ Nếu `host-redirect.test.ts` hoặc test khác đọc markup → fix theo đúng assert gốc (không bỏ test).
 
-- [ ] **Step 2.6 — Typecheck:**
+- [x] **Step 2.6 — Typecheck:**
 ```bash
 cd frontend/apps/storefront-web && pnpm lint
 ```
 Expected: 0 lỗi (không còn import file đã xóa).
 
-- [ ] **Step 2.7 — Commit.**
+- [x] **Step 2.7 — Commit.**
 ```bash
 git add -A frontend/apps/storefront-web
 git commit -m "feat(sf4): xóa dup Header/Footer/ThemeToggle + theme canonical chrome + css bridge (FI-401)"

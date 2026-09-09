@@ -1326,7 +1326,7 @@ git commit -m "test(e2e): session sync multi-tab — 2 pages cùng context + 20-
 - Create: `docker-compose.override-sf2.yml` (repo root)
 - Test command: `cd frontend && pnpm --filter @ecommerce/auth test`
 
-- [ ] **Step 6.1: Viết test + chạy — `guest-cart-key.test.ts`**
+- [x] **Step 6.1: Viết test + chạy — `guest-cart-key.test.ts`**
 
 ```ts
 import { readFileSync } from 'node:fs';
@@ -1377,7 +1377,7 @@ describe('guest cart token — same-key cross-app (binary)', () => {
 });
 ```
 
-- [ ] **Step 6.2: Viết `docs/adr/0008-session-sync-contract.md`**
+- [x] **Step 6.2: Viết `docs/adr/0008-session-sync-contract.md`**
 
 ```markdown
 # ADR 0008 — Session sync contract (FI-399, story FI-397)
@@ -1436,7 +1436,7 @@ ra login/logout 1 tab không lan tab khác; 127.0.0.1 vs localhost = 2 cookie ho
 - Roadmap migration (b) account→checkout thuộc SF-5 (ADR riêng).
 ```
 
-- [ ] **Step 6.3: Viết `docker-compose.override-sf2.yml`** (repo root — recipe isolated +400 cho SF-5; SF-2 gate KHÔNG cần — dùng docker-run PG riêng, Task 7)
+- [x] **Step 6.3: Viết `docker-compose.override-sf2.yml`** (repo root — recipe isolated +400 cho SF-5; SF-2 gate KHÔNG cần — dùng docker-run PG riêng, Task 7)
 
 ```yaml
 # FI-399 — isolated stack cho gate same-origin proof + SF-5 regression.
@@ -1545,12 +1545,12 @@ Expected: `MISSING: NONE ✓` — nếu liệt kê thiếu service nào (base đ
 
 ⚠ Khi thực hiện: grep `container_name:` trong docker-compose.yml — MỌI service base có container_name phải được prefix trong override (kể cả services không host-port), nếu không `up` full sẽ collision với stack chính. `docker compose version` ≥ 2.24 mới hiểu `!override` — kiểm trước; nếu cũ hơn → thay bằng copy toàn section ports và ghi chú cho SF-5.
 
-- [ ] **Step 6.4: Chạy full packages/auth suite**
+- [x] **Step 6.4: Chạy full packages/auth suite**
 
 Run: `cd frontend && pnpm --filter @ecommerce/auth test`
 Expected: ALL PASS.
 
-- [ ] **Step 6.5: Commit**
+- [x] **Step 6.5: Commit**
 
 ```bash
 git add frontend/packages/auth/src/__tests__/guest-cart-key.test.ts docs/adr/0008-session-sync-contract.md docker-compose.override-sf2.yml

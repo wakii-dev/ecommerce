@@ -1,0 +1,81 @@
+# FI-399 — isolated stack cho gate same-origin proof + SF-5 regression.
+# Dùng: COMPOSE_PROJECT_NAME=fi397sf2 docker compose -p fi397sf2 \
+#         -f docker-compose.yml -f docker-compose.override-sf2.yml --profile full up -d
+# Toàn bộ host-port +400 so với base; container_name prefix fi397sf2- (container
+# là GLOBAL — project name riêng không đổi container_name, không prefix = đụng
+# stack chính). Inter-service vẫn DNS theo service name (không đổi).
+# ⚠ ports trong override PHẢI dùng !override tag để REPLACE (compose merge ports
+# là union — không !override sẽ conflict 2 mapping cùng host port).
+services:
+  postgres:
+    container_name: fi397sf2-postgres
+    ports: !override
+      - "5833:5432"
+  redis:
+    container_name: fi397sf2-redis
+    ports: !override
+      - "6777:6379"
+  rabbitmq:
+    container_name: fi397sf2-rabbitmq
+    ports: !override
+      - "6072:5672"
+      - "16072:15672"
+  mailpit:
+    container_name: fi397sf2-mailpit
+    ports: !override
+      - "1425:1025"
+      - "8425:8025"
+  mongo:
+    container_name: fi397sf2-mongo
+    ports: !override
+      - "27417:27017"
+  mongo-express:
+    container_name: fi397sf2-mongo-express
+    ports: !override
+      - "8489:8081"
+  elasticsearch:
+    container_name: fi397sf2-elasticsearch
+    ports: !override
+      - "9600:9200"
+  invoice-service:
+    container_name: fi397sf2-invoice-service
+    ports: !override
+      - "8490:8090"
+  gateway:
+    container_name: fi397sf2-gateway
+    ports: !override
+      - "8480:8080"
+  minio:
+    container_name: fi397sf2-minio
+    ports: !override
+      - "9400-9401:9000-9001"
+  # Services chỉ nội bộ (không host port) — chỉ cần container_name prefix
+  # (base KHAI BÁO container_name cho chúng → không prefix = collision stack chính):
+  identity-service:
+    container_name: fi397sf2-identity-service
+  catalog-service:
+    container_name: fi397sf2-catalog-service
+  cart-service:
+    container_name: fi397sf2-cart-service
+  inventory-service:
+    container_name: fi397sf2-inventory-service
+  ordering-service:
+    container_name: fi397sf2-ordering-service
+  payment-service:
+    container_name: fi397sf2-payment-service
+  notification-service:
+    container_name: fi397sf2-notification-service
+  log-service:
+    container_name: fi397sf2-log-service
+  partner-api:
+    container_name: fi397sf2-partner-api
+  affiliate-service:
+    container_name: fi397sf2-affiliate-service
+  storefront-web:
+    container_name: fi397sf2-storefront-web
+  frontend-web:
+    container_name: fi397sf2-frontend-web
+  minio-init:
+    container_name: fi397sf2-minio-init
+  stripe-cli:
+    container_name: fi397sf2-stripe-cli

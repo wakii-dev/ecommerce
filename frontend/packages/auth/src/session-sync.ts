@@ -186,11 +186,12 @@ export function createSessionSync(store: AuthSyncStore, deps: SessionSyncDeps = 
       ctx.bus = deps.bus !== undefined ? deps.bus : createProductionBus();
       if (ctx.bus) ctx.unsubBus = ctx.bus.subscribe((m) => onRemoteMessage(ctx, m));
       ctx.unsubTransition = store.subscribe(() => onStateChange(ctx));
-      // Task 2 cắm wrapRefresh(ctx) ở đây.
+      wrapRefresh(ctx);
     },
     stop() {
       if (!ctx.started) return;
       ctx.started = false;
+      unwrapRefresh(ctx); // trả prototype refresh TRƯỚC khi gỡ listener
       ctx.unsubBus?.();
       ctx.unsubBus = null;
       ctx.unsubTransition?.();
@@ -198,4 +199,95 @@ export function createSessionSync(store: AuthSyncStore, deps: SessionSyncDeps = 
       ctx.bus = null;
     }
   };
+}
+
+// ---------------------------------------------------------------------------
+// Cross-tab refresh coordination (FI-399, spec §2.3):
+// - Web Locks serialize mọi refresh (POST tuần tự → không replay cookie cũ).
+// - Fallback (không navigator.locks): BC handshake refresh-start/done + jitter.
+// - 401 retry ĐÚNG 1 lần, BÊN TRONG lock, CHỈ khi có bằng chứng rotate có thể
+//   xảy ra lúc mình chờ (fallback mode HOẶC locks.query() thấy holder khác).
+//   Không contender + không fallback → cookie thật chết → logout NGAY (1 POST).
+// ---------------------------------------------------------------------------
+
+type RefreshFn = () => Promise<boolean>;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Wrap store.refresh = coordinatedRefresh; giữ bản gốc để stop() restore. */
+function wrapRefresh(ctx: SyncCtx): void {
+  const target = ctx.store as AuthSyncStore & { refresh: RefreshFn };
+  ctx.originalRefresh = target.refresh; // prototype method (chưa bị wrap)
+  target.refresh = () => coordinatedRefresh(ctx);
+  ctx.refreshWrapped = true;
+}
+
+function unwrapRefresh(ctx: SyncCtx): void {
+  if (!ctx.refreshWrapped) return;
+  delete (ctx.store as { refresh?: RefreshFn }).refresh; // trả prototype lookup
+  ctx.refreshWrapped = false;
+}
+
+function getLocks(deps: SessionSyncDeps): LockManager | null {
+  if (deps.locks !== undefined) return deps.locks; // DI (kể cả null = fallback)
+  if (typeof navigator !== 'undefined') return navigator.locks ?? null;
+  return null;
+}
+
+async function coordinatedRefresh(ctx: SyncCtx): Promise<boolean> {
+  const locks = getLocks(ctx.deps);
+  const fallback = locks === null;
+  // Đo contention TRƯỚC khi vào lock — evidence cho retry-once (spec §2.3).
+  // KHÔNG dựa handshake-start ở đây: refresh-start chỉ tồn tại ở fallback mode.
+  let contender = false;
+  if (locks && typeof locks.query === 'function') {
+    try {
+      const snapshot = await locks.query();
+      contender = (snapshot.held?.length ?? 0) > 0;
+    } catch {
+      contender = true; // không đo được — an toàn là trên (retry enabled)
+    }
+  }
+  const runInside = () => refreshWithConditionalRetry(ctx, { fallback, contender });
+  if (locks) {
+    try {
+      return await locks.request(LOCK_NAME, { ifAvailable: false }, runInside);
+    } catch {
+      // locks API lỗi giữa chừng — chạy không lock, retry enabled (an toàn)
+      return refreshWithConditionalRetry(ctx, { fallback: true, contender: true });
+    }
+  }
+  return fallbackRefresh(ctx, runInside);
+}
+
+/** Fallback (không Web Locks): jitter → nhường remote refresh đang chạy → handshake broadcast. BEST-EFFORT (ADR 0008). */
+async function fallbackRefresh(ctx: SyncCtx, runInside: () => Promise<boolean>): Promise<boolean> {
+  const [min, max] = ctx.deps.jitterRange ?? [50, 150];
+  await sleep(min + Math.random() * (max - min));
+  const deadline = Date.now() + 5_000;
+  while (ctx.remoteRefreshActive && Date.now() < deadline) {
+    await sleep(25);
+  }
+  ctx.bus?.post({ type: REFRESH_START });
+  try {
+    return await runInside();
+  } finally {
+    ctx.bus?.post({ type: REFRESH_DONE });
+  }
+}
+
+async function refreshWithConditionalRetry(
+  ctx: SyncCtx,
+  flags: { fallback: boolean; contender: boolean }
+): Promise<boolean> {
+  const attempt = (): Promise<boolean> => ctx.originalRefresh!.call(ctx.store);
+  const first = await attempt();
+  if (first) return true;
+  // 401 KHÔNG có bằng chứng rotate lúc mình chờ = cookie thật chết (expiry/
+  // revoke/logout app khác) — logout đã xảy ra trong original, KHÔNG retry.
+  if (!flags.fallback && !flags.contender) return false;
+  // Retry ĐÚNG 1 lần (quyết định epic) — vẫn trong lock này.
+  const timeoutMs = ctx.deps.fetchTimeoutMs ?? 10_000;
+  await sleep(Math.min(ctx.deps.backoffMs ?? 400, timeoutMs));
+  return attempt();
 }

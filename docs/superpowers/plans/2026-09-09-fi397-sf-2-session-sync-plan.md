@@ -564,7 +564,7 @@ git commit -m "feat(auth): session-sync module — transition-only broadcast + s
 - Modify: `frontend/packages/auth/src/session-sync.ts` (wrapRefresh + coordinatedRefresh)
 - Test command: `cd frontend && pnpm --filter @ecommerce/auth test`
 
-- [ ] **Step 2.1: Viết test FAIL — `__tests__/session-sync-race.test.ts`**
+- [x] **Step 2.1: Viết test FAIL — `__tests__/session-sync-race.test.ts`**
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
@@ -837,12 +837,12 @@ describe('singleton regression', () => {
 });
 ```
 
-- [ ] **Step 2.2: Chạy verify FAIL**
+- [x] **Step 2.2: Chạy verify FAIL**
 
 Run: `cd frontend && pnpm --filter @ecommerce/auth test 2>&1 | tail -15`
 Expected: FAIL — race tests fail (spurious logout / stale POSTs — KHÔNG có coordination) — đây chính là bug FI-399 tái hiện trong unit.
 
-- [ ] **Step 2.3: Implement coordination trong `session-sync.ts`**
+- [x] **Step 2.3: Implement coordination trong `session-sync.ts`**
 
 Thêm vào `createSessionSync` trong `start()` (thay comment "Task 2 cắm..."):
 
@@ -942,12 +942,12 @@ async function refreshWithConditionalRetry(
 
 ⚠ Lưu ý đặt `ctx.originalRefresh!` — wrapRefresh gán TRƯỚC khi refresh gọi; nếu caller gọi refresh TRƯỚC start() (không qua wrap) thì path không coordination — production start() luôn chạy trước (configureAuth → start ngay). Test gọi sau start().
 
-- [ ] **Step 2.4: Chạy verify PASS + full package**
+- [x] **Step 2.4: Chạy verify PASS + full package**
 
 Run: `cd frontend && pnpm --filter @ecommerce/auth test`
 Expected: ALL PASS (bao gồm Task 1 + cũ).
 
-- [ ] **Step 2.5: Commit**
+- [x] **Step 2.5: Commit**
 
 ```bash
 git add frontend/packages/auth/src/session-sync.ts frontend/packages/auth/src/__tests__/session-sync-race.test.ts

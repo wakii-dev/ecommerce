@@ -90,13 +90,22 @@ describe('AdminApp mount smoke (jsdom)', () => {
       vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) }) as unknown as Response)
     );
     render(<AdminApp />);
-    await waitFor(() => {
-      // i18n phải dịch được (initI18n đăng ký initReactI18next) — không chấp nhận key thô
-      expect(screen.getByText('Không có quyền')).toBeTruthy();
-    });
-    // Link đăng nhập sang shell — next=%2Fadmin để login xong quay lại admin
+    await waitFor(
+      () => {
+        // i18n phải dịch được (initI18n đăng ký initReactI18next) — không chấp nhận key thô
+        expect(screen.getByText('Không có quyền')).toBeTruthy();
+      },
+      // session-sync (FI-399) wrap refresh: fallback-mode (jsdom không có
+      // navigator.locks) tự retry sau backoff 400ms BÊN TRONG boot-retry
+      // thứ 2 → guard settle ~1s, waitFor default 1s không đủ (đo thực tế
+      // 472→996ms). Precedent timeout 3000: test "refresh thua race".
+      { timeout: 3000 }
+    );
+    // Link đăng nhập sang shell — next=%2Fadmin để login xong quay lại admin.
+    // feab2d6: toàn bộ nav qua gateway — href RELATIVE (1-origin), test assert
+    // path+query component kiểm soát, KHÔNG bake origin dev cũ (5173) vào.
     const loginLink = screen.getByRole('link', { name: 'Đăng nhập qua shell' }) as HTMLAnchorElement;
-    expect(loginLink.href).toBe('http://localhost:5173/login?next=%2Fadmin');
+    expect(loginLink.getAttribute('href')).toBe('/login?next=%2Fadmin');
     // Không có sidebar nav
     expect(screen.queryByRole('navigation')).toBeNull();
   });
@@ -198,8 +207,11 @@ describe('AdminApp mount smoke (jsdom)', () => {
     // Mount lần 2 khi refresh đầu chưa resolve — phải tái sử dụng promise chung.
     first.unmount();
     render(<AdminApp />);
+    // Chờ boot-refresh #1 THẬT SỰ bắn (session-sync wrap + pipeline jsdom làm
+    // POST đầu muộn ~70ms — đo scratch 2026-09-10; chờ cứng 20ms cũ luôn 0).
+    await waitFor(() => expect(refreshCount).toBe(1), { timeout: 3000 });
     // Cho microtask chạy: nếu mount 2 tự bắn refresh riêng thì callCount đã = 2.
-    await new Promise((r) => setTimeout(r, 20));
+    await new Promise((r) => setTimeout(r, 100));
     expect(refreshCount).toBe(1);
     resolveFirst({
       ok: false,

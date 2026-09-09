@@ -96,7 +96,7 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 ### Task 5 — docker full regression isolated +400
 - [x] Preflight `docker compose -p fi397sf5 down -v` (chống leftover collision) rồi build + up (STAGGER + keys override + **net override `scripts/qa/docker-override-sf5-net.yml`** — xem Task 0); nếu rig B từ Task 0 còn sống + sạch → reuse, không buộc rebuild (plan-critic round-2 P2#1)
 - [x] Rig B health từng container (17 services) + curl matrix qua :8480 (storefront `/`, shell `/cart`, `/admin`, `/api/identity` login, mailpit API :8425)
-- [x] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **prod-red = FAIL thật → fix-task SF sở hữu** (không phải documented limitation)
+- [ ] Golden-path spec subset chạy với `E2E_STOREFRONT_URL=E2E_SHELL_URL=http://localhost:8480` (kèm /admin) — **BLOCKED bởi finding #7** (shell prod :8480 không boot — route `/remoteEntry.js`): prod-red = FAIL thật đúng semantics, fix-task đã lên epic, re-run sau fix merge
 - [x] Sync-matrix spec chạy trên :8480 — tick cùng Task 1 evidence (không chạy 2 lần, plan-critic P2#6)
 - [x] Report `docs/superpowers/qa/docker-regression.md` — gồm 2 finding (PG 53300 cold-boot race + keys mount thiếu 4 service) + override QA recipe + verdict nguyên trạng vs override; teardown KHÔNG ở đây (chuyển Task 6 cuối — plan-critic P1#3)
 
@@ -104,7 +104,7 @@ Epic claim "frontend hợp nhất: 1 chrome + session tức thì + 1-origin" ch�
 - [x] Diff check: `git diff a9a8fad..HEAD -- backend/gateway/src/main/resources/gateway-routes.yml` comment-only (routes/predicates/filters identical — dùng `grep -vE '^\s*#'` so) + `infra/nginx/frontend-web.conf` rỗng + compose khác override-sf2 (thêm từ SF-2, không sửa base)
 - [x] Functional: route matrix curl qua gateway isolated :8480 khớp bảng routes (storefront/shell/admin/api/media)
 - [x] Report phần gateway trong `docs/superpowers/qa/gateway-regression.md`
-- [ ] TEARDOWN rig B `docker compose -p fi397sf5 down -v` (SAU KHI Task 5+6 xong hẳn — plan-critic P1#3)
+- [x] TEARDOWN rig B `docker compose -p fi397sf5 down -v` — 0 container còn lại, volumes removed, stripe-cli isolate removed (SAU KHI Task 5+6 xong — plan-critic P1#3)
 
 ### Task 7 — chrome cross-host visual consistency + theme legacy-key
 - [x] Playwright screenshots header/footer 2 host × 4 trạng thái (light/dark × guest/authed) qua entry — lưu `docs/superpowers/qa/walkthrough/chrome-consistency/`

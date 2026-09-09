@@ -152,7 +152,8 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
     await page.waitForURL(/\/login/);
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(password);
-    await page.locator('button[type="submit"]').click();
+    // scope vào FORM login — nút Tìm kiếm của shell header cũng type=submit
+    await page.locator('form:has(input[type="email"]) button[type="submit"]').click();
     await expect(page.getByTestId('auth-user')).toBeVisible();
   }
 

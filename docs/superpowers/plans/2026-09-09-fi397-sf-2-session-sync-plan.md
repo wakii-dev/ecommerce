@@ -1302,7 +1302,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 });
 ```
 
-⚠ Selector note: `auth-guest`/`auth-user` là data-testid có sẵn (AuthWidget.tsx:31,157 — READ-ONLY); 'Đăng nhập'/'Đăng xuất' là label vi hiện có (i18n `nav.login`, `account.menu.logout`). Nếu selector fail khi chạy thật → sửa TEST theo DOM thật ( KHÔNG sửa AuthWidget — không thuộc touch map).
+⚠ Selector note (gate run 09-09): `button[type="submit"]` dính nút Tìm kiếm của shell header → scope `form:has(input[type="email"]) button[type="submit"]` (commit kèm gate). Middleware guard đọc HOST HEADER (nextUrl.hostname = bind address `0.0.0.0` với -H 0.0.0.0) — commit 871e166: `auth-guest`/`auth-user` là data-testid có sẵn (AuthWidget.tsx:31,157 — READ-ONLY); 'Đăng nhập'/'Đăng xuất' là label vi hiện có (i18n `nav.login`, `account.menu.logout`). Nếu selector fail khi chạy thật → sửa TEST theo DOM thật ( KHÔNG sửa AuthWidget — không thuộc touch map).
 
 - [x] **Step 5.2: Validate syntax (không cần stack)**
 
@@ -1576,7 +1576,7 @@ fi
 ls -la $REPO/infra/keys/   # jwt-private.pem + jwt-public.pem phải có
 ```
 
-- [ ] **Step 7.1: PG isolated + identity + gateway (JVM isolate — 0 image Java tồn tại, build compose = 20-40')**
+- [x] **Step 7.1: PG isolated + identity + gateway (JVM isolate — 0 image Java tồn tại, build compose = 20-40')**
 
 ```bash
 REPO=/Users/hoivu/orca/workspaces/ecommerce/sf-2-session-sync
@@ -1619,7 +1619,7 @@ curl -4 -si -X POST http://localhost:8480/api/identity/auth/refresh -H "cookie: 
 curl -4 -si -X POST http://localhost:8480/api/identity/auth/refresh -H "cookie: $COOKIE" | head -1   # 401 — one-time rotate
 ```
 
-- [ ] **Step 7.2: FE rig +400 (boot `--host` — 127.0.0.1 phải với tới được; bind ::1-only = fail IPv4)**
+- [x] **Step 7.2: FE rig +400 (boot `--host` — 127.0.0.1 phải với tới được; bind ::1-only = fail IPv4)**
 
 ```bash
 cd $REPO/frontend
@@ -1642,7 +1642,7 @@ echo $! > /tmp/fi397sf2-next.pid
 for p in 5575 5576 5577 5578 5573 3400; do curl -4 -sf -o /dev/null http://localhost:$p && echo "$p OK" || echo "$p CHƯA SỐNG"; done
 ```
 
-- [ ] **Step 7.3: curl matrix — ACCEPTANCE 4**
+- [x] **Step 7.3: curl matrix — ACCEPTANCE 4**
 
 ```bash
 # 127→localhost, giữ path+query (Next :3400)
@@ -1661,7 +1661,7 @@ curl -4 -sI 'http://localhost:3400/vi' | head -1
 
 ⚠ Nếu `curl -4` không với tới Vite (connection refused) mà `curl` thường được → Vite bind ::1-only dù `--host` → kiểm log, thêm `--host 0.0.0.0`.
 
-- [ ] **Step 7.4: e2e auth-cookie FULL (HTTP-level cũ + multi-tab mới)**
+- [x] **Step 7.4: e2e auth-cookie FULL (HTTP-level cũ + multi-tab mới)**
 
 ```bash
 cd $REPO/frontend
@@ -1674,14 +1674,14 @@ Expected: **7/7 PASS** (4 regression FI-337 + 3 sync). Fail → đọc lỗi →
 
 Browser walkthrough bổ sung (Rule 0 — T3 flow): mở Playwright codegen hoặc thủ công 1 context: login UI tab A → thấy tab B đổi header KHÔNG reload (đã nằm trong e2e test 1) — e2e PASS = flow đã đi trọn; chụp 1 screenshot kết quả cuối mỗi tab làm evidence: `--trace on` KHÔNG cần (config off), dùng `playwright test auth-cookie -g "login A" --headed` nếu cần nhìn bằng mắt.
 
-- [ ] **Step 7.5: Unit sweep toàn workspace (surface SF-2)**
+- [x] **Step 7.5: Unit sweep toàn workspace (surface SF-2)**
 
 ```bash
 cd $REPO/frontend && pnpm --filter @ecommerce/auth test && pnpm --filter @ecommerce/config test && pnpm --filter storefront-web test
 ```
 Expected: ALL PASS.
 
-- [ ] **Step 7.6: Teardown (kill theo PID đã ghi ở 7.1/7.2 — CẤM pkill -f pattern rộng: machine-wide, có thể giết JVM của worktree khác — memory shared-ports cross-worktree)**
+- [x] **Step 7.6: Teardown (kill theo PID đã ghi ở 7.1/7.2 — CẤM pkill -f pattern rộng: machine-wide, có thể giết JVM của worktree khác — memory shared-ports cross-worktree)**
 
 ```bash
 for f in /tmp/fi397sf2-*.pid; do [ -f "$f" ] && kill "$(cat $f)" 2>/dev/null; rm -f "$f"; done

@@ -132,7 +132,7 @@ describe('session-sync — transition-only broadcast', () => {
     const listener = vi.fn();
     const unsub = authStore.subscribe(listener);
     try {
-      await expect(login({ email: 'a@b.c', password: 'password123' })).rejects.toThrow();
+      await expect(login({ email: 'a@b.c', password: 'password123' })).rejects.toThrow(/2FA|hai lớp/);
       expect(listener, 'challenge throw TRƯỚC setToken → store không notify').not.toHaveBeenCalled();
       expect(authStore.isAuthenticated()).toBe(false);
     } finally {
@@ -271,6 +271,21 @@ describe('session-sync SSR-guard (Node thuần — không window)', () => {
     const { configureAuth } = await import('../AuthStore');
     expect(() => configureAuth({ refreshUrl: '/api/identity/auth/refresh' })).not.toThrow();
     expect(created, 'SSR/Node: lazy init KHÔNG chạm BroadcastChannel (typeof window guard)').toHaveLength(0);
+  });
+
+  it('configureAuth ×2 (browser path — window defined) → ĐÚNG 1 channel (idempotent, spec §4)', async () => {
+    vi.stubGlobal('window', {}); // window defined → auto-start được phép chạy
+    try {
+      vi.resetModules(); // handle module-level singleton — cần module fresh
+      const { configureAuth: freshConfigure } = await import('../AuthStore');
+      created.length = 0;
+      freshConfigure({ refreshUrl: '/api/identity/auth/refresh' });
+      freshConfigure({ refreshUrl: '/api/identity/auth/refresh' });
+      expect(created, '2 lần configureAuth không được nhân bản listener/channel').toHaveLength(1);
+    } finally {
+      vi.unstubAllGlobals(); // gỡ window + SpyBC stub
+      vi.resetModules(); // tránh module AuthStore "dính" stub leak sang file khác
+    }
   });
 });
 ```
@@ -504,7 +519,7 @@ và thêm vào `AuthConfig` interface:
   fetchTimeoutMs?: number;
 ```
 
-(c) Cuối file — auto-start listener (idempotent, SSR-guard `typeof window`):
+(c) **THAY THẾ** hàm `configureAuth` hiện có ở cuối file (AuthStore.ts:209-211 — KHÔNG append trùng export) — auto-start listener (idempotent, SSR-guard `typeof window`):
 
 ```ts
 import { createSessionSync, type SessionSyncHandle } from './session-sync';
@@ -578,7 +593,11 @@ class BroadcastHub {
     const members = this.members;
     return {
       post(message: { type: string }) {
-        for (const [t, fn] of members) if (t !== tag) fn(message);
+        // Delivery ASYNC (giống BC thật — không chạy trên call stack của post).
+        // Sync delivery sẽ khiến handshake serialize cả race 2-tab (START của A
+        // tới B trước khi B kịp check) → stale không bao giờ xảy ra → assertion
+        // `log.some(stale)` chết. Async tái hiện message-crossing thật.
+        for (const [t, fn] of members) if (t !== tag) setTimeout(() => fn(message), 0);
       },
       subscribe(fn: (m: { type: string }) => void) {
         members.set(tag, fn);
@@ -1092,7 +1111,8 @@ function redirect127ToLocalhostPlugin() {
       server.middlewares.use((req, res, next) => {
         if (req.headers.upgrade === 'websocket') return next();
         const host = req.headers.host ?? '';
-        if (!host.startsWith('127.0.0.1')) return next();
+        // Regex neo — startsWith('127.0.0.1') sẽ nhầm cả 127.0.0.10 / 127.0.0.100
+        if (!/^127\.0\.0\.1(:|$)/.test(host)) return next();
         const port = host.slice('127.0.0.1'.length); // ':5573' | ''
         res.writeHead(308, { Location: `http://localhost${port}${req.url ?? '/'}` });
         res.end();
@@ -1158,7 +1178,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
   });
 
   /** Đếm POST refresh từ thời điểm attach (sau khi page boot xong). */
-  function trackRefreshPosts(page: import('@playwright/test').Page): { count: () => number } {
+  function trackRefreshPosts(page: import('@playwright/test').Page): { count: (sinceMs?: number) => number; reset: () => void } {
     const times: number[] = [];
     page.on('request', (req) => {
       if (req.method() === 'POST' && req.url().includes('/api/identity/auth/refresh')) {
@@ -1166,7 +1186,10 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
       }
     });
     return {
-      count: (sinceMs = 0) => times.filter((t) => t >= sinceMs).length
+      count: (sinceMs = 0) => times.filter((t) => t >= sinceMs).length,
+      reset: () => {
+        times.length = 0;
+      }
     };
   }
 
@@ -1179,6 +1202,12 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
       (window as unknown as { sync399Loaded: boolean }).sync399Loaded = true;
     });
     return page;
+  }
+
+  /** Tab A cũng phải navigate tường minh (fixture `page` khởi đầu ở about:blank). */
+  async function openMainPage(page: import('@playwright/test').Page) {
+    await page.goto(`${SHELL}/`);
+    await expect(page.getByTestId('auth-guest')).toBeVisible();
   }
 
   async function loginViaUi(page: import('@playwright/test').Page) {
@@ -1198,12 +1227,16 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 
   test('login A → B thấy user NGAY (không reload, ĐÚNG 1 POST refresh trên B)', async ({ page }) => {
     test.setTimeout(60_000);
+    await openMainPage(page);
     const b = await openGuestPage(page.context());
-    await expect
-      .poll(async () => b.evaluate(() => document.readyState), { timeout: 10_000 })
-      .toBe('complete');
-    const t0 = Date.now();
+    // Chờ boot-refresh của B (initAccountShell POST 1 lần) được counter quan
+    // sát rồi RESET — bất biến với rig chậm (boot POST không tính vào t0).
     const bCounter = trackRefreshPosts(b);
+    await expect
+      .poll(() => bCounter.count(), { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(1);
+    bCounter.reset();
+    const t0 = Date.now();
 
     await loginViaUi(page);
 
@@ -1215,6 +1248,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 
   test('logout A → B về guest NGAY (không reload)', async ({ page }) => {
     test.setTimeout(60_000);
+    await openMainPage(page);
     const b = await openGuestPage(page.context());
     await loginViaUi(page);
     await expect(b.getByTestId('auth-user')).toBeVisible({ timeout: 15_000 });
@@ -1228,6 +1262,7 @@ test.describe('session sync — 2 pages cùng context (FI-399)', () => {
 
   test('20-run rotate-race: 0 spurious logout (2 tab refresh đồng thời qua BC)', async ({ page }) => {
     test.setTimeout(180_000);
+    await openMainPage(page);
     const b = await openGuestPage(page.context());
     await loginViaUi(page);
     await expect(b.getByTestId('auth-user')).toBeVisible({ timeout: 15_000 });
@@ -1447,11 +1482,58 @@ services:
     container_name: fi397sf2-minio
     ports: !override
       - "9400-9401:9000-9001"
-  # Services chỉ nội bộ (identity, catalog, cart, inventory, ordering, payment,
-  # notification, log, partner-api, affiliate, storefront-web, frontend-web…) —
-  # KHÔNG có host port; chỉ prefix container_name khi compose file base khai
-  # báo container_name cho service đó (grep trước khi thêm).
+  # Services chỉ nội bộ (không host port) — chỉ cần container_name prefix
+  # (base KHAI BÁO container_name cho chúng → không prefix = collision stack chính):
+  identity-service:
+    container_name: fi397sf2-identity-service
+  catalog-service:
+    container_name: fi397sf2-catalog-service
+  cart-service:
+    container_name: fi397sf2-cart-service
+  inventory-service:
+    container_name: fi397sf2-inventory-service
+  ordering-service:
+    container_name: fi397sf2-ordering-service
+  payment-service:
+    container_name: fi397sf2-payment-service
+  notification-service:
+    container_name: fi397sf2-notification-service
+  log-service:
+    container_name: fi397sf2-log-service
+  partner-api:
+    container_name: fi397sf2-partner-api
+  affiliate-service:
+    container_name: fi397sf2-affiliate-service
+  storefront-web:
+    container_name: fi397sf2-storefront-web
+  frontend-web:
+    container_name: fi397sf2-frontend-web
+  minio-init:
+    container_name: fi397sf2-minio-init
+  stripe-cli:
+    container_name: fi397sf2-stripe-cli
 ```
+
+**Exit criterion cơ chế (chạy sau khi viết file — bắt buộc PASS):**
+
+```bash
+python3 - <<'EOF'
+import re
+def services_with_container_name(path):
+    out, cur = set(), None
+    for line in open(path):
+        m = re.match(r'^  ([a-z0-9_-]+):\s*$', line)
+        if m: cur = m.group(1)
+        if re.match(r'^\s+container_name:', line) and cur: out.add(cur)
+    return out
+base = services_with_container_name('docker-compose.yml')
+ovr = services_with_container_name('docker-compose.override-sf2.yml')
+missing = sorted(base - ovr)
+print('base services có container_name:', len(base), '| override:', len(ovr))
+print('MISSING:', missing if missing else 'NONE ✓')
+EOF
+```
+Expected: `MISSING: NONE ✓` — nếu liệt kê thiếu service nào (base đổi sau ngày 09-09), bổ sung vào override theo cùng pattern.
 
 ⚠ Khi thực hiện: grep `container_name:` trong docker-compose.yml — MỌI service base có container_name phải được prefix trong override (kể cả services không host-port), nếu không `up` full sẽ collision với stack chính. `docker compose version` ≥ 2.24 mới hiểu `!override` — kiểm trước; nếu cũ hơn → thay bằng copy toàn section ports và ghi chú cho SF-5.
 
@@ -1478,6 +1560,12 @@ git commit -m "docs+test: ADR 0008 session-sync contract + guest-cart key binary
 lsof -nP -iTCP:5833 -iTCP:8480 -iTCP:8481 -iTCP:5573 -iTCP:5575 -iTCP:5576 -iTCP:5577 -iTCP:5578 -iTCP:3400 -sTCP:LISTEN   # phải rỗng
 docker ps --format '{{.Names}}' | grep fi397sf2 || echo "no leftover"
 curl -s http://localhost:8025/api/v2/messages >/dev/null && echo "mailpit :8025 OK (main stack)" || echo "MAILPIT DOWN — docker run -d --name fi397sf2-mailpit -p 8025:8025 axllent/mailpit"
+# JWT keys — infra/keys GITIGNORED (không có trong worktree) — make keys hoặc copy từ main checkout
+REPO=/Users/hoivu/orca/workspaces/ecommerce/sf-2-session-sync
+if [ ! -f $REPO/infra/keys/jwt-private.pem ]; then
+  (cd $REPO && make keys) || mkdir -p $REPO/infra/keys && cp /Users/hoivu/orca/projects/ecommerce/infra/keys/*.pem $REPO/infra/keys/
+fi
+ls -la $REPO/infra/keys/   # jwt-private.pem + jwt-public.pem phải có
 ```
 
 - [ ] **Step 7.1: PG isolated + identity + gateway (JVM isolate — 0 image Java tồn tại, build compose = 20-40')**
@@ -1494,12 +1582,14 @@ SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5833/db_identity' \
 JWT_PRIVATE_KEY_PATH=$REPO/infra/keys/jwt-private.pem \
 JWT_PUBLIC_KEY_PATH=$REPO/infra/keys/jwt-public.pem \
   mvn -q -pl backend/services/identity-service -am spring-boot:run > /tmp/fi397sf2-identity.log 2>&1 &
+echo $! > /tmp/fi397sf2-identity.pid
 
 # gateway :8480
 SERVER_PORT=8480 \
 IDENTITY_URI=http://localhost:8481 \
 IDENTITY_JWKS_URI='http://localhost:8481/.well-known/jwks.json' \
   mvn -q -pl backend/gateway -am spring-boot:run > /tmp/fi397sf2-gateway.log 2>&1 &
+echo $! > /tmp/fi397sf2-gateway.pid
 
 # chờ khỏe (tối đa ~180s): curl -4 cả hai
 for i in $(seq 1 60); do curl -4 -sf http://localhost:8481/actuator/health >/dev/null && break; sleep 3; done
@@ -1527,13 +1617,19 @@ curl -4 -si -X POST http://localhost:8480/api/identity/auth/refresh -H "cookie: 
 cd $REPO/frontend
 export GATEWAY_URL=http://localhost:8480
 pnpm --filter @ecommerce/mfe-checkout exec vite --port 5575 --strictPort --host > /tmp/fi397sf2-checkout.log 2>&1 &
+echo $! > /tmp/fi397sf2-checkout.pid
 pnpm --filter @ecommerce/mfe-account exec vite --port 5576 --strictPort --host > /tmp/fi397sf2-account.log 2>&1 &
+echo $! > /tmp/fi397sf2-account.pid
 pnpm --filter @ecommerce/mfe-admin exec vite --port 5577 --strictPort --host > /tmp/fi397sf2-admin.log 2>&1 &
+echo $! > /tmp/fi397sf2-admin.pid
 pnpm --filter @ecommerce/skeleton-remote exec vite --port 5578 --strictPort --host > /tmp/fi397sf2-skeleton.log 2>&1 &
+echo $! > /tmp/fi397sf2-skeleton.pid
 REMOTE_ACCOUNT_URL=http://localhost:5576 REMOTE_CHECKOUT_URL=http://localhost:5575 \
 REMOTE_ADMIN_URL=http://localhost:5577 REMOTE_SKELETON_URL=http://localhost:5578 \
   pnpm --filter @ecommerce/shell exec vite --port 5573 --strictPort --host > /tmp/fi397sf2-shell.log 2>&1 &
+echo $! > /tmp/fi397sf2-shell.pid
 pnpm --filter storefront-web exec next dev -H 0.0.0.0 -p 3400 > /tmp/fi397sf2-next.log 2>&1 &
+echo $! > /tmp/fi397sf2-next.pid
 
 for p in 5575 5576 5577 5578 5573 3400; do curl -4 -sf -o /dev/null http://localhost:$p && echo "$p OK" || echo "$p CHƯA SỐNG"; done
 ```
@@ -1577,11 +1673,12 @@ cd $REPO/frontend && pnpm --filter @ecommerce/auth test && pnpm --filter @ecomme
 ```
 Expected: ALL PASS.
 
-- [ ] **Step 7.6: Teardown**
+- [ ] **Step 7.6: Teardown (kill theo PID đã ghi ở 7.1/7.2 — CẤM pkill -f pattern rộng: machine-wide, có thể giết JVM của worktree khác — memory shared-ports cross-worktree)**
 
 ```bash
-pkill -f 'vite --port 557' ; pkill -f 'next dev -H 0.0.0.0 -p 3400'
-pkill -f 'identity-service' ; pkill -f 'backend.gateway'   # hoặc kill PID JVM theo jps
+for f in /tmp/fi397sf2-*.pid; do [ -f "$f" ] && kill "$(cat $f)" 2>/dev/null; rm -f "$f"; done
+# JVM fork con có thể sống sót sau kill mvn — kiểm và kill chính xác theo port:
+for port in 8481 8480; do pid=$(lsof -tnP -iTCP:$port -sTCP:LISTEN 2>/dev/null); [ -n "$pid" ] && kill $pid; done
 docker rm -f fi397sf2-pg
 # (mailpit standalone nếu đã tạo: docker rm -f fi397sf2-mailpit)
 ```

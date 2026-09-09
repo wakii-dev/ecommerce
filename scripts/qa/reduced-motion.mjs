@@ -3,7 +3,7 @@
  * per task instruction). No order placement, no coupon toggle.
  * Run: node scripts/qa/reduced-motion.mjs
  */
-import { chromium } from 'file:///Users/hoivu/orca/projects/ecommerce/frontend/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///Users/hoivu/orca/workspaces/ecommerce/sf-6-convergence-qa/frontend/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 
 const EXE = '/Users/hoivu/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell';

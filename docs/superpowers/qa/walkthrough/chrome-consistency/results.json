@@ -1,0 +1,42 @@
+[
+  {
+    "name": "theme ban đầu 2 host đồng bộ",
+    "pass": true,
+    "detail": "sf=storefront sh=storefront"
+  },
+  {
+    "name": "theme toggle storefront → shell đồng bộ ON-LOAD (boot script)",
+    "pass": true,
+    "detail": "sf=storefront→dark, sh (reload)=storefront→dark"
+  },
+  {
+    "name": "theme quay lại dark 2 host đồng bộ (on-load)",
+    "pass": true,
+    "detail": "sf=dark sh=dark"
+  },
+  {
+    "name": "chrome scaffolding cùng nguồn 2 host (theme toggle chrome)",
+    "pass": true,
+    "detail": "sfToggle=1 shToggle=1; islands (design): sf={} sh={\"cart-badge\":1,\"auth-guest\":1}"
+  },
+  {
+    "name": "toggle ghi canonical key ecommerce.theme",
+    "pass": true,
+    "detail": "value=dark"
+  },
+  {
+    "name": "storefront authed: static account link (design SF-4, không islands)",
+    "pass": true,
+    "detail": "links=1"
+  },
+  {
+    "name": "auth-menu authed trên shell host (islands nơi remotes đăng ký)",
+    "pass": true,
+    "detail": "auth-user shell OK"
+  },
+  {
+    "name": "badge single-instance: add storefront → shell (reload) đếm đúng (đăng ký từ remote, 1 instance chrome)",
+    "pass": true,
+    "detail": "badge=1"
+  }
+]

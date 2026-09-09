@@ -1,0 +1,20 @@
+{
+  "storefront": {
+    "testids": [],
+    "theme": "dark"
+  },
+  "shell": {
+    "testids": [
+      "auth-guest",
+      "cart-badge"
+    ],
+    "theme": "dark"
+  },
+  "locatorTestids": {
+    "storefront": {},
+    "shell": {
+      "cart-badge": 1,
+      "auth-guest": 1
+    }
+  }
+}

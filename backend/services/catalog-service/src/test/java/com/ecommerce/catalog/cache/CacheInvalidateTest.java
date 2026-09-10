@@ -185,7 +185,7 @@ class CacheInvalidateTest extends AbstractIntegrationTest {
 
         ProductDetailDto served = new ProductDetailDto(
             UUID.randomUUID(), "slug", "slug-en", "Tên", "Brand", 1_000L, null, null,
-            null, new BigDecimal("4.5"), 3, null, List.of(), null, "Mô tả", List.of(), List.of(), 0);
+            null, new BigDecimal("4.5"), 3, null, List.of(), null, "Mô tả", null, null, List.of(), List.of(), 0);
         AtomicBoolean loaderRan = new AtomicBoolean(false);
 
         ProductDetailDto result = cache.getOrLoadDetail("slug", "vi", () -> {

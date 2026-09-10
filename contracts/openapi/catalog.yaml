@@ -1148,6 +1148,12 @@ components:
             description:
               type: string
               description: Mo ta DA resolve theo locale.
+            seoTitle:
+              type: string
+              description: SEO title DA resolve theo locale (admin override; nullable).
+            seoDescription:
+              type: string
+              description: SEO description DA resolve theo locale (admin override; nullable).
             images:
               type: array
               items:

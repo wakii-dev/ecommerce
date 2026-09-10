@@ -238,7 +238,10 @@ public class CatalogQueryService {
             card.id(), card.slug(), card.slugEn(), card.name(), card.brand(), card.price(),
             card.comparePrice(), card.discountPercent(), card.flashSaleEndsAt(), card.ratingAvg(),
             card.ratingCount(), card.image(), card.tags(), card.categoryId(),
-            p.getDescription().resolve(locale), imageDtos, variantDtos, 0);
+            p.getDescription().resolve(locale),
+            p.getSeoTitle() != null ? p.getSeoTitle().resolve(locale) : null,
+            p.getSeoDescription() != null ? p.getSeoDescription().resolve(locale) : null,
+            imageDtos, variantDtos, 0);
     }
 
     /** Mapping đọc variant — spec Q5c CHÍNH XÁC. */

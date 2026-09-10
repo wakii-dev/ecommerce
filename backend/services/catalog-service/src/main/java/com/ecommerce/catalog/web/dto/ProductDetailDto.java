@@ -28,6 +28,8 @@ public record ProductDetailDto(
         List<String> tags,
         UUID categoryId,
         String description,
+        String seoTitle,
+        String seoDescription,
         List<ProductImageDto> images,
         List<VariantDto> variants,
         int relatedCount) {

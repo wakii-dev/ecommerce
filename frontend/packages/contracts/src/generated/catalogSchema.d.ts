@@ -593,6 +593,10 @@ export interface components {
         ProductDetail: components["schemas"]["ProductCard"] & {
             /** @description Mo ta DA resolve theo locale. */
             description: string;
+            /** @description SEO title DA resolve theo locale (admin override; nullable). */
+            seoTitle?: string;
+            /** @description SEO description DA resolve theo locale (admin override; nullable). */
+            seoDescription?: string;
             images: components["schemas"]["ProductImage"][];
             variants: components["schemas"]["Variant"][];
             /** @description So san pham lien quan (goi y API sau neu can — spec §6.1). */

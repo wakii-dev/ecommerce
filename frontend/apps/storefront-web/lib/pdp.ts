@@ -103,7 +103,8 @@ export function jsonLdFor(product: JsonLdInput, locale: Locale, origin: string):
     offers,
   };
   if (product.image && hasText(product.image.url)) {
-    jsonLd.image = product.image.url;
+    // Google yêu cầu URL absolute trong JSON-LD — API trả path /media/** relative
+    jsonLd.image = /^https?:\/\//.test(product.image.url) ? product.image.url : `${origin}${product.image.url}`;
   }
   if (product.ratingCount > 0) {
     jsonLd.aggregateRating = {

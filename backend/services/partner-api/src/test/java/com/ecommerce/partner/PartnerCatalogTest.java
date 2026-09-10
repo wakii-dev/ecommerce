@@ -136,11 +136,25 @@ class PartnerCatalogTest extends AbstractPartnerApiTest {
     }
 
     @Test
-    void productByUuid_withoutAdminToken_is502WithGuidance() {
-        // base context để CATALOG_API_TOKEN rỗng (GAP-3: 502 + nhắn dùng slug)
-        ResponseEntity<Map<String, Object>> response = apiGet("/open-api/v1/products/" + UUID.randomUUID());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
-        assertThat((String) response.getBody().get("detail")).contains("slug");
+    void productByUuid_proxiesPublicById() {
+        // SF-4/FI-408: UUID-lookup đi public by-id (GAP-3 admin-token đã xóa);
+        // PUBLISHED-only — draft/deleted → catalog 404 → partner NOT_FOUND
+        String id = UUID.randomUUID().toString();
+        WIRE.stubFor(get(urlEqualTo("/api/catalog/products/by-id/" + id))
+            .willReturn(okJson("{\"id\": \"" + id + "\", \"slug\": \"iphone-15\", \"name\": \"iPhone 15\", \"price\": 21990000}")));
+        ResponseEntity<Map<String, Object>> response = apiGet("/open-api/v1/products/" + id);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("id")).isEqualTo(id);
+    }
+
+    @Test
+    void productByUuid_notFound_is404() {
+        // draft/deleted UUID → catalog by-id 404 → partner NOT_FOUND (trước đây
+        // 502 GAP-3 khi token rỗng — behavior đã xóa)
+        String id = UUID.randomUUID().toString();
+        WIRE.stubFor(get(urlEqualTo("/api/catalog/products/by-id/" + id))
+            .willReturn(aResponse().withStatus(404)));
+        assertThat(apiGet("/open-api/v1/products/" + id).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

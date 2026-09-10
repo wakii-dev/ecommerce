@@ -64,8 +64,9 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
  *       Saga*TestApp (scan hẹp — jar 3 module chung classpath test).</li>
  *   <li>invoice-service 🐍: Docker container thật build từ
  *       services/invoice-service/Dockerfile (D18 — PDF render thật).</li>
- *   <li>catalog + JWKS: WireMock double (catalog admin-by-id là đường duy nhất
- *       trong contract — REQUIREMENT-GAP FI-310 comment 94b8496e).</li>
+ *   <li>catalog + JWKS: WireMock double (catalog public by-id — FI-397
+ *       endpoint; default by-id-path SF-4/FI-408, REQUIREMENT-GAP FI-310
+ *       đã resolve).</li>
  * </ul>
  *
  * <p><strong>Flyway TẮT trong IT</strong> — 3 jar cùng mang classpath:db/migration
@@ -104,7 +105,7 @@ public abstract class AbstractSagaTest {
     /** Stripe double — POST /v1/payment_intents + /v1/refunds (stripe-java SDK gọi thật). */
     static final WireMockServer STRIPE = new WireMockServer(options().dynamicPort());
 
-    /** Catalog admin-by-id + JWKS (ordering gọi; identity/catalog KHÔNG boot trong IT). */
+    /** Catalog public by-id + JWKS (ordering gọi; identity/catalog KHÔNG boot trong IT). */
     static final WireMockServer EXTERNAL = new WireMockServer(options().dynamicPort());
 
     /** invoice-service 🐍 thật — build image từ Dockerfile của nó (D18).
@@ -203,13 +204,13 @@ public abstract class AbstractSagaTest {
         }
     }
 
-    /** Stub catalog admin-by-id (REQUIREMENT-GAP FI-310 — đường duy nhất hiện có). */
+    /** Stub catalog public by-id (FI-397 endpoint; default by-id-path chuyển SF-4/FI-408). */
     private static void stubCatalog() {
         // INSTANCE stubFor — static WireMock.stubFor bắn localhost:8080 mặc định
         // (trên máy này là GATEWAY đang chạy → 404 lẫn vào test!)
-        EXTERNAL.stubFor(get("/api/catalog/admin/products/" + PRODUCT_A)
+        EXTERNAL.stubFor(get("/api/catalog/products/by-id/" + PRODUCT_A)
             .willReturn(okJson(productJson(PRODUCT_A, "A", PRICE_A, VARIANT_A, 0))));
-        EXTERNAL.stubFor(get("/api/catalog/admin/products/" + PRODUCT_B)
+        EXTERNAL.stubFor(get("/api/catalog/products/by-id/" + PRODUCT_B)
             .willReturn(okJson(productJson(PRODUCT_B, "B", PRICE_B, VARIANT_B, 30_000))));
     }
 

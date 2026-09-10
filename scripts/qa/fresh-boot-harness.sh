@@ -440,9 +440,36 @@ stage_up() {
   log "[up] make -s keys (JWT keypair nếu thiếu — identity/catalog mount ./infra/keys)"
   make -s keys || die 7 "[up] make keys FAIL — không sinh được JWT keypair"
 
-  log "[up] docker compose --profile full --profile stripe up -d"
-  if ! "${COMPOSE[@]}" up -d; then
-    die 7 "[up] compose up -d FAIL sau $(( $(date +%s) - t0 ))s"
+  # QA-F2-04 fix (SF-4 FI-408): bulk `up -d` 23 containers song song → Docker
+  # Desktop daemon 500 /_ping wedge (signature 32s, ×2 ngày 2026-09-10: 14:10
+  # create-bulk + 14:48 start-only-bulk; batch 4-7 containers luôn sống). Tách
+  # up theo 4 batch (map vào health-gates 3 tầng: JVM-a/JVM-b cùng tầng 2) — semantics không đổi.
+  log "[up] docker compose up -d — batch theo tier (anti daemon-wedge QA-F2-04)"
+  # Coverage assertion: services active-profile của compose phải == union 4
+  # batch — compose append-only (SF mới thêm block) mà quên thêm vào batch →
+  # die 7 Ở ĐÂY (chứ không phải tier-gate die xa nguyên nhân về sau).
+  local compose_svcs batch_svcs
+  compose_svcs="$("${COMPOSE[@]}" config --services 2>/dev/null | sort | tr '\n' ' ')"
+  batch_svcs="$(printf '%s\n' \
+    "${INFRA_SERVICES[@]}" \
+    invoice-service identity-service catalog-service cart-service inventory-service \
+    ordering-service payment-service notification-service log-service partner-api affiliate-service \
+    gateway storefront-web frontend-web mongo-express stripe-cli minio-init \
+    | sort | tr '\n' ' ')"
+  if [[ "${compose_svcs}" != "${batch_svcs}" ]]; then
+    die 7 "[up] coverage: compose services != union batch — compose[${compose_svcs}] batch[${batch_svcs}] (service mới trong compose phải thêm vào batch list)"
+  fi
+  if ! "${COMPOSE[@]}" up -d "${INFRA_SERVICES[@]}"; then
+    die 7 "[up] compose up -d (TIER infra) FAIL sau $(( $(date +%s) - t0 ))s"
+  fi
+  if ! "${COMPOSE[@]}" up -d invoice-service identity-service catalog-service cart-service inventory-service; then
+    die 7 "[up] compose up -d (TIER JVM-a) FAIL sau $(( $(date +%s) - t0 ))s"
+  fi
+  if ! "${COMPOSE[@]}" up -d ordering-service payment-service notification-service log-service partner-api affiliate-service; then
+    die 7 "[up] compose up -d (TIER JVM-b) FAIL sau $(( $(date +%s) - t0 ))s"
+  fi
+  if ! "${COMPOSE[@]}" up -d gateway storefront-web frontend-web mongo-express stripe-cli minio-init; then
+    die 7 "[up] compose up -d (TIER FE+gateway+aux) FAIL sau $(( $(date +%s) - t0 ))s"
   fi
 
   # ── TIER 1/3 — infra healthy (poll 5s · 2'/svc · budget tổng ${UP_TOTAL_BUDGET}s) ──

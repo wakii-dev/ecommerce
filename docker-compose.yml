@@ -177,12 +177,20 @@ services:
       RABBITMQ_HOST: rabbitmq
       REDIS_HOST: redis
       ELASTICSEARCH_URI: http://elasticsearch:9200
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200   # QA-F2-02 (FI-408) — health indicator đọc spring.elasticsearch.uris, không phải custom ELASTICSEARCH_URI
+      INVENTORY_BASE_URL: http://inventory-service:8084   # CFG-A (FI-408) — default localhost không tới được trong container
       CATALOG_MINIO_ENABLED: "true"       # SF-13 A3 — upload MinIO (review G1)
       CATALOG_MINIO_ENDPOINT: http://minio:9000
     volumes:
       - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8082"   # internal — gateway (full profile) gọi qua service name
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -213,8 +221,15 @@ services:
       INVENTORY_BASE_URL: http://inventory-service:8084
       PAYMENT_BASE_URL: http://payment-service:8086
       INVOICE_SERVICE_URL: http://invoice-service:8090
+      AFFILIATE_BASE_URL: http://affiliate-service:8092   # CFG-A (FI-408) — default localhost không tới được trong container (LoyaltyClient)
     expose:
       - "8085"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,6 +252,7 @@ services:
     environment:
       JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # JWT keys (patch FI-397 demo)
       REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq   # QA-F2-01 (FI-408) — thiếu env → indicator bắn localhost:5672 trong container (SF-2 dry-run)
       # enrichment gọi service khác qua service name (full profile)
       CATALOG_BASE_URL: http://catalog-service:8082
       INVENTORY_BASE_URL: http://inventory-service:8084
@@ -244,6 +260,12 @@ services:
       - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8083"   # internal — gateway (full profile) gọi qua service name
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       redis:
         condition: service_healthy
@@ -289,6 +311,12 @@ services:
       PARTNER_CATALOG_BASE_URL: http://catalog-service:8082
     expose:
       - "8091"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8091/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -312,8 +340,17 @@ services:
       RABBITMQ_HOST: rabbitmq
       SECURITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       AFFILIATE_DEFAULT_RATE: ${AFFILIATE_DEFAULT_RATE:-5}
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem   # CFG-B (FI-408) — thiếu env+volume → JwtDecoderConfig chết trong container
+    volumes:
+      - ./infra/keys:/keys:ro   # CFG-B (FI-408) — JWT keys mount như 6 service khác
     expose:
       - "8092"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8092/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -336,10 +373,17 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db_identity
       JWT_PRIVATE_KEY_PATH: /keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+      RABBITMQ_HOST: rabbitmq   # QA-F2-01 (FI-408) — thiếu env → indicator bắn localhost:5672 trong container (SF-2 dry-run)
     volumes:
       - ./infra/keys:/keys:ro
     expose:
       - "8081"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -362,6 +406,12 @@ services:
       - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8084"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8084/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -385,6 +435,12 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     expose:
       - "8086"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -412,8 +468,15 @@ services:
       NOTIFY_SERVICE_ACCOUNT_EMAIL: ${NOTIFY_SERVICE_ACCOUNT_EMAIL:-notification-svc@ecommerce.local}
       NOTIFY_SERVICE_ACCOUNT_PASSWORD: ${NOTIFY_SERVICE_ACCOUNT_PASSWORD:-NotifySvc#2026}
       NOTIFY_MY_ORDERS_URL: ${NOTIFY_MY_ORDERS_URL:-http://localhost:8080/account/orders}
+      NOTIFY_STOCK_ALERT_CATALOG_BASE_URL: http://catalog-service:8082   # CFG-A (FI-408) — default localhost không tới được trong container
     expose:
       - "8087"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8087/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -441,6 +504,12 @@ services:
       - ./infra/keys:/keys:ro   # JWT keys (patch FI-397 demo)
     expose:
       - "8088"
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8088/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       mongo:
         condition: service_healthy
@@ -477,6 +546,12 @@ services:
       SPRING_PROFILES_ACTIVE: full
     ports:
       - "8080:8080"   # public entry duy nhất của stack full
+    healthcheck:   # CFG-C (FI-408) — JVM service cần signal unhealthy
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       identity-service:
         condition: service_started
@@ -526,6 +601,8 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile.web
+      args:
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}   # pk_* public — bake FE (golden-path Stripe)
     container_name: ecommerce-frontend-web
     profiles:
       - full

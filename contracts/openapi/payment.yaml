@@ -7,7 +7,8 @@ info:
 
     Adapter SPI nội bộ: `createIntent` / `void` / `refund` / `verifyWebhook` — Stripe là
     adapter đầu tiên; VNPay/MoMo bổ sung sau cùng interface, không đổi contract này.
-    COD KHÔNG đi qua service này (saga COD bỏ bước intent — D21).
+    COD không tạo payment intent (saga bỏ bước intent — D21); capture tiền lúc
+    giao hàng vẫn gọi service này (POST /payment/cod/captures — CT-24).
 
     Stripe VND là zero-decimal currency: mọi trường tiền `amount` = số nguyên đơn vị VND,
     KHÔNG dùng số thập phân.
@@ -168,6 +169,35 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/payment/cod/captures:
+    post:
+      tags:
+        - payments
+      operationId: captureCodPayment
+      summary: Capture tiền COD lúc giao hàng (SF-13 A2)
+      description: |
+        Ordering gọi nội bộ khi deliver đơn COD (HTTP thẳng :8086, KHÔNG qua
+        gateway — command edge §3.2). `idempotencyKey` bảo vệ retry: deliver
+        retry cùng key → trả kết quả cũ với `replay=true`, không capture hai lần.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodCaptureRequest'
+      responses:
+        '201':
+          description: Đã capture (replay=true khi retry cùng key).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCaptureResult'
+        '400':
+          description: Payload không hợp lệ
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 components:
   schemas:
     ApiError:
@@ -318,3 +348,37 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/PaymentIntentStatus'
+    CodCaptureRequest:
+      type: object
+      description: Body capture tiền COD (SF-13 A2) — ordering gọi lúc deliver.
+      required:
+        - orderId
+        - amountVnd
+        - idempotencyKey
+      properties:
+        orderId:
+          type: string
+          description: Order id bên ordering-service
+        amountVnd:
+          type: integer
+          minimum: 1
+          description: Số tiền thu COD (VND nguyên)
+        idempotencyKey:
+          type: string
+          description: Key dedupe — cùng key → replay kết quả cũ
+    CodCaptureResult:
+      type: object
+      required:
+        - paymentIntentId
+        - status
+        - replay
+      properties:
+        paymentIntentId:
+          type: string
+          description: Id payment intent COD nội bộ
+        status:
+          type: string
+          description: Trạng thái sau capture (vd SUCCEEDED)
+        replay:
+          type: boolean
+          description: true khi đây là replay cùng idempotencyKey

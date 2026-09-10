@@ -1,0 +1,435 @@
+════ FI-406 fresh-boot harness — 20260910-155942 ════
+repo=/Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes · log=/tmp/qa-fresh-boot-20260910-155942.log
+[stage] GATE — 15:59:42 (elapsed 0s)
+[gate] BLAST RADIUS — down -v sẽ xóa 7 volumes:
+[gate]   pgdata       = BACKED-UP (stage BACKUP dump 9 DB trước wipe)
+[gate]   redisdata    = regenerable
+[gate]   rabbitmqdata = regenerable
+[gate]   mailpitdata  = regenerable
+[gate]   esdata       = regenerable
+[gate]   mongodata    = MẤT VĨNH VIỄN (event_log — KHÔNG có backup)
+[gate]   miniodata    = MẤT VĨNH VIỄN (uploaded images — bucket re-init only, ảnh KHÔNG re-upload)
+[gate] disk free: 24GB (≥20GB OK)
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          87        0         7.997GB   6.888GB (86%)
+Containers      0         0         0B        0B
+Local Volumes   15        0         921.1MB   921.1MB (100%)
+Build Cache     371       0         17.55GB   13.73GB
+[gate] Docker VM RAM: 7GB (≥6GB OK)
+[stage] BACKUP — 15:59:43 (elapsed 1s)
+[backup] đảm bảo postgres sống + healthy trước dump (không dump-trên-starting)
+[backup] postgres chưa chạy → docker compose up -d postgres
+ Network ecommerce-net Creating 
+ Network ecommerce-net Creating 
+ Network ecommerce-net Created 
+ Network ecommerce-net Created 
+ Container ecommerce-postgres Creating 
+ Container ecommerce-postgres Created 
+ Container ecommerce-postgres Starting 
+ Container ecommerce-postgres Started 
+[backup] postgres healthy
+[backup] pg_dump db_affiliate → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_affiliate.sql.gz
+[backup] pg_dump db_catalog → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_catalog.sql.gz
+[backup] pg_dump db_identity → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_identity.sql.gz
+[backup] pg_dump db_inventory → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_inventory.sql.gz
+[backup] pg_dump db_notification → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_notification.sql.gz
+[backup] pg_dump db_ordering → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_ordering.sql.gz
+[backup] pg_dump db_partner → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_partner.sql.gz
+[backup] pg_dump db_payment → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_payment.sql.gz
+[backup] pg_dump db_template → /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/backups/qa-20260910-155942/db_template.sql.gz
+[backup] RESTORE-TEST per-DB (throwaway qa_restore_test_* — gunzip không đủ)
+NOTICE:  database "qa_restore_test_affiliate" does not exist, skipping
+[backup] RESTORE-TEST db_affiliate → qa_restore_test_affiliate OK (sanity: 0)
+NOTICE:  database "qa_restore_test_catalog" does not exist, skipping
+[backup] RESTORE-TEST db_catalog → qa_restore_test_catalog OK (sanity: 24)
+NOTICE:  database "qa_restore_test_identity" does not exist, skipping
+[backup] RESTORE-TEST db_identity → qa_restore_test_identity OK (sanity: 3)
+NOTICE:  database "qa_restore_test_inventory" does not exist, skipping
+[backup] RESTORE-TEST db_inventory → qa_restore_test_inventory OK (sanity: 31)
+NOTICE:  database "qa_restore_test_notification" does not exist, skipping
+[backup] RESTORE-TEST db_notification → qa_restore_test_notification OK (sanity: 0)
+NOTICE:  database "qa_restore_test_ordering" does not exist, skipping
+[backup] RESTORE-TEST db_ordering → qa_restore_test_ordering OK (sanity: 2)
+NOTICE:  database "qa_restore_test_partner" does not exist, skipping
+[backup] RESTORE-TEST db_partner → qa_restore_test_partner OK (sanity: 1)
+NOTICE:  database "qa_restore_test_payment" does not exist, skipping
+[backup] RESTORE-TEST db_payment → qa_restore_test_payment OK (sanity: 0)
+NOTICE:  database "qa_restore_test_template" does not exist, skipping
+[backup] RESTORE-TEST db_template → qa_restore_test_template OK (sanity: 1)
+[backup] backup 9 DB + restore-test PASS — bằng chứng:
+total 104
+-rw-r--r--  1 hoivu  staff   2.0K Sep 10 15:59 db_affiliate.sql.gz
+-rw-r--r--  1 hoivu  staff    14K Sep 10 15:59 db_catalog.sql.gz
+-rw-r--r--  1 hoivu  staff   4.5K Sep 10 15:59 db_identity.sql.gz
+-rw-r--r--  1 hoivu  staff   3.2K Sep 10 15:59 db_inventory.sql.gz
+-rw-r--r--  1 hoivu  staff   1.3K Sep 10 15:59 db_notification.sql.gz
+-rw-r--r--  1 hoivu  staff   3.6K Sep 10 15:59 db_ordering.sql.gz
+-rw-r--r--  1 hoivu  staff   2.2K Sep 10 15:59 db_partner.sql.gz
+-rw-r--r--  1 hoivu  staff   1.4K Sep 10 15:59 db_payment.sql.gz
+-rw-r--r--  1 hoivu  staff   392B Sep 10 15:59 db_template.sql.gz
+[backup] compose stop postgres — trả stack về all-down cho down() TOCTOU check
+ Container ecommerce-postgres Stopping 
+ Container ecommerce-postgres Stopped 
+[stage] DOWN — 15:59:56 (elapsed 14s)
+[down] docker compose down -v --remove-orphans — WIPE volumes (mongodata/miniodata MẤT VĨNH VIỄN — đã disclose ở GATE)
+ Container ecommerce-postgres Stopping 
+ Container ecommerce-postgres Stopped 
+ Container ecommerce-postgres Removing 
+ Container ecommerce-postgres Removed 
+ Volume ecommerce_miniodata Removing 
+ Network ecommerce-net Removing 
+ Volume ecommerce_pgdata Removing 
+ Volume ecommerce_mongodata Removing 
+ Volume ecommerce_redisdata Removing 
+ Volume ecommerce_esdata Removing 
+ Volume ecommerce_rabbitmqdata Removing 
+ Volume ecommerce_mailpitdata Removing 
+ Volume ecommerce_miniodata Removed 
+ Volume ecommerce_mailpitdata Removed 
+ Volume ecommerce_redisdata Removed 
+ Volume ecommerce_esdata Removed 
+ Volume ecommerce_mongodata Removed 
+ Volume ecommerce_pgdata Removed 
+ Volume ecommerce_rabbitmqdata Removed 
+ Network ecommerce-net Removed 
+[down] down -v hoàn tất trong 0s
+[down] marker ghi: /Users/hoivu/orca/workspaces/ecommerce/sf-4-sweep-run-fixes/.run/qa-fresh-boot-wiped = 20260910-155956 (bằng chứng wipe cho RESUME=BUILD)
+[down] verify: 0 container ecommerce-* còn lại
+[stage] BUILD — 15:59:56 (elapsed 14s)
+[build] docker compose build — chạy nền, poll 30s (10-15')
+[build] build OK trong 30s
+[stage] UP — 16:00:26 (elapsed 44s)
+[up] make -s keys (JWT keypair nếu thiếu — identity/catalog mount ./infra/keys)
+infra/keys/jwt-private.pem đã tồn tại — bỏ qua (xóa để regenerate)
+...+++++++++++++++++++++++++++++++++++++++*....+.........+.....+...+...+.......+..+.+.....+.......+..............+.............+..+.+.....+..................+....+........+++++++++++++++++++++++++++++++++++++++*.+............+.....+..........+.....+.+..+....+......+.....+...+.......+..+.......+......+..............+......+...+.+...+..+.........+.........+...+.......+.....+.+.........+......+..+...+......+...+...............+.+.....+.+.....+.............+..+....+..+...+.......+..+...+....+...........+....+...+...+.....+....+...+..+....+.....+.......+...............+..................++++++
+..........+....+...+........+...+......+....+++++++++++++++++++++++++++++++++++++++*..+............+++++++++++++++++++++++++++++++++++++++*........+...+......+............+........+.+...+.....................+.....+.+........+...+.............+..+.......+.....+.+..++++++
+→ Đã sinh infra/keys/jwt-{private,public}.pem
+[up] docker compose up -d — batch theo tier (anti daemon-wedge QA-F2-04)
+ Volume ecommerce_esdata Creating 
+ Volume ecommerce_esdata Creating 
+ Volume ecommerce_pgdata Creating 
+ Volume ecommerce_pgdata Creating 
+ Volume ecommerce_miniodata Creating 
+ Volume ecommerce_miniodata Creating 
+ Volume ecommerce_rabbitmqdata Creating 
+ Volume ecommerce_rabbitmqdata Creating 
+ Volume ecommerce_mongodata Creating 
+ Volume ecommerce_mongodata Creating 
+ Network ecommerce-net Creating 
+ Network ecommerce-net Creating 
+ Volume ecommerce_mailpitdata Creating 
+ Volume ecommerce_mailpitdata Creating 
+ Volume ecommerce_redisdata Creating 
+ Volume ecommerce_redisdata Creating 
+ Volume ecommerce_mongodata Created 
+ Volume ecommerce_mongodata Created 
+ Volume ecommerce_rabbitmqdata Created 
+ Volume ecommerce_rabbitmqdata Created 
+ Volume ecommerce_esdata Created 
+ Volume ecommerce_esdata Created 
+ Volume ecommerce_miniodata Created 
+ Volume ecommerce_miniodata Created 
+ Volume ecommerce_pgdata Created 
+ Volume ecommerce_pgdata Created 
+ Volume ecommerce_redisdata Created 
+ Volume ecommerce_redisdata Created 
+ Volume ecommerce_mailpitdata Created 
+ Volume ecommerce_mailpitdata Created 
+ Network ecommerce-net Created 
+ Network ecommerce-net Created 
+ Container ecommerce-redis Creating 
+ Container ecommerce-postgres Creating 
+ Container ecommerce-rabbitmq Creating 
+ Container ecommerce-elasticsearch Creating 
+ Container ecommerce-mailpit Creating 
+ Container ecommerce-minio Creating 
+ Container ecommerce-mongo Creating 
+ Container ecommerce-postgres Created 
+ Container ecommerce-redis Created 
+ Container ecommerce-minio Created 
+ Container ecommerce-rabbitmq Created 
+ Container ecommerce-mailpit Created 
+ Container ecommerce-mongo Created 
+ Container ecommerce-elasticsearch Created 
+ Container ecommerce-elasticsearch Starting 
+ Container ecommerce-minio Starting 
+ Container ecommerce-redis Starting 
+ Container ecommerce-postgres Starting 
+ Container ecommerce-mailpit Starting 
+ Container ecommerce-rabbitmq Starting 
+ Container ecommerce-mongo Starting 
+ Container ecommerce-redis Started 
+ Container ecommerce-elasticsearch Started 
+ Container ecommerce-postgres Started 
+ Container ecommerce-minio Started 
+ Container ecommerce-mailpit Started 
+ Container ecommerce-rabbitmq Started 
+ Container ecommerce-mongo Started 
+ Container ecommerce-rabbitmq Running 
+ Container ecommerce-elasticsearch Running 
+ Container ecommerce-redis Running 
+ Container ecommerce-postgres Running 
+ Container ecommerce-catalog-service Creating 
+ Container ecommerce-identity-service Creating 
+ Container ecommerce-invoice-service Creating 
+ Container ecommerce-inventory-service Creating 
+ Container ecommerce-cart-service Creating 
+ Container ecommerce-identity-service Created 
+ Container ecommerce-invoice-service Created 
+ Container ecommerce-inventory-service Created 
+ Container ecommerce-catalog-service Created 
+ Container ecommerce-cart-service Created 
+ Container ecommerce-invoice-service Starting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-redis Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-elasticsearch Waiting 
+ Container ecommerce-redis Waiting 
+ Container ecommerce-invoice-service Started 
+ Container ecommerce-redis Healthy 
+ Container ecommerce-cart-service Starting 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-identity-service Starting 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-redis Healthy 
+ Container ecommerce-cart-service Started 
+ Container ecommerce-identity-service Started 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-inventory-service Starting 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-inventory-service Started 
+ Container ecommerce-elasticsearch Healthy 
+ Container ecommerce-catalog-service Starting 
+ Container ecommerce-catalog-service Started 
+ Container ecommerce-mongo Running 
+ Container ecommerce-mailpit Running 
+ Container ecommerce-invoice-service Running 
+ Container ecommerce-postgres Running 
+ Container ecommerce-rabbitmq Running 
+ Container ecommerce-payment-service Creating 
+ Container ecommerce-ordering-service Creating 
+ Container ecommerce-partner-api Creating 
+ Container ecommerce-affiliate-service Creating 
+ Container ecommerce-log-service Creating 
+ Container ecommerce-notification-service Creating 
+ Container ecommerce-partner-api Created 
+ Container ecommerce-log-service Created 
+ Container ecommerce-ordering-service Created 
+ Container ecommerce-affiliate-service Created 
+ Container ecommerce-notification-service Created 
+ Container ecommerce-payment-service Created 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-invoice-service Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-mailpit Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-mongo Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-mailpit Healthy 
+ Container ecommerce-mongo Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-log-service Starting 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-invoice-service Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-partner-api Starting 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-notification-service Starting 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-payment-service Starting 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-ordering-service Starting 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-affiliate-service Starting 
+ Container ecommerce-partner-api Started 
+ Container ecommerce-payment-service Started 
+ Container ecommerce-log-service Started 
+ Container ecommerce-ordering-service Started 
+ Container ecommerce-affiliate-service Started 
+ Container ecommerce-notification-service Started 
+ Container ecommerce-ordering-service Running 
+ Container ecommerce-rabbitmq Running 
+ Container ecommerce-payment-service Running 
+ Container ecommerce-elasticsearch Running 
+ Container ecommerce-cart-service Running 
+ Container ecommerce-minio Running 
+ Container ecommerce-redis Running 
+ Container ecommerce-affiliate-service Running 
+ Container ecommerce-log-service Running 
+ Container ecommerce-mongo Running 
+ Container ecommerce-identity-service Running 
+ Container ecommerce-partner-api Running 
+ Container ecommerce-inventory-service Running 
+ Container ecommerce-invoice-service Running 
+ Container ecommerce-notification-service Running 
+ Container ecommerce-mailpit Running 
+ Container ecommerce-postgres Running 
+ Container ecommerce-catalog-service Running 
+ Container ecommerce-stripe-cli Creating 
+ Container ecommerce-frontend-web Creating 
+ Container ecommerce-minio-init Creating 
+ Container ecommerce-gateway Creating 
+ Container ecommerce-storefront-web Creating 
+ Container ecommerce-mongo-express Creating 
+ Container ecommerce-stripe-cli Created 
+ Container ecommerce-gateway Created 
+ Container ecommerce-storefront-web Created 
+ Container ecommerce-minio-init Created 
+ Container ecommerce-frontend-web Created 
+ Container ecommerce-mongo-express Created 
+ Container ecommerce-stripe-cli Starting 
+ Container ecommerce-storefront-web Starting 
+ Container ecommerce-mongo Waiting 
+ Container ecommerce-minio Waiting 
+ Container ecommerce-frontend-web Starting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-invoice-service Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-redis Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-mailpit Waiting 
+ Container ecommerce-redis Waiting 
+ Container ecommerce-mongo Waiting 
+ Container ecommerce-rabbitmq Waiting 
+ Container ecommerce-elasticsearch Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-postgres Waiting 
+ Container ecommerce-mongo Healthy 
+ Container ecommerce-redis Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-elasticsearch Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-mailpit Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-invoice-service Healthy 
+ Container ecommerce-redis Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-postgres Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-rabbitmq Healthy 
+ Container ecommerce-gateway Starting 
+ Container ecommerce-mongo Healthy 
+ Container ecommerce-mongo-express Starting 
+ Container ecommerce-minio Healthy 
+ Container ecommerce-minio-init Starting 
+ Container ecommerce-frontend-web Started 
+ Container ecommerce-storefront-web Started 
+ Container ecommerce-stripe-cli Started 
+ Container ecommerce-mongo-express Started 
+ Container ecommerce-minio-init Started 
+ Container ecommerce-gateway Started 
+[up] TIER 1/3 — infra: postgres redis rabbitmq mongo elasticsearch minio mailpit (poll 5s · timeout 2'/svc)
+[up]   postgres healthy (elapsed 33s)
+[up]   redis healthy (elapsed 33s)
+[up]   rabbitmq healthy (elapsed 33s)
+[up]   mongo healthy (elapsed 34s)
+[up]   elasticsearch healthy (elapsed 34s)
+[up]   minio healthy (elapsed 34s)
+[up]   mailpit healthy (elapsed 34s)
+[up] TIER 2/3 — 10 JVM actuator + gateway(host :8080) + invoice(FastAPI healthcheck) (poll 10s · timeout 4'/svc)
+[up]   identity UP (elapsed 35s)
+[up]   catalog UP (elapsed 87s)
+[up]   cart UP (elapsed 87s)
+[up]   inventory UP (elapsed 87s)
+[up]   ordering UP (elapsed 87s)
+[up]   payment UP (elapsed 87s)
+[up]   notification UP (elapsed 88s)
+[up]   log UP (elapsed 88s)
+[up]   partner-api UP (elapsed 88s)
+[up]   affiliate UP (elapsed 88s)
+[up]   gateway UP — host :8080/actuator/health (elapsed 88s)
+[up]   invoice-service healthy — compose healthcheck (elapsed 88s)
+[up] TIER 3/3 — FE containers + gateway public routes (poll 5s · timeout 2')
+[up]   ecommerce-frontend-web running (elapsed 88s)
+[up]   ecommerce-storefront-web running (elapsed 88s)
+[up]   GET :8080/ → 200 (storefront route, elapsed 90s)
+[up]   GET :8080/cart → 200 (shell route, elapsed 90s)
+[up] UP PASS — 3/3 tier (tổng 90s)
+[stage] SEED — 16:01:56 (elapsed 134s)
+[seed] readiness poll — đợi SeedDataRunner populate products (async sau health UP · poll 5s · timeout 2')
+[seed] products > 0 — seed-readiness OK
+[seed] make seed — assert exit 0 AND output khớp XONG (seed.sh:229)
+scripts/seed/seed.sh: line 29: .env: No such file or directory
+[36m[seed][0m admin admin@demo.vn…
+[36m[seed][0m demo user user@demo.vn…
+[36m[seed][0m notification service-account + promote ADMIN…
+[36m[seed][0m roles OK (admin + notification-svc = ADMIN)
+INSERT 0 2
+[36m[seed][0m coupons OK (WELCOME10 10%/limit100/+30d · GIAM50K 50k)
+[36m[seed][0m catalog: 24 products, 4 flash đang chạy (+2 ngày từ boot)
+[36m[seed][0m default variants: +19 (product còn thiếu variant: 0)
+[36m[seed][0m ảnh: upload thử 1 fail [HTTP:403] — retry sau 6s
+[36m[seed][0m ảnh: upload thử 2 fail [HTTP:403] — retry sau 6s
+[36m[seed][0m ảnh: upload thử 3 fail [HTTP:403] — retry sau 6s
+[36m[seed][0m ảnh: upload thử 4 fail [HTTP:403] — retry sau 6s
+[36m[seed][0m ảnh: upload fail sau 5 thử (cuối: HTTP:403) — bỏ qua phần còn lại (guard QA-F2-03)
+[36m[seed][0m ảnh: uploaded 0/24 products, 0 image rows filled
+[36m[seed][0m orders CONFIRMED OK: 2 đơn (invoice #1 #2 — 01/001 C26/2026)
+[36m[seed][0m review eligibility OK (tai nghe — user@demo.vn)
+INSERT 0 1
+UPDATE 1
+[36m[seed][0m review APPROVED (verified) OK
+[36m[seed][0m inventory stocks OK (31 variant × 50)
+[36m[seed][0m partner demo key OK (raw: pk_0123456789abcdef0123456789abcdef — E2E §5.13 dùng key này)
+[36m[seed][0m XONG — accounts: admin admin@demo.vn / user user@demo.vn (password từ .env)
+[36m[seed][0m       affiliate demo: xem docs/demo-script.md §affiliate
+[seed] make seed OK — exit 0 + XONG khớp
+[stage] PROBES — 16:02:31 (elapsed 169s)
+[probes] collect-ALL — 7 sub-probe (a→f; rbac = guest-put + roundtrip), không fail-fast, verdict bảng cuối
+[probe] FINDING — MinIO-reseed: 0 product_images có url — ảnh không có sẵn sau seed
+[probe] FAIL — minio-image: 0 product_images có url (MinIO-reseed)
+[probe] PASS — login-admin: POST /api/identity/auth/login → 200 + accessToken (605 chars)
+[probe] PASS — guest-cart: POST /api/cart/items (guest, product a2c05bb5…) → 200
+[probe] PASS — events-api: GET /api/log/admin/events (JWT) → 200
+[probe] PASS — rbac-guest-put: PUT admin product KHÔNG token → 401 (blocked đúng)
+[probe] FINDING — bug data: images url rỗng — admin PUT round-trip 400 (images[].url bắt buộc)
+[probe] FAIL — rbac-roundtrip: PUT 400 — bug data images url rỗng
+[probe] PASS — port-owner: 9 port sạch (chỉ docker/rỗng)
+[probes] ── VERDICT TABLE (2/7 FAIL) ──
+[probes]   FAIL  minio-image — 0 product_images có url (MinIO-reseed)
+[probes]   PASS  login-admin — POST /api/identity/auth/login → 200 + accessToken (605 chars)
+[probes]   PASS  guest-cart — POST /api/cart/items (guest, product a2c05bb5…) → 200
+[probes]   PASS  events-api — GET /api/log/admin/events (JWT) → 200
+[probes]   PASS  rbac-guest-put — PUT admin product KHÔNG token → 401 (blocked đúng)
+[probes]   FAIL  rbac-roundtrip — PUT 400 — bug data images url rỗng
+[probes]   PASS  port-owner — 9 port sạch (chỉ docker/rỗng)
+[probes] FINDINGS (2):
+[probes]   - MinIO-reseed: 0 product_images có url — ảnh không có sẵn sau seed
+[probes]   - bug data: images url rỗng — admin PUT round-trip 400 (images[].url bắt buộc)
+[die] exit 6 — [probes] 2/7 probe FAIL — findings minh bạch (stack vẫn seeded) (total elapsed 172s)
+[done] exit=6 · total elapsed 172s · log=/tmp/qa-fresh-boot-20260910-155942.log
+make: *** [qa-fresh-boot] Error 6

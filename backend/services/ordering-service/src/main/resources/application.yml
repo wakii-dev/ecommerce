@@ -42,11 +42,13 @@ ordering:
   ttl-cancel-seconds: ${ORDERING_TTL_CANCEL_SECONDS:2100}
   sweep-interval-ms: ${ORDERING_SWEEP_INTERVAL_MS:30000}
   pricing:
-    # Catalog là authority giá §6.1. Endpoint admin-by-id duy nhất address-by-id
-    # trong contract freeze — REQUIREMENT-GAP FI-310 (comment 94b8496e): chờ
-    # internal endpoint/service-token thì đổi URL + token, saga không đổi.
+    # Catalog là authority giá §6.1. REQUIREMENT-GAP FI-310 ĐÃ RESOLVE: catalog
+    # có public by-id endpoint từ FI-397 (route khai báo trong catalog.yaml,
+    # SF-4 contracts-sync) — default chuyển sang by-id public ở SF-4/FI-408
+    # (static matrix sync); compose ORDERING_PRICING_BYIDPATH giữ như
+    # belt-and-suspenders.
     base-url: ${CATALOG_BASE_URL:http://localhost:8082}
-    by-id-path: ${CATALOG_BY_ID_PATH:/api/catalog/admin/products/}
+    by-id-path: ${CATALOG_BY_ID_PATH:/api/catalog/products/by-id/}
     token: ${CATALOG_API_TOKEN:}
     timeout-ms: ${CATALOG_TIMEOUT_MS:5000}
   inventory:

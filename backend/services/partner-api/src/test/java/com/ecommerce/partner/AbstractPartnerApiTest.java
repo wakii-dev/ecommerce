@@ -65,8 +65,8 @@ public abstract class AbstractPartnerApiTest {
         registry.add("partner.webhook.scheduler-interval-ms", () -> "200");
         // IT tự tạo partner/key của riêng mình (deterministic) — tắt seed demo
         registry.add("partner.seed.enabled", () -> "false");
-        // Cả 3 service nội bộ trỏ WireMock chung + token admin RỖNG —
-        // UUID detail trả 502 trong context này; ma trận có-token ở CatalogClientTest
+        // Cả 3 service nội bộ trỏ WireMock chung (UUID detail đi public by-id
+        // — ma trận client thuần ở CatalogClientTest)
         registry.add("partner.catalog.base-url", WIRE::baseUrl);
         registry.add("partner.identity.base-url", WIRE::baseUrl);
         registry.add("partner.ordering.base-url", WIRE::baseUrl);

@@ -14,6 +14,13 @@ COPY frontend/apps ./apps
 WORKDIR /workspace
 RUN pnpm install --frozen-lockfile=false --prefer-offline
 
+# VITE_STRIPE_PUBLISHABLE_KEY (pk_* PUBLIC — bake an toàn theo design stripePay.ts
+# ở mfe-checkout): đặt TRƯỚC build remotes + shell để cả hai nhận. Thiếu ARG này →
+# containerized FE không bao giờ có pay-panel (dev-mode FE export .env mới có —
+# FI-408: golden-path [VERIFIED-STRIPE] iframe 404 trên full stack).
+ARG VITE_STRIPE_PUBLISHABLE_KEY
+ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
+
 # Remotes: build + --base=/remotes/<name>/ (asset prefix khớp nginx alias)
 RUN pnpm --filter @ecommerce/skeleton-remote exec vite build --base=/remotes/skeleton/
 RUN pnpm --filter @ecommerce/mfe-account exec vite build --base=/remotes/account/

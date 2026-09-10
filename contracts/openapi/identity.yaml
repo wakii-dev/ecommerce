@@ -27,6 +27,8 @@ tags:
     description: Dang nhap Google / Facebook (D22)
   - name: 2fa
     description: Xac thuc hai lop TOTP (D22)
+  - name: newsletter
+    description: Dang ky nhan tin (public) + danh sach subscriber (admin) — SF-13 A8
 paths:
   /api/identity/auth/register:
     post:
@@ -129,6 +131,32 @@ paths:
                 $ref: '#/components/schemas/Me'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: Cap nhat profile user hien tai
+      description: |
+        Can JWT bearer. Partial update — field null/bo qua = khong doi (FI-310).
+        phone de blank → xoa phone.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: Profile sau khi cap nhat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/identity/.well-known/jwks.json:
     get:
       tags: [auth]
@@ -214,6 +242,65 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/identity/newsletter:
+    post:
+      tags: [newsletter]
+      operationId: subscribeNewsletter
+      summary: Dang ky nhan newsletter
+      description: |
+        Public. Email dup → van 200 voi status "already" (khong tao row moi,
+        khong publish event — khong double email). Email moi → row + event
+        `user.newsletter_subscribed` (SF-13 A8). Race dup đồng thời → 409
+        (unique email — FE hiện "already").
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterSubscribeRequest'
+      responses:
+        '200':
+          description: Da xu ly — status "subscribed" hoac "already".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterSubscribeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/identity/admin/newsletter:
+    get:
+      tags: [admin]
+      operationId: adminListNewsletter
+      summary: Danh sach subscriber newsletter (admin)
+      description: |
+        Can role ADMIN — 2 lop guard: gateway admin-prefix /api/identity/admin/**
+        + SecurityConfig /admin/**. Moi nhat truoc.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          required: false
+          description: So item moi trang (mac dinh 50, toi da 100).
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Trang subscriber.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/identity/oauth/{provider}/authorize:
     get:
       tags: [oauth]
@@ -277,6 +364,55 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/identity/oauth/exchange:
+    post:
+      tags: [oauth]
+      operationId: oauthExchange
+      summary: Doi one-time code lay access token (D22)
+      description: |
+        FE goi sau khi nhan code tu callback. Tra `LoginSuccess` + Set-Cookie
+        refresh_token (httpOnly) giong login thuong. ADDITIVE (ADR 0005, FI-310).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthExchangeRequest'
+      responses:
+        '200':
+          description: Dang nhap thanh cong.
+          headers:
+            Set-Cookie:
+              description: Cookie refresh_token httpOnly (xoa khi logout).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Code sai / het han / da dung.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/identity/.well-known/oauth-providers:
+    get:
+      tags: [oauth]
+      operationId: listOAuthProviders
+      summary: Danh sach OAuth provider da cau hinh
+      description: |
+        Public discovery — FE dung de an/hien nut login Google/Facebook.
+        Provider chua cau hinh (thieu client-id/secret) → false. ADDITIVE (ADR 0005).
+      responses:
+        '200':
+          description: Trang thai cau hinh tung provider.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthProviders'
   /api/identity/2fa/setup:
     post:
       tags: [2fa]
@@ -554,6 +690,9 @@ components:
           format: email
         fullName:
           type: string
+        phone:
+          type: [string, 'null']
+          description: So dien thoai — null khi chua co / da xoa (PATCH /me).
         roles:
           type: array
           items:
@@ -680,3 +819,71 @@ components:
         code:
           type: string
           description: Ma TOTP 6 chu so hoac recovery code.
+    UpdateMeRequest:
+      type: object
+      description: PATCH /me — partial, field null = khong doi (FI-310).
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 32
+          description: Blank → xoa phone.
+    NewsletterSubscribeRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    NewsletterSubscribeResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [subscribed, already]
+          description: Gia tri already khi email da dang ky truoc (khong double).
+    NewsletterItem:
+      type: object
+      required: [email, createdAt]
+      properties:
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+    NewsletterPage:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsletterItem'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer
+    OAuthExchangeRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: One-time code nhan tu callback (dung mot lan).
+    OAuthProviders:
+      type: object
+      description: Provider da cau hinh — FE an/hien nut login tuong ung.
+      required: [google, facebook]
+      properties:
+        google:
+          type: boolean
+        facebook:
+          type: boolean

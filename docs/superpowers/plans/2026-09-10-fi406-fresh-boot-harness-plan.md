@@ -46,40 +46,40 @@ trước R1 verdict (commit-race cùng file — memory lesson shared-worktree). 
 khi xong.
 
 ### Task T1 — harness-skeleton-stages-timestamps
-- [ ] T1.1 Tạo `scripts/qa/fresh-boot-harness.sh`: shebang, `set -u -o pipefail` (KHÔNG `set -e` — stages tự kiểm exit), LOG=`/tmp/qa-fresh-boot-$(date +%Y%m%d-%H%M%S).log` (tee mọi output), hàm `stage <name>` in `[stage] HH:MM:SS (elapsed-since-start)`, hàm `die <code> <msg>`, exit-code convention 0/3/4/5/6 + bắt mọi exit → in tổng thời gian
-- [ ] T1.2 Khung 7 stage tuần tự GATE→BACKUP→DOWN→BUILD→UP→SEED→PROBES với thân TODO stub trả về 0 — `bash -n` pass
-- [ ] Commit `feat(qa): fresh-boot harness skeleton — 7 stages + timestamp log (FI-406)`
+- [x] T1.1 Tạo `scripts/qa/fresh-boot-harness.sh`: shebang, `set -u -o pipefail` (KHÔNG `set -e` — stages tự kiểm exit), LOG=`/tmp/qa-fresh-boot-$(date +%Y%m%d-%H%M%S).log` (tee mọi output), hàm `stage <name>` in `[stage] HH:MM:SS (elapsed-since-start)`, hàm `die <code> <msg>`, exit-code convention 0/3/4/5/6 + bắt mọi exit → in tổng thời gian
+- [x] T1.2 Khung 7 stage tuần tự GATE→BACKUP→DOWN→BUILD→UP→SEED→PROBES với thân TODO stub trả về 0 — `bash -n` pass
+- [x] Commit `feat(qa): fresh-boot harness skeleton — 7 stages + timestamp log (FI-406)`
 
 **Exit:** `bash -n` pass; chạy `bash scripts/qa/fresh-boot-harness.sh` (thân stub) → log file tạo, 7 stage header in, exit 0.
 
 ### Task T2 — safety-gate-confirm-disk-ram-demo-idle (P0 — phần cứng nhất)
-- [ ] T2.1 Pidfile lock `.run/qa-fresh-boot.lock` (mkdir + trap cleanup) — run song song die 3; confirm flag `QA_FRESH_BOOT_CONFIRM=1` thiếu → die 3 (trước MỌI hành động); `QA_FRESH_BOOT_RESUME` nếu set phải ∈ {BUILD} → khác die 3
-- [ ] T2.2 Demo-idle: (a) DERIVED chính `docker compose --profile full --profile stripe ps -q` non-empty → die 3 (phủ mọi service compose — kể cả invoice default-profile); (b) `lsof -nP -iTCP -sTCP:LISTEN` trên 8080,3000,5173,5174,5175,5176,5177,5178,9099 — có listener → die 3 in PID/process; KHÔNG có --force
-- [ ] T2.3 Blast-radius minh bạch khi idle pass (sắp wipe): in fate từng volume — pgdata=BACKED-UP · redis/rabbitmq/mailpit/es=regenerable · **mongodata=MẤT VĨNH VIỄN (event_log, không backup)** · **miniodata=MẤT VĨNH VIỄN (uploaded images không re-upload — probe MinIO là detector)**
-- [ ] T2.4 Disk `df -k <repo>` free ≥ 20GB + `docker system df` vào log; RAM `docker info --format {{.MemTotal}}` ≥ 6GB → thiếu die 3
-- [ ] T2.5 Preflight: docker daemon trả lời (`docker info`), compose file tồn tại → fail die 3
-- [ ] T2.6 Self-test gates sandbox: chạy KHÔNG flag → exit 3; chạy CÓ flag khi stack demo sống (case thật) → exit 3; `bash -n`; commit `feat(qa): fresh-boot safety gate — confirm+idle+blast-radius+disk+ram (FI-406)`
+- [x] T2.1 Pidfile lock `.run/qa-fresh-boot.lock` (mkdir + trap cleanup) — run song song die 3; confirm flag `QA_FRESH_BOOT_CONFIRM=1` thiếu → die 3 (trước MỌI hành động); `QA_FRESH_BOOT_RESUME` nếu set phải ∈ {BUILD} → khác die 3
+- [x] T2.2 Demo-idle: (a) DERIVED chính `docker compose --profile full --profile stripe ps -q` non-empty → die 3 (phủ mọi service compose — kể cả invoice default-profile); (b) `lsof -nP -iTCP -sTCP:LISTEN` trên 8080,3000,5173,5174,5175,5176,5177,5178,9099 — có listener → die 3 in PID/process; KHÔNG có --force
+- [x] T2.3 Blast-radius minh bạch khi idle pass (sắp wipe): in fate từng volume — pgdata=BACKED-UP · redis/rabbitmq/mailpit/es=regenerable · **mongodata=MẤT VĨNH VIỄN (event_log, không backup)** · **miniodata=MẤT VĨNH VIỄN (uploaded images không re-upload — probe MinIO là detector)**
+- [x] T2.4 Disk `df -k <repo>` free ≥ 20GB + `docker system df` vào log; RAM `docker info --format {{.MemTotal}}` ≥ 6GB → thiếu die 3
+- [x] T2.5 Preflight: docker daemon trả lời (`docker info`), compose file tồn tại → fail die 3
+- [x] T2.6 Self-test gates sandbox: chạy KHÔNG flag → exit 3; chạy CÓ flag khi stack demo sống (case thật) → exit 3; `bash -n`; commit `feat(qa): fresh-boot safety gate — confirm+idle+blast-radius+disk+ram (FI-406)`
 
 **Exit:** bằng chứng 2 refusal thật có trong log (thiếu flag; stack sống), không đụng gì trước refuse.
 
 ### Task T3 — pg-dump-backup-restore-test-throwaway-db
-- [ ] T3.1 Đảm bảo postgres sống + healthy: container `ecommerce-postgres` không running → `docker compose up -d postgres` + ĐỢI `.State.Health.Status == healthy` trước dump (không dump-trên-starting; timeout 2') — idempotent
-- [ ] T3.2 Backup 9 DB (danh sách hardcoded đúng spec; `<ts>`=YYYYMMDD-HHMMSS) → `backups/qa-<ts>/<db>.sql.gz` qua `docker compose exec -T postgres pg_dump -U postgres -d <db> | gzip`; dump < 200 bytes hoặc gzip fail → die 4 (trước wipe)
-- [ ] T3.3 RESTORE-TEST per-DB: `docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE qa_restore_test_<db sans db_>"` → `gunzip -c <dump> | docker compose exec -T postgres psql -U postgres -d qa_restore_test_<...>` → sanity `SELECT count(*) FROM <bảng-map hardcoded>` (identity→users, catalog→products, inventory→stocks, ordering→orders, payment→payments, notification→notifications, partner→partners, affiliate→affiliates, **template→schema-only `SELECT 1`** — db_template 0 bảng public, verified) → `DROP DATABASE`; bất kỳ fail → die 4 + dọn DB test còn sót
-- [ ] T3.4 ls -lh backups/ vào log (bằng chứng 9 file); commit `feat(qa): fresh-boot backup 9 DB + restore-test throwaway (FI-406)`
+- [x] T3.1 Đảm bảo postgres sống + healthy: container `ecommerce-postgres` không running → `docker compose up -d postgres` + ĐỢI `.State.Health.Status == healthy` trước dump (không dump-trên-starting; timeout 2') — idempotent
+- [x] T3.2 Backup 9 DB (danh sách hardcoded đúng spec; `<ts>`=YYYYMMDD-HHMMSS) → `backups/qa-<ts>/<db>.sql.gz` qua `docker compose exec -T postgres pg_dump -U postgres -d <db> | gzip`; dump < 200 bytes hoặc gzip fail → die 4 (trước wipe)
+- [x] T3.3 RESTORE-TEST per-DB: `docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE qa_restore_test_<db sans db_>"` → `gunzip -c <dump> | docker compose exec -T postgres psql -U postgres -d qa_restore_test_<...>` → sanity `SELECT count(*) FROM <bảng-map hardcoded>` (identity→users, catalog→products, inventory→stocks, ordering→orders, payment→payments, notification→notifications, partner→partners, affiliate→affiliates, **template→schema-only `SELECT 1`** — db_template 0 bảng public, verified) → `DROP DATABASE`; bất kỳ fail → die 4 + dọn DB test còn sót
+- [x] T3.4 ls -lh backups/ vào log (bằng chứng 9 file); commit `feat(qa): fresh-boot backup 9 DB + restore-test throwaway (FI-406)`
 
 **Exit:** backup 9 file + 9 restore-test pass trong log (hoặc die 4 trước wipe nếu fail).
 
 ### Task T4 — stage-down-v
-- [ ] T4.1 `docker compose --profile full --profile stripe down -v --remove-orphans` + log thời gian; ghi marker `.run/qa-fresh-boot-wiped` (timestamp — bằng chứng wipe cho RESUME); verify `docker ps -a --format {{.Names}} | grep ^ecommerce-` = rỗng → còn sót die 4
-- [ ] Commit `feat(qa): fresh-boot down -v stage (FI-406)`
+- [x] T4.1 `docker compose --profile full --profile stripe down -v --remove-orphans` + log thời gian; ghi marker `.run/qa-fresh-boot-wiped` (timestamp — bằng chứng wipe cho RESUME); verify `docker ps -a --format {{.Names}} | grep ^ecommerce-` = rỗng → còn sót die 4
+- [x] Commit `feat(qa): fresh-boot down -v stage (FI-406)`
 
 **Exit:** sau stage, không còn container ecommerce-*.
 
 ### Task T5 — stage-build-serialized-stack-down (daemon wedge)
-- [ ] T5.1 `docker compose --profile full --profile stripe build` chạy nền (log ra LOG), poll progress in % interval 30s
-- [ ] T5.2 Daemon-wedge detect: build exit != 0 + tail log khớp `Cannot connect to the Docker daemon|error during connect|Cannot connect.*docker` → in hướng dẫn restart daemon (`pkill -f com.docker.backend; open -a Docker`) + `QA_FRESH_BOOT_RESUME=BUILD QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` + die 5; build fail khác → die 5 kèm tail log
-- [ ] T5.3 RESUME=BUILD: skip BACKUP+DOWN nhưng BẮT BUỘC marker `.run/qa-fresh-boot-wiped` tồn tại từ run trước → không marker die 3 (chặn false-fresh trên data demo còn nguyên); GATE vẫn chạy đầy đủ; `bash -n`; commit `feat(qa): fresh-boot build stage + daemon-wedge resume (FI-406)`
+- [x] T5.1 `docker compose --profile full --profile stripe build` chạy nền (log ra LOG), poll progress in % interval 30s
+- [x] T5.2 Daemon-wedge detect: build exit != 0 + tail log khớp `Cannot connect to the Docker daemon|error during connect|Cannot connect.*docker` → in hướng dẫn restart daemon (`pkill -f com.docker.backend; open -a Docker`) + `QA_FRESH_BOOT_RESUME=BUILD QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` + die 5; build fail khác → die 5 kèm tail log
+- [x] T5.3 RESUME=BUILD: skip BACKUP+DOWN nhưng BẮT BUỘC marker `.run/qa-fresh-boot-wiped` tồn tại từ run trước → không marker die 3 (chặn false-fresh trên data demo còn nguyên); GATE vẫn chạy đầy đủ; `bash -n`; commit `feat(qa): fresh-boot build stage + daemon-wedge resume (FI-406)`
 
 **Exit:** `bash -n` pass; logic resume verify bằng code-inspect + dry-run thật (T-V).
 

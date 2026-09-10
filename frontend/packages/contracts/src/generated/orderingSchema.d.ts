@@ -287,6 +287,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ordering/admin/orders/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xuat CSV toan bo don (admin)
+         * @description Stream CSV (SF-13 A7b, ADR 0005) — BOM UTF-8 dau stream cho Excel VN.
+         *     Attachment filename orders-<yyyy-mm-dd>.csv.
+         */
+        get: operations["adminExportOrdersCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ordering/admin/orders/{id}": {
         parameters: {
             query?: never;
@@ -1417,6 +1438,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    adminExportOrdersCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File CSV. */
+            200: {
+                headers: {
+                    /** @description attachment; filename="orders-<yyyy-mm-dd>.csv" */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             401: components["responses"]["Unauthorized"];

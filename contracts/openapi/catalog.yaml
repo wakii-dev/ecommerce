@@ -1118,6 +1118,14 @@ components:
         name:
           type: string
           description: Ten variant DA resolve (vd "Do / XL").
+        nameI18n:
+          type: object
+          description: Ten goc chua resolve (admin edit round-trip; nullable).
+          properties:
+            vi:
+              type: string
+            en:
+              type: string
         options:
           type: object
           description: 'Tue chon (vd {color: do, size: XL}).'

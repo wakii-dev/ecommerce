@@ -84,6 +84,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/products/by-id/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chi tiet san pham theo id (FI-397)
+         * @description Cung shape PDP — ordering re-price saga goi theo id (public; duong dan
+         *     admin cu → 401 vi ordering khong co token service). Draft/deleted → 404.
+         */
+        get: operations["getProductById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/products/{slug}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * San pham tuong tu (SF-13 A6b)
+         * @description "San pham tuong tu" tren PDP — ES more_like_this + fill cung category.
+         *     Slug la → page rong 200 (PDP an section).
+         */
+        get: operations["listRelatedProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/categories": {
         parameters: {
             query?: never;
@@ -184,6 +226,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/me/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sach review cua toi (JWT)
+         * @description Review cua chinh user — moi status (PENDING/APPROVED/REJECTED) kem ten
+         *     product (resolve vi). Loc theo productId khi co (SF-8, FI-310).
+         */
+        get: operations["listMyReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/me/reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sua review cua toi (JWT)
+         * @description Chi review con PENDING sua duoc (SF-8).
+         */
+        put: operations["updateMyReview"];
+        post?: never;
+        /**
+         * Xoa review cua toi (JWT)
+         * @description Chi review con PENDING xoa duoc (SF-8).
+         */
+        delete: operations["deleteMyReview"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalog/me/wishlist/{productId}": {
         parameters: {
             query?: never;
@@ -226,6 +313,27 @@ export interface paths {
          * @description Nhan ProductWrite — truong i18n dang object {vi, en}.
          */
         post: operations["adminCreateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog/admin/products/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xuat CSV toan bo san pham (admin)
+         * @description Stream CSV (SF-13 A7b, ADR 0005) — BOM UTF-8 dau stream cho Excel VN.
+         *     Attachment filename products-<yyyy-mm-dd>.csv.
+         */
+        get: operations["adminExportProductsCsv"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -467,6 +575,11 @@ export interface components {
             id: string;
             /** @description Ten variant DA resolve (vd "Do / XL"). */
             name: string;
+            /** @description Ten goc chua resolve (admin edit round-trip; nullable). */
+            nameI18n?: {
+                vi?: string;
+                en?: string;
+            };
             /** @description Tue chon (vd {color: do, size: XL}). */
             options: {
                 [key: string]: string;
@@ -626,6 +739,29 @@ export interface components {
         UploadResponse: {
             /** @description URL public /media/** (phat qua gateway). */
             url: string;
+        };
+        /** @description Review cua toi (SF-8, FI-310) — kem status moderation + ten product. */
+        MeReview: {
+            id: string;
+            productId: string;
+            /** @description Ten san pham (resolve vi). */
+            productName: string;
+            rating: number;
+            title?: string;
+            content: string;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            verifiedPurchase: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Page chuan {items, page, size, total} (1-based). */
+        MeReviewPage: {
+            items: components["schemas"]["MeReview"][];
+            /** @description Trang hien tai (1-based). */
+            page: number;
+            size: number;
+            total: number;
         };
     };
     responses: {
@@ -846,6 +982,61 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getProductById: {
+        parameters: {
+            query?: {
+                /** @description Ngon ngu resolve content (D17). Mac dinh vi. */
+                locale?: "vi" | "en";
+            };
+            header?: never;
+            path: {
+                /** @description Id tai nguyen. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chi tiet san pham. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetail"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listRelatedProducts: {
+        parameters: {
+            query?: {
+                /** @description So luong (mac dinh 8). */
+                size?: number;
+                /** @description Ngon ngu resolve content (D17). Mac dinh vi. */
+                locale?: "vi" | "en";
+            };
+            header?: never;
+            path: {
+                /** @description Slug san pham (vi hoac en). */
+                slug: components["parameters"]["SlugPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trang san pham lien quan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductCardPage"];
+                };
+            };
+        };
+    };
     getCategories: {
         parameters: {
             query?: {
@@ -988,6 +1179,87 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    listMyReviews: {
+        parameters: {
+            query?: {
+                /** @description Loc review theo san pham. */
+                productId?: string;
+                /** @description So trang — 1-based. */
+                page?: components["parameters"]["Page"];
+                /** @description So item moi trang (mac dinh 20, toi da 100). */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trang review cua toi. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeReviewPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    updateMyReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id tai nguyen. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Review da cap nhat (van PENDING). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeReview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteMyReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id tai nguyen. */
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Da xoa. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     addWishlistItem: {
         parameters: {
             query?: never;
@@ -1084,6 +1356,30 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    adminExportProductsCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File CSV. */
+            200: {
+                headers: {
+                    /** @description attachment; filename="products-<yyyy-mm-dd>.csv" */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
         };

@@ -59,6 +59,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/affiliate/me/loyalty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Điểm loyalty của user hiện tại
+         * @description Balance + tổng điểm đã nhận (SF-14 — dashboard loyalty).
+         */
+        get: operations["getMyLoyalty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/affiliate/me/loyalty/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sổ điểm loyalty của user hiện tại
+         * @description Mỗi entry là một biến động điểm (EARN/REDEEM/ADJUST); page 1-based.
+         */
+        get: operations["listMyLoyaltyLedger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/affiliate/track/click": {
         parameters: {
             query?: never;
@@ -140,6 +180,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/affiliate/admin/affiliates/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tạm ngưng affiliate (ngừng track)
+         * @description ADDITIVE (FI-310) — chỉ APPROVED suspend được; SUSPENDED thì track click bỏ qua code.
+         */
+        post: operations["suspendAffiliate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/affiliate/admin/affiliates/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kích hoạt lại affiliate (track lại)
+         * @description ADDITIVE (FI-310) — chỉ SUSPENDED reactivate được; trở lại APPROVED.
+         */
+        post: operations["reactivateAffiliate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/affiliate/admin/affiliates/{id}/rate": {
         parameters: {
             query?: never;
@@ -154,6 +234,46 @@ export interface paths {
          */
         put: operations["updateAffiliateRate"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/affiliate/admin/loyalty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tra cứu loyalty theo userId (admin)
+         * @description Account + ledger gần đây của user — dùng cho admin console.
+         */
+        get: operations["adminLookupLoyalty"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/affiliate/admin/loyalty/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chỉnh điểm loyalty thủ công (admin)
+         * @description Delta ± (âm = trừ điểm), kèm note; trả account sau adjust.
+         */
+        post: operations["adjustLoyaltyPoints"];
         delete?: never;
         options?: never;
         head?: never;
@@ -231,7 +351,7 @@ export interface components {
             note?: string;
         };
         /** @enum {string} */
-        AffiliateStatus: "PENDING" | "APPROVED" | "REJECTED";
+        AffiliateStatus: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
         AffiliatePending: {
             id: string;
             status: components["schemas"]["AffiliateStatus"];
@@ -311,6 +431,58 @@ export interface components {
             discount: number;
             /** @description Điểm còn lại của user */
             remaining: number;
+        };
+        /** @description Tài khoản loyalty của user (SF-14) */
+        LoyaltyAccount: {
+            /** Format: uuid */
+            userId: string;
+            /** @description Điểm hiện có */
+            balance: number;
+            /** @description Tổng điểm đã nhận */
+            totalEarned: number;
+        };
+        /**
+         * @description Loại biến động điểm — ADJUST là chỉnh tay bởi admin
+         * @enum {string}
+         */
+        LoyaltyLedgerType: "EARN" | "REDEEM" | "ADJUST";
+        LoyaltyLedgerEntry: {
+            id: string;
+            /** @description Đơn gắn biến động — null khi ADJUST thủ công */
+            orderId?: string | null;
+            type: components["schemas"]["LoyaltyLedgerType"];
+            /** @description Điểm biến động (±) */
+            points: number;
+            /** @description Ghi chú (vd lý do adjust) */
+            note?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Page chuẩn {items, page, size, total} */
+        LoyaltyLedgerPage: {
+            items: components["schemas"]["LoyaltyLedgerEntry"][];
+            /** @description Trang hiện tại (1-based) */
+            page: number;
+            size: number;
+            total: number;
+        };
+        /** @description Kết quả tra cứu loyalty theo userId (admin) */
+        AdminLoyaltyLookup: {
+            account: components["schemas"]["LoyaltyAccount"];
+            /** @description Ledger gần đây của user */
+            ledger: components["schemas"]["LoyaltyLedgerEntry"][];
+            /** @description Trang hiện tại (1-based) */
+            page: number;
+            size: number;
+            total: number;
+        };
+        LoyaltyAdjustRequest: {
+            /** Format: uuid */
+            userId: string;
+            /** @description Delta ± (âm = trừ điểm) */
+            points?: number;
+            /** @description Lý do chỉnh điểm (log lại) */
+            note?: string;
         };
     };
     responses: never;
@@ -434,6 +606,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LedgerPage"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    getMyLoyalty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tài khoản loyalty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoyaltyAccount"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listMyLoyaltyLedger: {
+        parameters: {
+            query?: {
+                /** @description Số trang (1-based) */
+                page?: components["parameters"]["Page"];
+                /** @description Số entry mỗi trang */
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page sổ điểm */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoyaltyLedgerPage"];
                 };
             };
             /** @description Chưa đăng nhập / token hết hạn */
@@ -593,6 +828,88 @@ export interface operations {
             };
         };
     };
+    suspendAffiliate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id hồ sơ affiliate */
+                id: components["parameters"]["AffiliateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hồ sơ đã SUSPENDED */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AffiliateProfile"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Hồ sơ không ở trạng thái APPROVED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    reactivateAffiliate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id hồ sơ affiliate */
+                id: components["parameters"]["AffiliateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hồ sơ đã APPROVED lại */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AffiliateProfile"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Hồ sơ không ở trạng thái SUSPENDED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     updateAffiliateRate: {
         parameters: {
             query?: never;
@@ -619,6 +936,84 @@ export interface operations {
                 };
             };
             /** @description Rate ngoài khoảng cho phép */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    adminLookupLoyalty: {
+        parameters: {
+            query: {
+                /** @description Id user cần tra cứu */
+                userId: string;
+                /** @description Số trang (1-based) */
+                page?: components["parameters"]["Page"];
+                /** @description Số entry ledger mỗi trang */
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account + ledger */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLoyaltyLookup"];
+                };
+            };
+            /** @description Chưa đăng nhập / token hết hạn */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    adjustLoyaltyPoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoyaltyAdjustRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã adjust — account mới */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoyaltyAccount"];
+                };
+            };
+            /** @description Payload không hợp lệ */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -66,6 +66,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inventory/admin/stocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upsert ton kho theo variant (admin, FI-397)
+         * @description Form admin goi NGAY SAU save product cho tung variant — catalog admin
+         *     PUT variants KHONG sync stock (inventory so huu ton kho, writer-supply).
+         *     quantity 0 hop le (chot het hang).
+         */
+        put: operations["setStock"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/admin/stocks/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Doc ton kho 1 variant (admin)
+         * @description Form admin dung sau save de confirm.
+         */
+        get: operations["getStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -136,6 +178,27 @@ export interface components {
             available: number;
             /** @description Nguong da ap dung cho dong nay. */
             threshold: number;
+        };
+        /** @description Body PUT /admin/stocks (FI-397) — upsert theo variant. */
+        SetStockRequest: {
+            variantId: string;
+            /** @description So luong moi (0 = chot het hang). */
+            quantity: number;
+            /** @description Denormalized nullable — writer-supply (FI-310). */
+            productId?: string;
+            productName?: string;
+        };
+        /** @description Row ton kho theo variant (pin §6.1.4). */
+        Stock: {
+            variantId: string;
+            /** @description Ton kha dung (available). */
+            quantity: number;
+            /** @description Nguong canh bao ton kho thap. */
+            thresholdLow: number;
+            productId?: string | null;
+            productName?: string | null;
+            /** Format: date-time */
+            updatedAt: string;
         };
     };
     responses: {
@@ -255,6 +318,66 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    setStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetStockRequest"];
+            };
+        };
+        responses: {
+            /** @description Stock row sau upsert. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stock"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stock row cua variant. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stock"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Khong co stock row cho variant. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
         };
     };
 }

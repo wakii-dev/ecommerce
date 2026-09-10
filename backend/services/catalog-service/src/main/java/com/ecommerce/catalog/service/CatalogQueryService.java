@@ -252,7 +252,7 @@ public class CatalogQueryService {
             options.put("size", v.getSize());
         }
         long priceDelta = v.getPrice() != null ? v.getPrice() - product.getPrice() : 0;
-        return new VariantDto(v.getId(), name, options, priceDelta, 0);
+        return new VariantDto(v.getId(), name, options, priceDelta, 0, v.getNameI18n());
     }
 
     /** Fallback tên variant: non-null của [color, size] join " / " (Q5c). */

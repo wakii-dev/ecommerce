@@ -135,11 +135,11 @@ export function viewToForm(view: AdminProductView): ProductFormState {
     price: String(view.price),
     comparePrice: view.comparePrice !== undefined ? String(view.comparePrice) : '',
     flashSaleEndsAt: isoToLocalDateTime(view.flashSaleEndsAt),
-    // View không trả nameI18n gốc của variant (Variant chỉ có name resolved) —
-    // dùng resolved làm vi; en để trống (server fallback vi — D17).
+    // nameI18n gốc của variant (FI round-trip: admin view trả đủ vi+en kể từ
+    // khi VariantDto thêm nameI18n) — fallback resolved làm vi khi null.
     variants: (view.variants ?? []).map((v) => ({
-      nameVi: v.name,
-      nameEn: '',
+      nameVi: v.nameI18n?.vi ?? v.name,
+      nameEn: v.nameI18n?.en ?? '',
       optionsText: optionsToText(v.options),
       priceDelta: v.priceDelta !== undefined ? String(v.priceDelta) : '',
       stock: String(v.stock)

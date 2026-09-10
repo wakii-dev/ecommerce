@@ -83,6 +83,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payment/cod/captures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Capture tiền COD lúc giao hàng (SF-13 A2)
+         * @description Ordering gọi nội bộ khi deliver đơn COD (HTTP thẳng :8086, KHÔNG qua
+         *     gateway — command edge §3.2). `idempotencyKey` bảo vệ retry: deliver
+         *     retry cùng key → trả kết quả cũ với `replay=true`, không capture hai lần.
+         */
+        post: operations["captureCodPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -171,6 +193,23 @@ export interface components {
         };
         VoidResult: {
             status: components["schemas"]["PaymentIntentStatus"];
+        };
+        /** @description Body capture tiền COD (SF-13 A2) — ordering gọi lúc deliver. */
+        CodCaptureRequest: {
+            /** @description Order id bên ordering-service */
+            orderId: string;
+            /** @description Số tiền thu COD (VND nguyên) */
+            amountVnd: number;
+            /** @description Key dedupe — cùng key → replay kết quả cũ */
+            idempotencyKey: string;
+        };
+        CodCaptureResult: {
+            /** @description Id payment intent COD nội bộ */
+            paymentIntentId: string;
+            /** @description Trạng thái sau capture (vd SUCCEEDED) */
+            status: string;
+            /** @description true khi đây là replay cùng idempotencyKey */
+            replay: boolean;
         };
     };
     responses: never;
@@ -352,6 +391,39 @@ export interface operations {
             };
             /** @description Intent đã capture / đã void — không void được nữa */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    captureCodPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodCaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description Đã capture (replay=true khi retry cùng key). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodCaptureResult"];
+                };
+            };
+            /** @description Payload không hợp lệ */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

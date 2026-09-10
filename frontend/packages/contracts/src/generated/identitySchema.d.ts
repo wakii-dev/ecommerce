@@ -100,7 +100,12 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Cap nhat profile user hien tai
+         * @description Can JWT bearer. Partial update — field null/bo qua = khong doi (FI-310).
+         *     phone de blank → xoa phone.
+         */
+        patch: operations["updateMe"];
         trace?: never;
     };
     "/api/identity/.well-known/jwks.json": {
@@ -185,6 +190,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/identity/newsletter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dang ky nhan newsletter
+         * @description Public. Email dup → van 200 voi status "already" (khong tao row moi,
+         *     khong publish event — khong double email). Email moi → row + event
+         *     `user.newsletter_subscribed` (SF-13 A8). Race dup đồng thời → 409
+         *     (unique email — FE hiện "already").
+         */
+        post: operations["subscribeNewsletter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/identity/admin/newsletter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sach subscriber newsletter (admin)
+         * @description Can role ADMIN — 2 lop guard: gateway admin-prefix /api/identity/admin/**
+         *     + SecurityConfig /admin/**. Moi nhat truoc.
+         */
+        get: operations["adminListNewsletter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/identity/oauth/{provider}/authorize": {
         parameters: {
             query?: never;
@@ -219,6 +268,48 @@ export interface paths {
          *     hoac tham so error neu tu choi. Flow chi tiet SF-15.
          */
         get: operations["oauthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/identity/oauth/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Doi one-time code lay access token (D22)
+         * @description FE goi sau khi nhan code tu callback. Tra `LoginSuccess` + Set-Cookie
+         *     refresh_token (httpOnly) giong login thuong. ADDITIVE (ADR 0005, FI-310).
+         */
+        post: operations["oauthExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/identity/.well-known/oauth-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sach OAuth provider da cau hinh
+         * @description Public discovery — FE dung de an/hien nut login Google/Facebook.
+         *     Provider chua cau hinh (thieu client-id/secret) → false. ADDITIVE (ADR 0005).
+         */
+        get: operations["listOAuthProviders"];
         put?: never;
         post?: never;
         delete?: never;
@@ -373,6 +464,8 @@ export interface components {
             /** Format: email */
             email: string;
             fullName: string;
+            /** @description So dien thoai — null khi chua co / da xoa (PATCH /me). */
+            phone?: string | null;
             roles: string[];
             twoFactorEnabled: boolean;
         };
@@ -438,6 +531,45 @@ export interface components {
             challengeToken: string;
             /** @description Ma TOTP 6 chu so hoac recovery code. */
             code: string;
+        };
+        /** @description PATCH /me — partial, field null = khong doi (FI-310). */
+        UpdateMeRequest: {
+            fullName?: string;
+            /** @description Blank → xoa phone. */
+            phone?: string;
+        };
+        NewsletterSubscribeRequest: {
+            /** Format: email */
+            email: string;
+        };
+        NewsletterSubscribeResponse: {
+            /**
+             * @description Gia tri already khi email da dang ky truoc (khong double).
+             * @enum {string}
+             */
+            status: "subscribed" | "already";
+        };
+        NewsletterItem: {
+            /** Format: email */
+            email: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NewsletterPage: {
+            items: components["schemas"]["NewsletterItem"][];
+            /** @description Trang hien tai (1-based). */
+            page: number;
+            size: number;
+            total: number;
+        };
+        OAuthExchangeRequest: {
+            /** @description One-time code nhan tu callback (dung mot lan). */
+            code: string;
+        };
+        /** @description Provider da cau hinh — FE an/hien nut login tuong ung. */
+        OAuthProviders: {
+            google: boolean;
+            facebook: boolean;
         };
     };
     responses: {
@@ -607,6 +739,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMeRequest"];
+            };
+        };
+        responses: {
+            /** @description Profile sau khi cap nhat. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     getJwks: {
         parameters: {
             query?: never;
@@ -711,6 +869,59 @@ export interface operations {
             };
         };
     };
+    subscribeNewsletter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewsletterSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description Da xu ly — status "subscribed" hoac "already". */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsletterSubscribeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    adminListNewsletter: {
+        parameters: {
+            query?: {
+                /** @description So trang — 1-based. */
+                page?: components["parameters"]["Page"];
+                /** @description So item moi trang (mac dinh 50, toi da 100). */
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trang subscriber. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsletterPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     oauthAuthorize: {
         parameters: {
             query?: never;
@@ -776,6 +987,62 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    oauthExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Dang nhap thanh cong. */
+            200: {
+                headers: {
+                    /** @description Cookie refresh_token httpOnly (xoa khi logout). */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginSuccess"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Code sai / het han / da dung. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    listOAuthProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trang thai cau hinh tung provider. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthProviders"];
                 };
             };
         };

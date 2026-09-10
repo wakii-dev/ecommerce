@@ -19,7 +19,7 @@
  * /PASS|SECRET|TOKEN|PASSWORD|API_?KEY|PRIVATE/i → in «masked» (ngoại lệ:
  * giá trị path-shape vd /keys/jwt-public.pem in được).
  */
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve, dirname, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -591,6 +591,125 @@ function loadFixedRegistry(file) {
   return new Set(obj.findings.map((f) => f.id));
 }
 
+// ── Report writer (T5) — marker-based, idempotent ────────────────────────────
+// Mỗi script chỉ regen block `<!-- sf1:<section> -->` của mình: read → replace
+// → write. Thiếu marker (file bị tay đụng) → append cuối, KHÔNG clobber block
+// script khác. Thiếu file → sinh skeleton đầy đủ 7 section.
+const REPORT_SECTIONS = ['summary', 'axis-a', 'axis-b', 'axis-c', 's2s', 'rbac', 'contracts'];
+const SECTION_OWNER = {
+  summary: 'config-audit.mjs', 'axis-a': 'config-audit.mjs', 'axis-b': 'config-audit.mjs',
+  'axis-c': 'config-audit.mjs', s2s: 's2s-auth-matrix.mjs', rbac: 'rbac-matrix.mjs',
+  contracts: 'contracts-freshness.mjs',
+};
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function reportSkeleton() {
+  const body = REPORT_SECTIONS
+    .map((s) => `<!-- sf1:${s} -->\n(chờ ${SECTION_OWNER[s]} ghi)\n<!-- /sf1:${s} -->`)
+    .join('\n\n');
+  return [
+    '# QA Static Audit — SF-1 (FI-405)', '',
+    '> Report marker-based: MỖI script regen block `<!-- sf1:<section> -->` của mình',
+    '> (read → replace → write, idempotent re-run). Block do script sinh — KHÔNG sửa tay.',
+    `> config-audit.mjs: summary + axis-a/b/c · s2s-auth-matrix.mjs: s2s ·`,
+    '> rbac-matrix.mjs: rbac · contracts-freshness.mjs: contracts.',
+    '> Exit semantics chung 4 script: 0 = 0 finding CHƯA fix · 1 = ≥1 finding CHƯA fix · 2 = script error.',
+    '', body, '',
+  ].join('\n');
+}
+
+function upsertSection(reportPath, section, content) {
+  if (!REPORT_SECTIONS.includes(section)) fail(`Section lạ '${section}' — không thuộc report schema`);
+  let text;
+  if (existsSync(reportPath)) text = readFileSync(reportPath, 'utf8');
+  else text = reportSkeleton();
+  const open = `<!-- sf1:${section} -->`;
+  const close = `<!-- /sf1:${section} -->`;
+  const re = new RegExp(`${escRe(open)}[\\s\\S]*?${escRe(close)}`);
+  const replacement = `${open}\n${content}\n${close}`;
+  const next = re.test(text) ? text.replace(re, replacement) : `${text}\n${replacement}\n`;
+  writeFileSync(reportPath, next);
+}
+
+function mdTable(header, rows) {
+  return [
+    `| ${header.join(' | ')} |`,
+    `| ${header.map(() => '---').join(' | ')} |`,
+    ...rows.map((r) => `| ${r.join(' | ')} |`),
+  ].join('\n');
+}
+const trunc = (s, n = 60) => (s == null ? '—' : String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s));
+
+function buildAxisContent(axisA, axisB, axisC, findings) {
+  const parts = [];
+  // axis-a
+  const cnt = {};
+  for (const r of axisA) cnt[r.status] = (cnt[r.status] || 0) + 1;
+  const aRows = axisA
+    .filter((r) => r.status !== 'SKIP-NOENTRY')
+    .map((r) => [r.service, r.var, r.status, trunc(maskValue(r.var, r.default)), trunc(maskValue(r.var, r.composeVal != null ? resolveComposeValue(r.composeVal) : null))]);
+  const aFind = findings.A.map((f) => [f.id, f.service, f.var, trunc(f.note, 120), trunc(f.evidence, 120)]);
+  const aWarn = axisA.filter((r) => r.status === 'WARN').map((r) => [r.service, r.var, trunc(maskValue(r.var, r.composeVal != null ? resolveComposeValue(r.composeVal) : null), 40), trunc(r.note, 110)]);
+  parts.push([
+    '### Trục (a) — env var code ↔ compose (A1)', '',
+    `Đối chiếu ${axisA.length} env-var. Trạng thái: ${Object.entries(cnt).map(([k, v]) => `${k}=${v}`).join(' · ')}. WARN/UNSET/SKIP **không phải finding**.`,
+    '', '**Findings DANGEROUS:**', '',
+    mdTable(['ID', 'service', 'var', 'ghi chú', 'evidence'], aFind.length ? aFind : [['—', '—', '—', '0 finding', '—']]),
+    '', '**WARN (non-finding, không ảnh hưởng exit):**', '',
+    mdTable(['service', 'var', 'compose', 'ghi chú'], aWarn.length ? aWarn : [['—', '—', '—', '0 WARN']]),
+    '', `**Bảng đầy đủ** (default/compose masked theo policy secret; SKIP-NOENTRY=${cnt['SKIP-NOENTRY'] || 0} var của service không có entry compose — lược):`, '',
+    mdTable(['service', 'var', 'status', 'default', 'compose'], aRows),
+  ].join('\n'));
+  // axis-b
+  const bRows = axisB.map((r) => [r.service, r.var, trunc(r.envVal != null ? r.envVal : r.default, 46), trunc(r.targets.join(', ') || '—', 30), r.status, trunc(r.note, 90)]);
+  const bFind = findings.B.map((f) => [f.id, f.service, f.var, trunc(f.note, 120), trunc(f.evidence, 120)]);
+  parts.push([
+    '### Trục (b) — volume mounts drift (A6)', '',
+    `${axisB.length} path-requirement (code default + compose env) so container-target volume của chính service.`,
+    '', '**Findings DANGEROUS:**', '',
+    mdTable(['ID', 'service', 'var', 'ghi chú', 'evidence'], bFind.length ? bFind : [['—', '—', '—', '0 finding', '—']]),
+    '', '**Bảng đầy đủ:**', '',
+    mdTable(['service', 'var', 'path hiệu lực', 'volume targets', 'status', 'ghi chú'], bRows),
+  ].join('\n'));
+  // axis-c
+  const cRows = axisC.map((r) => [r.service, r.check, r.status, trunc(r.note, 100)]);
+  const cFind = findings.C.map((f) => [f.id, f.service, f.check, trunc(f.note, 120), trunc(f.evidence, 120)]);
+  parts.push([
+    '### Trục (c) — compose value drift, closed checklist (A7)', '',
+    '(1) postgres `max_connections` ≥ 110 · (2) healthcheck per JVM service · (3) flag ngoài bảng KNOWN_FLAGS → WARN.',
+    '', '**Findings DANGEROUS:**', '',
+    mdTable(['ID', 'service', 'check', 'ghi chú', 'evidence'], cFind.length ? cFind : [['—', '—', '—', '0 finding', '—']]),
+    '', '**Bảng đầy đủ:**', '',
+    mdTable(['service', 'check', 'status', 'ghi chú'], cRows),
+  ].join('\n'));
+  return parts;
+}
+
+function writeReport(opts, data) {
+  const { axisA, axisB, axisC, findings, unfixed, fixedCount, exitCode } = data;
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  const totalUnfixed = unfixed.A + unfixed.B + unfixed.C;
+  const summary = [
+    `**config-audit** run ${now} — compose \`${relative(REPO, opts.compose)}\` · backend \`${relative(REPO, opts.backend)}\``,
+    '',
+    '| Trục | Kiểm | DANGEROUS | UNFIXED | FIXED (registry) | WARN (non-finding) |',
+    '| --- | --- | --- | --- | --- | --- |',
+    `| (a) env var | ${axisA.length} | ${findings.A.length} | ${unfixed.A} | ${fixedCount && findings.A.some((f) => f.status === 'FIXED') ? findings.A.filter((f) => f.status === 'FIXED').length : 0} | ${axisA.filter((r) => r.status === 'WARN').length} |`,
+    `| (b) volume mount | ${axisB.length} | ${findings.B.length} | ${unfixed.B} | ${findings.B.filter((f) => f.status === 'FIXED').length} | — |`,
+    `| (c) compose checklist | ${findings.allC.length} | ${findings.C.length} | ${unfixed.C} | ${findings.C.filter((f) => f.status === 'FIXED').length} | ${findings.allC.filter((r) => r.status === 'WARN').length} |`,
+    '',
+    `**Exit config-audit: \`${exitCode}\`** — legend: \`0\` = 0 finding CHƯA fix · \`1\` = ≥1 finding CHƯA fix · \`2\` = script error. Tổng unfixed: **${totalUnfixed}** (finding ID \`CFG-xx\`; FIXED registry \`scripts/qa/config-audit-fixed.json\`).`,
+    '',
+    '> Bảng exit ĐỦ 4 script (config-audit · s2s · rbac · contracts) do recipe `make qa-audit` ghi',
+    '> vào block này SAU KHI đủ 4 exit — script standalone KHÔNG biết exit của script khác.',
+  ].join('\n');
+  const [aC, bC, cC] = buildAxisContent(axisA, axisB, axisC, findings);
+  upsertSection(opts.report, 'summary', summary);
+  upsertSection(opts.report, 'axis-a', aC);
+  upsertSection(opts.report, 'axis-b', bC);
+  upsertSection(opts.report, 'axis-c', cC);
+}
+
 function main() {
 
   const opts = parseArgs(process.argv.slice(2));
@@ -655,10 +774,17 @@ function main() {
   for (const [ax, list] of Object.entries(findings))
     for (const f of list)
       console.log(`   ${f.id} [${f.status}] ${f.service} · ${f.var || f.check} — ${f.note}\n      ↳ ${f.evidence}`);
-  console.log(`\n== T4 classify OK (exit semantics + report ghép ở T5) ==`);
+
+  // ── T5: exit semantics (0 = 0 unfixed finding · 1 = ≥1 · 2 = script error) ─
+  const exitCode = unfixed.A + unfixed.B + unfixed.C > 0 ? 1 : 0;
+  findings.allC = axisC; // bảng đầy đủ trục (c) cho summary
+  writeReport(opts, { axisA, axisB, axisC, findings, unfixed, fixedCount, exitCode });
+  console.log(`\n== config-audit EXIT=${exitCode} — unfixed A=${unfixed.A} B=${unfixed.B} C=${unfixed.C}, FIXED=${fixedCount} ==`);
+  console.log(`   report: ${relative(REPO, opts.report)} — regen summary + axis-a/b/c (s2s/rbac/contracts giữ nguyên)`);
+  return exitCode;
 }
 
-try { main(); } catch (e) {
+try { process.exit(main()); } catch (e) {
   console.error(`config-audit: LỖI script (exit 2): ${e && e.stack ? e.stack : e}`);
   process.exit(2);
 }

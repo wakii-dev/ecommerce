@@ -84,9 +84,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Finding IDs ổn định A11 (`CFG-A-01`… theo var; `CFG-B-xx`; `CFG-C-xx`) — deterministic ordering
 
 ### Task 5 — exit-code + report-sf1.md skeleton (executor A)
-- [ ] Exit semantics 0/1/2 chung; `--report` regen marker blocks (summary + axis-a/b/c)
-- [ ] Tạo `docs/superpowers/qa/report-sf1.md` skeleton + markers (s2s/rbac/contracts block để trống chờ script B/C)
-- [ ] Real-run lần 1: exit + summary đúng (LOG_URI/keys/max_connections = OK; DANGEROUS nếu có = finding thật)
+- [x] Exit semantics 0/1/2 chung; `--report` regen marker blocks (summary + axis-a/b/c)
+- [x] Tạo `docs/superpowers/qa/report-sf1.md` skeleton + markers (s2s/rbac/contracts block để trống chờ script B/C)
+- [x] Real-run lần 1: exit + summary đúng (LOG_URI/keys/max_connections = OK; DANGEROUS nếu có = finding thật)
 
 ### Task 6 — s2s inventory enumerate clients path-granularity (executor B)
 - [ ] Grep client classes + call sites; resolve base-url → compose service; loại trừ A3; map module→compose name constant

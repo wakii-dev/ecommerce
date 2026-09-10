@@ -13,7 +13,9 @@ import { adminUiLogin } from '../helpers/journey';
  * form IDs ổn định (p-name, p-price…), testid sẵn có, classname contract
  * (ADR 0007 — KHÔNG thêm testid mới: cấm sửa app code). Serial + shared
  * state theo pattern golden-path — chạy --grep 1 test độc lập có thể đỏ vì
- * thiếu state test trước (accepted trade-off của suite này).
+ * thiếu state test trước (accepted trade-off của suite này). Admin pages điều
+ * hướng qua ${GATEWAY}/admin/... (gateway-routes shell-web predicate
+ * Path=/admin/**) — sibling specs dùng SHELL; one-origin :8080 equivalent.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -131,7 +133,7 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await expect(page.locator('#p-desc-en')).toHaveValue(PRODUCT.descEn);
     await page.getByRole('tab', { name: 'Tiếng Việt', exact: true }).click();
     // official (checkbox duy nhất, checked)
-    expect(await page.getByRole('checkbox').isChecked()).toBe(true);
+    await expect(page.getByRole('checkbox')).toBeChecked();
     // SEO
     await page.getByRole('tab', { name: 'SEO' }).click();
     await expect(page.getByLabel('SEO title')).toHaveValue(PRODUCT.seoTitle);
@@ -169,6 +171,8 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await page.getByLabel('Giá bán (₫)').fill('469000');
     await page.getByRole('tab', { name: 'Phân loại' }).click();
     const row = page.locator('.admin-variant-row').first();
+    // barrier — chờ availability fetch settle (giá trị đã nhập 33) trước khi edit; chống race overwrite (code-review P1)
+    await expect(row.locator('input').nth(4)).toHaveValue('33', { timeout: 15_000 });
     await row.locator('input').nth(4).fill('44');
 
     await page.getByRole('button', { name: 'Đăng bán' }).click();

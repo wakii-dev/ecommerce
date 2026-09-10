@@ -101,3 +101,11 @@ Serial describe. Fetch-id runtime qua API (slug seed ổn định).
 - Ưu tiên assert ở tầng network/response khi UI-toast dễ bay (pattern addFirstVariantToCart golden-path).
 - Button labels templated ("Đặt hàng COD — {{total}}", "Tiếp tục — chọn vận chuyển", "Đặt hàng — {{total}}") → match bằng PREFIX/regex (`getByRole('button', { name: /^Đặt hàng COD/ })` — pattern cod-checkout.spec.ts:69), không match chuỗi đầy đủ.
 - Redis helper: container resolve theo pattern pgExec — override env `E2E_REDIS_CONTAINER` (bare container của rig isolate) hoặc mặc định `docker compose exec -T redis redis-cli` (spec-critic P2).
+
+## 6. Amendment khi execute (ground truth sửa bởi run thật — 2026-09-10)
+
+1. **SW CÓ THẬT ở prod build** (sửa §1/§3.2): storefront-web có `PwaRegister` đăng ký `/sw.js` CHỈ ở prod — env :8080 là prod build, `public/sw.js` tồn tại, serve 200. Fresh-state assert thay SW-absence bằng SW-presence lock: đúng 1 registration + scriptURL active worker = `/sw.js` + poll vì register async. Version-key-changes-sau-rebuild cần rig 2 build — ngoài scope SF (epic §5.7 follow-up, coordinator quyết).
+2. **Stock assert = runtime-fetch equality** (sửa §3.2 mục admin stock): suite TỰ tiêu stock Nokia (COD order 3a reserve 4 → availability 46) — assert hardcoded 50 đỏ giả. Lock đúng contract surfacing: admin form stock input == availability API fetch cùng lúc (ProductFormPage.tsx:62 nguồn) — vẫn khóa "không 0 ảo".
+3. **Merge-on-login listener attach TRƯỚC uiLogin** (sửa §3.1 helper): merge POST fire ĐỒNG THỜI với auth flip (bootstrap watchMergeOnLogin) — attach sau login là lỡ 2/2 runs.
+4. **Coupon edit = bug thật** (xác nhận §5 risk): test E tách leg hoạt động (create/toggle/delete, green) + edit-leg `test.fixme` — SF-4 fix bug FE↔BE (contracts client strip `code` khỏi PUT body; `CouponService.validateAdmin` đòi body code) rồi bỏ fixme.
+

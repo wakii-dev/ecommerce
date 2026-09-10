@@ -601,6 +601,8 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile.web
+      args:
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}   # pk_* public — bake FE (golden-path Stripe)
     container_name: ecommerce-frontend-web
     profiles:
       - full

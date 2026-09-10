@@ -37,6 +37,7 @@ GATE_PORTS=(8080 3000 5173 5174 5175 5176 5177 5178 9099)
 RESUME_MODE="${QA_FRESH_BOOT_RESUME:-}"
 LOCK_HELD=0
 BUILD_PID=""
+TEE_PID=""
 
 log() { printf '%s\n' "$*"; }
 
@@ -61,12 +62,18 @@ cleanup() {
     rm -rf "${LOCK_DIR}"
   fi
   log "[done] exit=${rc} · total elapsed $(( $(date +%s) - START_EPOCH ))s · log=${LOG}"
-  sleep 0.3  # cho tee kịp flush dòng cuối vào LOG
+  # Flush tee trước khi exit: đóng fd → tee thấy EOF → flush + exit → wait về 0.
+  # (wait TRỰC TIẾP khi chưa đóng fd = deadlock — write-end của pipe do script giữ)
+  exec >&- 2>&-
+  if [[ -n "${TEE_PID}" ]] && kill -0 "${TEE_PID}" 2>/dev/null; then
+    wait "${TEE_PID}" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
 
 # Mọi output (stdout + stderr) tee vào LOG
 exec > >(tee -a "${LOG}") 2>&1
+TEE_PID=$!
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage GATE — refuse TRƯỚC MỌI hành động phá hoại (P0 — phần cứng nhất)
@@ -167,8 +174,8 @@ pg_sanity_sql() {
     db_catalog)      echo "SELECT count(*) FROM products;" ;;
     db_inventory)    echo "SELECT count(*) FROM stocks;" ;;
     db_ordering)     echo "SELECT count(*) FROM orders;" ;;
-    db_payment)      echo "SELECT count(*) FROM payments;" ;;
-    db_notification) echo "SELECT count(*) FROM notifications;" ;;
+    db_payment)      echo "SELECT count(*) FROM payment_intents;" ;;  # V10__payment_domain.sql — payments không tồn tại
+    db_notification) echo "SELECT count(*) FROM send_log;" ;;  # V10__send_log.sql — notifications không tồn tại
     db_partner)      echo "SELECT count(*) FROM partners;" ;;
     db_affiliate)    echo "SELECT count(*) FROM affiliates;" ;;
     db_template)     echo "SELECT 1;" ;;
@@ -260,8 +267,15 @@ backup() {
 # Stage DOWN — down -v (WIPE 7 volumes) + marker
 # ─────────────────────────────────────────────────────────────────────────────
 down() {
+  # TOCTOU hardening — có container start lại giữa GATE và down -v → refuse wipe
+  local toctou_ids
+  toctou_ids="$("${COMPOSE[@]}" ps -q 2>/dev/null || true)"
+  if [[ -n "${toctou_ids}" ]]; then
+    die 3 "[down] TOCTOU: containers xuất hiện lại giữa GATE và down -v (compose-ps non-empty) — refuse wipe"
+  fi
+
   log "[down] docker compose down -v --remove-orphans — WIPE volumes (mongodata/miniodata MẤT VĨNH VIỄN — đã disclose ở GATE)"
-  local t0 leftover
+  local t0 leftover ps_out
   t0=$(date +%s)
   if ! "${COMPOSE[@]}" down -v --remove-orphans; then
     die 4 "[down] compose down -v FAIL sau $(( $(date +%s) - t0 ))s"
@@ -272,9 +286,13 @@ down() {
   printf '%s\n' "$(date +%Y%m%d-%H%M%S)" > "${MARKER}"
   log "[down] marker ghi: ${MARKER} = $(cat "${MARKER}") (bằng chứng wipe cho RESUME=BUILD)"
 
-  leftover="$(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -c '^ecommerce-' || true)"
+  # docker ps fail (daemon chết?) ≠ "0 leftover" — refuse, không âm thầm pass
+  if ! ps_out="$(docker ps -a --format '{{.Names}}' 2>/dev/null)"; then
+    die 4 "[down] docker ps fail sau wipe — không verify được (daemon chết?)"
+  fi
+  leftover="$(printf '%s\n' "${ps_out}" | grep -c '^ecommerce-' || true)"
   if [[ "${leftover}" != "0" ]]; then
-    docker ps -a --format '{{.Names}}' 2>/dev/null | grep '^ecommerce-' || true
+    printf '%s\n' "${ps_out}" | grep '^ecommerce-' || true
     die 4 "[down] còn ${leftover} container ecommerce-* sau down -v"
   fi
   log "[down] verify: 0 container ecommerce-* còn lại"

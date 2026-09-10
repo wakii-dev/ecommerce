@@ -59,7 +59,7 @@ Serial describe "Admin journey — CRUD đầy đủ field (FI-407)". Mỗi sect
    - phân loại (tab "Phân loại"): 1 row — tên vi "Màu Đen", options `color=Đen`, chênh giá 10000, **tồn kho 33**
    - ảnh (tab "Ảnh"): 1 row URL `/media/products/e2e-journey.png` + alt
    - "Đăng bán" → toast "Đã tạo sản phẩm" → về list; tìm bằng search box → assert row PUBLISHED ("Đăng bán").
-2. **Section B — round-trip reopen (chứng minh không còn field không-lưu)**: mở lại form (Sửa từ row) → assert TỪNG field giữ đúng: tên vi/en, mô tả vi/en, SEO title/desc, brand, category, official checked, giá, niem yết, flash `2027-01-31T23:59`, variant row (tên, `color=Đen`, chênh giá 10000, **tồn kho 33** — stock fetch availability sau save-sync, đợi `expect.poll`), ảnh url+alt. **Ngoại lệ ghi chú D17**: variant nameEn KHÔNG round-trip (view trả name resolved — fallback vi); không assert nameEn.
+2. **Section B — round-trip reopen (chứng minh không còn field không-lưu)**: mở lại form (Sửa từ row) → assert TỪNG field giữ đúng: tên vi/en, mô tả vi/en, SEO title/desc, brand, category, official checked, giá, niem yết, flash **assert phần NGÀY** (`value` bắt đầu `2027-01-31` — spec-critic P1: datetime-local↔ISO qua TZ có thể lệch giờ giữa host/container; ngày là đủ chứng minh field không rơi), variant row (tên, `color=Đen`, chênh giá 10000, **tồn kho 33** — stock fetch availability sau save-sync, đợi `expect.poll`), ảnh url+alt. **Ngoại lệ ghi chú D17**: variant nameEn KHÔNG round-trip (view trả name resolved — fallback vi); không assert nameEn.
 3. **Section C — edit + save + re-assert**: đổi giá 459000 → 469000, đổi stock 33 → 44 → Lưu → mở lại → assert 469000 + 44 (edit round-trip).
 4. **Section D — coupon CRUD round-trip**: `/admin/coupons` → "Thêm mã" (`coupon-create-btn`) → form IDs `coupon-code/-type/-value/-min/-starts/-ends/-limit/-active/-desc`: code `E2EJ<ts>` FIXED 50000, min 100000, limit 5, active, mô tả → submit (`coupon-submit-btn`) → toast "Đã tạo mã giảm giá" → assert row (code, badge "Số tiền cố định (₫)", `50.000 ₫`, usage `0/5` qua `coupon-usage-<code>`) → Sửa (code khóa — hint "Mã không đổi khi sửa") đổi value 60000 → Lưu → assert `60.000 ₫` → toggle (`coupon-toggle-<code>`) → "Tắt" → xóa (`coupon-delete-<code>` → confirm modal "Đồng ý") → code biến mất.
 5. **Section E — category CRUD round-trip**: `/admin/categories` → "Thêm danh mục" → `cat-name-vi/-en/-slug-vi/-slug-en`, parent = "— Danh mục gốc —" → Lưu → toast "Đã tạo danh mục" → assert `category-row` chứa tên + slug → Sửa đổi tên → Lưu → assert tên mới → xóa (confirm modal) → row biến mất (dọn rác — category không con/không product thì xóa được).
@@ -83,7 +83,7 @@ Serial describe. Fetch-id runtime qua API (slug seed ổn định).
 
 ### 3.4 Evidence + report
 
-- Chạy: `GATEWAY_URL=http://localhost:8080 E2E_STOREFRONT_URL=http://localhost:8080 E2E_SHELL_URL=http://localhost:8080 MAILPIT_API=http://localhost:8025 pnpm e2e --run tests/admin-journey.spec.ts tests/data-lifecycle.spec.ts` (fresh-boot env one-origin :8080 — FE containers chỉ expose trong docker network).
+- Chạy (cú pháp chuẩn `docs/superpowers/qa/e2e-full.md:64` — KHÔNG có flag `--run`): `cd frontend && GATEWAY_URL=http://localhost:8080 E2E_STOREFRONT_URL=http://localhost:8080 E2E_SHELL_URL=http://localhost:8080 MAILPIT_API=http://localhost:8025 pnpm --filter @ecommerce/e2e exec playwright test tests/admin-journey.spec.ts tests/data-lifecycle.spec.ts` (fresh-boot env one-origin :8080 — FE containers chỉ expose trong docker network).
 - `docs/superpowers/qa/report-sf3.md`: lệnh chạy, pass/fail từng test, số asserts đã probe, drift note pack-vs-seed, screenshot/video theo playwright config (screenshot off mặc định — bật tay khi debug; evidence = log run + file report).
 
 ## 4. ACCEPTANCE (user-visible — pack, verify từng dòng)
@@ -91,7 +91,7 @@ Serial describe. Fetch-id runtime qua API (slug seed ổn định).
 1. admin-journey: tạo product đầy đủ field + variant stock → save → mở lại → MỌI field giữ đúng (bao gồm stock = số đã nhập 33/44); coupon + category CRUD round-trip pass.
 2. data-lifecycle: variant-less product (Nokia) add-to-cart → login merge → checkout KHÔNG văng "variantId must not be null" (COD CONFIRMED); stale cart row `variantId: null` được xử lý rõ ràng (`.pay-error` có field variantId, không 500).
 3. Surfacing: admin form Nokia stock = 50 (inventory thật); PDP không "Đã bán"; Biti's giá 799.000 ₫ = base + delta.
-4. Cả 2 spec XANH chạy ngay sau `make qa-fresh-boot` (fresh env :8080) — evidence log + report-sf3.
+4. Cả 2 spec XANH trên fresh-boot env do coordinator/harness tạo (:8080) — SF-3 KHÔNG tự down -v/chạy harness; evidence log + report-sf3.
 5. Spec cũ 15 file không bị sửa (git diff evidence).
 
 ## 5. Test strategy & risks
@@ -99,3 +99,5 @@ Serial describe. Fetch-id runtime qua API (slug seed ổn định).
 - Specs = chính là test (e2e); chạy TRÊN env fresh-boot thật (Rule 0 — không process-pass). Mỗi task commit xong chạy đúng spec của task trên env sống; task 9 = full run cả 2 + report.
 - Risks: (a) toast tự ẩn 2.5s → assert qua response/network hoặc poll nhanh; (b) availability fetch async → `expect.poll` cho stock; (c) redis JSON shape phải khớp CartDocument records chính xác (9 field LineItem) → helper test thử GET cart 200 trước khi UI đọc; (d) merge-on-login phụ thuộc localStorage guest token cùng origin :8080 (one-origin — an toàn port-scope); (e) harness env có thể chết giữa chừng → STOP, comment epic FI-404, không tự down -v.
 - Ưu tiên assert ở tầng network/response khi UI-toast dễ bay (pattern addFirstVariantToCart golden-path).
+- Button labels templated ("Đặt hàng COD — {{total}}", "Tiếp tục — chọn vận chuyển", "Đặt hàng — {{total}}") → match bằng PREFIX/regex (`getByRole('button', { name: /^Đặt hàng COD/ })` — pattern cod-checkout.spec.ts:69), không match chuỗi đầy đủ.
+- Redis helper: container resolve theo pattern pgExec — override env `E2E_REDIS_CONTAINER` (bare container của rig isolate) hoặc mặc định `docker compose exec -T redis redis-cli` (spec-critic P2).

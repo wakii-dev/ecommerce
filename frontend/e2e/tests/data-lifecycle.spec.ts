@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { GATEWAY, SHELL, STOREFRONT } from '../helpers/env';
 import { registerNewUser, type Session } from '../helpers/api';
-import { injectStaleGuestCart, uiLogin } from '../helpers/journey';
+import { adminUiLogin, injectStaleGuestCart, uiLogin } from '../helpers/journey';
 
 /**
  * DATA LIFECYCLE (SF-3 FI-407) — regression-lock lớp 3/4/5:
@@ -134,5 +134,90 @@ test.describe('Data lifecycle — lớp 3/4/5 (FI-407)', () => {
     await page.getByRole('button', { name: /^Đặt hàng COD/ }).click();
     await expect(page.locator('.pay-error')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('.pay-error')).toContainText('variantId');
+  });
+
+  test("lớp 4 — PDP Biti's: giá hiển thị = base + priceDelta (799.000 ₫ = 749.000 + 50.000 auto-pick Đỏ/40)", async ({ page }) => {
+    await page.goto(`${STOREFRONT}/vi/p/${BITIS_SLUG}`);
+    // auto-pick lựa đầu mỗi dimension (Đỏ + 40) → variant 799000
+    await expect(page.locator('.pdp-price')).toHaveText('799.000 ₫', { timeout: 15_000 });
+  });
+
+  test('lớp 4 — PDP không render "Đã bán" từ ratingCount (fix FI-390 giữ nguyên)', async ({ page }) => {
+    for (const slug of [NOKIA_SLUG, BITIS_SLUG]) {
+      await page.goto(`${STOREFRONT}/vi/p/${slug}`);
+      const text = await page.locator('body').innerText();
+      expect(text, `PDP ${slug} không được render "Đã bán"`).not.toContain('Đã bán');
+    }
+  });
+
+  test('lớp 4 — admin edit form Nokia: stock input = inventory THẬT (không 0 ảo — fix FI-397)', async ({ page }) => {
+    // availability RUNTIME, không hardcode 50: suite này TỰ đặt hàng Nokia (lớp 3a)
+    // mỗi run + env dùng chung có order trước đó → số giảm thật (probe T8: 46,
+    // reserved 4). Assert = số THẬT db_inventory cùng nguồn admin form fetch
+    // (ProductFormPage.tsx:62 /api/inventory/availability) — lock "không 0 ảo".
+    const detail = (await (await page.request.get(`${GATEWAY}/api/catalog/products/${NOKIA_SLUG}?locale=vi`)).json()) as {
+      variants: Array<{ id: string }>;
+    };
+    const variantId = detail.variants[0]!.id;
+    const avail = (await (await page.request.get(`${GATEWAY}/api/inventory/availability?variantIds=${variantId}`)).json()) as
+      Array<{ variantId: string; available: number }>;
+    expect(avail[0]!.variantId).toBe(variantId);
+    const expectedStock = String(avail[0]!.available);
+
+    await adminUiLogin(page);
+    await page.goto(`${GATEWAY}/admin/products`); // one-origin :8080 — nhất quán GATEWAY như admin-journey (plan-critic P2-3)
+    await page.getByLabel('Tìm kiếm').fill('Nokia 110');
+    await page.keyboard.press('Enter');
+    await page.locator('tbody tr', { hasText: 'Nokia 110' }).first()
+      .getByRole('button', { name: 'Sửa' }).click();
+    await page.getByRole('tab', { name: 'Phân loại' }).click();
+    // availability fetch async → poll về giá trị THẬT từ db_inventory
+    await expect(page.locator('.admin-variant-row input').nth(4)).toHaveValue(expectedStock, { timeout: 15_000 });
+  });
+
+  test('lớp 5 — fresh-state: page sống sau fresh boot + entry chunks content-hash + SW absence', async ({ page, request }) => {
+    const home = await request.get(`${STOREFRONT}/vi`);
+    expect(home.status()).toBe(200);
+    const html = await home.text();
+    expect(html).toMatch(/Shop VN|Cửa hàng|Ecommerce/i);
+
+    // entry scripts content-hashed (build mới → hash mới — baseline ghi report mỗi run)
+    const chunks = [...html.matchAll(/\/_next\/static\/chunks\/[^"']+\.js/g)].map((m) => m[0]);
+    expect(chunks.length, 'entry chunks phải có mặt trong SSR HTML').toBeGreaterThan(0);
+    for (const url of chunks.slice(0, 5)) {
+      const r = await request.get(`${STOREFRONT}${url}`);
+      expect(r.status(), `chunk ${url} phải load được`).toBe(200);
+    }
+    const hashed = chunks.filter((u) => /-[0-9a-f]{8,}\.js$/.test(u));
+    expect(hashed.length, 'chunks phải content-hashed (cache-bust sau rebuild)').toBeGreaterThan(0);
+
+    // SW — SF-15 PwaRegister đăng ký /sw.js CHỈ prod (PwaRegister.tsx:12) — env
+    // :8080 là prod build nên CÓ ĐÚNG 1 registration (assumption "SW absence"
+    // của plan đã hết hạn theo thiết kế; epic §5.7 assert version-key đổi sau
+    // rebuild cần rig 2 build — follow-up ngoài story này). Lock fresh-state:
+    // đúng sw.js của app + asset load được (poll — register fire async sau load).
+    await page.goto(`${STOREFRONT}/vi`);
+    await expect
+      .poll(
+        () => page.evaluate(() =>
+          navigator.serviceWorker.getRegistrations().then((rs) =>
+            // scriptURL nằm trên ServiceWorker (active/waiting/installing),
+            // KHÔNG phải trên Registration — null trong lúc install → poll chờ
+            rs.map((r) => r.active?.scriptURL ?? r.waiting?.scriptURL ?? r.installing?.scriptURL)
+          )
+        ),
+        { timeout: 10_000 }
+      )
+      .toEqual([`${STOREFRONT}/sw.js`]);
+    const swResp = await request.get(`${STOREFRONT}/sw.js`);
+    expect(swResp.status(), 'sw.js phải load được').toBe(200);
+
+    // wipe marker (nếu có) = evidence env-fresh — SOFT note, không hard-fail
+    const { existsSync, readFileSync } = await import('node:fs');
+    const path = await import('node:path');
+    const marker = path.resolve(__dirname, '../../../.run/qa-fresh-boot-wiped');
+    if (existsSync(marker)) {
+      test.info().annotations.push({ type: 'info', description: `fresh-boot wipe marker: ${readFileSync(marker, 'utf8').trim()}` });
+    }
   });
 });

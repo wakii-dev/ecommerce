@@ -32,12 +32,18 @@ Spec §4 — 7 stages + exit codes 0/3/4/5/6/7. Chi tiết đã verify live 2026
 ## 5. Implementation outline — task DAG
 
 ```
-T1 skeleton ─→ T2 gate ─→ T3 backup ─→ T4 down ─→ T5 build ─┬→ T6 up ─→ T7 seed ─→ T8 probes ─→ T9 port-owner ─┐
-                                                            └→ R1 review nhóm A (T1-T5)                        ├→ V dry-run (coordinator) ─→ SEC audit ─→ VER verifier
-                                     T10 makefile+gitignore+README (parallel-safe, file khác) ─→ R2 review nhóm B (T6-T10)
+T1 skeleton ─→ T2 gate ─→ T3 backup ─→ T4 down ─→ T5 build ─┬→ R1 review nhóm A (T1-T5, 5 commits)
+                                                            │        │ verdict+fix xong
+                                     T10 makefile+gitignore+README ─┘        ↓
+                                                            └────────→ T6 up ─→ T7 seed ─→ T8 probes+port-owner ─→ R2 review nhóm B ─→ V dry-run (coordinator) ─→ SEC audit ─→ VER verifier
 ```
 
-Thực thi: T1-T5 = 1 executor (cùng file harness), T6-T10 = executor kế (T6-T9 cùng file dep T5; T10 file khác song song-safe), R1 chạy ngay T5 xong (rolling review nhóm A — safety critical). V (dry-run) coordinator tự chạy — destructive trên máy thật + consent context. Tick `[x]` khi xong.
+Thực thi (anti-race — shared worktree, R1 có thể yêu cầu sửa GATE/BACKUP cùng file với
+executor-2): T1-T5 = executor-1 → R1 ‖ T10 (T10 file khác — song song an toàn) → áp fix
+R1 (nếu có) → executor-2 (T6-T8) → **R2 = review nhóm B: commits T6-T8 CỘNG T10** →
+V (coordinator — destructive, consent đã có) → SEC → VER. KHÔNG dispatch executor-2
+trước R1 verdict (commit-race cùng file — memory lesson shared-worktree). Tick `[x]`
+khi xong.
 
 ### Task T1 — harness-skeleton-stages-timestamps
 - [ ] T1.1 Tạo `scripts/qa/fresh-boot-harness.sh`: shebang, `set -u -o pipefail` (KHÔNG `set -e` — stages tự kiểm exit), LOG=`/tmp/qa-fresh-boot-$(date +%Y%m%d-%H%M%S).log` (tee mọi output), hàm `stage <name>` in `[stage] HH:MM:SS (elapsed-since-start)`, hàm `die <code> <msg>`, exit-code convention 0/3/4/5/6 + bắt mọi exit → in tổng thời gian
@@ -79,19 +85,20 @@ Thực thi: T1-T5 = 1 executor (cùng file harness), T6-T10 = executor kế (T6-
 
 ### Task T6 — stage-up-health-gates-tiers
 - [ ] T6.1 `docker compose --profile full --profile stripe up -d` → tầng 1 infra: đợi `docker inspect -f {{.State.Health.Status}}` = healthy cho postgres,redis,rabbitmq,mongo,elasticsearch,minio,mailpit (timeout 2', poll 5s)
-- [ ] T6.2 Tầng 2 JVMs (12, timeout 4'/service — poll 10s): `docker exec ecommerce-<svc> curl -sf localhost:<port>/actuator/health` khớp `"status":"UP"` — port map hardcoded (identity 8081, catalog 8082, cart 8083, inventory 8084, ordering 8085, payment 8086, notification 8087, log 8088, invoice 8090, partner-api 8091, affiliate 8092); gateway qua host `curl -sf :8080/actuator/health`
+- [ ] T6.2 Tầng 2 JVMs (timeout 4'/service — poll 10s): **10 JVM actuator** `docker exec ecommerce-<svc> curl -sf localhost:<port>/actuator/health` khớp `"status":"UP"` — port map hardcoded (identity 8081, catalog 8082, cart 8083, inventory 8084, ordering 8085, payment 8086, notification 8087, log 8088, partner-api 8091, affiliate 8092). **Gateway probe QUA HOST `curl -sf :8080/actuator/health`** (không docker-exec nội bộ — gateway image chưa verify có curl; host probe + tier-3 FE đã cover — plan-critic P2). **invoice-service = FastAPI — KHÔNG actuator: probe qua compose healthcheck `docker inspect .State.Health.Status == healthy`** (compose đã định nghĩa healthcheck — plan-critic P0-2)
 - [ ] T6.3 Tầng 3 FE + gateway public: frontend-web/storefront-web Up; `curl :8080/` 200 (storefront route) + `curl :8080/cart` 200 (shell route); timeout riêng; fail BẤT KỲ tầng → **die 7** kèm container logs tail — abort TRƯỚC SEED
 - [ ] Commit `feat(qa): fresh-boot up + tiered health gates (FI-406)`
 
 **Exit:** health gates pass từng tầng có timestamp trong log (verify thật ở T-V).
 
 ### Task T7 — stage-seed
-- [ ] T7.1 `make seed` → capture output; assert **exit 0 AND** khớp `XONG` (seed.sh:229); fail → tail log seed + die 4
-- [ ] Commit `feat(qa): fresh-boot seed stage — assert XONG (FI-406)`
+- [ ] T7.1 **Poll seed-readiness:** catalog SeedDataRunner populate `products` ASYNC sau health UP — poll `SELECT count(*) FROM products` > 0 (timeout 2', poll 5s) trước khi seed (plan-critic P1-5: seed.sh:114 hard-fail "không tìm thấy product" nếu chạy sớm)
+- [ ] T7.2 `make seed` → capture output; assert **exit 0 AND** khớp `XONG` (seed.sh:229); fail → tail log seed + die 4
+- [ ] Commit `feat(qa): fresh-boot seed stage — readiness poll + assert XONG (FI-406)`
 
 **Exit:** seed thật pass trong dry-run (T-V).
 
-### Task T8 — stage-probes-image-login-cart-events-live-rbac-hardcoded
+### Task T8 — stage-probes-image-login-cart-events-live-rbac-hardcoded + port-owner (gộp bracket T9 — plan-critic P1-6)
 - [ ] T8.1 (a) MinIO: `SELECT url FROM product_images WHERE url <> '' LIMIT 1` → GET `:8080<url>` 200; không có url / non-200 → FINDING "MinIO-reseed" ghi vào danh sách (không giấu, không dừng)
 - [ ] T8.2 (b) login admin (creds từ .env ADMIN_EMAIL/ADMIN_PASSWORD fallback admin@demo.vn/admin123) → 200 + accessToken; (c) guest `POST /api/cart/items {productId từ db, qty:1}` → 200; (d) events `GET /api/log/admin/events` JWT → 200
 - [ ] T8.3 (e) RBAC HARDCODED: pin product `name->>'vi' ILIKE 'Tai nghe%'`; guest PUT `/api/catalog/admin/products/<id>` không token → expect 401/403; admin PUT round-trip GET→PUT cùng body → expect 2xx + re-GET so name/price unchanged (idempotent); 400 `images[].url` → FINDING bug data ghi rõ
@@ -99,12 +106,6 @@ Thực thi: T1-T5 = 1 executor (cùng file harness), T6-T10 = executor kế (T6-
 - [ ] T8.5 Collect-ALL findings → in bảng verdict từng probe; có finding → die 6 (stack vẫn seeded); commit `feat(qa): fresh-boot probes — image/login/cart/events/rbac/port-owner (FI-406)`
 
 **Exit:** 6 probe chạy thật trong dry-run, verdict từng cái có trong log.
-
-### Task T9 — stage-port-owner-check-stale-env
-- [ ] T9.1 `lsof` 8080,3000,5173-5178,9099: process ngoài docker-server/com.docker (ports docker publish) → in cảnh báo FINDING stale-env (PID + command); lsof list đầy đủ vào log — gộp verdict với T8.4, exit 6 chung
-- [ ] Commit `feat(qa): fresh-boot port-owner stale-env check (FI-406)`
-
-**Exit:** check chạy trong dry-run, log sạch (hoặc finding minh bạch).
 
 ### Task T10 — makefile-target-qa-fresh-boot-runbook-restore-gitignore-backups
 - [ ] T10.1 Makefile: `.PHONY` + target `qa-fresh-boot` đặt NGAY SAU block seed (cạnh — KHÔNG cuối file, khác vùng SF-1 qa-audit append-cuối); target = guard `test -f scripts/qa/fresh-boot-harness.sh` + `bash scripts/qa/fresh-boot-harness.sh` (env QA_FRESH_BOOT_CONFIRM pass-through)
@@ -115,11 +116,16 @@ Thực thi: T1-T5 = 1 executor (cùng file harness), T6-T10 = executor kế (T6-
 **Exit:** `make qa-fresh-boot` KHÔNG flag → exit 3 (bằng chứng); gitignore có backups/; README có runbook.
 
 ### Task T-V — dry-run 1 lần toàn bộ (coordinator — destructive, consent đã có)
-- [ ] TV.0 Pre-clean stale-env: kill next-server mồ côi giữ :3000 (PID 75329 @23:11 tối qua, cwd `orca/projects/ecommerce` main checkout — dev server không data, gate sẽ refuse mãi nếu không dọn) + ghi vào report; vite rig cũ :5373/:5376 KHÔNG đụng (ngoài list gate)
+- [ ] TV.0 Pre-clean stale-env: lsof-discover process lạ giữ port gate (tầm nhìn: next-server mồ côi :3000 từ main checkout — dev server không data) → kill + ghi vào report; PID tra tại thời điểm chạy, KHÔNG hardcode; vite rig cũ :5373/:5376 KHÔNG đụng (ngoài list gate)
 - [ ] TV.1 Bằng chứng refuse: (1) không flag khi stack sống → exit 3; (2) CÓ flag khi stack sống → exit 3 idle-check
-- [ ] TV.2 Coordinator down app containers (giữ infra postgres cho backup) → chạy `QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` nền + poll `/tmp/qa-fresh-boot-*.log`
+- [ ] TV.2 Coordinator down TOÀN BỘ stack KHÔNG -v (`docker compose --profile full --profile stripe down --remove-orphans` — compose-ps phải rỗng để GATE pass; KHÔNG down app-only: compose-ps vẫn non-empty → gate tự refuse dry-run — plan-critic P0-1; wipe -v là VIỆC CỦA HARNESS, postgres do T3.1 tự revive) → chạy `QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` nền + poll `/tmp/qa-fresh-boot-*.log`
 - [ ] TV.3 Verify từng dòng ACCEPTANCE pack (5 dòng) bằng log timestamp + file backup + RESTORE-TEST + health gates + SEED XONG + PROBES từng cái
-- [ ] TV.4 Ghi `docs/superpowers/qa/report-sf2.md`: thời gian từng stage + tổng + verdict probe + findings (MinIO url rỗng nếu có) + evidence log path + **inline các đoạn log then chốt** (log /tmp bị macOS dọn định kỳ)
+- [ ] TV.4 Ghi `docs/superpowers/qa/report-sf2.md`: thời gian từng stage + tổng + verdict probe + findings (MinIO url rỗng nếu có) + evidence log path + **inline các đoạn log then chốt** (log /tmp bị macOS dọn định kỳ) + **ghi rõ RESUME=BUILD là untested-path** (chỉ code-inspect — không credit như đã exercised)
+
+**Recovery nếu dry-run đỏ giữa chừng** (plan-critic P0-3 — wipe đã xảy ra, stack chết/half-dead):
+- Exit 7 (health fail) hoặc seed-fail exit 4: stack đang up-lỡ → `docker compose --profile full --profile stripe down --remove-orphans` (KHÔNG -v) → fix nguyên nhân → re-run `QA_FRESH_BOOT_RESUME=BUILD QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` (marker `.run/qa-fresh-boot-wiped` từ run trước hợp lệ — skip BACKUP/DOWN, BACKUP lại trên DB rỗng sẽ die 4 vô nghĩa) → BUILD (cached) → UP → SEED → PROBES.
+- Không dùng resume / muốn sạch hoàn toàn: restore-from-backup theo runbook README (T10.3) HOẶC chấp nhận mất dữ liệu hiện có, chạy full lại từ đầu.
+- ĐÁNH MẤT demo không thể khôi phục bằng backup: mongodata/miniodata (đã disclose ở GATE) — report ghi rõ.
 
 **Exit:** 5 ACCEPTANCE từng dòng có bằng chứng; report có số liệu stage. **Dry-run semantics:** exit 6 với findings báo đúng = ACCEPTANCE thỏa (spec §Exit-codes) — KHÔNG bẻ cong probe để đạt exit 0.
 

@@ -105,13 +105,15 @@ READ-ONLY: docker-compose.yml, service code, seed.sh, e2e specs, scripts/qa/conf
 1. **Infra:** `docker compose --profile full --profile stripe up -d` → đợi
    `docker inspect .State.Health.Status == healthy` cho postgres/redis/rabbitmq/mongo/
    elasticsearch/minio/mailpit (timeout 2').
-2. **JVMs (12):** identity, catalog, cart, inventory, ordering, payment, affiliate,
-   notification, log, invoice, partner-api, gateway — probe
+2. **JVMs (11 actuator + 1 compose-healthcheck):** identity, catalog, cart, inventory,
+   ordering, payment, affiliate, notification, log, partner-api, gateway — probe
    `docker exec <ct> curl -sf localhost:<port>/actuator/health` khớp `"status":"UP"`
    (images có curl — verified trên catalog), timeout **4 phút/service** (pack).
    Port map: identity 8081, catalog 8082, cart 8083, inventory 8084, ordering 8085,
-   payment 8086, notification 8087, log 8088, invoice 8090, partner 8091, affiliate 8092.
-   Lưu ý template-service không chạy trong profile full — không probe.
+   payment 8086, notification 8087, log 8088, partner 8091, affiliate 8092; gateway
+   qua host `:8080/actuator/health`. **invoice-service = FastAPI (KHÔNG actuator) —
+   probe qua compose healthcheck `docker inspect .State.Health.Status`** (đã định nghĩa
+   trong compose). Lưu ý template-service không chạy trong profile full — không probe.
 3. **FE:** frontend-web (nginx :80) + storefront-web (:3000) Up; probe HTTP qua gateway:
    `GET :8080/` (storefront route) + `GET :8080/cart` (shell route) 200.
 4. **Gateway public:** `curl :8080/actuator/health` → `"status":"UP"` (verified).

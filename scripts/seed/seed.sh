@@ -73,6 +73,13 @@ log "notification service-account + promote ADMIN…"
 register_or_login "$NOTIFY_SVC_EMAIL" "$NOTIFY_SVC_PASSWORD" "Notification Service" >/dev/null
 $PSQL_ID "UPDATE users SET role='ADMIN' WHERE email IN ('$ADMIN_EMAIL','$NOTIFY_SVC_EMAIL');" >/dev/null
 log "roles OK (admin + notification-svc = ADMIN)"
+# RE-LOGIN admin sau promote (FI-408): JWT ĐÓNG role lúc login — token mint ở
+# §1 (trước promote) mang role USER cũ → mọi admin API sau này (uploads §3c)
+# 403. Cold-boot run 15:59 chứng kiến 5/5 upload HTTP:403; identity-admin-role
+# semantics: đổi role phải re-login. (Run cold-boot 16:01: 5/5 upload HTTP:403.)
+ADMIN_TOKEN=$(api_post /api/identity/auth/login "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('accessToken',''))")
+[ -n "$ADMIN_TOKEN" ] || { echo "✗ admin re-login sau promote fail"; exit 1; }
 
 # ── 2. Coupons pack-correct (schema-level nguồn = V14__seed_coupons_repair.sql;
 # block này giữ đồng bộ 1:1 với V14 — seed runtime cho volume đã migrate) ────

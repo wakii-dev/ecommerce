@@ -342,7 +342,53 @@
 <!-- /sf1:axis-c -->
 
 <!-- sf1:s2s -->
-(chờ s2s-auth-matrix.mjs ghi)
+### s2s auth matrix — STATIC (A2 · A3 · A5)
+
+Run 2026-09-10 01:07:11 UTC — enumerate tĩnh 24 pair path-granularity (pair := client class × endpoint path; ngưỡng A2 ≥ 23: **ĐẠT**) · 14 client file main-source in-scope · 4 file loại trừ A3 · 9 SecurityConfig parse.
+
+Guard đích = SecurityConfig service ĐÍCH, service-side path (s2s gọi thẳng port service, KHÔNG qua gateway StripPrefix). `permitAll*` = service không SecurityConfig + không spring-security (payment · invoice-Python) — special rule plan-critic: ghi note, KHÔNG GAP. Verdicts: **EXPECTED_OK=22 · DANGEROUS=2 · GAP=0** → exit **1**.
+
+**Findings (S2S-xx — A11 deterministic):**
+
+| ID | verdict | pair | lý do / ghi chú | evidence |
+| --- | --- | --- | --- | --- |
+| S2S-01 | DANGEROUS | ordering-service/HttpCatalogPricingClient — GET /api/catalog/admin/products/{id} | Bearer ${CATALOG_API_TOKEN:} — compose UNSET + default rỗng → header "Bearer " → catalog 401 → ordering 502 (bug 9/9 re-price, hi… | backend/services/ordering-service/src/main/java/com/ecommerce/ordering/saga/Htt… |
+| S2S-02 | DANGEROUS | partner-api/CatalogClient — GET /api/catalog/admin/products/{id} | Bearer ${CATALOG_API_TOKEN:} — partner compose UNSET; client có guard adminTokenConfigured() 502 TRƯỚC khi gọi (GAP-3 interim, fa… | backend/services/partner-api/src/main/java/com/ecommerce/partner/proxy/CatalogC… |
+
+**Matrix đầy đủ (24 pair):**
+
+| client (module) | call | destination | guard đích | token attach | verdict | evidence (client ⟂ guard) |
+| --- | --- | --- | --- | --- | --- | --- |
+| cart.CatalogEnricher | GET /api/catalog/products/{slug} | catalog-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/cart-service/src/main/java/com/eco… ⟂ SecurityConfig catalog-service:42 — /api/catalog/pr… |
+| cart.InventoryChecker | GET /inventory/availability | inventory-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/cart-service/src/main/java/com/eco… ⟂ SecurityConfig inventory-service:44 — /inventory/av… |
+| catalog.InventoryAvailabilityClient | GET /inventory/availability | inventory-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/catalog-service/src/main/java/com/… ⟂ SecurityConfig inventory-service:44 — /inventory/av… |
+| notification.CatalogStockAlertClient | GET /api/catalog/internal/stock-alerts/candidates | catalog-service | permitAll | X-Internal-Token (controller-side check) | EXPECTED_OK | backend/services/notification-service/src/main/java… ⟂ SecurityConfig catalog-service:51 — /api/catalog/in… |
+| notification.CatalogStockAlertClient | POST /api/catalog/internal/stock-alerts/claim | catalog-service | permitAll | X-Internal-Token (controller-side check) | EXPECTED_OK | backend/services/notification-service/src/main/java… ⟂ SecurityConfig catalog-service:51 — /api/catalog/in… |
+| notification.IdentityClient | POST /auth/login | identity-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/notification-service/src/main/java… ⟂ SecurityConfig identity-service:47 — /auth/register… |
+| notification.IdentityClient | POST /auth/register | identity-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/notification-service/src/main/java… ⟂ SecurityConfig identity-service:47 — /auth/register… |
+| notification.InvoiceClient | GET /admin/orders/{id}/invoice | ordering-service | hasRole("ADMIN") | Bearer (service-account ADMIN theo seed) | EXPECTED_OK | backend/services/notification-service/src/main/java… ⟂ SecurityConfig ordering-service:53 — /admin/**, ADM… |
+| ordering.HttpCatalogPricingClient | GET /api/catalog/admin/products/{id} | catalog-service | hasRole("ADMIN") | gắn Bearer NHƯNG var UNSET → token rỗng | DANGEROUS | backend/services/ordering-service/src/main/java/com… ⟂ SecurityConfig catalog-service:57 — /api/catalog/ad… |
+| ordering.HttpInvoiceProvider | POST /api/invoice/generate | invoice-service | permitAll** | không gắn (không cần) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ service ngoài backend/ (Python) — không Spring Secu… |
+| ordering.InventoryClient | POST /inventory/reservations | inventory-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ SecurityConfig inventory-service:46 — /inventory/re… |
+| ordering.LoyaltyClient | POST /api/affiliate/internal/loyalty/redeem | affiliate-service | permitAll | X-Internal-Token (controller-side check) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ SecurityConfig affiliate-service:35 — /api/affiliat… |
+| ordering.PaymentClient | POST /payment/cod/captures | payment-service | permitAll** | không gắn (không cần) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ payment-service/pom.xml (không spring-security) · k… |
+| ordering.PaymentClient | POST /payment/intents | payment-service | permitAll** | không gắn (không cần) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ payment-service/pom.xml (không spring-security) · k… |
+| ordering.PaymentClient | POST /payment/refunds | payment-service | permitAll** | không gắn (không cần) | EXPECTED_OK | backend/services/ordering-service/src/main/java/com… ⟂ payment-service/pom.xml (không spring-security) · k… |
+| partner.CatalogClient | GET /api/catalog/admin/products/{id} | catalog-service | hasRole("ADMIN") | gắn Bearer NHƯNG var UNSET → token rỗng | DANGEROUS | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig catalog-service:57 — /api/catalog/ad… |
+| partner.CatalogClient | GET /api/catalog/categories | catalog-service | permitAll | Bearer (service-account ADMIN theo seed) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig catalog-service:42 — /api/catalog/pr… |
+| partner.CatalogClient | GET /api/catalog/products | catalog-service | permitAll | Bearer (service-account ADMIN theo seed) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig catalog-service:42 — /api/catalog/pr… |
+| partner.CatalogClient | GET /api/catalog/products/{slug} | catalog-service | permitAll | Bearer (service-account ADMIN theo seed) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig catalog-service:42 — /api/catalog/pr… |
+| partner.CatalogClient | GET /api/catalog/search | catalog-service | permitAll | Bearer (service-account ADMIN theo seed) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig catalog-service:42 — /api/catalog/pr… |
+| partner.IdentityClient | POST /auth/login | identity-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig identity-service:47 — /auth/register… |
+| partner.IdentityClient | POST /auth/register | identity-service | permitAll | không gắn (không cần) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig identity-service:47 — /auth/register… |
+| partner.OrderingClient | GET /me/orders/{id} | ordering-service | authenticated | Bearer (service-account) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig ordering-service:54 — ** |
+| partner.OrderingClient | POST /orders | ordering-service | authenticated | Bearer (service-account) | EXPECTED_OK | backend/services/partner-api/src/main/java/com/ecom… ⟂ SecurityConfig ordering-service:54 — ** |
+
+**Loại trừ A3 (4 client file):** `search/EsIndexConfig.java` (infra Elasticsearch (A3)) · `oauth/OAuthProviderClient.java` (third-party OAuth IdP (Google/Facebook) (A3)) · `saga/GhnClient.java` (third-party GHN shipping (A3)) · `webhook/WebhookDeliveryService.java` (third-party partner webhooks).
+
+Drift check: enumerate 24 call-site ↔ curated 24 rows — 1:1 (0 stale, 0 missing).
+
+> Phương pháp: enumerate client = file main-source build/dùng RestClient|WebClient|RestTemplate (file chỉ catch RestClientException KHÔNG phải client). Base-url resolve qua @Value / props-hint constant → port → compose service (A3). Token attach chỉ in TÊN var nguồn («masked» theo policy) + header name — KHÔNG giá trị. Static ≠ runtime: matrix là EXPECTED — live execute là harness SF-2 + triage SF-4.
 <!-- /sf1:s2s -->
 
 <!-- sf1:rbac -->

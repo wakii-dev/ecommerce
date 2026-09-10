@@ -93,9 +93,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Đếm path-granularity — nếu < 23: report con số THẬT + flag epic (KHÔNG pad pair external) — **24 pair ≥ 23 ĐẠT** (14 client file in-scope; 23-file baseline gồm 2 file chỉ catch RestClientException + 1 test — loại đúng)
 
 ### Task 7 — s2s expected-verdict matrix static (executor B)
-- [ ] Curated verdict mỗi pair: destination guard (SecurityConfig matcher match path — Ant-pattern đơn giản) + token attach (client code) + evidence file:line 2 phía. **Destination KHÔNG có SecurityConfig + KHÔNG có spring-security starter (notification/payment/template — đã verify) → guard = permitAll (ghi note trong matrix), KHÔNG GAP** (gateway front door enforce)
-- [ ] Verdict A5 EXPECTED_OK/DANGEROUS/GAP; drift check enumerate↔rows
-- [ ] Bảng markdown regen marker block `s2s` trong report
+- [x] Curated verdict mỗi pair: destination guard (SecurityConfig matcher match path — Ant-pattern đơn giản) + token attach (client code) + evidence file:line 2 phía. **Destination KHÔNG có SecurityConfig + KHÔNG có spring-security starter (notification/payment/template — đã verify) → guard = permitAll (ghi note trong matrix), KHÔNG GAP** (gateway front door enforce)
+- [x] Verdict A5 EXPECTED_OK/DANGEROUS/GAP; drift check enumerate↔rows — **EXPECTED_OK=22 · DANGEROUS=2 (S2S-01 ordering re-price bug 9/9 hiện trạng chưa fix · S2S-02 partner byId GAP-3 502-guard) · GAP=0 · drift 1:1 · exit 1**
+- [x] Bảng markdown regen marker block `s2s` trong report
 
 ### Task 8 — RBAC expected matrix closed list (executor B)
 - [ ] Scan SecurityConfigs `hasRole`/`hasAuthority` + `@PreAuthorize` + 12 admin controllers mappings (A8)

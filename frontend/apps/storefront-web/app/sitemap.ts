@@ -8,10 +8,13 @@ import { buildProductSitemapEntries, buildStaticSitemapEntries, type SitemapProd
  * Sitemap (plan Task 14): static routes (/, /search, /coupons — vi bare + en
  * prefix, alternates.languages) + TẤT CẢ sản phẩm published (loop size=100
  * locale vi — 1 loop đủ nhờ card luôn mang slugEn cho URL en qua alternates).
- * Catalog down/lỗi BẤT KỲ → trả static-only, KHÔNG crash build. ISR 3600s.
+ * Catalog down/lỗi BẤT KỲ → trả static-only, KHÔNG crash build. force-dynamic:
+ * route KHÔNG set sẽ bị prerender LÚC BUILD — SITE_URL vắng trong build stage
+ * (Dockerfile) → mọi <loc> baked :3000 sai origin; render per-request ăn
+ * SITE_URL runtime của deployment (https :8443). Route rẻ (2 fetch, < 50 URL).
  */
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 /** Chặn vòng lặp phòng hờ khi `total` lệch thực tế. */
 const MAX_PAGES = 50;

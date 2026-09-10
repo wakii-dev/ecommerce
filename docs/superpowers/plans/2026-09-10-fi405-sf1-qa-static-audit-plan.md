@@ -65,9 +65,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 ## 5. Implementation outline
 
 ### Task 1 — config-audit trục (a) extract env từ code (executor A)
-- [ ] Extract `${VAR:default}` từ `backend/services/*/src/main/resources/application*.yml` + `backend/gateway/src/main/resources/application*.yml` + **`backend/gateway/src/main/resources/gateway-routes.yml`** (LOG_URI:133 — spring.config.import) + MỌI `routes/*.yml` (A4) + `@Value("${VAR:default}")` annotations (regex, skip comment dòng) → model `{service, var, default, sourceFile:line}`
-- [ ] Compose env parse line-level (map-style; strip inline `#`; skip block scalar an toàn)
-- [ ] Chạy tay trên repo thật — cột service × var in ra hợp lý (spot-check LOG_URI, SPRING_DATASOURCE_URL, JWT_PUBLIC_KEY_PATH)
+- [x] Extract `${VAR:default}` từ `backend/services/*/src/main/resources/application*.yml` + `backend/gateway/src/main/resources/application*.yml` + **`backend/gateway/src/main/resources/gateway-routes.yml`** (LOG_URI:133 — spring.config.import) + MỌI `routes/*.yml` (A4) + `@Value("${VAR:default}")` annotations (regex, skip comment dòng) → model `{service, var, default, sourceFile:line}`
+- [x] Compose env parse line-level (map-style; strip inline `#`; skip block scalar an toàn)
+- [x] Chạy tay trên repo thật — cột service × var in ra hợp lý (spot-check LOG_URI, SPRING_DATASOURCE_URL, JWT_PUBLIC_KEY_PATH)
 
 ### Task 2 — trục (b) volume mounts drift (executor A)
 - [ ] Collect path service đọc lúc boot: env có value shape path (`/...`, `./...`, `*.pem`, `*keystore*`) + `@Value` path defaults

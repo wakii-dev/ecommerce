@@ -53,12 +53,12 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 
 ## 4. Design
 
-- **config-audit.mjs** — flags: `--compose <path>` `--backend <dir>` `--routes <dir>` `--report <path>` `--self-test` (default: repo thật). Trục (a): extract `${VAR:default}` từ `backend/services/*/src/main/resources/application*.yml` + `@Value("${...}")` + MỌI `routes/*.yml`; parse compose `environment:` map-style; classify A1: DANGEROUS = default `localhost|127.0.0.1` + service có compose entry + compose không set var; OK = compose set + (alias-equivalence: cùng port + host là compose service name | trùng default) ; WARN = set nhưng lệch port/path/host lạ (WARN non-finding). FE-host whitelist: var thuộc storefront/shell/FE dev (default :3000/:5173) không flag. Trục (b): với mỗi service, env path (code default + compose env) phải prefix-match 1 volume container-target của chính nó; code cần path + không env + không volume → DANGEROUS; volume có nhưng path lệch target → DANGEROUS; host-relative default (`../infra/keys`) chuẩn hóa basename trước match. Trục (c): closed checklist — `max_connections ≥ 110`, healthcheckPresent per JVM service, flag ngoài bảng constant → WARN. FIXED registry `config-audit-fixed.json`: `{id, evidence, date}` — ID match → status FIXED (không ảnh hưởng exit).
+- **config-audit.mjs** — flags: `--compose <path>` `--backend <dir>` `--routes <dir>` `--report <path>` `--self-test` (default: repo thật). Trục (a): extract `${VAR:default}` từ `backend/services/*/src/main/resources/application*.yml` + `backend/gateway/src/main/resources/application*.yml` + **`backend/gateway/src/main/resources/gateway-routes.yml` (spring.config.import — chứa LOG_URI:133, CATALOG_URI:47/51, NOTIFICATION_URI:107)** + MỌI `routes/*.yml` (A4) + `@Value("${...}")` annotations; parse compose `environment:` map-style; classify A1: DANGEROUS = default `localhost|127.0.0.1` + service có compose entry + compose không set var; OK = compose set + (alias-equivalence: cùng port + host là compose service name | trùng default) ; WARN = set nhưng lệch port/path/host lạ (WARN non-finding). FE-host whitelist operationalized: default match `:3000|:5173` HOẶC var name match `VITE_|STOREFRONT|SHELL` → không flag. Trục (b): với mỗi service, env path (code default + compose env) phải prefix-match 1 volume container-target của chính nó; code cần path + không env + không volume → DANGEROUS; volume có nhưng path lệch target → DANGEROUS; host-relative default (`../infra/keys`) chuẩn hóa basename trước match. Trục (c): closed checklist — `max_connections ≥ 110`, healthcheckPresent per JVM service, flag ngoài bảng constant → WARN. FIXED registry `config-audit-fixed.json`: `{id, evidence, date}` — ID match → status FIXED (không ảnh hưởng exit).
 - **s2s-auth-matrix.mjs** — enumerate client class + call sites (path granularity, A2): grep `RestClient|WebClient|RestTemplate` + URI template + base-url property (`${X_URI:...}` / `@Value` / yml property) resolve vào compose service (A3 loại infra/third-party); verdict data curated embedded (mỗi pair: destination guard từ SecurityConfig + token attach từ client code + evidence `file:line` cả 2 phía); drift check: call-site enumerate ↔ matrix rows lệch nhau → GAP; verdict A5: EXPECTED_OK / DANGEROUS (path cần auth, client không gắn token) / GAP (không resolve tĩnh — reason; GAP = finding). Bảng markdown ≥ 23 pair.
 - **rbac-matrix.mjs** — closed list = static scan `hasRole("ADMIN")`/`hasAuthority` SecurityConfigs + `@PreAuthorize` + admin controllers mappings (A8); cells guest→expect 401, user→403, admin→2xx; rows ≈ 12 controllers ~40 endpoints × 3 roles; drift (controller mới scanner không map được) → GAP.
 - **contracts-freshness.mjs** — `contracts/openapi/*.yaml` paths+methods vs `@*Mapping` per service; stale hai chiều → finding `CT-xx` (không tự sửa).
 - **Exit semantics chung (cả 4 script):** 0 = 0 unfixed finding; 1 = ≥1 unfixed (GAP/DANGEROUS/CT); 2 = script error (parser fail-loud, throw → catch → stderr + exit 2). `make qa-audit`: chạy đủ 4 script (không stop sớm), exit = max, in legend.
-- **Report marker-based:** `docs/superpowers/qa/report-sf1.md` có `<!-- sf1:<section> -->` blocks (summary, axis-a, axis-b, axis-c, s2s, rbac, contracts); mỗi script regen block riêng (read → replace → write, idempotent); summary block do config-audit viết (exit table 4 script + counts). Secret masking mọi chỗ in giá trị.
+- **Report marker-based:** `docs/superpowers/qa/report-sf1.md` có `<!-- sf1:<section> -->` blocks (summary, axis-a, axis-b, axis-c, s2s, rbac, contracts); mỗi script regen block riêng (read → replace → write, idempotent). **Ownership tách 2 tầng:** config-audit viết summary = counts riêng của nó + legend; **exit-table 4 script do recipe `make qa-audit` ghi vào summary block SAU KHI đủ 4 exit** (script standalone không biết exit của script khác — không fabricate). Secret masking mọi chỗ in giá trị.
 - **--self-test (T9):** chạy detector trên `scripts/qa/fixtures/` (mini backend tree + compose fixtures THIẾU env / THIẾU keys mount / max_connections=100) — assert finding IDs kỳ vọng xuất hiện (≥1 DANGEROUS per trục), exit 0 pass / 1 fail; KHÔNG đụng compose thật.
 - **Edge cases:** inline `#` comment trong compose env value → strip cẩn thận; block scalar compose (một chỗ) → parser skip an toàn; var set rỗng (`${STRIPE_SECRET_KEY:-}` compose value rỗng) = "set rỗng" riêng với UNSET; module→compose-name map constant (`ordering-service` ↔ compose `ordering-service`, URI var `ORDERING_URI`).
 
@@ -93,7 +93,7 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [ ] Đếm path-granularity — nếu < 23: report con số THẬT + flag epic (KHÔNG pad pair external)
 
 ### Task 7 — s2s expected-verdict matrix static (executor B)
-- [ ] Curated verdict mỗi pair: destination guard (SecurityConfig matcher match path — Ant-pattern đơn giản) + token attach (client code) + evidence file:line 2 phía
+- [ ] Curated verdict mỗi pair: destination guard (SecurityConfig matcher match path — Ant-pattern đơn giản) + token attach (client code) + evidence file:line 2 phía. **Destination KHÔNG có SecurityConfig + KHÔNG có spring-security starter (notification/payment/template — đã verify) → guard = permitAll (ghi note trong matrix), KHÔNG GAP** (gateway front door enforce)
 - [ ] Verdict A5 EXPECTED_OK/DANGEROUS/GAP; drift check enumerate↔rows
 - [ ] Bảng markdown regen marker block `s2s` trong report
 
@@ -108,11 +108,11 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [ ] Chạy `--self-test` thật — output trong terminal evidence
 
 ### Task 10 — Makefile target + README ref (executor C)
-- [ ] Append CUỐI Makefile: `qa-audit` chạy 4 script (không stop sớm, exit = max, in legend); comment giải thích semantics
-- [ ] Append CUỐI README: section QA ngắn ≤ 6 dòng (make qa-audit + report path + exit semantics — SF-2 sẽ thêm section fresh-boot riêng)
+- [ ] Append CUỐI Makefile: `qa-audit` chạy 4 script (không stop sớm, exit = max, in legend) + **ghi exit-table 4 script vào summary block report** (P1 plan-critic — script standalone không biết exit nhau); comment giải thích semantics; **KHÔNG đụng dòng `.PHONY` (dòng 9) — append-only constraint, ghi comment note chủ đích**
+- [ ] Append CUỐI README: section QA ngắn ≤ 6 dòng (make qa-audit + report path + exit semantics — đây là "tham chiếu" theo bracket; SF-2 viết section fresh-boot RIÊNG sau này, không đụng section này)
 
 ### Task 11 — contracts freshness probe + real run (executor C)
-- [ ] `scripts/qa/contracts-freshness.mjs`: openapi paths+methods vs controllers per service; stale → CT-xx finding; regen marker block
+- [ ] `scripts/qa/contracts-freshness.mjs`: openapi paths+methods vs controllers per service; **map constant yaml→module: `invoice.yaml` → ordering-service (invoice controllers sống trong ordering — không có dir invoice-service)**, còn lại 1:1 theo tên; stale → CT-xx finding; regen marker block
 - [ ] `make qa-audit` REAL RUN — evidence raw output (exit code + counts + time < 5 phút); commit `report-sf1.md` kết quả thật
 
 ### Task M — Review + verify + merge + gate (coordinator — meta-steps, KHÔNG checkbox)
@@ -125,6 +125,7 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 7. GATE CỨNG `ORCA_BIN=/usr/local/bin/orca ~/.claude/bin/story-verify sf-1` sạch → FI-405 Done (sau merge) + report tóm tắt lên epic FI-404
 
 ## 6. Risks & unknowns
+- **Extraction-scope drift (plan-critic P0 round 1):** file-list grep của mỗi task phải là UNION của context-pack slice + Amendment A-refs — check trước real-run (vd T1 từng thiếu root `gateway-routes.yml` — file LOG_URI flagship; đã fix trong plan).
 - **Parser YAML thủ công:** shape lạ → fail-loud exit 2 là ĐÚNG (không đoán) — fix parser, không nuốt lỗi.
 - **s2s curated verdicts sai thực chất** (static ≠ runtime): matrix là EXPECTED — live execute là SF-2 harness + SF-4; sai → finding thật khi triage, không phải lỗi detector.
 - **Path-granularity < 23:** không pad — report thật + epic flag (A2 đồng ý định nghĩa, không đồng ý bịa).

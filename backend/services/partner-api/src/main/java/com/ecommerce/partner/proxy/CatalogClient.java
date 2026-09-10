@@ -4,7 +4,6 @@ import com.ecommerce.partner.config.PartnerProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -20,9 +19,9 @@ import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 
 /**
  * Proxy đọc catalog (REST trực tiếp :8082 — public GET permitAll, KHÔNG cần
- * token; path giữ full prefix /api/catalog/**). Admin-by-id chỉ dùng cho
- * partner path UUID-shaped (GAP-3 interim): token rỗng → 502 với detail
- * "dùng slug"; catalog 401/403 (token hỏng) → 502 config-broken; 404 → null.
+ * token; path giữ full prefix /api/catalog/**). UUID-lookup đi public by-id
+ * (PUBLISHED-only — draft/deleted → 404 → null → partner NOT_FOUND; GAP-3
+ * interim admin-token ĐÃ XÓA ở SF-4/FI-408); catalog 5xx → 502 BAD_GATEWAY.
  */
 @Component
 public class CatalogClient {
@@ -30,22 +29,12 @@ public class CatalogClient {
     private static final Logger log = LoggerFactory.getLogger(CatalogClient.class);
 
     private final RestClient rest;
-    private final String adminToken;
 
     public CatalogClient(RestClient.Builder builder, PartnerProperties props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) props.catalog().timeoutMs());
         factory.setReadTimeout((int) props.catalog().timeoutMs());
-        RestClient.Builder b = builder.requestFactory(factory).baseUrl(props.catalog().baseUrl());
-        this.adminToken = props.catalog().adminToken();
-        if (adminToken != null && !adminToken.isBlank()) {
-            b.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken);
-        }
-        this.rest = b.build();
-    }
-
-    public boolean adminTokenConfigured() {
-        return adminToken != null && !adminToken.isBlank();
+        this.rest = builder.requestFactory(factory).baseUrl(props.catalog().baseUrl()).build();
     }
 
     /** GET /api/catalog/products — trả page {items,page,size,total} hoặc 502. */
@@ -87,23 +76,15 @@ public class CatalogClient {
     }
 
     /**
-     * GET /api/catalog/admin/products/{id} — UUID path (GAP-3 interim).
-     * Token chưa cấu hình → 502 (ops-visible, nhắn "dùng slug"); token hỏng
-     * (401/403) → 502; không thấy (404) → null.
+     * GET /api/catalog/products/by-id/{id} — public by-id (PUBLISHED-only,
+     * cùng contract shape với productBySlug). Không thấy (404) → null;
+     * catalog 5xx → 502.
      */
     public JsonNode productById(String id) {
-        if (!adminTokenConfigured()) {
-            throw new ResponseStatusException(BAD_GATEWAY,
-                "Tra cứu product theo UUID chưa được cấu hình trên platform — hãy dùng slug (/open-api/v1/products/{slug})");
-        }
         try {
-            return rest.get().uri("/api/catalog/admin/products/{id}", id).retrieve().body(JsonNode.class);
+            return rest.get().uri("/api/catalog/products/by-id/{id}", id).retrieve().body(JsonNode.class);
         } catch (HttpClientErrorException.NotFound e) {
             return null;
-        } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
-            log.error("Catalog admin token bị từ chối ({} {}) — CATALOG_API_TOKEN cấu hình sai/hết hạn",
-                e.getStatusCode(), e.getMessage());
-            throw upstream("Platform misconfiguration — không đọc được catalog theo UUID", e);
         } catch (RestClientException e) {
             throw upstream("Catalog không trả lời được khi lấy product", e);
         }

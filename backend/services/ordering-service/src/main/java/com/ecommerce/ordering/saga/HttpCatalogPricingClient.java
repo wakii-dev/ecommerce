@@ -16,14 +16,11 @@ import java.util.UUID;
 /**
  * PricingAuthority mặc định — gọi catalog REST (authority §6.1.1).
  *
- * <p>Đường đi hiện có: {@code GET {base}{by-id-path}{productId}} (endpoint
- * admin-by-id — đường DUY NHẤT address-by-id trong contract freeze). Product
- * bị xóa/draft → 404 → {@link ItemUnavailableException}; catalog chết/timeout
+ * <p>Đường đi: {@code GET {base}{by-id-path}{productId}} — public by-id
+ * endpoint của catalog (FI-397; route khai báo trong catalog.yaml từ SF-4
+ * contracts-sync). PUBLISHED-only — draft/deleted → 404 →
+ * {@link ItemUnavailableException} (path ORDER_FAILED); catalog chết/timeout
  * → {@link PricingUnavailableException} (502).</p>
- *
- * <p>REQUIREMENT-GAP FI-310 (comment 94b8496e): chờ coordinator amendment
- * internal pricing endpoint — khi có chỉ đổi {@code ordering.pricing.*} config
- * (URL + token), implementation giữ nguyên shape parse.</p>
  *
  * <p>Giá variant = {@code price} gốc + {@code priceDelta} variant (catalog
  * convention — VariantDto.priceDelta là giá override − giá gốc).</p>
@@ -39,7 +36,7 @@ public class HttpCatalogPricingClient implements PricingAuthority {
     public HttpCatalogPricingClient(
         RestClient.Builder builder,
         @Value("${ordering.pricing.base-url:http://localhost:8082}") String baseUrl,
-        @Value("${ordering.pricing.by-id-path:/api/catalog/admin/products/}") String byIdPath,
+        @Value("${ordering.pricing.by-id-path:/api/catalog/products/by-id/}") String byIdPath,
         @Value("${ordering.pricing.token:}") String token,
         @Value("${ordering.pricing.timeout-ms:5000}") long timeoutMs
     ) {

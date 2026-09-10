@@ -27,8 +27,8 @@ import java.util.UUID;
 /**
  * Catalog đọc cho partner (contract partner-products) — proxy catalog REST,
  * map sang shape partner (không lộ field nội bộ). Path param {idOrSlug}:
- * slug là đường chính (public); UUID-shaped đi admin-by-id khi platform cấu
- * hình CATALOG_API_TOKEN (GAP-3 — rỗng → 502 + nhắn dùng slug).
+ * slug là đường chính (public); UUID-shaped đi public by-id (PUBLISHED-only,
+ * SF-4/FI-408 — GAP-3 interim admin-token đã xóa).
  */
 @RestController
 @RequestMapping("/open-api/v1")

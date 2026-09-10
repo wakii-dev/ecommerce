@@ -159,9 +159,100 @@ gate() {
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage BACKUP — dump 9 DB + restore-test throwaway (fail → die 4 TRƯỚC wipe)
 # ─────────────────────────────────────────────────────────────────────────────
+pg_sanity_sql() {
+  # Map hardcoded spec §4 BACKUP — db_template 0 bảng public (verified 2026-09-10) → schema-only
+  case "$1" in
+    db_identity)     echo "SELECT count(*) FROM users;" ;;
+    db_catalog)      echo "SELECT count(*) FROM products;" ;;
+    db_inventory)    echo "SELECT count(*) FROM stocks;" ;;
+    db_ordering)     echo "SELECT count(*) FROM orders;" ;;
+    db_payment)      echo "SELECT count(*) FROM payments;" ;;
+    db_notification) echo "SELECT count(*) FROM notifications;" ;;
+    db_partner)      echo "SELECT count(*) FROM partners;" ;;
+    db_affiliate)    echo "SELECT count(*) FROM affiliates;" ;;
+    db_template)     echo "SELECT 1;" ;;
+    *)               echo "SELECT 1;" ;;
+  esac
+}
+
+restore_test_db() { echo "${RESTORE_TEST_PREFIX}_${1#db_}"; }
+
+cleanup_restore_dbs() {
+  local db
+  for db in "${DBS[@]}"; do
+    "${COMPOSE[@]}" exec -T postgres psql -U postgres \
+      -c "DROP DATABASE IF EXISTS $(restore_test_db "${db}");" >/dev/null 2>&1 || true
+  done
+}
+
+wait_postgres_healthy() {
+  local id status deadline
+  deadline=$(( $(date +%s) + 120 ))
+  id="$("${COMPOSE[@]}" ps -q postgres 2>/dev/null || true)"
+  if [[ -z "${id}" ]]; then
+    log "[backup] postgres chưa chạy → docker compose up -d postgres"
+    "${COMPOSE[@]}" up -d postgres || return 1
+  fi
+  while :; do
+    status="$(docker inspect -f '{{.State.Health.Status}}' "$("${COMPOSE[@]}" ps -q postgres 2>/dev/null)" 2>/dev/null || true)"
+    if [[ "${status}" == "healthy" ]]; then
+      log "[backup] postgres healthy"
+      return 0
+    fi
+    if (( $(date +%s) > deadline )); then
+      log "[backup] postgres chưa healthy sau 2' (status=${status:-?})"
+      return 1
+    fi
+    sleep 5
+  done
+}
+
 backup() {
-  log "[stub] stage BACKUP — NOT IMPLEMENTED (T3)"
-  return 0
+  log "[backup] đảm bảo postgres sống + healthy trước dump (không dump-trên-starting)"
+  wait_postgres_healthy || die 4 "[backup] postgres không healthy — refuse dump (TRƯỚC wipe)"
+
+  mkdir -p "${BACKUP_DIR}"
+  local db dump_file restore_db sanity_out dump_bytes
+  for db in "${DBS[@]}"; do
+    dump_file="${BACKUP_DIR}/${db}.sql.gz"
+    log "[backup] pg_dump ${db} → ${dump_file}"
+    if ! "${COMPOSE[@]}" exec -T postgres pg_dump -U postgres -d "${db}" | gzip > "${dump_file}"; then
+      cleanup_restore_dbs
+      die 4 "[backup] pg_dump/gzip FAIL cho ${db} — refuse wipe (TRƯỚC wipe)"
+    fi
+    dump_bytes="$(wc -c < "${dump_file}" | tr -d ' ')"
+    if (( dump_bytes < 200 )); then
+      cleanup_restore_dbs
+      die 4 "[backup] dump ${db} = ${dump_bytes} bytes < 200 (rỗng?) — refuse wipe"
+    fi
+  done
+
+  log "[backup] RESTORE-TEST per-DB (throwaway ${RESTORE_TEST_PREFIX}_* — gunzip không đủ)"
+  for db in "${DBS[@]}"; do
+    restore_db="$(restore_test_db "${db}")"
+    dump_file="${BACKUP_DIR}/${db}.sql.gz"
+    if ! "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "DROP DATABASE IF EXISTS ${restore_db};" >/dev/null \
+       || ! "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE ${restore_db};" >/dev/null; then
+      cleanup_restore_dbs
+      die 4 "[backup] tạo DB test ${restore_db} FAIL — refuse wipe"
+    fi
+    if ! gunzip -c "${dump_file}" | "${COMPOSE[@]}" exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 -d "${restore_db}" >/dev/null; then
+      cleanup_restore_dbs
+      die 4 "[backup] restore FAIL vào ${restore_db} (${db}) — refuse wipe"
+    fi
+    if ! sanity_out="$("${COMPOSE[@]}" exec -T postgres psql -U postgres -d "${restore_db}" -tAc "$(pg_sanity_sql "${db}")")"; then
+      cleanup_restore_dbs
+      die 4 "[backup] sanity query FAIL trên ${restore_db} (${db}) — refuse wipe"
+    fi
+    if ! "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "DROP DATABASE ${restore_db};" >/dev/null; then
+      cleanup_restore_dbs
+      die 4 "[backup] drop DB test ${restore_db} FAIL — refuse wipe"
+    fi
+    log "[backup] RESTORE-TEST ${db} → ${restore_db} OK (sanity: ${sanity_out})"
+  done
+
+  log "[backup] backup 9 DB + restore-test PASS — bằng chứng:"
+  ls -lh "${BACKUP_DIR}"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -89,8 +89,8 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Real-run lần 1: exit + summary đúng (LOG_URI/keys/max_connections = OK; DANGEROUS nếu có = finding thật)
 
 ### Task 6 — s2s inventory enumerate clients path-granularity (executor B)
-- [ ] Grep client classes + call sites; resolve base-url → compose service; loại trừ A3; map module→compose name constant
-- [ ] Đếm path-granularity — nếu < 23: report con số THẬT + flag epic (KHÔNG pad pair external)
+- [x] Grep client classes + call sites; resolve base-url → compose service; loại trừ A3; map module→compose name constant
+- [x] Đếm path-granularity — nếu < 23: report con số THẬT + flag epic (KHÔNG pad pair external) — **24 pair ≥ 23 ĐẠT** (14 client file in-scope; 23-file baseline gồm 2 file chỉ catch RestClientException + 1 test — loại đúng)
 
 ### Task 7 — s2s expected-verdict matrix static (executor B)
 - [ ] Curated verdict mỗi pair: destination guard (SecurityConfig matcher match path — Ant-pattern đơn giản) + token attach (client code) + evidence file:line 2 phía. **Destination KHÔNG có SecurityConfig + KHÔNG có spring-security starter (notification/payment/template — đã verify) → guard = permitAll (ghi note trong matrix), KHÔNG GAP** (gateway front door enforce)

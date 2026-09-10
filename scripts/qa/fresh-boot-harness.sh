@@ -283,8 +283,34 @@ down() {
 # Stage BUILD — compose build (nền + poll), daemon-wedge detect + resume
 # ─────────────────────────────────────────────────────────────────────────────
 build() {
-  log "[stub] stage BUILD — NOT IMPLEMENTED (T5)"
-  return 0
+  log "[build] docker compose build — chạy nền, poll 30s (10-15')"
+  local t0 rc
+  t0=$(date +%s)
+  "${COMPOSE[@]}" build >>"${LOG}" 2>&1 &
+  BUILD_PID=$!
+  while kill -0 "${BUILD_PID}" 2>/dev/null; do
+    sleep 30
+    kill -0 "${BUILD_PID}" 2>/dev/null \
+      && log "[build] ... đang build (elapsed $(( $(date +%s) - t0 ))s)"
+  done
+  wait "${BUILD_PID}"; rc=$?
+  BUILD_PID=""
+  if (( rc == 0 )); then
+    log "[build] build OK trong $(( $(date +%s) - t0 ))s"
+    return 0
+  fi
+
+  if tail -n 40 "${LOG}" | grep -Eq 'Cannot connect to the Docker daemon|error during connect'; then
+    log "[build] DAEMON WEDGE — Docker daemon chết giữa build (log tail khớp pattern):"
+    tail -n 10 "${LOG}"
+    log "[build] FIX daemon: pkill -f com.docker.backend; open -a Docker"
+    log "[build] RESUME sau khi daemon sống lại (wipe ĐÃ xảy ra — marker tồn tại):"
+    log "[build]   QA_FRESH_BOOT_RESUME=BUILD QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot"
+    die 5 "[build] daemon wedge — exit 5"
+  fi
+  log "[build] build FAIL (không phải daemon) — log tail:"
+  tail -n 30 "${LOG}"
+  die 5 "[build] compose build exit ${rc}"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

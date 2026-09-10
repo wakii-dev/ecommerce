@@ -217,7 +217,7 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await expect(page.locator('tbody tr', { hasText: CODE })).toHaveCount(0, { timeout: 15_000 });
   });
 
-  test.fixme('E-edit — coupon SỬA round-trip — BỊ CHẬN bug thật FE↔BE: PUT /api/ordering/admin/coupons/{code} 400 "code không hợp lệ" (contracts client strip code khỏi body — client.ts executeRequest; BE CouponService.validateAdmin đòi body code). SF-4 fix bug-register → bỏ fixme. Bug đã probe xác minh 2026-09-10 (executor T4).', async ({ page }) => {
+  test('E-edit — coupon SỬA round-trip (regression-lock FI-408: BE adminUpdate merge path-code — FE contracts client không gửi code trong body)', async ({ page }) => {
     await adminUiLogin(page);
     const CODE = `E2EJ${STAMP}`.slice(0, 64); // [A-Za-z0-9_-], form tự uppercase
     await page.goto(`${GATEWAY}/admin/coupons`);

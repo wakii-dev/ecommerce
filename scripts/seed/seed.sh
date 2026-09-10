@@ -103,6 +103,72 @@ RETURNING 1;" | wc -l | tr -d ' ')
 NO_VARIANT=$($PSQL_CAT "SELECT count(*) FROM products p WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id);")
 log "default variants: +${DEFAULT_ADDED} (product còn thiếu variant: ${NO_VARIANT})"
 
+# ── 3c. Ảnh placeholder product (QA-F2-03): SeedDataRunner cố ý insert
+# product_images.url='' (storefront fallback gradient category) nhưng harness
+# probe đòi ≥1 url non-empty + GET :8080<url> → 200, và admin PUT product đòi
+# ProductImageWrite.url (edit form echo url rỗng → 400 mỗi lần save). Fix:
+# sinh gradient PNG 480×360 theo category (python3 stdlib struct+zlib+colorsys
+# — KHÔNG thêm dependency), upload QUA admin API thật (POST /api/catalog/
+# admin/uploads multipart field `image` → MinIO, 201 {url}), rồi UPDATE các
+# row url='' (CHỈ row rỗng — idempotent: chạy lại trên DB đã fill = không
+# upload, không UPDATE; SeedDataRunner không re-insert image product đã có).
+# Guard QA-F2-03: uploads API chết → log + bỏ qua phần còn lại (seed không
+# được làm fail cả harness vì catalog uploads down; fresh env phải OK).
+EMPTY_IMG=$($PSQL_CAT "SELECT p.id::text || '|' || COALESCE(c.slug_vi,'') FROM products p
+  LEFT JOIN categories c ON c.id = p.category_id
+  WHERE EXISTS (SELECT 1 FROM product_images pi WHERE pi.product_id = p.id AND pi.url = '');" ) || EMPTY_IMG=""
+IMG_TOTAL=$(printf '%s' "$EMPTY_IMG" | grep -c . || true)
+if [ "${IMG_TOTAL:-0}" -eq 0 ]; then
+  log "ảnh: mọi product_images đã có url — skip (idempotent)"
+else
+  IMG_DIR=$(mktemp -d /tmp/seed-imgs.XXXXXX)
+  IMG_DONE=0; IMG_FILLED=0
+  gen_gradient_png() { # $1 category slug $2 outfile — 2 màu deterministic theo slug
+    python3 - "$1" "$2" <<'PYEOF'
+import colorsys, struct, sys, zlib
+slug, path = sys.argv[1], sys.argv[2]
+W, H = 480, 360
+# hue từ crc32(slug): cùng category = cùng màu, khác category = khác màu
+h1 = (zlib.crc32(slug.encode()) % 360) / 360.0
+h2 = (h1 + 60 / 360.0 + (zlib.crc32((slug + ":b").encode()) % 80) / 360.0) % 1.0
+def rgb(h):
+    r, g, b = colorsys.hls_to_rgb(h, 0.55, 0.45)
+    return (round(r * 255), round(g * 255), round(b * 255))
+c1, c2 = rgb(h1), rgb(h2)
+row = bytearray([0])  # filter type 0 mỗi dòng quét
+for x in range(W):
+    t = x / (W - 1)
+    row += bytes(round(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+def chunk(typ, data):
+    return struct.pack(">I", len(data)) + typ + data + struct.pack(">I", zlib.crc32(typ + data) & 0xFFFFFFFF)
+ihdr = struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0)
+png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(bytes(row) * H, 9)) + chunk(b"IEND", b"")
+open(path, "wb").write(png)
+PYEOF
+  }
+  # loop đọc từ FILE (không pipe — while trong pipe = subshell, mất counter)
+  printf '%s\n' "$EMPTY_IMG" > /tmp/seed-img-products.$$
+  while IFS='|' read -r PIDC SLUGC; do
+    [ -n "$PIDC" ] || continue
+    F="$IMG_DIR/$SLUGC.png"
+    gen_gradient_png "$SLUGC" "$F" || continue
+    UP=$(curl -sf -m 20 -X POST http://localhost:8080/api/catalog/admin/uploads \
+      -H "Authorization: Bearer $ADMIN_TOKEN" -F "image=@$F;type=image/png" 2>/dev/null) || UP=""
+    IMG_URL=$(printf '%s' "$UP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null) || IMG_URL=""
+    if [ -z "$IMG_URL" ]; then
+      log "ảnh: upload fail (uploads API chết / 4xx-5xx) — bỏ qua phần còn lại (guard QA-F2-03)"
+      break
+    fi
+    FILLED_N=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_catalog -tAc \
+      "UPDATE product_images SET url='$IMG_URL' WHERE url='' AND product_id='$PIDC';" </dev/null | tr -d ' ')
+    IMG_FILLED=$((IMG_FILLED + ${FILLED_N:-0}))
+    IMG_DONE=$((IMG_DONE + 1))
+  done < /tmp/seed-img-products.$$
+  rm -f /tmp/seed-img-products.$$
+  rm -rf "$IMG_DIR"
+  log "ảnh: uploaded ${IMG_DONE}/${IMG_TOTAL} products, ${IMG_FILLED} image rows filled"
+fi
+
 # ── 4. Orders CONFIRMED (guard idempotent: demo user chưa có đơn) ────────────
 USER_ID=$($PSQL_ID "SELECT id FROM users WHERE email='$DEMO_USER_EMAIL';")
 EXISTING=$($PSQL_ORD "SELECT count(*) FROM orders WHERE user_id='$USER_ID';" | tr -d ' ')

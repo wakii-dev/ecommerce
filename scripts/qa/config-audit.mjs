@@ -474,7 +474,125 @@ function analyzeAxisC(compose) {
   return rows.sort((a, b) => a.service.localeCompare(b.service) || a.check.localeCompare(b.check));
 }
 
+// ── Trục (a) — classify machine-checkable (A1) ───────────────────────────────
+// DANGEROUS = default match localhost|127.0.0.1 + service có compose entry +
+//              compose KHÔNG set var (pattern LOG_URI 9/9).
+// OK         = compose set + alias-equivalence: cùng port + host là compose
+//              service name, HOẶC set trùng default. Set localhost-family
+//              KHÔNG được OK (trừ khi == default) — giữ bắt được bug flagship.
+// WARN       = compose set nhưng lệch ngữ nghĩa (khác port / host lạ) — WARN
+//              KHÔNG PHẢI finding, không ảnh hưởng exit.
+// FE whitelist: default match :3000|:5173 HOẶC var match VITE_|STOREFRONT|SHELL
+//              → SKIP (FE dev chạy host là chủ đích).
+// Path file-system (FS_PATH_RE) → chuyển trục (b) xử lý (tránh so alias URLs).
+function parseHostPort(v) {
+  if (!v) return { host: null, port: null };
+  // scheme lồng ghép: http://host:port · mongodb://mongo:27017 · jdbc:postgresql://pg:5432/db
+  let m = v.match(/^(?:[a-zA-Z][a-zA-Z0-9+.-]*:)+(\/\/)?([^/:?#]+)(?::(\d+))?/);
+  if (m && m[2] && !/^\d+$/.test(m[2])) return { host: m[2], port: m[3] ? Number(m[3]) : null };
+  m = v.match(/^([^/:?#]+):(\d+)$/); // bare host:port
+  if (m) return { host: m[1], port: Number(m[2]) };
+  if (/^[^/:?#]+$/.test(v)) return { host: v, port: null }; // bare host
+  return { host: null, port: null }; // scalar (true/full/...) — không phải host
+}
+
+function classifyAxisA(compose, placeholders) {
+  const rows = [];
+  for (const p of placeholders) {
+    if (p.kind !== 'env') continue;
+    const evidenceSrc = p.sources.join(', ');
+    const svc = compose.get(p.service);
+    if (!svc) { // không có entry compose — chạy host-only, không đối chiếu được
+      rows.push({ ...p, status: 'SKIP-NOENTRY', note: 'service không có entry compose (host-only)', composeVal: null, evidence: evidenceSrc });
+      continue;
+    }
+    if (FE_PORT_RE.test(p.default || '') || FE_VAR_RE.test(p.var)) {
+      rows.push({ ...p, status: 'SKIP-FE', note: 'FE-host whitelist (dev :3000/:5173 hoặc tên var FE) — chủ đích, không flag', composeVal: null, evidence: evidenceSrc });
+      continue;
+    }
+    if (p.default != null && FS_PATH_RE.test(p.default)) {
+      rows.push({ ...p, status: 'SEE-AXIS-B', note: 'giá trị path file-system — trục (b) phân loại', composeVal: null, evidence: evidenceSrc });
+      continue;
+    }
+    const hasVar = svc.env.has(p.var);
+    const evidence = `${evidenceSrc} · compose ${hasVar ? `SET ${p.var}` : `không set ${p.var}`}`;
+    if (!hasVar) {
+      if (p.default == null)
+        rows.push({ ...p, status: 'UNSET', note: 'compose không set, code không có default (Spring sẽ fail nếu cần) — không finding theo A1', composeVal: null, evidence });
+      else if (p.default === '')
+        rows.push({ ...p, status: 'UNSET', note: 'compose không set, default rỗng (optional theo design) — không finding', composeVal: null, evidence });
+      else if (LOCALHOST_RE.test(p.default))
+        rows.push({ ...p, status: 'DANGEROUS', note: `default ${maskValue(p.var, p.default)} trỏ localhost — container không tới được (pattern LOG_URI 9/9)`, composeVal: null, evidence });
+      else
+        rows.push({ ...p, status: 'UNSET', note: `compose không set — dùng default ${maskValue(p.var, p.default)} (không localhost, benign)`, composeVal: null, evidence });
+      continue;
+    }
+    const raw = svc.env.get(p.var);
+    const shape = composeValueShape(raw);
+    if (shape.kind === 'hostref' && shape.tail === '') {
+      // compose set rỗng `${X:-}` — trạng thái RIÊNG với UNSET (plan edge-case)
+      const localhostDef = p.default != null && p.default !== '' && LOCALHOST_RE.test(p.default);
+      rows.push({ ...p, status: localhostDef ? 'WARN' : 'SET-EMPTY', note: localhostDef
+        ? 'compose set-rỗng nhưng code default trỏ localhost — cảnh báo (non-finding theo A1: "set")'
+        : 'compose set-rỗng (${VAR:-}) — trạng thái set rỗng riêng với UNSET', composeVal: raw, evidence });
+      continue;
+    }
+    const setVal = resolveComposeValue(raw); // hostref → tail khai báo (không đọc .env)
+    if (SECRET_RE.test(p.var)) {
+      // secret — KHÔNG so alias (không bao giờ in giá trị), chỉ cần biết SET
+      rows.push({ ...p, status: 'OK', note: 'compose SET (masked) — secret không so alias', composeVal: raw, evidence });
+      continue;
+    }
+    if (setVal === p.default) {
+      rows.push({ ...p, status: 'OK', note: `compose set trùng default — OK`, composeVal: raw, evidence });
+      continue;
+    }
+    const d = parseHostPort(p.default || '');
+    const s = parseHostPort(setVal);
+    const serviceName = compose.has(s.host || ' ');
+    const samePort = d.port === s.port; // null == null → host-only value (vd RABBITMQ_HOST)
+    if (serviceName && samePort)
+      rows.push({ ...p, status: 'OK', note: `alias-equivalence: ${s.host ?? '(host rỗng)'} là compose service + cùng port → OK`, composeVal: raw, evidence });
+    else if (serviceName)
+      rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} — host là compose service nhưng lệch port (${d.port ?? '—'} → ${s.port ?? '—'}) — WARN non-finding`, composeVal: raw, evidence });
+    else if (s.host == null)
+      rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} khác default ${maskValue(p.var, p.default)} (giá trị vô hướng) — WARN non-finding`, composeVal: raw, evidence });
+    else
+      rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} — host '${s.host}' không phải compose service name, lệch default — WARN non-finding`, composeVal: raw, evidence });
+  }
+  return rows.sort((a, b) => a.service.localeCompare(b.service) || a.var.localeCompare(b.var));
+}
+
+// ── Finding IDs ổn định (A11) + FIXED registry ───────────────────────────────
+// ID = CFG-<trục>-<số 2 chữ số> đánh theo thứ tự deterministic trong axis
+// (service, var/check). Registry scripts/qa/config-audit-fixed.json schema
+// {findings:[{id, evidence, date}]} — ID khớp → status FIXED (không ảnh hưởng
+// exit), script đọc MỖI run (A1).
+function assignFindingIds(axisA, axisB, axisC) {
+  const sortF = (k) => (a, b) => a.service.localeCompare(b.service) || (a[k] || '').localeCompare(b[k] || '');
+  const out = { A: [], B: [], C: [] };
+  out.A = axisA.filter((r) => r.status === 'DANGEROUS').sort(sortF('var'));
+  out.B = axisB.filter((r) => r.status === 'DANGEROUS').sort(sortF('var'));
+  out.C = axisC.filter((r) => r.status === 'DANGEROUS').sort(sortF('check'));
+  for (const [axis, list] of Object.entries(out))
+    list.forEach((r, i) => { r.id = `CFG-${axis}-${String(i + 1).padStart(2, '0')}`; });
+  return out;
+}
+
+function loadFixedRegistry(file) {
+  if (!existsSync(file)) fail(`Không tìm thấy FIXED registry: ${file}`);
+  let obj;
+  try { obj = JSON.parse(readFileSync(file, 'utf8')); }
+  catch (e) { fail(`FIXED registry hỏng (không parse được JSON): ${e.message}`); }
+  if (!obj || !Array.isArray(obj.findings)) fail(`FIXED registry sai schema — cần {"findings":[{id,evidence,date}]}`);
+  for (const f of obj.findings)
+    if (!f || typeof f.id !== 'string' || typeof f.evidence !== 'string' || typeof f.date !== 'string')
+      fail(`FIXED registry: finding thiếu id/evidence/date — ${JSON.stringify(f)}`);
+  return new Set(obj.findings.map((f) => f.id));
+}
+
 function main() {
+
   const opts = parseArgs(process.argv.slice(2));
   if (opts.selfTest) return runSelfTest(opts); // T9 — định nghĩa sau
 
@@ -511,6 +629,33 @@ function main() {
   console.log(`\n== Trục (c): ${axisC.length} check, ${axisC.filter((r) => r.status === 'DANGEROUS').length} DANGEROUS, ${axisC.filter((r) => r.status === 'WARN').length} WARN (non-finding) ==`);
   for (const r of axisC)
     console.log(`   [${r.status}] ${r.service} · ${r.check} — ${r.note}\n      ↳ ${r.evidence}`);
+
+  // ── T4: classify trục (a) + gom findings + FIXED registry ────────────────
+  const axisA = classifyAxisA(compose, placeholders);
+  const statCount = {};
+  for (const r of axisA) statCount[r.status] = (statCount[r.status] || 0) + 1;
+  console.log(`\n== Trục (a) classify A1: ${axisA.length} env-var đối chiếu ==`);
+  console.log(`   trạng thái: ${Object.entries(statCount).map(([k, v]) => `${k}=${v}`).join(' · ')}`);
+  for (const r of axisA) {
+    if (['DANGEROUS', 'WARN', 'SEE-AXIS-B'].includes(r.status)) {
+      console.log(`   [${r.status}] ${r.service} · ${r.var} — ${r.note}\n      ↳ ${r.evidence}`);
+    } else {
+      console.log(`   [${r.status}] ${r.service} · ${r.var}`); // compact — chi tiết note chỉ với row đáng chú ý
+    }
+  }
+  const findings = assignFindingIds(axisA, axisB, axisC);
+  const fixed = loadFixedRegistry(opts.fixed);
+  let fixedCount = 0;
+  for (const list of Object.values(findings))
+    for (const f of list) if (fixed.has(f.id)) { f.status = 'FIXED'; fixedCount++; }
+  const unfixed = { A: 0, B: 0, C: 0 };
+  for (const [ax, list] of Object.entries(findings))
+    unfixed[ax] = list.filter((f) => f.status !== 'FIXED').length;
+  console.log(`\n== Findings DANGEROUS (CFG-xx): A=${findings.A.length} B=${findings.B.length} C=${findings.C.length} · FIXED theo registry: ${fixedCount} · UNFIXED: A=${unfixed.A} B=${unfixed.B} C=${unfixed.C} ==`);
+  for (const [ax, list] of Object.entries(findings))
+    for (const f of list)
+      console.log(`   ${f.id} [${f.status}] ${f.service} · ${f.var || f.check} — ${f.note}\n      ↳ ${f.evidence}`);
+  console.log(`\n== T4 classify OK (exit semantics + report ghép ở T5) ==`);
 }
 
 try { main(); } catch (e) {

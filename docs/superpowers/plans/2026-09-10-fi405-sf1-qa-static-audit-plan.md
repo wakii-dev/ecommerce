@@ -79,9 +79,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Spot-check: postgres 300 = OK; flag ngoài bảng → WARN non-finding
 
 ### Task 4 — classify rule machine-checkable + FIXED registry (executor A)
-- [ ] Classify A1 trục (a): DANGEROUS/OK-alias-equivalence/WARN — WARN non-finding; FE-host whitelist
-- [ ] `scripts/qa/config-audit-fixed.json` schema `{findings:[{id, evidence, date}]}` + merge vào classify (status FIXED)
-- [ ] Finding IDs ổn định A11 (`CFG-A-01`… theo var; `CFG-B-xx`; `CFG-C-xx`) — deterministic ordering
+- [x] Classify A1 trục (a): DANGEROUS/OK-alias-equivalence/WARN — WARN non-finding; FE-host whitelist
+- [x] `scripts/qa/config-audit-fixed.json` schema `{findings:[{id, evidence, date}]}` + merge vào classify (status FIXED)
+- [x] Finding IDs ổn định A11 (`CFG-A-01`… theo var; `CFG-B-xx`; `CFG-C-xx`) — deterministic ordering
 
 ### Task 5 — exit-code + report-sf1.md skeleton (executor A)
 - [ ] Exit semantics 0/1/2 chung; `--report` regen marker blocks (summary + axis-a/b/c)

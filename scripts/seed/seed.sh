@@ -153,20 +153,23 @@ PYEOF
     F="$IMG_DIR/$SLUGC.png"
     gen_gradient_png "$SLUGC" "$F" || continue
     UP=""; for ATT in 1 2 3 4 5; do
-      UP=$(curl -sf -m 20 -X POST http://localhost:8080/api/catalog/admin/uploads \
-        -H "Authorization: Bearer $ADMIN_TOKEN" -F "image=@$F;type=image/png" 2>/dev/null) || UP=""
-      [ -n "$UP" ] && break
+      # curl -f: 4xx/5xx → rc≠0, -w vẫn in HTTP:<code> → log chẩn đoán được
+      UP=$(curl -sf -m 20 -w '\nHTTP:%{http_code}' -X POST http://localhost:8080/api/catalog/admin/uploads \
+        -H "Authorization: Bearer $ADMIN_TOKEN" -F "image=@$F;type=image/png" 2>&1) || true
+      IMG_URL=$(printf '%s' "$UP" | head -n1 | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null) || IMG_URL=""
+      [ -n "$IMG_URL" ] && break
       # retry: race với minio-init (one-shot tạo bucket chạy sau tier-3 gate —
       # run 15:21 upload fail vì bucket chưa có; minio-init exit sau seed ~1')
-      [ "$ATT" -lt 5 ] && { log "ảnh: upload thử ${ATT} fail — bucket MinIO có thể đang init, retry sau 6s"; sleep 6; }
+      [ "$ATT" -lt 5 ] && { log "ảnh: upload thử ${ATT} fail [$(printf '%s' "$UP" | tail -n1 | head -c 120)] — retry sau 6s"; sleep 6; }
     done
-    IMG_URL=$(printf '%s' "$UP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null) || IMG_URL=""
     if [ -z "$IMG_URL" ]; then
-      log "ảnh: upload fail sau 5 thử (uploads API chết / 4xx-5xx) — bỏ qua phần còn lại (guard QA-F2-03)"
+      log "ảnh: upload fail sau 5 thử (cuối: $(printf '%s' "$UP" | tail -n1 | head -c 120)) — bỏ qua phần còn lại (guard QA-F2-03)"
       break
     fi
+    # psql UPDATE in tag "UPDATE <n>" → awk lấy số cuối (không tr-d_space —
+    # "UPDATE2" vào arithmetic dưới set -u là crash: run 15:48 đã chứng kiến)
     FILLED_N=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_catalog -tAc \
-      "UPDATE product_images SET url='$IMG_URL' WHERE url='' AND product_id='$PIDC';" </dev/null | tr -d ' ')
+      "UPDATE product_images SET url='$IMG_URL' WHERE url='' AND product_id='$PIDC';" </dev/null | LC_ALL=C awk '{print $NF}')
     IMG_FILLED=$((IMG_FILLED + ${FILLED_N:-0}))
     IMG_DONE=$((IMG_DONE + 1))
   done < /tmp/seed-img-products.$$

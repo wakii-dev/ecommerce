@@ -519,10 +519,38 @@ stage_up() {
   log "[up] UP PASS — 3/3 tier (tổng $(( $(date +%s) - t0 ))s)"
 }
 
-# ── Stage SEED (T7) — appended by executor 2 ──
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage SEED (T7) — readiness poll (products > 0) rồi mới make seed.
+# catalog SeedDataRunner populate products ASYNC sau health UP — seed.sh
+# hard-fail "không tìm thấy product" nếu chạy sớm (seed.sh:114).
+# Fail → die 4 (seed fail — KHÔNG phải 7/UP).
+# ─────────────────────────────────────────────────────────────────────────────
+products_seeded() {
+  local n
+  n="$("${COMPOSE[@]}" exec -T postgres psql -U postgres -d db_catalog \
+    -tAc "SELECT count(*) FROM products;" 2>/dev/null || true)"
+  [[ "${n}" =~ ^[0-9]+$ ]] && (( n > 0 ))
+}
+
 stage_seed() {
-  log "[stub] stage SEED — NOT IMPLEMENTED (executor 2 / T7: readiness poll + make seed assert XONG)"
-  return 0
+  log "[seed] readiness poll — đợi SeedDataRunner populate products (async sau health UP · poll 5s · timeout 2')"
+  if ! wait_healthy 5 120 products_seeded; then
+    die 4 "[seed] products không xuất hiện sau 2' — SeedDataRunner chưa chạy?"
+  fi
+  log "[seed] products > 0 — seed-readiness OK"
+
+  log "[seed] make seed — assert exit 0 AND output khớp XONG (seed.sh:229)"
+  local seed_out rc
+  seed_out="$(make seed 2>&1)"
+  rc=$?
+  printf '%s\n' "${seed_out}"  # full output vào LOG (tee ở main bắt mọi stdout)
+
+  if (( rc != 0 )) || ! printf '%s\n' "${seed_out}" | grep -q 'XONG'; then
+    log "[seed] FAIL — exit=${rc}, khớp XONG: NO — seed output tail:"
+    printf '%s\n' "${seed_out}" | tail -n 30
+    die 4 "[seed] make seed FAIL (exit=${rc} hoặc thiếu XONG)"
+  fi
+  log "[seed] make seed OK — exit 0 + XONG khớp"
 }
 
 # ── Stage PROBES (T8) — appended by executor 2 ──

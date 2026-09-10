@@ -7,7 +7,7 @@
 > Exit semantics chung 4 script: 0 = 0 finding CHƯA fix · 1 = ≥1 finding CHƯA fix · 2 = script error.
 
 <!-- sf1:summary -->
-**config-audit** run 2026-09-10 01:55:13 UTC — compose `docker-compose.yml` · backend `backend`
+**config-audit** run 2026-09-10 01:56:37 UTC — compose `docker-compose.yml` · backend `backend`
 
 | Trục | Kiểm | DANGEROUS | UNFIXED | FIXED (registry) | WARN (non-finding) |
 | --- | --- | --- | --- | --- | --- |
@@ -19,7 +19,18 @@
 
 > Bảng exit ĐỦ 4 script (config-audit · s2s · rbac · contracts) do recipe `make qa-audit` ghi
 > vào block này SAU KHI đủ 4 exit — script standalone KHÔNG biết exit của script khác.
-<!-- /sf1:summary -->
+<!-- make:exit-table -->
+**Exit-table 4 script (ghi bởi recipe make qa-audit sau khi đủ 4 script chạy — script standalone không biết exit nhau):**
+
+| script | exit |
+| --- | --- |
+| config-audit | 1 |
+| s2s-auth-matrix | 1 |
+| rbac-matrix | 0 |
+| contracts-freshness | 1 |
+
+Exit tổng (max): **1** — legend: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script error. (GNU make bọc recipe-fail → exit tiến trình make luôn 2 khi ≠ 0 — exit-tổng THẬT là số này + dòng Error N của make.)
+<!-- /make:exit-table --><!-- /sf1:summary -->
 
 <!-- sf1:axis-a -->
 ### Trục (a) — env var code ↔ compose (A1)
@@ -344,7 +355,7 @@
 <!-- sf1:s2s -->
 ### s2s auth matrix — STATIC (A2 · A3 · A5)
 
-Run 2026-09-10 01:34:43 UTC — enumerate tĩnh 24 pair path-granularity (pair := client class × endpoint path; ngưỡng A2 ≥ 23: **ĐẠT**) · 14 client file main-source in-scope · 4 file loại trừ A3 · 9 SecurityConfig parse.
+Run 2026-09-10 01:56:37 UTC — enumerate tĩnh 24 pair path-granularity (pair := client class × endpoint path; ngưỡng A2 ≥ 23: **ĐẠT**) · 14 client file main-source in-scope · 4 file loại trừ A3 · 9 SecurityConfig parse.
 
 Guard đích = SecurityConfig service ĐÍCH, service-side path (s2s gọi thẳng port service, KHÔNG qua gateway StripPrefix). `permitAll*` = service không SecurityConfig + không spring-security (payment · invoice-Python) — special rule plan-critic: ghi note, KHÔNG GAP. Verdicts: **EXPECTED_OK=22 · DANGEROUS=2 · GAP=0** → exit **1**.
 
@@ -394,7 +405,7 @@ Drift check: enumerate 24 call-site ↔ curated 24 rows — 1:1 (0 stale, 0 miss
 <!-- sf1:rbac -->
 ### RBAC expected matrix — closed list (A8)
 
-Run 2026-09-10 01:34:43 UTC — static scan 9 SecurityConfig + @PreAuthorize + controllers. **50 endpoint ADMIN** (12 controllers kỳ vọng: 12/12 thấy + 1 extra ngoài list: inventory-service/InventoryQueryController) × 3 cột EXPECTED: guest→401 · user→403 · admin→2xx. Đóng list — không "...".
+Run 2026-09-10 01:56:37 UTC — static scan 9 SecurityConfig + @PreAuthorize + controllers. **50 endpoint ADMIN** (12 controllers kỳ vọng: 12/12 thấy + 1 extra ngoài list: inventory-service/InventoryQueryController) × 3 cột EXPECTED: guest→401 · user→403 · admin→2xx. Đóng list — không "...".
 
 **Matrix admin (50 endpoint) — cell = EXPECTED:**
 
@@ -482,7 +493,7 @@ Run 2026-09-10 01:34:43 UTC — static scan 9 SecurityConfig + @PreAuthorize + c
 <!-- sf1:contracts -->
 ### Contracts freshness — openapi ↔ controllers (A12)
 
-Run 2026-09-10 01:34:43 UTC — 10 yaml ↔ 9 module backend. So khớp **(method, path)** sau chuẩn hóa: strip gateway-prefix theo gateway-routes.yml (identity/ordering StripPrefix=2 · inventory/payment StripPrefix=1 · còn lại 0) · `{param}` → `{*}` (Spring match theo vị trí segment, không tên biến) · ignore-list non-API áp 2 phía: actuator, swagger, swagger-ui, swagger-ui.html, v3, error, internal.
+Run 2026-09-10 01:56:37 UTC — 10 yaml ↔ 9 module backend. So khớp **(method, path)** sau chuẩn hóa: strip gateway-prefix theo gateway-routes.yml (identity/ordering StripPrefix=2 · inventory/payment StripPrefix=1 · còn lại 0) · `{param}` → `{*}` (Spring match theo vị trí segment, không tên biến) · ignore-list non-API áp 2 phía: actuator, swagger, swagger-ui, swagger-ui.html, v3, error, internal.
 
 **Findings: 24** (STALE-SPEC=3 — spec-op không có controller · STALE-CTRL=21 — controller route không có spec-op) → exit **1**. FINDING-ONLY — không tự sửa contracts/ hay controller (fix = SF-4).
 

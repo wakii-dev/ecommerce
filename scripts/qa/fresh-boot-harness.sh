@@ -261,6 +261,15 @@ backup() {
 
   log "[backup] backup 9 DB + restore-test PASS — bằng chứng:"
   ls -lh "${BACKUP_DIR}"
+
+  # Trả stack về all-down trước DOWN: backup là nơi DUY NHẤT start postgres
+  # giữa GATE và DOWN (up -d postgres; exec -T không giữ container nào khác —
+  # compose postgres không có depends_on) — nếu để chạy, down() TOCTOU-refuse
+  # chính postgres do harness tự start (happy path chết trên mọi fresh run).
+  log "[backup] compose stop postgres — trả stack về all-down cho down() TOCTOU check"
+  if ! "${COMPOSE[@]}" stop postgres; then
+    die 4 "[backup] compose stop postgres FAIL — stack chưa all-down, down() sẽ TOCTOU-refuse"
+  fi
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

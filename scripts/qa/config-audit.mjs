@@ -177,6 +177,8 @@ function parseCompose(file) {
         ctx = { mode: 'volumes', svc: ctx.svc };
       } else if (k === 'build') {
         ctx = v === '' ? { mode: 'build', svc: ctx.svc } : { mode: 'skip-service', svc: ctx.svc };
+      } else if (k === 'image') {
+        svc.image = v; // trục (c) cần nhận diện postgres qua image
       } else if (k === 'command') {
         if (v === '') fail(`${rel(i)}: 'command:' block-scalar không hỗ trợ — fail-loud`);
         svc.command = v;
@@ -337,7 +339,81 @@ function extractPlaceholders(ymlSources, javaSources, backendDir) {
     a.service.localeCompare(b.service) || a.var.localeCompare(b.var));
 }
 
-// ── main ─────────────────────────────────────────────────────────────────────
+// ── Trục (b) — volume mounts drift (A6) ──────────────────────────────────────
+// Mỗi env path service đọc lúc boot (code default + compose env) phải nằm dưới
+// (prefix-match) 1 volume container-target của CHÍNH service đó:
+//   · code cần path + không env + không volume            → DANGEROUS
+//   · path (env/default) không thuộc volume target nào    → DANGEROUS (path lệch)
+//   · host-relative default (../infra/keys/x.pem)         → chuẩn hóa basename,
+//     file phải tồn tại trong host-source của 1 volume (repo-resolvable).
+// HTTP path (ORDERING_PRICING_BYIDPATH=/api/...) KHÔNG phải file-path — bộ lọc
+// FS_PATH_RE (có extension) loại sẵn.
+function normalizeHostSrc(host) {
+  // ./infra/keys → repo-resolvable; named volume (pgdata) → null (không resolve được tĩnh)
+  if (!/^[./]/.test(host)) return null;
+  return resolve(REPO, host);
+}
+function prefixMatchTarget(pathValue, targets) {
+  return targets.some((t) => pathValue === t || pathValue.startsWith(t + '/'));
+}
+
+function analyzeAxisB(compose, placeholders) {
+  const rows = [];
+  // path-shaped mặc định từ code (env-shaped placeholder + default là file-path)
+  const codeByService = new Map();
+  for (const p of placeholders) {
+    if (p.kind !== 'env' || p.default == null || !FS_PATH_RE.test(p.default)) continue;
+    if (!codeByService.has(p.service)) codeByService.set(p.service, []);
+    codeByService.get(p.service).push(p);
+  }
+  // path-shaped env từ compose (kể cả service không có code req — vd invoice font)
+  for (const svc of compose.values()) {
+    const codeReqs = codeByService.get(svc.name) || [];
+    const seen = new Set();
+    const targets = svc.volumes.map((v) => v.container);
+    const hostSrcs = svc.volumes.map((v) => normalizeHostSrc(v.host)).filter(Boolean);
+
+    const verdictFor = (varName, envVal, codeDefault, codeSrc) => {
+      const effective = envVal != null ? envVal : codeDefault;
+      const evidence = [
+        codeSrc,
+        envVal != null ? `compose env ${varName} (set)` : 'compose không set env',
+        svc.volumes.length ? `volumes: ${svc.volumes.map((v) => v.host + '→' + v.container).join(', ')}` : 'không có volumes',
+      ].filter(Boolean).join(' · ');
+      if (envVal == null && svc.volumes.length === 0)
+        return { status: 'DANGEROUS', note: 'code cần path, compose không set env + không mount volume', evidence };
+      if (FS_PATH_RE.test(effective)) {
+        // absolute file-path → phải nằm dưới 1 container-target
+        return prefixMatchTarget(effective, targets)
+          ? { status: 'OK', note: `${effective} thuộc target ${targets.join('|')}`, evidence }
+          : { status: 'DANGEROUS', note: `path ${effective} không thuộc volume target nào (${targets.join('|') || 'không có'})`, evidence };
+      }
+      // host-relative (../infra/keys/x.pem) → basename phải có trong host-source
+      const b = basename(effective);
+      const found = hostSrcs.some((src) => existsSync(join(src, b)));
+      return found
+        ? { status: 'OK', note: `host-relative default — basename ${b} có trong mount host-source`, evidence }
+        : { status: 'DANGEROUS', note: `host-relative default ${effective} — không thấy ${b} trong host-source volume`, evidence };
+    };
+
+    for (const p of codeReqs) {
+      seen.add(p.var);
+      const envVal = svc.env.has(p.var) ? resolveComposeValue(svc.env.get(p.var)) : null;
+      const v = verdictFor(p.var, envVal, p.default, p.sources.join(', '));
+      rows.push({ service: svc.name, var: p.var, default: p.default, envVal, targets, ...v });
+    }
+    for (const [k, raw] of svc.env) {
+      if (seen.has(k)) continue;
+      const val = resolveComposeValue(raw);
+      if (!FS_PATH_RE.test(val)) continue;
+      const v = verdictFor(k, val, null, null);
+      rows.push({ service: svc.name, var: k, default: null, envVal: val, targets, ...v });
+    }
+  }
+  return rows.sort((a, b) => a.service.localeCompare(b.service) || a.var.localeCompare(b.var));
+}
+
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.selfTest) return runSelfTest(opts); // T9 — định nghĩa sau
@@ -363,6 +439,12 @@ function main() {
     console.log(`     ↳ ${p.sources.join(', ')}`);
   }
   console.log(`\n== T1 extraction OK (classify A1 + exit semantics ghép ở T4/T5) ==`);
+
+  // ── Trục (b) — volume mounts drift ───────────────────────────────────────
+  const axisB = analyzeAxisB(compose, placeholders);
+  console.log(`\n== Trục (b): ${axisB.length} path-requirement, ${axisB.filter((r) => r.status === 'DANGEROUS').length} DANGEROUS ==`);
+  for (const r of axisB)
+    console.log(`   [${r.status}] ${r.service} · ${r.var} · eff=${r.envVal != null ? r.envVal : maskValue(r.var, r.default)} — ${r.note}\n      ↳ ${r.evidence}`);
 }
 
 try { main(); } catch (e) {

@@ -70,9 +70,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Chạy tay trên repo thật — cột service × var in ra hợp lý (spot-check LOG_URI, SPRING_DATASOURCE_URL, JWT_PUBLIC_KEY_PATH)
 
 ### Task 2 — trục (b) volume mounts drift (executor A)
-- [ ] Collect path service đọc lúc boot: env có value shape path (`/...`, `./...`, `*.pem`, `*keystore*`) + `@Value` path defaults
-- [ ] So compose `volumes:` container-target prefix-match (A6) — thiếu mount → DANGEROUS, path lệch target → DANGEROUS, host-relative normalize basename
-- [ ] Spot-check identity (`/keys/jwt-private.pem` ↔ `./infra/keys:/keys:ro`) = OK
+- [x] Collect path service đọc lúc boot: env có value shape path (`/...`, `./...`, `*.pem`, `*keystore*`) + `@Value` path defaults
+- [x] So compose `volumes:` container-target prefix-match (A6) — thiếu mount → DANGEROUS, path lệch target → DANGEROUS, host-relative normalize basename
+- [x] Spot-check identity (`/keys/jwt-private.pem` ↔ `./infra/keys:/keys:ro`) = OK
 
 ### Task 3 — trục (c) compose value drift closed checklist (executor A)
 - [ ] Checklist A7: max_connections ≥ 110 · healthcheck per JVM service · bảng flag constant + rationale

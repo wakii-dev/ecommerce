@@ -116,11 +116,11 @@ khi xong.
 **Exit:** `make qa-fresh-boot` KHÔNG flag → exit 3 (bằng chứng — ĐÃ CHẠY: make in Error 3, refuse ở gate, log /tmp/qa-fresh-boot-20260910-074542.log); gitignore có backups/; README có runbook.
 
 ### Task T-V — dry-run 1 lần toàn bộ (coordinator — destructive, consent đã có)
-- [ ] TV.0 Pre-clean stale-env: lsof-discover process lạ giữ port gate (tầm nhìn: next-server mồ côi :3000 từ main checkout — dev server không data) → kill + ghi vào report; PID tra tại thời điểm chạy, KHÔNG hardcode; vite rig cũ :5373/:5376 KHÔNG đụng (ngoài list gate)
-- [ ] TV.1 Bằng chứng refuse: (1) không flag khi stack sống → exit 3; (2) CÓ flag khi stack sống → exit 3 idle-check
-- [ ] TV.2 Coordinator down TOÀN BỘ stack KHÔNG -v (`docker compose --profile full --profile stripe down --remove-orphans` — compose-ps phải rỗng để GATE pass; KHÔNG down app-only: compose-ps vẫn non-empty → gate tự refuse dry-run — plan-critic P0-1; wipe -v là VIỆC CỦA HARNESS, postgres do T3.1 tự revive) → chạy `QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` nền + poll `/tmp/qa-fresh-boot-*.log`
-- [ ] TV.3 Verify từng dòng ACCEPTANCE pack (5 dòng) bằng log timestamp + file backup + RESTORE-TEST + health gates + SEED XONG + PROBES từng cái
-- [ ] TV.4 Ghi `docs/superpowers/qa/report-sf2.md`: thời gian từng stage + tổng + verdict probe + findings (MinIO url rỗng nếu có) + evidence log path + **inline các đoạn log then chốt** (log /tmp bị macOS dọn định kỳ) + **ghi rõ RESUME=BUILD là untested-path** (chỉ code-inspect — không credit như đã exercised)
+- [x] TV.0 Pre-clean stale-env: lsof-discover process lạ giữ port gate (tầm nhìn: next-server mồ côi :3000 từ main checkout — dev server không data) → kill + ghi vào report; PID tra tại thời điểm chạy, KHÔNG hardcode; vite rig cũ :5373/:5376 KHÔNG đụng (ngoài list gate)
+- [x] TV.1 Bằng chứng refuse: (1) không flag khi stack sống → exit 3; (2) CÓ flag khi stack sống → exit 3 idle-check
+- [x] TV.2 Coordinator down TOÀN BỘ stack KHÔNG -v (`docker compose --profile full --profile stripe down --remove-orphans` — compose-ps phải rỗng để GATE pass; KHÔNG down app-only: compose-ps vẫn non-empty → gate tự refuse dry-run — plan-critic P0-1; wipe -v là VIỆC CỦA HARNESS, postgres do T3.1 tự revive) → chạy `QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` nền + poll `/tmp/qa-fresh-boot-*.log`
+- [x] TV.3 Verify từng dòng ACCEPTANCE pack (5 dòng) bằng log timestamp + file backup + RESTORE-TEST + health gates + SEED XONG + PROBES từng cái
+- [x] TV.4 Ghi `docs/superpowers/qa/report-sf2.md`: thời gian từng stage + tổng + verdict probe + findings (MinIO url rỗng nếu có) + evidence log path + **inline các đoạn log then chốt** (log /tmp bị macOS dọn định kỳ) + **ghi rõ RESUME=BUILD là untested-path** (chỉ code-inspect — không credit như đã exercised)
 
 **Recovery nếu dry-run đỏ giữa chừng** (plan-critic P0-3 — wipe đã xảy ra, stack chết/half-dead):
 - Exit 7 (health fail) hoặc seed-fail exit 4: stack đang up-lỡ → `docker compose --profile full --profile stripe down --remove-orphans` (KHÔNG -v) → fix nguyên nhân → re-run `QA_FRESH_BOOT_RESUME=BUILD QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot` (marker `.run/qa-fresh-boot-wiped` từ run trước hợp lệ — skip BACKUP/DOWN, BACKUP lại trên DB rỗng sẽ die 4 vô nghĩa) → BUILD (cached) → UP → SEED → PROBES.

@@ -21,3 +21,45 @@ export async function uiLogin(page: Page, email: string, password: string): Prom
 export async function adminUiLogin(page: Page): Promise<void> {
   await uiLogin(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 }
+
+/**
+ * Inject stale guest cart (FI-407 lớp 3b): GHI ĐÈ key `cart:guest:<token>`
+ * bằng CartDocument JSON có line variantId NULL — mô phỏng data cũ trước seed
+ * fix. Shape khớp records CartModels.java (LineItem 9 field; CartDocument:
+ * items/updatedAt/email). Redis exec theo pattern pgExec: E2E_REDIS_CONTAINER
+ * (rig isolate) hoặc `docker compose exec -T redis` (spec-critic P2).
+ * execFileSync ARG-ARRAY — JSON không đi qua /bin/sh (FI-402 P0 pattern).
+ */
+export async function injectStaleGuestCart(input: {
+  guestToken: string;
+  productId: string;
+  slug: string;
+  name: string;
+  unitPrice: number;
+}): Promise<void> {
+  const { execFileSync } = await import('node:child_process');
+  const path = require('node:path') as typeof import('node:path');
+  const repoRoot = path.resolve(__dirname, '../../..');
+  const doc = {
+    items: [
+      {
+        id: crypto.randomUUID(),
+        productId: input.productId,
+        variantId: null, // STALE — dòng cũ trước seed fix
+        qty: 1,
+        slug: input.slug,
+        name: input.name,
+        image: '',
+        unitPrice: input.unitPrice,
+        unavailable: false
+      }
+    ],
+    updatedAt: new Date().toISOString(),
+    email: null
+  };
+  const container = process.env.E2E_REDIS_CONTAINER;
+  const { args, cmd } = container
+    ? { args: ['exec', container, 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc)], cmd: 'docker' }
+    : { args: ['compose', 'exec', '-T', 'redis', 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc)], cmd: 'docker' };
+  execFileSync(cmd, args, { encoding: 'utf8', cwd: repoRoot });
+}

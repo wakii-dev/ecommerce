@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { GATEWAY, SHELL, STOREFRONT } from '../helpers/env';
 import { registerNewUser, type Session } from '../helpers/api';
-import { uiLogin } from '../helpers/journey';
+import { injectStaleGuestCart, uiLogin } from '../helpers/journey';
 
 /**
  * DATA LIFECYCLE (SF-3 FI-407) — regression-lock lớp 3/4/5:
@@ -93,5 +93,46 @@ test.describe('Data lifecycle — lớp 3/4/5 (FI-407)', () => {
     await expect(page.getByTestId('order-status')).toHaveAttribute('data-status-code', 'CONFIRMED', {
       timeout: 60_000
     });
+  });
+
+  test('lớp 3b — stale cart line variantId null: cart render (không 500) → merge → checkout lỗi RÕ RÀNG (.pay-error variantId)', async ({ page }) => {
+    const detail = (await (await page.request.get(`${GATEWAY}/api/catalog/products/${NOKIA_SLUG}?locale=vi`)).json()) as {
+      id: string; name: string; price: number;
+    };
+
+    // guest THẬT qua UI — cart_token cookie sống trong jar (Path=/api/cart)
+    await page.goto(`${STOREFRONT}/vi/p/${NOKIA_SLUG}`);
+    const addResp = page.waitForResponse(
+      (r) => r.url().includes('/api/cart/items') && r.request().method() === 'POST'
+    );
+    await page.getByRole('button', { name: 'THÊM VÀO GIỎ' }).click();
+    expect((await addResp).status()).toBe(200);
+
+    // GHI ĐÈ redis key bằng doc stale (variantId null)
+    const cartToken = (await page.context().cookies()).find((c) => c.name === 'cart_token')!.value;
+    await injectStaleGuestCart({
+      guestToken: cartToken, productId: detail.id, slug: NOKIA_SLUG,
+      name: detail.name, unitPrice: detail.price
+    });
+
+    // cart page render line stale — CartService tolerant (không 500)
+    await page.goto(`${SHELL}/cart`);
+    await expect(page.getByText('Nokia 110').first()).toBeVisible({ timeout: 15_000 });
+
+    // login → chờ merge (listener attach TRƯỚC click — race thật, xem lớp 3a) → user cart mang line stale
+    const mergeResp = page.waitForResponse(
+      (r) => r.url().includes('/api/cart/merge') && r.request().method() === 'POST',
+      { timeout: 10_000 }
+    );
+    await uiLogin(page, user.email, user.password);
+    await mergeResp;
+    await page.goto(`${SHELL}/cart`);
+    await expect(page.getByText('Nokia 110').first()).toBeVisible({ timeout: 15_000 });
+
+    // checkout → 400 validation "items[0].variantId must not be null" surface .pay-error (role=alert) — KHÔNG 500 trắng
+    await gotoCheckoutAndChooseCod(page);
+    await page.getByRole('button', { name: /^Đặt hàng COD/ }).click();
+    await expect(page.locator('.pay-error')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.pay-error')).toContainText('variantId');
   });
 });

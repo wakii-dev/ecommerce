@@ -6,7 +6,7 @@
 
 COMPOSE ?= docker compose
 
-.PHONY: help infra down keys stripe-listen full full-stop dev dev-stop dev-fe seed e2e
+.PHONY: help infra down keys stripe-listen full full-stop dev dev-stop dev-fe seed qa-fresh-boot e2e
 
 help: ## Liệt kê targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -104,6 +104,10 @@ endif
 
 seed: ## (SF-10) Deterministic seed — admin/user demo, WELCOME10/GIAM50K, orders CONFIRMED
 	@bash scripts/seed/seed.sh
+
+qa-fresh-boot: ## (FI-406 SF-2) DESTRUCTIVE fresh-boot harness — backup → wipe → build → up → seed → probes (cần QA_FRESH_BOOT_CONFIRM=1)
+	@test -f scripts/qa/fresh-boot-harness.sh || { echo "✗ thiếu scripts/qa/fresh-boot-harness.sh"; exit 1; }
+	@bash scripts/qa/fresh-boot-harness.sh
 
 e2e: ## (SF-10) Playwright E2E — CẦN dev stack đang chạy (make dev) + .env
 	cd frontend && pnpm --filter @ecommerce/e2e exec playwright test

@@ -112,8 +112,8 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Append CUỐI README: section QA ngắn ≤ 6 dòng (make qa-audit + report path + exit semantics — đây là "tham chiếu" theo bracket; SF-2 viết section fresh-boot RIÊNG sau này, không đụng section này)
 
 ### Task 11 — contracts freshness probe + real run (executor C)
-- [ ] `scripts/qa/contracts-freshness.mjs`: openapi paths+methods vs controllers per service; **map constant yaml→module: `invoice.yaml` → ordering-service (invoice controllers sống trong ordering — không có dir invoice-service)**, còn lại 1:1 theo tên; stale → CT-xx finding; regen marker block
-- [ ] `make qa-audit` REAL RUN — evidence raw output (exit code + counts + time < 5 phút); commit `report-sf1.md` kết quả thật
+- [x] `scripts/qa/contracts-freshness.mjs`: openapi paths+methods vs controllers per service; **map constant yaml→module: `invoice.yaml` → ordering-service (invoice controllers sống trong ordering — không có dir invoice-service)**, còn lại 1:1 theo tên; stale → CT-xx finding; regen marker block — **24 finding (STALE-SPEC=3 · STALE-CTRL=21): notification yaml 2 op không có controller · invoice POST /api/invoice/generate không có Java controller · loyalty/newsletter/oauth/stocks COD/me-reviews 21 route chưa freeze vào yaml**
+- [x] `make qa-audit` REAL RUN — evidence raw output (exit code + counts + time < 5 phút); commit `report-sf1.md` kết quả thật — **0.33s · config-audit 1 (19 unfixed) · s2s 1 (S2S-01/02) · rbac 0 · contracts 1 (CT-01..24) → exit tổng max = 1**
 
 ### Task M — Review + verify + merge + gate (coordinator — meta-steps, KHÔNG checkbox)
 1. code-reviewer round 1 (diff executor A: T1–T5+T9) → fix nếu CHANGES-REQUESTED

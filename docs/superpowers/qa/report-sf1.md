@@ -7,7 +7,7 @@
 > Exit semantics chung 4 script: 0 = 0 finding CHƯA fix · 1 = ≥1 finding CHƯA fix · 2 = script error.
 
 <!-- sf1:summary -->
-**config-audit** run 2026-09-10 00:46:39 UTC — compose `docker-compose.yml` · backend `backend`
+**config-audit** run 2026-09-10 01:34:43 UTC — compose `docker-compose.yml` · backend `backend`
 
 | Trục | Kiểm | DANGEROUS | UNFIXED | FIXED (registry) | WARN (non-finding) |
 | --- | --- | --- | --- | --- | --- |
@@ -19,7 +19,18 @@
 
 > Bảng exit ĐỦ 4 script (config-audit · s2s · rbac · contracts) do recipe `make qa-audit` ghi
 > vào block này SAU KHI đủ 4 exit — script standalone KHÔNG biết exit của script khác.
-<!-- /sf1:summary -->
+<!-- make:exit-table -->
+**Exit-table 4 script (ghi bởi recipe make qa-audit sau khi đủ 4 script chạy — script standalone không biết exit nhau):**
+
+| script | exit |
+| --- | --- |
+| config-audit | 1 |
+| s2s-auth-matrix | 1 |
+| rbac-matrix | 0 |
+| contracts-freshness | 1 |
+
+Exit tổng (max): **1** — legend: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script error. (GNU make bọc recipe-fail → exit tiến trình make luôn 2 khi ≠ 0 — exit-tổng THẬT là số này + dòng Error N của make.)
+<!-- /make:exit-table --><!-- /sf1:summary -->
 
 <!-- sf1:axis-a -->
 ### Trục (a) — env var code ↔ compose (A1)
@@ -30,12 +41,12 @@
 
 | ID | service | var | ghi chú | evidence |
 | --- | --- | --- | --- | --- |
-| CFG-A-01 | cart-service | RABBITMQ_HOST | default localhost trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/cart-service/src/main/resources/application.yml:22 · compose không set RABBITMQ_HOST |
-| CFG-A-02 | catalog-service | INVENTORY_BASE_URL | default http://localhost:8084 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/catalog-service/src/main/resources/application.yml:95 · compose không set INVENTORY_BASE_URL |
-| CFG-A-03 | identity-service | IDENTITY_OAUTH_PUBLIC_BASE_URL | default http://localhost:8080 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/identity-service/src/main/resources/application.yml:50 · compose không set IDENTITY_OAUTH_PUBLIC_BASE_… |
-| CFG-A-04 | identity-service | RABBITMQ_HOST | default localhost trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/identity-service/src/main/resources/application.yml:28 · compose không set RABBITMQ_HOST |
-| CFG-A-05 | notification-service | NOTIFY_STOCK_ALERT_CATALOG_BASE_URL | default http://localhost:8082 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/notification-service/src/main/resources/application.yml:72 · compose không set NOTIFY_STOCK_ALERT_CATA… |
-| CFG-A-06 | ordering-service | AFFILIATE_BASE_URL | default http://localhost:8092 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/ordering-service/src/main/resources/application.yml:71 · compose không set AFFILIATE_BASE_URL |
+| CFG-A-cart-service-RABBITMQ_HOST | cart-service | RABBITMQ_HOST | default localhost trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/cart-service/src/main/resources/application.yml:22 · compose không set RABBITMQ_HOST |
+| CFG-A-catalog-service-INVENTORY_BASE_URL | catalog-service | INVENTORY_BASE_URL | default http://localhost:8084 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/catalog-service/src/main/resources/application.yml:95 · compose không set INVENTORY_BASE_URL |
+| CFG-A-identity-service-IDENTITY_OAUTH_PUBLIC_BASE_URL | identity-service | IDENTITY_OAUTH_PUBLIC_BASE_URL | default http://localhost:8080 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/identity-service/src/main/resources/application.yml:50 · compose không set IDENTITY_OAUTH_PUBLIC_BASE_… |
+| CFG-A-identity-service-RABBITMQ_HOST | identity-service | RABBITMQ_HOST | default localhost trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/identity-service/src/main/resources/application.yml:28 · compose không set RABBITMQ_HOST |
+| CFG-A-notification-service-NOTIFY_STOCK_ALERT_CATALOG_BASE_URL | notification-service | NOTIFY_STOCK_ALERT_CATALOG_BASE_URL | default http://localhost:8082 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/notification-service/src/main/resources/application.yml:72 · compose không set NOTIFY_STOCK_ALERT_CATA… |
+| CFG-A-ordering-service-AFFILIATE_BASE_URL | ordering-service | AFFILIATE_BASE_URL | default http://localhost:8092 trỏ localhost — container không tới được (pattern LOG_URI 9/9) | backend/services/ordering-service/src/main/resources/application.yml:71 · compose không set AFFILIATE_BASE_URL |
 
 **WARN (non-finding, không ảnh hưởng exit):**
 
@@ -43,10 +54,10 @@
 | --- | --- | --- | --- |
 | affiliate-service | SECURITY_JWKS_URI | http://identity-service:8081/.well-know… | set http://identity-service:8081/.well-known/jwks.json — host là compose service nhưng lệch port (— → 8081) —… |
 | affiliate-service | SPRING_DATASOURCE_URL | jdbc:postgresql://postgres:5432/db_affi… | set jdbc:postgresql://postgres:5432/db_affiliate — host là compose service nhưng lệch port (5433 → 5432) — WA… |
-| catalog-service | CATALOG_MINIO_ENABLED | true | set true — host 'true' không phải compose service name, lệch default — WARN non-finding |
+| catalog-service | CATALOG_MINIO_ENABLED | true | set true khác default false — giá trị vô hướng (scalar, không host/port) — WARN non-finding |
 | catalog-service | SPRING_DATASOURCE_URL | jdbc:postgresql://postgres:5432/db_cata… | set jdbc:postgresql://postgres:5432/db_catalog — host là compose service nhưng lệch port (5433 → 5432) — WARN… |
 | gateway | IDENTITY_JWKS_URI | http://identity-service:8081/.well-know… | set http://identity-service:8081/.well-known/jwks.json — host là compose service nhưng lệch port (8080 → 8081… |
-| gateway | SPRING_PROFILES_ACTIVE | full | set full — host 'full' không phải compose service name, lệch default — WARN non-finding |
+| gateway | SPRING_PROFILES_ACTIVE | full | set full khác default dev — giá trị vô hướng (scalar, không host/port) — WARN non-finding |
 | identity-service | SPRING_DATASOURCE_URL | jdbc:postgresql://postgres:5432/db_iden… | set jdbc:postgresql://postgres:5432/db_identity — host là compose service nhưng lệch port (5433 → 5432) — WAR… |
 | inventory-service | SPRING_DATASOURCE_URL | jdbc:postgresql://postgres:5432/db_inve… | set jdbc:postgresql://postgres:5432/db_inventory — host là compose service nhưng lệch port (5433 → 5432) — WA… |
 | notification-service | SPRING_DATASOURCE_URL | jdbc:postgresql://postgres:5432/db_noti… | set jdbc:postgresql://postgres:5432/db_notification — host là compose service nhưng lệch port (5433 → 5432) —… |
@@ -82,7 +93,7 @@
 | cart-service | CART_TTL_DAYS | UNSET | 30 | (không default) |
 | cart-service | CATALOG_BASE_URL | OK | http://localhost:8082 | http://catalog-service:8082 |
 | cart-service | INVENTORY_BASE_URL | OK | http://localhost:8084 | http://inventory-service:8084 |
-| cart-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | (không default) |
+| cart-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | cart-service | RABBITMQ_HOST | DANGEROUS | localhost | (không default) |
 | cart-service | RABBITMQ_PASSWORD | UNSET | «masked» | (không default) |
 | cart-service | RABBITMQ_PORT | UNSET | 5672 | (không default) |
@@ -96,7 +107,7 @@
 | catalog-service | CATALOG_MINIO_ENDPOINT | OK | http://localhost:9000 | http://minio:9000 |
 | catalog-service | ELASTICSEARCH_URI | OK | http://localhost:9200 | http://elasticsearch:9200 |
 | catalog-service | INVENTORY_BASE_URL | DANGEROUS | http://localhost:8084 | (không default) |
-| catalog-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | (không default) |
+| catalog-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | catalog-service | MINIO_ROOT_PASSWORD | UNSET | «masked» | (không default) |
 | catalog-service | MINIO_ROOT_USER | UNSET | minioadmin | (không default) |
 | catalog-service | RABBITMQ_HOST | OK | localhost | rabbitmq |
@@ -122,9 +133,9 @@
 | gateway | ORDERING_URI | OK | http://localhost:8085 | http://ordering-service:8085 |
 | gateway | PARTNER_API_URI | OK | http://localhost:8091 | http://partner-api:8091 |
 | gateway | PAYMENT_URI | OK | http://localhost:8086 | http://payment-service:8086 |
-| gateway | SHELL_WEB_ORIGIN | SKIP-FE | http://localhost:5173 | (không default) |
+| gateway | SHELL_WEB_ORIGIN | SKIP-FE | http://localhost:5173 | http://frontend-web:80 |
 | gateway | SPRING_PROFILES_ACTIVE | WARN | dev | full |
-| gateway | STOREFRONT_WEB_URI | SKIP-FE | http://localhost:3000 | (không default) |
+| gateway | STOREFRONT_WEB_URI | SKIP-FE | http://localhost:3000 | http://storefront-web:3000 |
 | identity-service | ADMIN_EMAIL | UNSET | (rỗng) | (không default) |
 | identity-service | ADMIN_PASSWORD | UNSET | (rỗng) | (không default) |
 | identity-service | IDENTITY_2FA_KEY | UNSET | (rỗng) | (không default) |
@@ -134,8 +145,8 @@
 | identity-service | IDENTITY_REFRESH_TTL_DAYS | UNSET | 30 | (không default) |
 | identity-service | JWT_ACCESS_TTL_SECONDS | UNSET | 900 | (không default) |
 | identity-service | JWT_KID | UNSET | identity-1 | (không default) |
-| identity-service | JWT_PRIVATE_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-private.pem | (không default) |
-| identity-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | (không default) |
+| identity-service | JWT_PRIVATE_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-private.pem | /keys/jwt-private.pem |
+| identity-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | identity-service | OAUTH_FACEBOOK_AUTHORIZE_URI | UNSET | https://www.facebook.com/v19.0/dialog/oauth | (không default) |
 | identity-service | OAUTH_FACEBOOK_CLIENT_ID | UNSET | (rỗng) | (không default) |
 | identity-service | OAUTH_FACEBOOK_CLIENT_SECRET | UNSET | (rỗng) | (không default) |
@@ -157,7 +168,7 @@
 | inventory-service | INVENTORY_LOW_STOCK_THRESHOLD | UNSET | 10 | (không default) |
 | inventory-service | INVENTORY_MAX_TTL_MINUTES | UNSET | 60 | (không default) |
 | inventory-service | INVENTORY_SWEEP_INTERVAL_MS | UNSET | 30000 | (không default) |
-| inventory-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | (không default) |
+| inventory-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | inventory-service | RABBITMQ_HOST | OK | localhost | rabbitmq |
 | inventory-service | RABBITMQ_PASSWORD | UNSET | «masked» | (không default) |
 | inventory-service | RABBITMQ_PORT | UNSET | 5672 | (không default) |
@@ -167,7 +178,7 @@
 | inventory-service | SPRING_DATASOURCE_URL | WARN | jdbc:postgresql://localhost:5433/db_inventory | jdbc:postgresql://postgres:5432/db_inventory |
 | inventory-service | SPRING_DATASOURCE_USERNAME | UNSET | postgres | (không default) |
 | inventory-service | SPRING_PROFILES_ACTIVE | UNSET | dev | (không default) |
-| log-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | (không default) |
+| log-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | log-service | MONGO_DATABASE | OK | db_log | db_log |
 | log-service | MONGO_URI | OK | mongodb://localhost:27017 | mongodb://mongo:27017 |
 | log-service | RABBITMQ_HOST | OK | localhost | rabbitmq |
@@ -184,7 +195,7 @@
 | notification-service | NOTIFY_IDENTITY_BASE_URL | OK | http://localhost:8081 | http://identity-service:8081 |
 | notification-service | NOTIFY_IDENTITY_TIMEOUT_MS | UNSET | 5000 | (không default) |
 | notification-service | NOTIFY_MAIL_FROM | UNSET | Ecommerce Demo <no-reply@demo.vn> | (không default) |
-| notification-service | NOTIFY_MY_ORDERS_URL | SKIP-FE | http://localhost:5173/account/orders | (không default) |
+| notification-service | NOTIFY_MY_ORDERS_URL | SKIP-FE | http://localhost:5173/account/orders | http://localhost:8080/account/orders |
 | notification-service | NOTIFY_ORDERING_TIMEOUT_MS | UNSET | 10000 | (không default) |
 | notification-service | NOTIFY_RESET_PASSWORD_URL | SKIP-FE | «masked» | (không default) |
 | notification-service | NOTIFY_SERVICE_ACCOUNT_EMAIL | OK | notification-svc@ecommerce.local | notification-svc@ecommerce.local |
@@ -283,8 +294,8 @@
 
 | ID | service | var | ghi chú | evidence |
 | --- | --- | --- | --- | --- |
-| CFG-B-01 | affiliate-service | JWT_PUBLIC_KEY_PATH | code cần path, compose không set env + không mount volume | backend/services/affiliate-service/src/main/java/com/ecommerce/affiliate/config/JwtDecoderConfig.java:47 · compose khôn… |
-| CFG-B-02 | invoice-service | INVOICE_FONT_PATH | path /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf không thuộc volume target nào (không có) | compose env INVOICE_FONT_PATH (set) · không có volumes |
+| CFG-B-affiliate-service-jwt-public.pem | affiliate-service | JWT_PUBLIC_KEY_PATH | code cần path, compose không set env + không mount volume | backend/services/affiliate-service/src/main/java/com/ecommerce/affiliate/config/JwtDecoderConfig.java:47 · compose khôn… |
+| CFG-B-invoice-service-DejaVuSans.ttf | invoice-service | INVOICE_FONT_PATH | path /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf không thuộc volume target nào (không có) | compose env INVOICE_FONT_PATH (set) · không có volumes |
 
 **Bảng đầy đủ:**
 
@@ -309,17 +320,17 @@
 
 | ID | service | check | ghi chú | evidence |
 | --- | --- | --- | --- | --- |
-| CFG-C-01 | affiliate-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/affiliate-service/Dockerfile |
-| CFG-C-02 | cart-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/cart-service/Dockerfile |
-| CFG-C-03 | catalog-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/catalog-service/Dockerfile |
-| CFG-C-04 | gateway | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/gateway/Dockerfile |
-| CFG-C-05 | identity-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/identity-service/Dockerfile |
-| CFG-C-06 | inventory-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/inventory-service/Dockerfile |
-| CFG-C-07 | log-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/log-service/Dockerfile |
-| CFG-C-08 | notification-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/notification-service/Dockerfile |
-| CFG-C-09 | ordering-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/ordering-service/Dockerfile |
-| CFG-C-10 | partner-api | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/partner-api/Dockerfile |
-| CFG-C-11 | payment-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/payment-service/Dockerfile |
+| CFG-C-affiliate-service-healthcheck | affiliate-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/affiliate-service/Dockerfile |
+| CFG-C-cart-service-healthcheck | cart-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/cart-service/Dockerfile |
+| CFG-C-catalog-service-healthcheck | catalog-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/catalog-service/Dockerfile |
+| CFG-C-gateway-healthcheck | gateway | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/gateway/Dockerfile |
+| CFG-C-identity-service-healthcheck | identity-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/identity-service/Dockerfile |
+| CFG-C-inventory-service-healthcheck | inventory-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/inventory-service/Dockerfile |
+| CFG-C-log-service-healthcheck | log-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/log-service/Dockerfile |
+| CFG-C-notification-service-healthcheck | notification-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/notification-service/Dockerfile |
+| CFG-C-ordering-service-healthcheck | ordering-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/ordering-service/Dockerfile |
+| CFG-C-partner-api-healthcheck | partner-api | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/partner-api/Dockerfile |
+| CFG-C-payment-service-healthcheck | payment-service | healthcheck | JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart | build dockerfile: backend/services/payment-service/Dockerfile |
 
 **Bảng đầy đủ:**
 
@@ -344,7 +355,7 @@
 <!-- sf1:s2s -->
 ### s2s auth matrix — STATIC (A2 · A3 · A5)
 
-Run 2026-09-10 01:07:11 UTC — enumerate tĩnh 24 pair path-granularity (pair := client class × endpoint path; ngưỡng A2 ≥ 23: **ĐẠT**) · 14 client file main-source in-scope · 4 file loại trừ A3 · 9 SecurityConfig parse.
+Run 2026-09-10 01:34:43 UTC — enumerate tĩnh 24 pair path-granularity (pair := client class × endpoint path; ngưỡng A2 ≥ 23: **ĐẠT**) · 14 client file main-source in-scope · 4 file loại trừ A3 · 9 SecurityConfig parse.
 
 Guard đích = SecurityConfig service ĐÍCH, service-side path (s2s gọi thẳng port service, KHÔNG qua gateway StripPrefix). `permitAll*` = service không SecurityConfig + không spring-security (payment · invoice-Python) — special rule plan-critic: ghi note, KHÔNG GAP. Verdicts: **EXPECTED_OK=22 · DANGEROUS=2 · GAP=0** → exit **1**.
 
@@ -394,7 +405,7 @@ Drift check: enumerate 24 call-site ↔ curated 24 rows — 1:1 (0 stale, 0 miss
 <!-- sf1:rbac -->
 ### RBAC expected matrix — closed list (A8)
 
-Run 2026-09-10 01:15:28 UTC — static scan 9 SecurityConfig + @PreAuthorize + controllers. **50 endpoint ADMIN** (12 controllers kỳ vọng: 12/12 thấy + 1 extra ngoài list: inventory-service/InventoryQueryController) × 3 cột EXPECTED: guest→401 · user→403 · admin→2xx. Đóng list — không "...".
+Run 2026-09-10 01:34:43 UTC — static scan 9 SecurityConfig + @PreAuthorize + controllers. **50 endpoint ADMIN** (12 controllers kỳ vọng: 12/12 thấy + 1 extra ngoài list: inventory-service/InventoryQueryController) × 3 cột EXPECTED: guest→401 · user→403 · admin→2xx. Đóng list — không "...".
 
 **Matrix admin (50 endpoint) — cell = EXPECTED:**
 
@@ -480,5 +491,55 @@ Run 2026-09-10 01:15:28 UTC — static scan 9 SecurityConfig + @PreAuthorize + c
 <!-- /sf1:rbac -->
 
 <!-- sf1:contracts -->
-(chờ contracts-freshness.mjs ghi)
+### Contracts freshness — openapi ↔ controllers (A12)
+
+Run 2026-09-10 01:34:43 UTC — 10 yaml ↔ 9 module backend. So khớp **(method, path)** sau chuẩn hóa: strip gateway-prefix theo gateway-routes.yml (identity/ordering StripPrefix=2 · inventory/payment StripPrefix=1 · còn lại 0) · `{param}` → `{*}` (Spring match theo vị trí segment, không tên biến) · ignore-list non-API áp 2 phía: actuator, swagger, swagger-ui, swagger-ui.html, v3, error, internal.
+
+**Findings: 24** (STALE-SPEC=3 — spec-op không có controller · STALE-CTRL=21 — controller route không có spec-op) → exit **1**. FINDING-ONLY — không tự sửa contracts/ hay controller (fix = SF-4).
+
+**Chi tiết finding (CT-xx — A11 deterministic, service-scoped):**
+
+| ID | chiều | module | route (service-side) | ghi chú | evidence |
+| --- | --- | --- | --- | --- | --- |
+| CT-01 | STALE-CTRL | affiliate-service | GET /api/affiliate/admin/loyalty | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-02 | STALE-CTRL | affiliate-service | GET /api/affiliate/me/loyalty | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-03 | STALE-CTRL | affiliate-service | GET /api/affiliate/me/loyalty/ledger | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-04 | STALE-CTRL | affiliate-service | POST /api/affiliate/admin/affiliates/{id}/reactivate | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-05 | STALE-CTRL | affiliate-service | POST /api/affiliate/admin/affiliates/{id}/suspend | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-06 | STALE-CTRL | affiliate-service | POST /api/affiliate/admin/loyalty/adjust | controller route không có spec-op nào khai báo (yaml: affiliate) | backend/services/affiliate-service/src/main/java/com/ecommerce/affili… |
+| CT-07 | STALE-CTRL | catalog-service | DELETE /api/catalog/me/reviews/{id} | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-08 | STALE-CTRL | catalog-service | GET /api/catalog/admin/products/export.csv | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-09 | STALE-CTRL | catalog-service | GET /api/catalog/me/reviews | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-10 | STALE-CTRL | catalog-service | GET /api/catalog/products/{slug}/related | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-11 | STALE-CTRL | catalog-service | GET /api/catalog/products/by-id/{id} | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-12 | STALE-CTRL | catalog-service | PUT /api/catalog/me/reviews/{id} | controller route không có spec-op nào khai báo (yaml: catalog) | backend/services/catalog-service/src/main/java/com/ecommerce/catalog/… |
+| CT-13 | STALE-CTRL | identity-service | GET /.well-known/oauth-providers | controller route không có spec-op nào khai báo (yaml: identity) | backend/services/identity-service/src/main/java/com/ecommerce/identit… |
+| CT-14 | STALE-CTRL | identity-service | GET /admin/newsletter | controller route không có spec-op nào khai báo (yaml: identity) | backend/services/identity-service/src/main/java/com/ecommerce/identit… |
+| CT-15 | STALE-CTRL | identity-service | PATCH /me | controller route không có spec-op nào khai báo (yaml: identity) | backend/services/identity-service/src/main/java/com/ecommerce/identit… |
+| CT-16 | STALE-CTRL | identity-service | POST /newsletter | controller route không có spec-op nào khai báo (yaml: identity) | backend/services/identity-service/src/main/java/com/ecommerce/identit… |
+| CT-17 | STALE-CTRL | identity-service | POST /oauth/exchange | controller route không có spec-op nào khai báo (yaml: identity) | backend/services/identity-service/src/main/java/com/ecommerce/identit… |
+| CT-18 | STALE-CTRL | inventory-service | GET /inventory/admin/stocks/{variantId} | controller route không có spec-op nào khai báo (yaml: inventory) | backend/services/inventory-service/src/main/java/com/ecommerce/invent… |
+| CT-19 | STALE-CTRL | inventory-service | PUT /inventory/admin/stocks | controller route không có spec-op nào khai báo (yaml: inventory) | backend/services/inventory-service/src/main/java/com/ecommerce/invent… |
+| CT-20 | STALE-SPEC | notification-service | GET /api/notification/admin/emails | spec-op không có controller nào map route (yaml notification) | contracts/openapi/notification.yaml:49 |
+| CT-21 | STALE-SPEC | notification-service | POST /api/notification/emails | spec-op không có controller nào map route (yaml notification) | contracts/openapi/notification.yaml:18 |
+| CT-22 | STALE-CTRL | ordering-service | GET /admin/orders/export.csv | controller route không có spec-op nào khai báo (yaml: invoice, ordering) | backend/services/ordering-service/src/main/java/com/ecommerce/orderin… |
+| CT-23 | STALE-SPEC | ordering-service | POST /api/invoice/generate | spec-op không có controller nào map route (yaml invoice) | contracts/openapi/invoice.yaml:22 |
+| CT-24 | STALE-CTRL | payment-service | POST /payment/cod/captures | controller route không có spec-op nào khai báo (yaml: payment) | backend/services/payment-service/src/main/java/com/ecommerce/payment/… |
+
+**Coverage per yaml:**
+
+| yaml | module | path khai báo | ops so khớp | ignored spec | ignored ctrl | stale-spec | stale-ctrl* |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| affiliate.yaml | affiliate-service | 10 | 9 | 1 | 1 | 0 | 6 |
+| cart.yaml | cart-service | 4 | 6 | 0 | 0 | 0 | 0 |
+| catalog.yaml | catalog-service | 18 | 26 | 0 | 2 | 0 | 6 |
+| identity.yaml | identity-service | 15 | 15 | 0 | 0 | 0 | 5 |
+| inventory.yaml | inventory-service | 3 | 3 | 0 | 0 | 0 | 2 |
+| invoice.yaml | ordering-service | 1 | 1 | 0 | 0 | 1 | 1 |
+| notification.yaml | notification-service | 2 | 2 | 0 | 0 | 2 | 0 |
+| ordering.yaml | ordering-service | 27 | 30 | 0 | 0 | 0 | 1 |
+| partner-api.yaml | partner-api | 6 | 6 | 0 | 0 | 0 | 0 |
+| payment.yaml | payment-service | 4 | 4 | 0 | 0 | 0 | 1 |
+
+> *stale-ctrl gộp theo MODULE (module nhận union các yaml map vào nó — vd ordering-service: ordering.yaml + invoice.yaml). Map CONSTANT A12: `invoice.yaml → ordering-service` (không có module invoice-service trong backend/ — renderer Python :8090 ngoài backend/, probe chỉ scan Java @*Mapping nên op POST /api/invoice/generate stale-spec là ĐÚNG hiện trạng). Scope: log-service/template-service/gateway không có yaml → ngoài probe. Phương pháp: parse line-level (A9, fail-loud exit 2) — spec: `paths:` indent 0, path key indent 2, verb key indent 4; controller: class-level `@RequestMapping` + method-level `@*Mapping` (chỉ file *Controller.java src/main). Không đọc .env; không emit giá trị env (chuỗi khớp secret-pattern → «masked»).
 <!-- /sf1:contracts -->

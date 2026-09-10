@@ -554,7 +554,7 @@ stage_seed() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage PROBES (T8) — 6 probe (a→f), COLLECT-ALL findings (không fail-fast),
+# Stage PROBES (T8) — 7 sub-probe (a→f; rbac đếm 2), COLLECT-ALL findings (không fail-fast),
 # verdict bảng cuối. Có FAIL → die 6 (stack vẫn seeded — findings minh bạch).
 # ─────────────────────────────────────────────────────────────────────────────
 FINDINGS=()
@@ -562,6 +562,15 @@ PROBE_RESULTS=()
 PROBE_TOTAL=0
 PROBE_FAILS=0
 ADMIN_TOKEN=""
+PROBE_TMP=()  # mktemp files của probe — đăng ký TẠI CHỖ (in-shell, không qua
+              # command substitution — subshell làm mất phép +=) — dọn ở cuối stage
+
+probe_tmps_rm() {
+  local t
+  for t in ${PROBE_TMP[@]+"${PROBE_TMP[@]}"}; do
+    rm -f "${t}"
+  done
+}
 
 probe_result() {  # probe_result <tên> <PASS|FAIL> <ghi chú>
   PROBE_TOTAL=$(( PROBE_TOTAL + 1 ))
@@ -588,11 +597,13 @@ psql_catalog() {  # psql_catalog <sql> — query db_catalog qua exec (lỗi → 
   "${COMPOSE[@]}" exec -T postgres psql -U postgres -d db_catalog -tAc "$1" 2>/dev/null || true
 }
 
-json_get() {  # json_get <file> <key> — python3 host (rỗng nếu thiếu/parse-fail)
+json_get() {  # json_get <file> <key> — python3 host (rỗng nếu thiếu/null/parse-fail)
   python3 -c '
 import json, sys
 data = json.load(open(sys.argv[1]))
-v = data.get(sys.argv[2], "")
+v = data.get(sys.argv[2])
+if v is None:
+    sys.exit(0)  # thiếu HOẶC null → rỗng (null token không được nuốt thành "null")
 sys.stdout.write(v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
 ' "$1" "$2" 2>/dev/null || true
 }
@@ -623,7 +634,7 @@ probe_login() {
   password="$(env_value ADMIN_PASSWORD)"
   [[ -n "${password}" ]] || password="admin123"
   payload="$(printf '{"email":"%s","password":"%s"}' "${email}" "${password}")"
-  tmp="$(mktemp)"
+  tmp="$(mktemp)"; PROBE_TMP+=("${tmp}")
   code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 -X POST \
     http://localhost:8080/api/identity/auth/login \
     -H 'Content-Type: application/json' -d "${payload}")"
@@ -647,7 +658,7 @@ probe_guest_cart() {
     return
   fi
   payload="$(printf '{"productId":"%s","qty":1}' "${pid}")"
-  tmp="$(mktemp)"
+  tmp="$(mktemp)"; PROBE_TMP+=("${tmp}")
   code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 -X POST \
     http://localhost:8080/api/cart/items \
     -H 'Content-Type: application/json' -d "${payload}")"
@@ -662,7 +673,7 @@ probe_guest_cart() {
 # (d) Events API — GET /api/log/admin/events với JWT từ (b)
 probe_events() {
   local code tmp
-  tmp="$(mktemp)"
+  tmp="$(mktemp)"; PROBE_TMP+=("${tmp}")
   code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 \
     -H "Authorization: Bearer ${ADMIN_TOKEN}" \
     "http://localhost:8080/api/log/admin/events?page=0&size=1")"
@@ -699,7 +710,9 @@ probe_rbac() {
     probe_result "rbac-guest-put" FAIL "guest PUT → ${guest_code:-?} (expect 401/403)"
   fi
 
-  tmp_get="$(mktemp)"; tmp_put="$(mktemp)"; tmp_reget="$(mktemp)"
+  tmp_get="$(mktemp)"; PROBE_TMP+=("${tmp_get}")
+  tmp_put="$(mktemp)"; PROBE_TMP+=("${tmp_put}")
+  tmp_reget="$(mktemp)"; PROBE_TMP+=("${tmp_reget}")
   get_code="$(curl -s -o "${tmp_get}" -w '%{http_code}' --max-time 15 \
     -H "Authorization: Bearer ${ADMIN_TOKEN}" "${base}")"
   if [[ "${get_code}" != "200" ]]; then
@@ -755,8 +768,10 @@ probe_port_owner() {
     [[ -n "${pids}" ]] || continue
     for pid in ${pids}; do
       cmd="$(ps -p "${pid}" -o comm= 2>/dev/null || true)"
+      # macOS comm= trả FULL PATH (vd /Applications/Docker.app/Contents/MacOS/
+      # com.docker.backend) — KHÔNG phải truncation 9-char của cột COMMAND lsof
       case "${cmd}" in
-        com.docke|docker) : ;;  # docker-published (gateway :8080...) — expected
+        *com.docker*|docker|*/docker*|*vpnkit*) : ;;  # docker-published — expected
         *)
           strays=$(( strays + 1 ))
           add_finding "stale-env: port ${port} giữ bởi PID ${pid} ${cmd:-?}"
@@ -772,7 +787,7 @@ probe_port_owner() {
 }
 
 stage_probes() {
-  log "[probes] collect-ALL — 6 probe (a→f), không fail-fast, verdict bảng cuối"
+  log "[probes] collect-ALL — 7 sub-probe (a→f; rbac = guest-put + roundtrip), không fail-fast, verdict bảng cuối"
   probe_minio_image
   probe_login
   probe_guest_cart
@@ -786,6 +801,7 @@ stage_probes() {
     log "[probes]   ${r}"
   done
 
+  probe_tmps_rm  # dọn tmp probe trước mọi lối ra
   if (( PROBE_FAILS > 0 )); then
     log "[probes] FINDINGS (${#FINDINGS[@]}):"
     for r in ${FINDINGS[@]+"${FINDINGS[@]}"}; do

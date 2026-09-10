@@ -24,8 +24,8 @@
  * Map CONSTANT (A12): `invoice.yaml` → ordering-service (invoice controllers
  * sống trong ordering-service — KHÔNG có module invoice-service trong
  * backend/; note: /api/invoice/generate thực tế do invoice-service Python
- * :8090 serve ngoài backend/ — probe chỉ scan Java @*Mapping → stale-spec
- * được báo đúng hiện trạng, không tự suy diễn).
+ * :8090 serve ngoài backend/ — probe chỉ scan Java @*Mapping → op bị bỏ qua
+ * qua IGNORE_SEGMENTS segment 'generate' (CT-23, SF-4/FI-408), không tự suy diễn).
  *
  * Exit semantics: 0 = 0 finding CHƯA fix · 1 = ≥1 finding (CT-xx) ·
  * 2 = script error (fail-loud — shape yaml/controller không parse được).
@@ -72,7 +72,7 @@ const STRIP_PREFIX = new Map([
 // Ignore-list non-API path (constant, áp CẢ 2 PHÍA spec lẫn controller —
 // endpoint hạ tầng/không thuộc hợp đồng API công khai: actuator health,
 // swagger docs, internal s2s (đã phủ ở s2s-auth-matrix), error page).
-const IGNORE_SEGMENTS = ['actuator', 'swagger', 'swagger-ui', 'swagger-ui.html', 'v3', 'error', 'internal'];
+const IGNORE_SEGMENTS = ['actuator', 'swagger', 'swagger-ui', 'swagger-ui.html', 'v3', 'error', 'internal', 'generate']; // CT-23 — invoice renderer Python (services/invoice-service/, ngoài backend/) — probe chỉ scan Java; blind-spot vô hạn + op này có thật ở runtime (s2s matrix row HttpInvoiceProvider). Segment 'generate' surgical — KHÔNG ignore cả 'invoice'.
 const isIgnoredPath = (p) => p.split('/').some((seg) => IGNORE_SEGMENTS.includes(seg));
 
 // Module SCOPE của probe = các module CÓ yaml (YAML_TO_MODULE values).
@@ -361,7 +361,7 @@ function main() {
     '',
     mdTable(['yaml', 'module', 'path khai báo', 'ops so khớp', 'ignored spec', 'ignored ctrl', 'stale-spec', 'stale-ctrl*'], covRows),
     '',
-    `> *stale-ctrl gộp theo MODULE (module nhận union các yaml map vào nó — vd ordering-service: ordering.yaml + invoice.yaml). Map CONSTANT A12: \`invoice.yaml → ordering-service\` (không có module invoice-service trong backend/ — renderer Python :8090 ngoài backend/, probe chỉ scan Java @*Mapping nên op POST /api/invoice/generate stale-spec là ĐÚNG hiện trạng). Scope: log-service/template-service/gateway không có yaml → ngoài probe. Phương pháp: parse line-level (A9, fail-loud exit 2) — spec: \`paths:\` indent 0, path key indent 2, verb key indent 4; controller: class-level \`@RequestMapping\` + method-level \`@*Mapping\` (chỉ file *Controller.java src/main). Không đọc .env; không emit giá trị env (chuỗi khớp secret-pattern → «masked»).`,
+    `> *stale-ctrl gộp theo MODULE (module nhận union các yaml map vào nó — vd ordering-service: ordering.yaml + invoice.yaml). Map CONSTANT A12: \`invoice.yaml → ordering-service\` (không có module invoice-service trong backend/ — renderer Python :8090 ngoài backend/, probe chỉ scan Java @*Mapping nên op POST /api/invoice/generate được bỏ qua qua IGNORE_SEGMENTS segment 'generate' — CT-23 SF-4/FI-408; runtime cover bởi s2s matrix row HttpInvoiceProvider). Scope: log-service/template-service/gateway không có yaml → ngoài probe. Phương pháp: parse line-level (A9, fail-loud exit 2) — spec: \`paths:\` indent 0, path key indent 2, verb key indent 4; controller: class-level \`@RequestMapping\` + method-level \`@*Mapping\` (chỉ file *Controller.java src/main). Không đọc .env; không emit giá trị env (chuỗi khớp secret-pattern → «masked»).`,
   ].join('\n');
   upsertSection(opts.report, 'contracts', content);
 

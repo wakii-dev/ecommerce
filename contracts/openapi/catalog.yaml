@@ -193,6 +193,66 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/catalog/products/by-id/{id}:
+    get:
+      tags: [products]
+      operationId: getProductById
+      summary: Chi tiet san pham theo id (FI-397)
+      description: |
+        Cung shape PDP — ordering re-price saga goi theo id (public; duong dan
+        admin cu → 401 vi ordering khong co token service). Draft/deleted → 404.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+      responses:
+        '200':
+          description: Chi tiet san pham.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/products/{slug}/related:
+    get:
+      tags: [products]
+      operationId: listRelatedProducts
+      summary: San pham tuong tu (SF-13 A6b)
+      description: |
+        "San pham tuong tu" tren PDP — ES more_like_this + fill cung category.
+        Slug la → page rong 200 (PDP an section).
+      parameters:
+        - $ref: '#/components/parameters/SlugPath'
+        - name: size
+          in: query
+          required: false
+          description: So luong (mac dinh 8).
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+        - name: locale
+          in: query
+          required: false
+          description: Ngon ngu resolve content (D17). Mac dinh vi.
+          schema:
+            type: string
+            enum: [vi, en]
+            default: vi
+      responses:
+        '200':
+          description: Trang san pham lien quan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCardPage'
   /api/catalog/categories:
     get:
       tags: [categories]
@@ -361,6 +421,79 @@ paths:
                 $ref: '#/components/schemas/WishlistIds'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/catalog/me/reviews:
+    get:
+      tags: [reviews]
+      operationId: listMyReviews
+      summary: Danh sach review cua toi (JWT)
+      description: |
+        Review cua chinh user — moi status (PENDING/APPROVED/REJECTED) kem ten
+        product (resolve vi). Loc theo productId khi co (SF-8, FI-310).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: query
+          required: false
+          description: Loc review theo san pham.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Trang review cua toi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeReviewPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/catalog/me/reviews/{id}:
+    put:
+      tags: [reviews]
+      operationId: updateMyReview
+      summary: Sua review cua toi (JWT)
+      description: Chi review con PENDING sua duoc (SF-8).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewSubmitRequest'
+      responses:
+        '200':
+          description: Review da cap nhat (van PENDING).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [reviews]
+      operationId: deleteMyReview
+      summary: Xoa review cua toi (JWT)
+      description: Chi review con PENDING xoa duoc (SF-8).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Da xoa.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/catalog/me/wishlist/{productId}:
     put:
       tags: [wishlist]
@@ -456,6 +589,33 @@ paths:
                 $ref: '#/components/schemas/ProductAdminView'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/catalog/admin/products/export.csv:
+    get:
+      tags: [admin]
+      operationId: adminExportProductsCsv
+      summary: Xuat CSV toan bo san pham (admin)
+      description: |
+        Stream CSV (SF-13 A7b, ADR 0005) — BOM UTF-8 dau stream cho Excel VN.
+        Attachment filename products-<yyyy-mm-dd>.csv.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: File CSV.
+          headers:
+            Content-Disposition:
+              description: attachment; filename="products-<yyyy-mm-dd>.csv"
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                description: Noi dung CSV.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1287,3 +1447,47 @@ components:
         url:
           type: string
           description: URL public /media/** (phat qua gateway).
+    MeReview:
+      type: object
+      description: Review cua toi (SF-8, FI-310) — kem status moderation + ten product.
+      required: [id, productId, productName, rating, content, status, verifiedPurchase, createdAt]
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        productName:
+          type: string
+          description: Ten san pham (resolve vi).
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        verifiedPurchase:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    MeReviewPage:
+      type: object
+      description: Page chuan {items, page, size, total} (1-based).
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeReview'
+        page:
+          type: integer
+          description: Trang hien tai (1-based).
+        size:
+          type: integer
+        total:
+          type: integer

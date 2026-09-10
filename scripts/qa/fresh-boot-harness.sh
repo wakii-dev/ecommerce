@@ -57,7 +57,8 @@ cleanup() {
     kill "${BUILD_PID}" 2>/dev/null
   fi
   if [[ "${LOCK_HELD}" -eq 1 && -d "${LOCK_DIR}" ]]; then
-    rmdir "${LOCK_DIR}" 2>/dev/null
+    # rm -rf (không rmdir) — lock dir chứa file owner
+    rm -rf "${LOCK_DIR}"
   fi
   log "[done] exit=${rc} · total elapsed $(( $(date +%s) - START_EPOCH ))s · log=${LOG}"
   sleep 0.3  # cho tee kịp flush dòng cuối vào LOG

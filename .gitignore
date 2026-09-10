@@ -35,6 +35,9 @@ Thumbs.db
 *.log
 tmp/
 
+# --- QA fresh-boot backups (FI-406) — dumps DB demo, KHÔNG commit ---
+backups/
+
 # --- Python (invoice-service, SF-9) ---
 .venv/
 __pycache__/

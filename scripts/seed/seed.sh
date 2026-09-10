@@ -152,11 +152,17 @@ PYEOF
     [ -n "$PIDC" ] || continue
     F="$IMG_DIR/$SLUGC.png"
     gen_gradient_png "$SLUGC" "$F" || continue
-    UP=$(curl -sf -m 20 -X POST http://localhost:8080/api/catalog/admin/uploads \
-      -H "Authorization: Bearer $ADMIN_TOKEN" -F "image=@$F;type=image/png" 2>/dev/null) || UP=""
+    UP=""; for ATT in 1 2 3 4 5; do
+      UP=$(curl -sf -m 20 -X POST http://localhost:8080/api/catalog/admin/uploads \
+        -H "Authorization: Bearer $ADMIN_TOKEN" -F "image=@$F;type=image/png" 2>/dev/null) || UP=""
+      [ -n "$UP" ] && break
+      # retry: race với minio-init (one-shot tạo bucket chạy sau tier-3 gate —
+      # run 15:21 upload fail vì bucket chưa có; minio-init exit sau seed ~1')
+      [ "$ATT" -lt 5 ] && { log "ảnh: upload thử ${ATT} fail — bucket MinIO có thể đang init, retry sau 6s"; sleep 6; }
+    done
     IMG_URL=$(printf '%s' "$UP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null) || IMG_URL=""
     if [ -z "$IMG_URL" ]; then
-      log "ảnh: upload fail (uploads API chết / 4xx-5xx) — bỏ qua phần còn lại (guard QA-F2-03)"
+      log "ảnh: upload fail sau 5 thử (uploads API chết / 4xx-5xx) — bỏ qua phần còn lại (guard QA-F2-03)"
       break
     fi
     FILLED_N=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-postgres}" -d db_catalog -tAc \

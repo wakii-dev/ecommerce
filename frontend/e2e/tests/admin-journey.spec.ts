@@ -241,6 +241,11 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await expect(page.getByText('Đã cập nhật mã giảm giá')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('tbody tr', { hasText: CODE }).first())
       .toContainText(/60\.000\s*₫/); // formatVnd Intl vi-VN — space có thể non-breaking
+
+    // dọn rác (code-review P2: unskip cần giữ cleanup tail — xóa mã sau round-trip)
+    await page.getByTestId(`coupon-delete-${CODE}`).click();
+    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await expect(page.locator('tbody tr', { hasText: CODE })).toHaveCount(0, { timeout: 15_000 });
   });
 
   test('F — category CRUD round-trip: tạo → sửa tên → xóa (dọn rác)', async ({ page }) => {

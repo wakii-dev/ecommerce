@@ -58,8 +58,10 @@ export async function injectStaleGuestCart(input: {
     email: null
   };
   const container = process.env.E2E_REDIS_CONTAINER;
+  // EX 30 ngày (khớp cart.ttl-days default) — SET trần không TTL để lại key
+  // mồ côi khi run 3b fail giữa chừng (code-review P2 hygiene)
   const { args, cmd } = container
-    ? { args: ['exec', container, 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc)], cmd: 'docker' }
-    : { args: ['compose', 'exec', '-T', 'redis', 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc)], cmd: 'docker' };
+    ? { args: ['exec', container, 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc), 'EX', '2592000'], cmd: 'docker' }
+    : { args: ['compose', 'exec', '-T', 'redis', 'redis-cli', 'SET', `cart:guest:${input.guestToken}`, JSON.stringify(doc), 'EX', '2592000'], cmd: 'docker' };
   execFileSync(cmd, args, { encoding: 'utf8', cwd: repoRoot });
 }

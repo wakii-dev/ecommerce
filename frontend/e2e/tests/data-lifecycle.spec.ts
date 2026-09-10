@@ -14,7 +14,8 @@ import { adminUiLogin, injectStaleGuestCart, uiLogin } from '../helpers/journey'
  *  - Lớp 4: PDP không render "Đã bán" từ ratingCount (fix FI-390); giá =
  *    base + priceDelta (CatalogQueryService.java:254); admin stock = inventory thật.
  *  - Lớp 5: fresh-state — page sống sau fresh boot, entry chunks content-hash,
- *    SW absence (port-owner là detector của harness SF-2 — không assert ở đây).
+ *    SW lock (prod build đăng ký /sw.js — spec amendment §6.1; port-owner là
+ *    detector của harness SF-2 — không assert ở đây).
  *
  * COD checkout (SF-13): CONFIRMED không cần Stripe — env fresh-boot không cam
  * kết stripe keys. Số thật (probe 2026-09-10): Nokia 590.000₫; Biti's Đỏ/40
@@ -175,7 +176,7 @@ test.describe('Data lifecycle — lớp 3/4/5 (FI-407)', () => {
     await expect(page.locator('.admin-variant-row input').nth(4)).toHaveValue(expectedStock, { timeout: 15_000 });
   });
 
-  test('lớp 5 — fresh-state: page sống sau fresh boot + entry chunks content-hash + SW absence', async ({ page, request }) => {
+  test('lớp 5 — fresh-state: page sống sau fresh boot + entry chunks content-hash + SW lock (/sw.js prod)', async ({ page, request }) => {
     const home = await request.get(`${STOREFRONT}/vi`);
     expect(home.status()).toBe(200);
     const html = await home.text();

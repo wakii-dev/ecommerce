@@ -155,4 +155,35 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await expect(imgRow.locator('input').nth(1)).toHaveValue(PRODUCT.imageAlt);
     // Ghi chú D17: variant nameEn KHÔNG round-trip (view trả name resolved — fallback vi) — không assert.
   });
+
+  test('D — edit giá 469000 + stock 44 → save → mở lại giữ đúng (edit round-trip)', async ({ page }) => {
+    await adminUiLogin(page);
+    await page.goto(`${GATEWAY}/admin/products`);
+    await page.getByLabel('Tìm kiếm').fill(PRODUCT.nameVi);
+    await page.keyboard.press('Enter');
+    await page.locator('tbody tr', { hasText: PRODUCT.nameVi }).first()
+      .getByRole('button', { name: 'Sửa' }).click();
+    await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f-]{36}/);
+
+    await page.getByRole('tab', { name: 'Giá' }).click();
+    await page.getByLabel('Giá bán (₫)').fill('469000');
+    await page.getByRole('tab', { name: 'Phân loại' }).click();
+    const row = page.locator('.admin-variant-row').first();
+    await row.locator('input').nth(4).fill('44');
+
+    await page.getByRole('button', { name: 'Đăng bán' }).click();
+    await expect(page.getByText('Đã cập nhật sản phẩm')).toBeVisible({ timeout: 15_000 });
+
+    // reopen — cả giá lẫn stock đổi thật (stock qua inventory sync + availability fetch)
+    await page.goto(`${GATEWAY}/admin/products`);
+    await page.getByLabel('Tìm kiếm').fill(PRODUCT.nameVi);
+    await page.keyboard.press('Enter');
+    await page.locator('tbody tr', { hasText: PRODUCT.nameVi }).first()
+      .getByRole('button', { name: 'Sửa' }).click();
+    await page.getByRole('tab', { name: 'Giá' }).click();
+    await expect(page.getByLabel('Giá bán (₫)')).toHaveValue('469000');
+    await page.getByRole('tab', { name: 'Phân loại' }).click();
+    await expect(page.locator('.admin-variant-row').first().locator('input').nth(4))
+      .toHaveValue('44', { timeout: 15_000 });
+  });
 });

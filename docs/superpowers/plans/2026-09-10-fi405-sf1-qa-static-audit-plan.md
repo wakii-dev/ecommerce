@@ -103,9 +103,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [ ] Regen marker block `rbac` + drift → GAP
 
 ### Task 9 — --self-test fixture negative (executor A, sau T4)
-- [ ] Fixtures: mini backend tree (2 service: 1 đọc `${LOG_URI:http://localhost:8088}`, 1 đọc `/keys/jwt-public.pem`) + 3 compose fixture (thiếu env / thiếu keys mount / max_connections=100) trong `scripts/qa/fixtures/`
-- [ ] `--self-test`: chạy cả 3 trục trên fixtures, assert IDs kỳ vọng (≥1 DANGEROUS per trục), exit 0/1; KHÔNG đụng compose thật
-- [ ] Chạy `--self-test` thật — output trong terminal evidence
+- [x] Fixtures: mini backend tree (2 service: 1 đọc `${LOG_URI:http://localhost:8088}`, 1 đọc `/keys/jwt-public.pem`) + 3 compose fixture (thiếu env / thiếu keys mount / max_connections=100) trong `scripts/qa/fixtures/`
+- [x] `--self-test`: chạy cả 3 trục trên fixtures, assert IDs kỳ vọng (≥1 DANGEROUS per trục), exit 0/1; KHÔNG đụng compose thật
+- [x] Chạy `--self-test` thật — output trong terminal evidence
 
 ### Task 10 — Makefile target + README ref (executor C)
 - [ ] Append CUỐI Makefile: `qa-audit` chạy 4 script (không stop sớm, exit = max, in legend) + **ghi exit-table 4 script vào summary block report** (P1 plan-critic — script standalone không biết exit nhau); comment giải thích semantics; **KHÔNG đụng dòng `.PHONY` (dòng 9) — append-only constraint, ghi comment note chủ đích**

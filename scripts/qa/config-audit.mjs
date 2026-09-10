@@ -710,10 +710,72 @@ function writeReport(opts, data) {
   upsertSection(opts.report, 'axis-c', cC);
 }
 
+// ── --self-test (T9, A10) — fixture negative, KHÔNG đụng compose thật ────────
+// Chạy đủ 3 trục trên scripts/qa/fixtures/ (mini backend 2 service + 3 compose
+// fixture, MỖI case đúng 1 DANGEROUS để test cả isolation). Assert: expected
+// finding xuất hiện (≥1 DANGEROUS per trục, đúng service·var, đúng ID) +
+// các trục còn lại của case = 0. Exit 0 = pass / 1 = fail. KHÔNG ghi report.
+function runSelfTest() {
+  const FIX = join(SCRIPT_DIR, 'fixtures');
+  const fBackend = join(FIX, 'backend');
+  const cases = [
+    {
+      name: 'missing-env',
+      compose: join(FIX, 'compose-missing-env.yml'),
+      axis: 'A',
+      expect: (f) => f.service === 'alpha-service' && f.var === 'LOG_URI',
+    },
+    {
+      name: 'missing-keys-mount',
+      compose: join(FIX, 'compose-missing-keys-mount.yml'),
+      axis: 'B',
+      expect: (f) => f.service === 'beta-service' && f.var === 'JWT_PUBLIC_KEY_PATH',
+    },
+    {
+      name: 'max-connections-100',
+      compose: join(FIX, 'compose-max-connections-100.yml'),
+      axis: 'C',
+      expect: (f) => f.service === 'postgres' && f.check === 'max_connections',
+    },
+  ];
+  let failed = 0;
+  for (const c of cases) {
+    const compose = parseCompose(c.compose);
+    const ph = extractPlaceholders(collectYmlSources(fBackend), collectJavaSources(fBackend), fBackend);
+    const axisA = classifyAxisA(compose, ph);
+    const axisB = analyzeAxisB(compose, ph);
+    const axisC = analyzeAxisC(compose);
+    const { A, B, C } = assignFindingIds(axisA, axisB, axisC);
+    const dang = { A, B, C };
+    const problems = [];
+    for (const ax of ['A', 'B', 'C']) {
+      const n = dang[ax].length;
+      if (ax === c.axis && n < 1) problems.push(`trục đích (${ax}) không bắt được DANGEROUS nào`);
+      if (ax !== c.axis && n > 0) problems.push(`trục ${ax} leakage ${n} DANGEROUS (case phải sạch trục khác)`);
+    }
+    const target = dang[c.axis];
+    if (!target.some(c.expect))
+      problems.push(`expected finding (đúng service·var) không có trong trục ${c.axis}`);
+    const idOk = target.some((f) => f.id === `CFG-${c.axis}-01`);
+    if (!idOk) problems.push(`expected ID CFG-${c.axis}-01 không đúng (thấy: ${target.map((f) => f.id).join(',') || '—'})`);
+    if (problems.length === 0) {
+      console.log(`SELF-TEST [PASS] ${c.name} — trục ${c.axis} bắt DANGEROUS: ${target[0].id} ${target[0].service}·${target[0].var || target[0].check}`);
+    } else {
+      failed++;
+      console.error(`SELF-TEST [FAIL] ${c.name}:`);
+      for (const p of problems) console.error(`   - ${p}`);
+    }
+  }
+  console.log(failed === 0
+    ? `\nSELF-TEST PASS 3/3 — detector bắt đủ cả 3 trục trên fixtures (compose thật không bị đụng)`
+    : `\nSELF-TEST FAIL ${failed}/3`);
+  return failed === 0 ? 0 : 1;
+}
+
 function main() {
 
   const opts = parseArgs(process.argv.slice(2));
-  if (opts.selfTest) return runSelfTest(opts); // T9 — định nghĩa sau
+  if (opts.selfTest) return runSelfTest();
 
   const compose = parseCompose(opts.compose);
   const ymlSources = collectYmlSources(opts.backend);

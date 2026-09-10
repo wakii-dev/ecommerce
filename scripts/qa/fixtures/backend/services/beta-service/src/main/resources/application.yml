@@ -1,0 +1,3 @@
+# Fixture — beta-service đọc JWT key path (pattern keys mount 9/9).
+keys:
+  public-path: ${JWT_PUBLIC_KEY_PATH:/keys/jwt-public.pem}

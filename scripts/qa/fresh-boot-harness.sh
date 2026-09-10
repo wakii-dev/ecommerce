@@ -259,8 +259,24 @@ backup() {
 # Stage DOWN — down -v (WIPE 7 volumes) + marker
 # ─────────────────────────────────────────────────────────────────────────────
 down() {
-  log "[stub] stage DOWN — NOT IMPLEMENTED (T4)"
-  return 0
+  log "[down] docker compose down -v --remove-orphans — WIPE volumes (mongodata/miniodata MẤT VĨNH VIỄN — đã disclose ở GATE)"
+  local t0 leftover
+  t0=$(date +%s)
+  if ! "${COMPOSE[@]}" down -v --remove-orphans; then
+    die 4 "[down] compose down -v FAIL sau $(( $(date +%s) - t0 ))s"
+  fi
+  log "[down] down -v hoàn tất trong $(( $(date +%s) - t0 ))s"
+
+  mkdir -p "${RUN_DIR}"
+  printf '%s\n' "$(date +%Y%m%d-%H%M%S)" > "${MARKER}"
+  log "[down] marker ghi: ${MARKER} = $(cat "${MARKER}") (bằng chứng wipe cho RESUME=BUILD)"
+
+  leftover="$(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -c '^ecommerce-' || true)"
+  if [[ "${leftover}" != "0" ]]; then
+    docker ps -a --format '{{.Names}}' 2>/dev/null | grep '^ecommerce-' || true
+    die 4 "[down] còn ${leftover} container ecommerce-* sau down -v"
+  fi
+  log "[down] verify: 0 container ecommerce-* còn lại"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@
 ### Constraints & hardships
 - Dep freeze; service code + compose READ-ONLY; không HTTP probe; không fresh-boot; Makefile/README chỉ append cuối (SF-2 chung vùng khác); bug-register.md = SF-4.
 - Không yaml lib → parser tự viết, fail-loud.
-- Secret masking bắt buộc (compose nhúng default password `NotifySvc#2026` + STRIPE từ .env).
+- Secret masking bắt buộc (compose nhúng default password chứa `#` — đã redact — + STRIPE từ .env).
 
 ### High-level strategy
 3 executor SERIAL cùng worktree (tránh commit-race — shared-worktree lesson): A = config-audit (T1–T5, T9) → review round 1; B = 2 matrix (T6–T8); C = contracts probe + Makefile/README + real run (T10–T11) → review round 2 full-diff → verifier/security-audit → merge → gate. Bridge 3 task DAG SKIP: single-writer serial + Linear FI-405 + plan file này là task tracking (deviation khai báo — SF 11 tasks nhưng độc lập module, không cần DAG runtime).

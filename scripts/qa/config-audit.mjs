@@ -27,7 +27,9 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(SCRIPT_DIR, '..', '..');
 
 // ── Hằng số chia sẻ ──────────────────────────────────────────────────────────
-const SECRET_RE = /PASS|SECRET|TOKEN|PASSWORD|API_?KEY|PRIVATE/i;
+// Sec-audit R1: thêm ACCESS_?KEY|ROOT_USER — MINIO_ROOT_USER (sibling của
+// MINIO_ROOT_PASSWORD) cũng là credential-bearing (default dev-known — redact).
+const SECRET_RE = /PASS|SECRET|TOKEN|PASSWORD|API_?KEY|PRIVATE|ACCESS_?KEY|ROOT_USER/i;
 // File-path THẬT (có extension) — loại trừ HTTP path như /api/catalog/.../by-id/
 // (trailing slash / không extension) và URL. Dùng để tách data trục (a) vs (b).
 const FS_PATH_RE = /^(\/|\.\.?\/).+\.[A-Za-z0-9]{2,5}$/;
@@ -89,7 +91,8 @@ const SERVICE_KEYS = new Set([
 ]);
 
 // Strip inline `# comment` trong value — CHỈ # có khoảng trắng phía trước và
-// ngoài quote (giữ nguyên `NotifySvc#2026` — # dính chữ không phải comment).
+// ngoài quote (giữ nguyên default password chứa `#` — đã redact: # dính chữ
+// không phải comment).
 function cleanValue(v) {
   let out = '';
   let q = null;
@@ -686,7 +689,7 @@ function buildAxisContent(axisA, axisB, axisC, findings) {
     mdTable(['service', 'var', 'status', 'default', 'compose'], aRows),
   ].join('\n'));
   // axis-b
-  const bRows = axisB.map((r) => [r.service, r.var, trunc(r.envVal != null ? r.envVal : r.default, 46), trunc(r.targets.join(', ') || '—', 30), r.status, trunc(r.note, 90)]);
+  const bRows = axisB.map((r) => [r.service, r.var, trunc(maskValue(r.var, r.envVal != null ? r.envVal : r.default), 46), trunc(r.targets.join(', ') || '—', 30), r.status, trunc(r.note, 90)]);
   const bFind = findings.B.map((f) => [f.id, f.service, f.var, trunc(f.note, 120), trunc(f.evidence, 120)]);
   parts.push([
     '### Trục (b) — volume mounts drift (A6)', '',
@@ -833,7 +836,7 @@ function main() {
   const axisB = analyzeAxisB(compose, placeholders);
   console.log(`\n== Trục (b): ${axisB.length} path-requirement, ${axisB.filter((r) => r.status === 'DANGEROUS').length} DANGEROUS ==`);
   for (const r of axisB)
-    console.log(`   [${r.status}] ${r.service} · ${r.var} · eff=${r.envVal != null ? r.envVal : maskValue(r.var, r.default)} — ${r.note}\n      ↳ ${r.evidence}`);
+    console.log(`   [${r.status}] ${r.service} · ${r.var} · eff=${maskValue(r.var, r.envVal != null ? r.envVal : r.default)} — ${r.note}\n      ↳ ${r.evidence}`);
 
   // ── Trục (c) — closed checklist ──────────────────────────────────────────
   const axisC = analyzeAxisC(compose);

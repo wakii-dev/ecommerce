@@ -7,7 +7,7 @@
 > Exit semantics chung 4 script: 0 = 0 finding CHƯA fix · 1 = ≥1 finding CHƯA fix · 2 = script error.
 
 <!-- sf1:summary -->
-**config-audit** run 2026-09-10 01:34:43 UTC — compose `docker-compose.yml` · backend `backend`
+**config-audit** run 2026-09-10 01:55:13 UTC — compose `docker-compose.yml` · backend `backend`
 
 | Trục | Kiểm | DANGEROUS | UNFIXED | FIXED (registry) | WARN (non-finding) |
 | --- | --- | --- | --- | --- | --- |
@@ -19,18 +19,7 @@
 
 > Bảng exit ĐỦ 4 script (config-audit · s2s · rbac · contracts) do recipe `make qa-audit` ghi
 > vào block này SAU KHI đủ 4 exit — script standalone KHÔNG biết exit của script khác.
-<!-- make:exit-table -->
-**Exit-table 4 script (ghi bởi recipe make qa-audit sau khi đủ 4 script chạy — script standalone không biết exit nhau):**
-
-| script | exit |
-| --- | --- |
-| config-audit | 1 |
-| s2s-auth-matrix | 1 |
-| rbac-matrix | 0 |
-| contracts-freshness | 1 |
-
-Exit tổng (max): **1** — legend: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script error. (GNU make bọc recipe-fail → exit tiến trình make luôn 2 khi ≠ 0 — exit-tổng THẬT là số này + dòng Error N của make.)
-<!-- /make:exit-table --><!-- /sf1:summary -->
+<!-- /sf1:summary -->
 
 <!-- sf1:axis-a -->
 ### Trục (a) — env var code ↔ compose (A1)
@@ -109,7 +98,7 @@ Exit tổng (max): **1** — legend: 0 = 0 unfixed finding · 1 = có finding ch
 | catalog-service | INVENTORY_BASE_URL | DANGEROUS | http://localhost:8084 | (không default) |
 | catalog-service | JWT_PUBLIC_KEY_PATH | SEE-AXIS-B | ../infra/keys/jwt-public.pem | /keys/jwt-public.pem |
 | catalog-service | MINIO_ROOT_PASSWORD | UNSET | «masked» | (không default) |
-| catalog-service | MINIO_ROOT_USER | UNSET | minioadmin | (không default) |
+| catalog-service | MINIO_ROOT_USER | UNSET | «masked» | (không default) |
 | catalog-service | RABBITMQ_HOST | OK | localhost | rabbitmq |
 | catalog-service | RABBITMQ_PASSWORD | UNSET | «masked» | (không default) |
 | catalog-service | RABBITMQ_PORT | UNSET | 5672 | (không default) |

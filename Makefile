@@ -107,3 +107,27 @@ seed: ## (SF-10) Deterministic seed — admin/user demo, WELCOME10/GIAM50K, orde
 
 e2e: ## (SF-10) Playwright E2E — CẦN dev stack đang chạy (make dev) + .env
 	cd frontend && pnpm --filter @ecommerce/e2e exec playwright test
+
+# ── QA static audit (FI-405 · SF-1 qa-static-audit) ──────────────────────────
+# Ghi chú review: dòng .PHONY đầu file CỐ Ý KHÔNG thêm qa-audit — constraint
+# append-only của Makefile (SF-2 append phần riêng sau); target không trùng tên
+# file nào trong repo nên thiếu .PHONY vô hại.
+# Recipe chạy ĐỦ 4 script (KHÔNG dừng sớm — mỗi script phải chạy để mọi marker
+# block trong report được regen), mỗi exit ghi vào .run/qa-exit-*, snippet node
+# cuối ghép exit-table vào block <!-- sf1:summary --> của report (script
+# standalone KHÔNG biết exit của script khác — chỉ recipe lắp bảng), rồi exit
+# tổng = max(4 exit).
+# Exit semantics: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script
+# error (fail-loud). GIỚI HẠN tool: GNU make bọc MỌI recipe-fail thành exit 2
+# của tiến trình make (đã test make 3.81) — exit-tổng THẬT (max) giữ ở: dòng
+# cuối output "exit tổng N" + dòng "make: *** [qa-audit] Error N" + bảng exit
+# trong report; make-exit chỉ phân biệt 0 (sạch) vs ≠0 (có việc).
+qa-audit: ## (FI-405) QA static audit tĩnh — 4 script non-destructive (không docker/HTTP/.env) · exit tổng = max (in cuối output + report) · report: docs/superpowers/qa/report-sf1.md
+	@echo "== make qa-audit — 4 script static (config-audit · s2s-auth-matrix · rbac-matrix · contracts-freshness) =="
+	@echo "   legend exit script: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script error (GNU make bọc fail → exit 2; exit-tổng thật in cuối output)"
+	@mkdir -p .run
+	@node scripts/qa/config-audit.mjs;        echo $$? > .run/qa-exit-config-audit
+	@node scripts/qa/s2s-auth-matrix.mjs;     echo $$? > .run/qa-exit-s2s-auth-matrix
+	@node scripts/qa/rbac-matrix.mjs;         echo $$? > .run/qa-exit-rbac-matrix
+	@node scripts/qa/contracts-freshness.mjs; echo $$? > .run/qa-exit-contracts-freshness
+	@node -e 'const fs=require("fs");const names=["config-audit","s2s-auth-matrix","rbac-matrix","contracts-freshness"];const rows=[];let mx=0;for(const n of names){const f=".run/qa-exit-"+n;const e=parseInt(fs.readFileSync(f,"utf8").trim(),10);if(e!==0&&e!==1&&e!==2)throw new Error("exit không hợp lệ "+f+"="+e);rows.push([n,e]);mx=Math.max(mx,e);}const p="docs/superpowers/qa/report-sf1.md";const t=fs.readFileSync(p,"utf8");const open="<!-- sf1:summary -->",close="<!-- /sf1:summary -->",b="<!-- make:exit-table -->",be="<!-- /make:exit-table -->";const io=t.indexOf(open),ic=t.indexOf(close);if(io<0||ic<0||ic<io)throw new Error("marker sf1:summary không tìm thấy trong "+p);const tbl=b+"\n**Exit-table 4 script (ghi bởi recipe make qa-audit sau khi đủ 4 script chạy — script standalone không biết exit nhau):**\n\n| script | exit |\n| --- | --- |\n"+rows.map((r)=>"| "+r[0]+" | "+r[1]+" |").join("\n")+"\n\nExit tổng (max): **"+mx+"** — legend: 0 = 0 unfixed finding · 1 = có finding chưa fix · 2 = script error. (GNU make bọc recipe-fail → exit tiến trình make luôn 2 khi ≠ 0 — exit-tổng THẬT là số này + dòng Error N của make.)\n"+be;const body=t.slice(io,ic);const ib=body.indexOf(b),ie=body.indexOf(be);const nb=(ib>=0&&ie>ib)?(body.slice(0,ib)+body.slice(ie+be.length)):body;fs.writeFileSync(p,t.slice(0,io)+nb+tbl+t.slice(ic));console.log("== make qa-audit: exit-table ghi vào "+p+" — exit tổng "+mx+" ==");for(const r of rows)console.log("   "+r[0]+": exit "+r[1]);process.exit(mx);'

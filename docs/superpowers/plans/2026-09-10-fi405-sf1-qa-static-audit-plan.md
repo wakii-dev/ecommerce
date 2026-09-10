@@ -108,8 +108,8 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Chạy `--self-test` thật — output trong terminal evidence
 
 ### Task 10 — Makefile target + README ref (executor C)
-- [ ] Append CUỐI Makefile: `qa-audit` chạy 4 script (không stop sớm, exit = max, in legend) + **ghi exit-table 4 script vào summary block report** (P1 plan-critic — script standalone không biết exit nhau); comment giải thích semantics; **KHÔNG đụng dòng `.PHONY` (dòng 9) — append-only constraint, ghi comment note chủ đích**
-- [ ] Append CUỐI README: section QA ngắn ≤ 6 dòng (make qa-audit + report path + exit semantics — đây là "tham chiếu" theo bracket; SF-2 viết section fresh-boot RIÊNG sau này, không đụng section này)
+- [x] Append CUỐI Makefile: `qa-audit` chạy 4 script (không stop sớm, exit = max, in legend) + **ghi exit-table 4 script vào summary block report** (P1 plan-critic — script standalone không biết exit nhau); comment giải thích semantics; **KHÔNG đụng dòng `.PHONY` (dòng 9) — append-only constraint, ghi comment note chủ đích** — *thực tế: GNU make 3.81 bọc mọi recipe-fail → exit tiến trình make luôn 2; exit-tổng THẬT (max) do snippet node tính, in cuối output + ghi bảng trong report (đã comment ngay trong Makefile)*
+- [x] Append CUỐI README: section QA ngắn ≤ 6 dòng (make qa-audit + report path + exit semantics — đây là "tham chiếu" theo bracket; SF-2 viết section fresh-boot RIÊNG sau này, không đụng section này)
 
 ### Task 11 — contracts freshness probe + real run (executor C)
 - [ ] `scripts/qa/contracts-freshness.mjs`: openapi paths+methods vs controllers per service; **map constant yaml→module: `invoice.yaml` → ordering-service (invoice controllers sống trong ordering — không có dir invoice-service)**, còn lại 1:1 theo tên; stale → CT-xx finding; regen marker block

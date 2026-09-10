@@ -365,3 +365,11 @@ make seed
 | 🧱 **Bracket** | [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md) — 10 SF × 5 tier |
 | 📦 **Context packs** | [`docs/superpowers/contexts/`](docs/superpowers/contexts/) — spec slice per SF |
 | 🗂 **ADR** | `docs/adr/` — quyết định kiến trúc chi tiết (SF-10 hoàn thiện) |
+
+---
+
+## 🧪 QA static audit (SF-1 — FI-405)
+
+`make qa-audit` — 4 detector tĩnh (config-audit · s2s-auth-matrix · rbac-matrix · contracts-freshness), non-destructive (không docker/HTTP/.env), < 5 phút.
+Report: [`docs/superpowers/qa/report-sf1.md`](docs/superpowers/qa/report-sf1.md) — finding ID `CFG-xx` / `S2S-xx` / `RBAC-xx` / `CT-xx` (triage + fix = SF-4).
+Exit: `0` = 0 finding CHƯA fix · `1` = có finding chưa fix · `2` = script error (fail-loud).

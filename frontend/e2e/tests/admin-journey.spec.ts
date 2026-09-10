@@ -187,6 +187,58 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
       .toHaveValue('44', { timeout: 15_000 });
   });
 
+  test('E — coupon round-trip: tạo FIXED → assert row → toggle tắt → xóa (leg hoạt động)', async ({ page }) => {
+    await adminUiLogin(page);
+    const CODE = `E2EJ${STAMP}`.slice(0, 64); // [A-Za-z0-9_-], form tự uppercase
+    await page.goto(`${GATEWAY}/admin/coupons`);
+    await page.getByTestId('coupon-create-btn').click();
+    await page.getByLabel('Mã').fill(CODE);
+    await page.getByLabel('Kiểu').selectOption('FIXED');
+    await page.getByLabel('Giá trị').fill('50000');
+    await page.getByLabel('Đơn tối thiểu (₫)').fill('100000');
+    await page.getByLabel('Lượt dùng').fill('5');
+    await page.getByLabel('Kết thúc').fill('2027-06-30T23:59');
+    await page.getByLabel('Mô tả').fill('e2e journey coupon round-trip');
+    await page.getByTestId('coupon-submit-btn').click();
+    await expect(page.getByText('Đã tạo mã giảm giá')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId(`coupon-usage-${CODE}`)).toHaveText(/0\/5/);
+
+    // TOGGLE off
+    await page.getByTestId(`coupon-toggle-${CODE}`).click();
+    await expect(page.getByTestId(`coupon-toggle-${CODE}`)).toContainText('Tắt', { timeout: 15_000 });
+
+    // XÓA (modal confirm) — dọn rác
+    await page.getByTestId(`coupon-delete-${CODE}`).click();
+    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await expect(page.locator('tbody tr', { hasText: CODE })).toHaveCount(0, { timeout: 15_000 });
+  });
+
+  test.fixme('E-edit — coupon SỬA round-trip — BỊ CHẬN bug thật FE↔BE: PUT /api/ordering/admin/coupons/{code} 400 "code không hợp lệ" (contracts client strip code khỏi body — client.ts executeRequest; BE CouponService.validateAdmin đòi body code). SF-4 fix bug-register → bỏ fixme. Bug đã probe xác minh 2026-09-10 (executor T4).', async ({ page }) => {
+    await adminUiLogin(page);
+    const CODE = `E2EJ${STAMP}`.slice(0, 64); // [A-Za-z0-9_-], form tự uppercase
+    await page.goto(`${GATEWAY}/admin/coupons`);
+    await page.getByTestId('coupon-create-btn').click();
+    await page.getByLabel('Mã').fill(CODE);
+    await page.getByLabel('Kiểu').selectOption('FIXED');
+    await page.getByLabel('Giá trị').fill('50000');
+    await page.getByLabel('Đơn tối thiểu (₫)').fill('100000');
+    await page.getByLabel('Lượt dùng').fill('5');
+    await page.getByLabel('Kết thúc').fill('2027-06-30T23:59');
+    await page.getByLabel('Mô tả').fill('e2e journey coupon round-trip');
+    await page.getByTestId('coupon-submit-btn').click();
+    await expect(page.getByText('Đã tạo mã giảm giá')).toBeVisible({ timeout: 15_000 });
+
+    // SỬA — code khóa (hint "Mã không đổi khi sửa"), đổi value 50000 → 60000
+    const couponRow = page.locator('tbody tr', { hasText: CODE }).first();
+    couponRow.getByRole('button', { name: 'Sửa', exact: true }).click();
+    await expect(page.getByLabel('Mã')).toBeDisabled();
+    await page.getByLabel('Giá trị').fill('60000');
+    await page.getByTestId('coupon-submit-btn').click();
+    await expect(page.getByText('Đã cập nhật mã giảm giá')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('tbody tr', { hasText: CODE }).first())
+      .toContainText(/60\.000\s*₫/); // formatVnd Intl vi-VN — space có thể non-breaking
+  });
+
   test('F — category CRUD round-trip: tạo → sửa tên → xóa (dọn rác)', async ({ page }) => {
     await adminUiLogin(page);
     const CAT = `E2E Danh Mục ${STAMP}`;

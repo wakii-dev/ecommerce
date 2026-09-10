@@ -1,6 +1,7 @@
 # --- Env / secrets ---
 .env
 infra/keys/
+infra/certs/
 
 # --- Java / Maven ---
 target/

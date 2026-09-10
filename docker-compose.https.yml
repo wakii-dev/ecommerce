@@ -1,0 +1,39 @@
+# HTTPS cho stack full — layer NỔI lên docker-compose.yml:
+#
+#   make full-https
+#   (= docker compose -f docker-compose.yml -f docker-compose.https.yml
+#      --profile full up -d --build)
+#
+# Thiết kế: thêm service https-edge (nginx TLS :443 container, host :8443)
+# offload TLS → gateway :8080 GIỮ NGUYÊN http nội bộ. Gateway không đổi
+# code/env; storefront SSR fetch GATEWAY_URL http nội bộ không gặp vấn đề
+# verify self-signed; http://localhost:8080 vẫn sống song song (đỡ debug).
+#
+# Cert: make certs → infra/certs/ (gitignored, self-signed localhost).
+# SITE_URL đổi sang https://localhost:8443 → canonical/og:image/sitemap
+# SSR render đúng origin public (runtime env — không cần rebuild image).
+
+services:
+  https-edge:
+    image: nginx:1.27-alpine
+    container_name: ecommerce-https-edge
+    profiles:
+      - full
+    ports:
+      - "8443:443"
+    volumes:
+      - ./infra/certs/gateway-https.crt:/etc/nginx/certs/tls.crt:ro
+      - ./infra/certs/gateway-https.key:/etc/nginx/certs/tls.key:ro
+      - ./infra/nginx/https-edge.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  storefront-web:
+    environment:
+      # Origin public là https://localhost:8443 — SSR metadata (canonical/
+      # og:image/sitemap qua siteUrl()) phải render origin này
+      SITE_URL: https://localhost:8443
+      NEXT_PUBLIC_SHELL_URL: https://localhost:8443

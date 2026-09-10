@@ -6,7 +6,7 @@
 
 COMPOSE ?= docker compose
 
-.PHONY: help infra down keys stripe-listen full full-stop dev dev-stop dev-fe seed qa-fresh-boot e2e
+.PHONY: help infra down keys stripe-listen full full-https full-stop certs dev dev-stop dev-fe seed qa-fresh-boot e2e
 
 help: ## Liệt kê targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -66,6 +66,29 @@ full: ## (SF-10) Stack 100% containerized — compose profile full (build mọi 
 
 full-stop: ## Stop stack full
 	$(COMPOSE) --profile full down
+
+certs: ## Sinh self-signed TLS cert edge HTTPS → infra/certs/ (gitignored)
+	@mkdir -p infra/certs
+	@if [ -f infra/certs/gateway-https.p12 ]; then \
+		echo "infra/certs/gateway-https.p12 đã tồn tại — bỏ qua (xóa để regenerate)"; exit 0; fi
+	openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
+		-keyout infra/certs/gateway-https.key -out infra/certs/gateway-https.crt \
+		-subj "/CN=localhost" \
+		-addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+		-addext "keyUsage=digitalSignature,keyEncipherment" \
+		-addext "extendedKeyUsage=serverAuth" 2>/dev/null
+	openssl pkcs12 -export -in infra/certs/gateway-https.crt -inkey infra/certs/gateway-https.key \
+		-out infra/certs/gateway-https.p12 -passout pass:wakii-gateway 2>/dev/null
+	@echo "→ Đã sinh infra/certs/gateway-https.{crt,key,p12} (self-signed localhost, 825 ngày)"
+	@echo "→ Bỏ cảnh báo browser: tin cậy infra/certs/gateway-https.crt (Keychain → Always Trust)"
+
+full-https: ## Stack full 100% container + HTTPS edge :8443 (TLS offload → gateway nội bộ)
+full-https: certs
+	@test -f .env || { echo "✗ thiếu .env (cp .env.example .env) — Stripe key rỗng → payment degraded"; }
+	$(MAKE) -s keys
+	$(COMPOSE) -f docker-compose.yml -f docker-compose.https.yml --profile full up -d --build
+	@echo "→ https://localhost:8443 (self-signed — browser cảnh báo là bình thường) · Mailpit :8025"
+	@echo "→ Dừng: make full-stop"
 
 dev: ## Không tham số = FULL STACK dev · hoặc 1 service: make dev svc=identity
 ifeq ($(svc),)

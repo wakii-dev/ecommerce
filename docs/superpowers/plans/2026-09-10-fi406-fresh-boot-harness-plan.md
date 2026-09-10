@@ -108,12 +108,12 @@ khi xong.
 **Exit:** 6 probe chạy thật trong dry-run, verdict từng cái có trong log.
 
 ### Task T10 — makefile-target-qa-fresh-boot-runbook-restore-gitignore-backups
-- [ ] T10.1 Makefile: `.PHONY` + target `qa-fresh-boot` đặt NGAY SAU block seed (cạnh — KHÔNG cuối file, khác vùng SF-1 qa-audit append-cuối); target = guard `test -f scripts/qa/fresh-boot-harness.sh` + `bash scripts/qa/fresh-boot-harness.sh` (env QA_FRESH_BOOT_CONFIRM pass-through)
-- [ ] T10.2 `.gitignore` + `backups/` (section riêng có comment)
-- [ ] T10.3 README: section QA — chạy harness, exit codes, **runbook restore-từ-backup** (docker compose up -d postgres → createdb → gunzip | psql per-DB → seed lại → up full), cảnh báo destructive
-- [ ] Commit `feat(qa): qa-fresh-boot makefile target + runbook + gitignore backups (FI-406)`
+- [x] T10.1 Makefile: `.PHONY` + target `qa-fresh-boot` đặt NGAY SAU block seed (cạnh — KHÔNG cuối file, khác vùng SF-1 qa-audit append-cuối); target = guard `test -f scripts/qa/fresh-boot-harness.sh` + `bash scripts/qa/fresh-boot-harness.sh` (env QA_FRESH_BOOT_CONFIRM pass-through)
+- [x] T10.2 `.gitignore` + `backups/` (section riêng có comment)
+- [x] T10.3 README: section QA — chạy harness, exit codes, **runbook restore-từ-backup** (docker compose up -d postgres → createdb → gunzip | psql per-DB → seed lại → up full), cảnh báo destructive + note mongo/minio không backup
+- [x] Commit `feat(qa): qa-fresh-boot makefile target + runbook + gitignore backups (FI-406)` @2d66090
 
-**Exit:** `make qa-fresh-boot` KHÔNG flag → exit 3 (bằng chứng); gitignore có backups/; README có runbook.
+**Exit:** `make qa-fresh-boot` KHÔNG flag → exit 3 (bằng chứng — ĐÃ CHẠY: make in Error 3, refuse ở gate, log /tmp/qa-fresh-boot-20260910-074542.log); gitignore có backups/; README có runbook.
 
 ### Task T-V — dry-run 1 lần toàn bộ (coordinator — destructive, consent đã có)
 - [ ] TV.0 Pre-clean stale-env: lsof-discover process lạ giữ port gate (tầm nhìn: next-server mồ côi :3000 từ main checkout — dev server không data) → kill + ghi vào report; PID tra tại thời điểm chạy, KHÔNG hardcode; vite rig cũ :5373/:5376 KHÔNG đụng (ngoài list gate)

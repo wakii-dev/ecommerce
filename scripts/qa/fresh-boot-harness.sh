@@ -342,12 +342,181 @@ build() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage UP (T6) — appended by executor 2 — stub bên dưới giữ script chạy được
-# end-to-end ở dạng skeleton (log NOT-IMPLEMENTED, return 0).
+# Stage UP (T6) — up -d + health gates theo tầng: infra → JVM → FE/gateway.
+# Fail BẤT KỲ tầng → die 7 + container logs tail — abort TRƯỚC SEED.
 # ─────────────────────────────────────────────────────────────────────────────
+UP_TOTAL_BUDGET=480  # 8' — guard tổng: pathological boot không được treo vô hạn
+
+# TIER 1 — infra (compose healthcheck → .State.Health.Status == healthy)
+INFRA_SERVICES=(postgres redis rabbitmq mongo elasticsearch minio mailpit)
+
+# TIER 2 — 10 JVM actuator, dạng <name>:<port>:<container>
+# (container_name ground truth compose, live-verified 2026-09-10)
+JVM_SERVICES=(
+  identity:8081:ecommerce-identity-service
+  catalog:8082:ecommerce-catalog-service
+  cart:8083:ecommerce-cart-service
+  inventory:8084:ecommerce-inventory-service
+  ordering:8085:ecommerce-ordering-service
+  payment:8086:ecommerce-payment-service
+  notification:8087:ecommerce-notification-service
+  log:8088:ecommerce-log-service
+  partner-api:8091:ecommerce-partner-api
+  affiliate:8092:ecommerce-affiliate-service
+)
+
+# Đợi <cmd...> exit 0 — poll mỗi <interval>s, hết <timeout>s → return 1
+wait_healthy() {
+  local interval="$1" timeout="$2"; shift 2
+  local deadline=$(( $(date +%s) + timeout ))
+  while :; do
+    if "$@" >/dev/null 2>&1; then
+      return 0
+    fi
+    if (( $(date +%s) > deadline )); then
+      return 1
+    fi
+    sleep "${interval}"
+  done
+}
+
+infra_healthy() {  # infra_healthy <compose-service> — resolve qua ps -q (không đoán container_name)
+  local id status
+  id="$("${COMPOSE[@]}" ps -q "$1" 2>/dev/null || true)"
+  [[ -n "${id}" ]] || return 1
+  status="$(docker inspect -f '{{.State.Health.Status}}' "${id}" 2>/dev/null || true)"
+  [[ "${status}" == "healthy" ]]
+}
+
+jvm_healthy() {  # jvm_healthy <container> <port> — actuator trong container (images có curl)
+  docker exec "$1" curl -sf "localhost:$2/actuator/health" 2>/dev/null | grep -q '"status":"UP"'
+}
+
+gateway_healthy() {  # gateway QUA HOST ONLY — không docker-exec (image chưa verify có curl)
+  curl -sf --max-time 10 http://localhost:8080/actuator/health 2>/dev/null | grep -q '"status":"UP"'
+}
+
+invoice_healthy() {  # invoice = FastAPI — KHÔNG actuator, dùng compose healthcheck
+  [[ "$(docker inspect -f '{{.State.Health.Status}}' ecommerce-invoice-service 2>/dev/null || true)" == "healthy" ]]
+}
+
+container_running() {
+  [[ "$(docker inspect -f '{{.State.Status}}' "$1" 2>/dev/null || true)" == "running" ]]
+}
+
+http_ok() {  # http_ok <url> — status code qua host, timeout ngắn
+  [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$1" 2>/dev/null)" == "200" ]]
+}
+
+up_budget_left() {  # giây còn lại của tổng budget UP
+  local left=$(( UP_DEADLINE - $(date +%s) ))
+  if (( left > 0 )); then printf '%s' "${left}"; else printf '%s' "0"; fi
+}
+
+# die 7 + container logs tail — mọi tier fail đi qua đây (logs best-effort)
+up_die_logs() {
+  local what="$1" container="$2"
+  log "[up] ${what} — container logs tail:"
+  if [[ -n "${container}" ]]; then
+    docker logs --tail 30 "${container}" 2>&1 || true
+  fi
+  die 7 "[up] ${what}"
+}
+
 stage_up() {
-  log "[stub] stage UP — NOT IMPLEMENTED (executor 2 / T6: up -d + tiered health gates)"
-  return 0
+  local t0 left svc entry name port container
+  t0=$(date +%s)
+  UP_DEADLINE=$(( t0 + UP_TOTAL_BUDGET ))
+
+  log "[up] docker compose --profile full --profile stripe up -d"
+  if ! "${COMPOSE[@]}" up -d; then
+    die 7 "[up] compose up -d FAIL sau $(( $(date +%s) - t0 ))s"
+  fi
+
+  # ── TIER 1/3 — infra healthy (poll 5s · 2'/svc · budget tổng ${UP_TOTAL_BUDGET}s) ──
+  log "[up] TIER 1/3 — infra: ${INFRA_SERVICES[*]} (poll 5s · timeout 2'/svc)"
+  for svc in "${INFRA_SERVICES[@]}"; do
+    left="$(up_budget_left)"
+    if (( left == 0 )); then
+      up_die_logs "TIER 1: tổng budget ${UP_TOTAL_BUDGET}s cạn khi đợi ${svc}" ""
+    fi
+    if wait_healthy 5 "${left}" infra_healthy "${svc}"; then
+      log "[up]   ${svc} healthy (elapsed $(( $(date +%s) - t0 ))s)"
+    else
+      up_die_logs "TIER 1 infra: ${svc} chưa healthy sau ${left}s (budget cạn?)" \
+        "$("${COMPOSE[@]}" ps -q "${svc}" 2>/dev/null || true)"
+    fi
+  done
+
+  # ── TIER 2/3 — 10 JVM actuator + gateway (host) + invoice (FastAPI healthcheck) ──
+  log "[up] TIER 2/3 — 10 JVM actuator + gateway(host :8080) + invoice(FastAPI healthcheck) (poll 10s · timeout 4'/svc)"
+  for entry in "${JVM_SERVICES[@]}"; do
+    name="${entry%%:*}"
+    port="${entry#*:}"; port="${port%%:*}"
+    container="${entry#*:*:}"
+    left="$(up_budget_left)"
+    if (( left == 0 )); then
+      up_die_logs "TIER 2: tổng budget ${UP_TOTAL_BUDGET}s cạn khi đợi ${name}" "${container}"
+    fi
+    if wait_healthy 10 "${left}" jvm_healthy "${container}" "${port}"; then
+      log "[up]   ${name} UP (elapsed $(( $(date +%s) - t0 ))s)"
+    else
+      up_die_logs "TIER 2 JVM: ${name} (:${port}) chưa UP sau ${left}s" "${container}"
+    fi
+  done
+
+  left="$(up_budget_left)"
+  if (( left == 0 )); then
+    up_die_logs "TIER 2: tổng budget ${UP_TOTAL_BUDGET}s cạn khi đợi gateway" ""
+  fi
+  if wait_healthy 10 "${left}" gateway_healthy; then
+    log "[up]   gateway UP — host :8080/actuator/health (elapsed $(( $(date +%s) - t0 ))s)"
+  else
+    up_die_logs "TIER 2 gateway: :8080/actuator/health chưa UP sau ${left}s" \
+      "$("${COMPOSE[@]}" ps -q gateway 2>/dev/null || true)"
+  fi
+
+  left="$(up_budget_left)"
+  if (( left == 0 )); then
+    up_die_logs "TIER 2: tổng budget ${UP_TOTAL_BUDGET}s cạn khi đợi invoice" "ecommerce-invoice-service"
+  fi
+  if wait_healthy 10 "${left}" invoice_healthy; then
+    log "[up]   invoice-service healthy — compose healthcheck (elapsed $(( $(date +%s) - t0 ))s)"
+  else
+    up_die_logs "TIER 2 invoice: compose healthcheck chưa healthy sau ${left}s" "ecommerce-invoice-service"
+  fi
+
+  # ── TIER 3/3 — FE containers running + gateway public routes 200 ──
+  log "[up] TIER 3/3 — FE containers + gateway public routes (poll 5s · timeout 2')"
+  for container in ecommerce-frontend-web ecommerce-storefront-web; do
+    left="$(up_budget_left)"
+    if (( left == 0 )); then
+      up_die_logs "TIER 3: tổng budget ${UP_TOTAL_BUDGET}s cạn khi đợi ${container}" "${container}"
+    fi
+    if wait_healthy 5 "${left}" container_running "${container}"; then
+      log "[up]   ${container} running (elapsed $(( $(date +%s) - t0 ))s)"
+    else
+      up_die_logs "TIER 3: ${container} không running sau ${left}s" "${container}"
+    fi
+  done
+
+  left="$(up_budget_left)"
+  if (( left == 0 )); then left=10; fi
+  if wait_healthy 5 "${left}" http_ok "http://localhost:8080/"; then
+    log "[up]   GET :8080/ → 200 (storefront route, elapsed $(( $(date +%s) - t0 ))s)"
+  else
+    up_die_logs "TIER 3: GET :8080/ != 200 (storefront route) sau ${left}s" "ecommerce-storefront-web"
+  fi
+
+  left="$(up_budget_left)"
+  if (( left == 0 )); then left=10; fi
+  if wait_healthy 5 "${left}" http_ok "http://localhost:8080/cart"; then
+    log "[up]   GET :8080/cart → 200 (shell route, elapsed $(( $(date +%s) - t0 ))s)"
+  else
+    up_die_logs "TIER 3: GET :8080/cart != 200 (shell route) sau ${left}s" "ecommerce-frontend-web"
+  fi
+
+  log "[up] UP PASS — 3/3 tier (tổng $(( $(date +%s) - t0 ))s)"
 }
 
 # ── Stage SEED (T7) — appended by executor 2 ──

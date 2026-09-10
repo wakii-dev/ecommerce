@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 
 import GaPageview from '../components/GaPageview';
 import { THEME_BOOT_SCRIPT } from '@ecommerce/chrome';
+import { siteUrl } from '../lib/site';
 
 import '@ecommerce/ui-kit/tokens.css';
 import '@ecommerce/chrome/styles.css';
@@ -28,8 +29,14 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 /** PWA metadata (SF-15) — manifest qua app/manifest.ts; child generateMetadata
- * ([locale]/layout) merge đè title/description, giữ manifest/icons. */
+ * ([locale]/layout) merge đè title/description, giữ manifest/icons.
+ *
+ * metadataBase (SEO FI): Next ghép mọi URL metadata RELATIVE (og:image /
+ * twitter:image truyền path /media/**) với metadataBase — không đặt thì dev
+ * mặc định http://localhost:3000, sai origin gateway. siteUrl() đọc SITE_URL
+ * runtime → đặt ở root để MỌI page (kể cả child generateMetadata) kế thừa. */
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   applicationName: 'ShopVN',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'ShopVN', statusBarStyle: 'default' },

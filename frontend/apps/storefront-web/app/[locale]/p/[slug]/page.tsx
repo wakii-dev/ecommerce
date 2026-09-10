@@ -79,7 +79,12 @@ export async function generateMetadata({ params }: PdpPageProps): Promise<Metada
   }
 
   const meta = pdpMetadata(product, locale, viProduct);
-  const ogImages = product.image.url ? [product.image.url] : undefined;
+  // og:image tự absolute bằng siteUrl() — KHÔNG dựa metadataBase (Next ghép
+  // relative theo metadataBase nhưng đường og/twitter phải đúng origin gateway
+  // cả khi layout metadata cache/stale — FI SEO verify 2026-09-10).
+  const ogImages = product.image.url
+    ? [/^https?:\/\//.test(product.image.url) ? product.image.url : `${siteUrl()}${product.image.url}`]
+    : undefined;
 
   return {
     title: meta.title,

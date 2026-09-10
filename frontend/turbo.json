@@ -1,5 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  // Turbo strict env mode (mặc định) filter mọi var không khai báo ở đây —
+  // chỉ passthrough prefix framework (NEXT_PUBLIC_*/VITE_*). SITE_URL dùng
+  // runtime SSR (canonical/og:image/sitemap) không có prefix → phải khai báo
+  // tay; GATEWAY_URL là entry gateway dev (FI-400).
+  "globalEnv": ["SITE_URL", "GATEWAY_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

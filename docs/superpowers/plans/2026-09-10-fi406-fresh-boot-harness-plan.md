@@ -84,26 +84,26 @@ khi xong.
 **Exit:** `bash -n` pass; logic resume verify bằng code-inspect + dry-run thật (T-V).
 
 ### Task T6 — stage-up-health-gates-tiers
-- [ ] T6.1 `docker compose --profile full --profile stripe up -d` → tầng 1 infra: đợi `docker inspect -f {{.State.Health.Status}}` = healthy cho postgres,redis,rabbitmq,mongo,elasticsearch,minio,mailpit (timeout 2', poll 5s)
-- [ ] T6.2 Tầng 2 JVMs (timeout 4'/service — poll 10s): **10 JVM actuator** `docker exec ecommerce-<svc> curl -sf localhost:<port>/actuator/health` khớp `"status":"UP"` — port map hardcoded (identity 8081, catalog 8082, cart 8083, inventory 8084, ordering 8085, payment 8086, notification 8087, log 8088, partner-api 8091, affiliate 8092). **Gateway probe QUA HOST `curl -sf :8080/actuator/health`** (không docker-exec nội bộ — gateway image chưa verify có curl; host probe + tier-3 FE đã cover — plan-critic P2). **invoice-service = FastAPI — KHÔNG actuator: probe qua compose healthcheck `docker inspect .State.Health.Status == healthy`** (compose đã định nghĩa healthcheck — plan-critic P0-2)
-- [ ] T6.3 Tầng 3 FE + gateway public: frontend-web/storefront-web Up; `curl :8080/` 200 (storefront route) + `curl :8080/cart` 200 (shell route); timeout riêng; fail BẤT KỲ tầng → **die 7** kèm container logs tail — abort TRƯỚC SEED
+- [x] T6.1 `docker compose --profile full --profile stripe up -d` → tầng 1 infra: đợi `docker inspect -f {{.State.Health.Status}}` = healthy cho postgres,redis,rabbitmq,mongo,elasticsearch,minio,mailpit (timeout 2', poll 5s)
+- [x] T6.2 Tầng 2 JVMs (timeout 4'/service — poll 10s): **10 JVM actuator** `docker exec ecommerce-<svc> curl -sf localhost:<port>/actuator/health` khớp `"status":"UP"` — port map hardcoded (identity 8081, catalog 8082, cart 8083, inventory 8084, ordering 8085, payment 8086, notification 8087, log 8088, partner-api 8091, affiliate 8092). **Gateway probe QUA HOST `curl -sf :8080/actuator/health`** (không docker-exec nội bộ — gateway image chưa verify có curl; host probe + tier-3 FE đã cover — plan-critic P2). **invoice-service = FastAPI — KHÔNG actuator: probe qua compose healthcheck `docker inspect .State.Health.Status == healthy`** (compose đã định nghĩa healthcheck — plan-critic P0-2)
+- [x] T6.3 Tầng 3 FE + gateway public: frontend-web/storefront-web Up; `curl :8080/` 200 (storefront route) + `curl :8080/cart` 200 (shell route); timeout riêng; fail BẤT KỲ tầng → **die 7** kèm container logs tail — abort TRƯỚC SEED
 - [ ] Commit `feat(qa): fresh-boot up + tiered health gates (FI-406)`
 
 **Exit:** health gates pass từng tầng có timestamp trong log (verify thật ở T-V).
 
 ### Task T7 — stage-seed
-- [ ] T7.1 **Poll seed-readiness:** catalog SeedDataRunner populate `products` ASYNC sau health UP — poll `SELECT count(*) FROM products` > 0 (timeout 2', poll 5s) trước khi seed (plan-critic P1-5: seed.sh:114 hard-fail "không tìm thấy product" nếu chạy sớm)
-- [ ] T7.2 `make seed` → capture output; assert **exit 0 AND** khớp `XONG` (seed.sh:229); fail → tail log seed + die 4
+- [x] T7.1 **Poll seed-readiness:** catalog SeedDataRunner populate `products` ASYNC sau health UP — poll `SELECT count(*) FROM products` > 0 (timeout 2', poll 5s) trước khi seed (plan-critic P1-5: seed.sh:114 hard-fail "không tìm thấy product" nếu chạy sớm)
+- [x] T7.2 `make seed` → capture output; assert **exit 0 AND** khớp `XONG` (seed.sh:229); fail → tail log seed + die 4
 - [ ] Commit `feat(qa): fresh-boot seed stage — readiness poll + assert XONG (FI-406)`
 
 **Exit:** seed thật pass trong dry-run (T-V).
 
 ### Task T8 — stage-probes-image-login-cart-events-live-rbac-hardcoded + port-owner (gộp bracket T9 — plan-critic P1-6)
-- [ ] T8.1 (a) MinIO: `SELECT url FROM product_images WHERE url <> '' LIMIT 1` → GET `:8080<url>` 200; không có url / non-200 → FINDING "MinIO-reseed" ghi vào danh sách (không giấu, không dừng)
-- [ ] T8.2 (b) login admin (creds từ .env ADMIN_EMAIL/ADMIN_PASSWORD fallback admin@demo.vn/admin123) → 200 + accessToken; (c) guest `POST /api/cart/items {productId từ db, qty:1}` → 200; (d) events `GET /api/log/admin/events` JWT → 200
-- [ ] T8.3 (e) RBAC HARDCODED: pin product `name->>'vi' ILIKE 'Tai nghe%'`; guest PUT `/api/catalog/admin/products/<id>` không token → expect 401/403; admin PUT round-trip GET→PUT cùng body → expect 2xx + re-GET so name/price unchanged (idempotent); 400 `images[].url` → FINDING bug data ghi rõ
-- [ ] T8.4 (f) port-owner: `lsof` 8080,3000,5173-5178,9099 — process lạ (không phải docker) → FINDING stale-env in PID+command
-- [ ] T8.5 Collect-ALL findings → in bảng verdict từng probe; có finding → die 6 (stack vẫn seeded); commit `feat(qa): fresh-boot probes — image/login/cart/events/rbac/port-owner (FI-406)`
+- [x] T8.1 (a) MinIO: `SELECT url FROM product_images WHERE url <> '' LIMIT 1` → GET `:8080<url>` 200; không có url / non-200 → FINDING "MinIO-reseed" ghi vào danh sách (không giấu, không dừng)
+- [x] T8.2 (b) login admin (creds từ .env ADMIN_EMAIL/ADMIN_PASSWORD fallback admin@demo.vn/admin123) → 200 + accessToken; (c) guest `POST /api/cart/items {productId từ db, qty:1}` → 200; (d) events `GET /api/log/admin/events` JWT → 200
+- [x] T8.3 (e) RBAC HARDCODED: pin product `name->>'vi' ILIKE 'Tai nghe%'`; guest PUT `/api/catalog/admin/products/<id>` không token → expect 401/403; admin PUT round-trip GET→PUT cùng body → expect 2xx + re-GET so name/price unchanged (idempotent); 400 `images[].url` → FINDING bug data ghi rõ
+- [x] T8.4 (f) port-owner: `lsof` 8080,3000,5173-5178,9099 — process lạ (không phải docker) → FINDING stale-env in PID+command
+- [x] T8.5 Collect-ALL findings → in bảng verdict từng probe; có finding → die 6 (stack vẫn seeded); commit `feat(qa): fresh-boot probes — image/login/cart/events/rbac/port-owner (FI-406)`
 
 **Exit:** 6 probe chạy thật trong dry-run, verdict từng cái có trong log.
 

@@ -410,6 +410,13 @@ function analyzeAxisB(compose, placeholders) {
       rows.push({ service: svc.name, var: k, default: null, envVal: val, targets, ...v });
     }
   }
+  // P2 review R1: service CÓ path req nhưng KHÔNG entry compose — vẫn phải có
+  // row (SKIP-NOENTRY) để bảng trục (b) đóng, không bỏ sót im lặng.
+  for (const [svcName, reqs] of [...codeByService.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (compose.has(svcName)) continue;
+    for (const p of reqs)
+      rows.push({ service: svcName, var: p.var, default: p.default, envVal: null, targets: [], status: 'SKIP-NOENTRY', note: 'service không có entry compose (host-only) — không đối chiếu volume', evidence: p.sources.join(', ') });
+  }
   return rows.sort((a, b) => a.service.localeCompare(b.service) || a.var.localeCompare(b.var));
 }
 
@@ -489,11 +496,11 @@ function parseHostPort(v) {
   if (!v) return { host: null, port: null };
   // scheme lồng ghép: http://host:port · mongodb://mongo:27017 · jdbc:postgresql://pg:5432/db
   let m = v.match(/^(?:[a-zA-Z][a-zA-Z0-9+.-]*:)+(\/\/)?([^/:?#]+)(?::(\d+))?/);
-  if (m && m[2] && !/^\d+$/.test(m[2])) return { host: m[2], port: m[3] ? Number(m[3]) : null };
+  if (m && m[2] && !/^\d+$/.test(m[2])) return { host: m[2], port: m[3] ? Number(m[3]) : null, bare: false };
   m = v.match(/^([^/:?#]+):(\d+)$/); // bare host:port
-  if (m) return { host: m[1], port: Number(m[2]) };
-  if (/^[^/:?#]+$/.test(v)) return { host: v, port: null }; // bare host
-  return { host: null, port: null }; // scalar (true/full/...) — không phải host
+  if (m) return { host: m[1], port: Number(m[2]), bare: false };
+  if (/^[^/:?#]+$/.test(v)) return { host: v, port: null, bare: true }; // bare word — host HOẶC scalar (true/full/...)
+  return { host: null, port: null, bare: false }; // không parse được thành host/port
 }
 
 function classifyAxisA(compose, placeholders) {
@@ -506,12 +513,15 @@ function classifyAxisA(compose, placeholders) {
       rows.push({ ...p, status: 'SKIP-NOENTRY', note: 'service không có entry compose (host-only)', composeVal: null, evidence: evidenceSrc });
       continue;
     }
+    // P2 review R1: row SKIP/pointer vẫn giữ composeVal — report cần thấy
+    // compose có SET var hay không dù không classify (vd STOREFRONT_WEB_URI).
+    const rawEarly = svc.env.has(p.var) ? svc.env.get(p.var) : null;
     if (FE_PORT_RE.test(p.default || '') || FE_VAR_RE.test(p.var)) {
-      rows.push({ ...p, status: 'SKIP-FE', note: 'FE-host whitelist (dev :3000/:5173 hoặc tên var FE) — chủ đích, không flag', composeVal: null, evidence: evidenceSrc });
+      rows.push({ ...p, status: 'SKIP-FE', note: 'FE-host whitelist (dev :3000/:5173 hoặc tên var FE) — chủ đích, không flag', composeVal: rawEarly, evidence: evidenceSrc });
       continue;
     }
     if (p.default != null && FS_PATH_RE.test(p.default)) {
-      rows.push({ ...p, status: 'SEE-AXIS-B', note: 'giá trị path file-system — trục (b) phân loại', composeVal: null, evidence: evidenceSrc });
+      rows.push({ ...p, status: 'SEE-AXIS-B', note: 'giá trị path file-system — trục (b) phân loại', composeVal: rawEarly, evidence: evidenceSrc });
       continue;
     }
     const hasVar = svc.env.has(p.var);
@@ -555,8 +565,10 @@ function classifyAxisA(compose, placeholders) {
       rows.push({ ...p, status: 'OK', note: `alias-equivalence: ${s.host ?? '(host rỗng)'} là compose service + cùng port → OK`, composeVal: raw, evidence });
     else if (serviceName)
       rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} — host là compose service nhưng lệch port (${d.port ?? '—'} → ${s.port ?? '—'}) — WARN non-finding`, composeVal: raw, evidence });
-    else if (s.host == null)
-      rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} khác default ${maskValue(p.var, p.default)} (giá trị vô hướng) — WARN non-finding`, composeVal: raw, evidence });
+    else if (s.host == null || s.bare)
+      // P2 review R1: bare word không phải service name → word là SCALAR (true/full/...),
+      // đừng ghi "host 'true' không phải compose service" — misleading.
+      rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} khác default ${maskValue(p.var, p.default)} — giá trị vô hướng (scalar, không host/port) — WARN non-finding`, composeVal: raw, evidence });
     else
       rows.push({ ...p, status: 'WARN', note: `set ${maskValue(p.var, setVal)} — host '${s.host}' không phải compose service name, lệch default — WARN non-finding`, composeVal: raw, evidence });
   }
@@ -564,18 +576,31 @@ function classifyAxisA(compose, placeholders) {
 }
 
 // ── Finding IDs ổn định (A11) + FIXED registry ───────────────────────────────
-// ID = CFG-<trục>-<số 2 chữ số> đánh theo thứ tự deterministic trong axis
-// (service, var/check). Registry scripts/qa/config-audit-fixed.json schema
+// ID content-DERIVED — KHÔNG đánh số theo vị trí sort (renumber hazard: SF-4
+// fix 1 finding → mọi ID phía sau dịch chuyển, entry FIXED cũ trong registry
+// match bare ID nhầm sang finding KHÁC → tắt exit 1 cho finding chưa fix):
+//   CFG-A-<service>-<VAR>            (var UPPER_SNAKE — unique trong service)
+//   CFG-B-<service>-<path-basename>  (path token — file service đọc lúc boot)
+//   CFG-C-<service>-<check>          (healthcheck lặp theo 11 service — cần prefix)
+// Registry scripts/qa/config-audit-fixed.json schema
 // {findings:[{id, evidence, date}]} — ID khớp → status FIXED (không ảnh hưởng
 // exit), script đọc MỖI run (A1).
 function assignFindingIds(axisA, axisB, axisC) {
   const sortF = (k) => (a, b) => a.service.localeCompare(b.service) || (a[k] || '').localeCompare(b[k] || '');
+  const token = (s) => String(s || '').trim().replace(/\s+/g, '-');
   const out = { A: [], B: [], C: [] };
   out.A = axisA.filter((r) => r.status === 'DANGEROUS').sort(sortF('var'));
   out.B = axisB.filter((r) => r.status === 'DANGEROUS').sort(sortF('var'));
   out.C = axisC.filter((r) => r.status === 'DANGEROUS').sort(sortF('check'));
-  for (const [axis, list] of Object.entries(out))
-    list.forEach((r, i) => { r.id = `CFG-${axis}-${String(i + 1).padStart(2, '0')}`; });
+  const seen = new Map(); // chống trùng content-ID (hiếm) — đuôi -2, -3 theo thứ tự sort
+  const uniq = (base) => {
+    const n = seen.get(base) || 0;
+    seen.set(base, n + 1);
+    return n === 0 ? base : `${base}-${n + 1}`;
+  };
+  for (const r of out.A) r.id = uniq(`CFG-A-${token(r.service)}-${token(r.var)}`);
+  for (const r of out.B) r.id = uniq(`CFG-B-${token(r.service)}-${token(basename(r.envVal != null ? r.envVal : r.default || ''))}`);
+  for (const r of out.C) r.id = uniq(`CFG-C-${token(r.service)}-${token(r.check)}`);
   return out;
 }
 
@@ -756,8 +781,13 @@ function runSelfTest() {
     const target = dang[c.axis];
     if (!target.some(c.expect))
       problems.push(`expected finding (đúng service·var) không có trong trục ${c.axis}`);
-    const idOk = target.some((f) => f.id === `CFG-${c.axis}-01`);
-    if (!idOk) problems.push(`expected ID CFG-${c.axis}-01 không đúng (thấy: ${target.map((f) => f.id).join(',') || '—'})`);
+    const expectedId = {
+      A: 'CFG-A-alpha-service-LOG_URI',
+      B: 'CFG-B-beta-service-jwt-public.pem',
+      C: 'CFG-C-postgres-max_connections',
+    }[c.axis];
+    if (!target.some((f) => f.id === expectedId))
+      problems.push(`expected content-ID ${expectedId} không đúng (thấy: ${target.map((f) => f.id).join(',') || '—'})`);
     if (problems.length === 0) {
       console.log(`SELF-TEST [PASS] ${c.name} — trục ${c.axis} bắt DANGEROUS: ${target[0].id} ${target[0].service}·${target[0].var || target[0].check}`);
     } else {

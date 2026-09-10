@@ -553,10 +553,247 @@ stage_seed() {
   log "[seed] make seed OK — exit 0 + XONG khớp"
 }
 
-# ── Stage PROBES (T8) — appended by executor 2 ──
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage PROBES (T8) — 6 probe (a→f), COLLECT-ALL findings (không fail-fast),
+# verdict bảng cuối. Có FAIL → die 6 (stack vẫn seeded — findings minh bạch).
+# ─────────────────────────────────────────────────────────────────────────────
+FINDINGS=()
+PROBE_RESULTS=()
+PROBE_TOTAL=0
+PROBE_FAILS=0
+ADMIN_TOKEN=""
+
+probe_result() {  # probe_result <tên> <PASS|FAIL> <ghi chú>
+  PROBE_TOTAL=$(( PROBE_TOTAL + 1 ))
+  if [[ "$2" == "FAIL" ]]; then
+    PROBE_FAILS=$(( PROBE_FAILS + 1 ))
+  fi
+  PROBE_RESULTS+=("${2}  ${1} — ${3}")
+  log "[probe] ${2} — ${1}: ${3}"
+}
+
+add_finding() {
+  FINDINGS+=("$1")
+  log "[probe] FINDING — $1"
+}
+
+env_value() {  # env_value <KEY> — đọc repo .env (strip quotes), rỗng nếu thiếu
+  local v
+  v="$(grep -E "^${1}=" "${REPO_ROOT}/.env" 2>/dev/null | head -n1 | cut -d= -f2- | tr -d '\r')"
+  v="${v%\"}"; v="${v#\"}"; v="${v%\'}"; v="${v#\'}"
+  printf '%s' "${v}"
+}
+
+psql_catalog() {  # psql_catalog <sql> — query db_catalog qua exec (lỗi → rỗng)
+  "${COMPOSE[@]}" exec -T postgres psql -U postgres -d db_catalog -tAc "$1" 2>/dev/null || true
+}
+
+json_get() {  # json_get <file> <key> — python3 host (rỗng nếu thiếu/parse-fail)
+  python3 -c '
+import json, sys
+data = json.load(open(sys.argv[1]))
+v = data.get(sys.argv[2], "")
+sys.stdout.write(v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
+' "$1" "$2" 2>/dev/null || true
+}
+
+# (a) MinIO — product_images.url phải có + load 200 qua gateway (url đã /media/)
+probe_minio_image() {
+  local url code
+  url="$(psql_catalog "SELECT url FROM product_images WHERE url <> '' LIMIT 1;")"
+  if [[ -z "${url}" ]]; then
+    add_finding "MinIO-reseed: 0 product_images có url — ảnh không có sẵn sau seed"
+    probe_result "minio-image" FAIL "0 product_images có url (MinIO-reseed)"
+    return
+  fi
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://localhost:8080${url}")"
+  if [[ "${code}" == "200" ]]; then
+    probe_result "minio-image" PASS "GET :8080${url} → 200"
+  else
+    add_finding "MinIO-reseed: image url tồn tại nhưng GET → ${code:-?} — ${url}"
+    probe_result "minio-image" FAIL "GET :8080${url} → ${code:-?} (expect 200)"
+  fi
+}
+
+# (b) Login admin — creds .env ADMIN_EMAIL/ADMIN_PASSWORD, fallback demo
+probe_login() {
+  local email password payload code tok tmp
+  email="$(env_value ADMIN_EMAIL)"
+  [[ -n "${email}" ]] || email="admin@demo.vn"
+  password="$(env_value ADMIN_PASSWORD)"
+  [[ -n "${password}" ]] || password="admin123"
+  payload="$(printf '{"email":"%s","password":"%s"}' "${email}" "${password}")"
+  tmp="$(mktemp)"
+  code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 -X POST \
+    http://localhost:8080/api/identity/auth/login \
+    -H 'Content-Type: application/json' -d "${payload}")"
+  tok="$(json_get "${tmp}" accessToken)"
+  if [[ "${code}" == "200" && -n "${tok}" ]]; then
+    ADMIN_TOKEN="${tok}"
+    probe_result "login-admin" PASS "POST /api/identity/auth/login → 200 + accessToken (${#tok} chars)"
+  else
+    add_finding "login admin FAIL — code=${code:-?} (creds .env/fallback), body: $(head -c 200 "${tmp}" 2>/dev/null)"
+    probe_result "login-admin" FAIL "POST login → ${code:-?}, accessToken rỗng"
+  fi
+}
+
+# (c) Guest cart — POST /api/cart/items không auth, productId từ db_catalog
+probe_guest_cart() {
+  local pid payload code tmp
+  pid="$(psql_catalog "SELECT id FROM products LIMIT 1;")"
+  if [[ -z "${pid}" ]]; then
+    add_finding "guest-cart: 0 products trong db_catalog (seed chưa populate?)"
+    probe_result "guest-cart" FAIL "không lấy được productId từ db_catalog"
+    return
+  fi
+  payload="$(printf '{"productId":"%s","qty":1}' "${pid}")"
+  tmp="$(mktemp)"
+  code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 -X POST \
+    http://localhost:8080/api/cart/items \
+    -H 'Content-Type: application/json' -d "${payload}")"
+  if [[ "${code}" == "200" ]]; then
+    probe_result "guest-cart" PASS "POST /api/cart/items (guest, product ${pid:0:8}…) → 200"
+  else
+    add_finding "guest-cart FAIL — POST /api/cart/items → ${code:-?}, body: $(head -c 200 "${tmp}" 2>/dev/null)"
+    probe_result "guest-cart" FAIL "POST /api/cart/items → ${code:-?} (expect 200)"
+  fi
+}
+
+# (d) Events API — GET /api/log/admin/events với JWT từ (b)
+probe_events() {
+  local code tmp
+  tmp="$(mktemp)"
+  code="$(curl -s -o "${tmp}" -w '%{http_code}' --max-time 15 \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+    "http://localhost:8080/api/log/admin/events?page=0&size=1")"
+  if [[ "${code}" == "200" ]]; then
+    probe_result "events-api" PASS "GET /api/log/admin/events (JWT) → 200"
+  else
+    add_finding "events-api FAIL — GET /api/log/admin/events → ${code:-?} (token ${#ADMIN_TOKEN} chars), body: $(head -c 200 "${tmp}" 2>/dev/null)"
+    probe_result "events-api" FAIL "GET /api/log/admin/events → ${code:-?} (expect 200)"
+  fi
+}
+
+# (e) RBAC HARDCODED — pin product 'Tai nghe%' (seed.sh:166); guest PUT phải
+# 401/403; admin PUT round-trip GET→PUT cùng body → 2xx + re-GET so
+# nameI18n/price unchanged (idempotent — không mutate demo).
+# PUT 400 + images[].url = bug data lộ (FINDING ghi rõ — KHÔNG bẻ cong probe).
+probe_rbac() {
+  local pid base guest_code get_code put_code reget_code tmp_get tmp_put tmp_reget
+  pid="$(psql_catalog "SELECT id FROM products WHERE name->>'vi' ILIKE 'Tai nghe%' LIMIT 1;")"
+  [[ -n "${pid}" ]] || pid="$(psql_catalog "SELECT id FROM products LIMIT 1;")"
+  if [[ -z "${pid}" ]]; then
+    add_finding "rbac: không lấy được product pin (db_catalog rỗng?)"
+    probe_result "rbac-guest-put" FAIL "không có product để probe"
+    probe_result "rbac-roundtrip" FAIL "không có product để probe"
+    return
+  fi
+  base="http://localhost:8080/api/catalog/admin/products/${pid}"
+
+  guest_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -X PUT \
+    -H 'Content-Type: application/json' -d '{}' "${base}")"
+  if [[ "${guest_code}" == "401" || "${guest_code}" == "403" ]]; then
+    probe_result "rbac-guest-put" PASS "PUT admin product KHÔNG token → ${guest_code} (blocked đúng)"
+  else
+    add_finding "rbac: guest PUT /api/catalog/admin/products → ${guest_code:-?} (expect 401/403) — lỗ hổng"
+    probe_result "rbac-guest-put" FAIL "guest PUT → ${guest_code:-?} (expect 401/403)"
+  fi
+
+  tmp_get="$(mktemp)"; tmp_put="$(mktemp)"; tmp_reget="$(mktemp)"
+  get_code="$(curl -s -o "${tmp_get}" -w '%{http_code}' --max-time 15 \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" "${base}")"
+  if [[ "${get_code}" != "200" ]]; then
+    add_finding "rbac: admin GET product → ${get_code:-?} (token rỗng nếu login fail)"
+    probe_result "rbac-roundtrip" FAIL "admin GET → ${get_code:-?} (expect 200)"
+    return
+  fi
+
+  put_code="$(curl -s -o "${tmp_put}" -w '%{http_code}' --max-time 15 -X PUT \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" -H 'Content-Type: application/json' \
+    -d @"${tmp_get}" "${base}")"
+  if [[ "${put_code}" == "400" ]] \
+     && grep -q 'images' "${tmp_put}" 2>/dev/null && grep -q 'url' "${tmp_put}" 2>/dev/null; then
+    add_finding "bug data: images url rỗng — admin PUT round-trip 400 (images[].url bắt buộc)"
+    probe_result "rbac-roundtrip" FAIL "PUT 400 — bug data images url rỗng"
+    return
+  fi
+  case "${put_code}" in
+    200|201|204) ;;
+    *)
+      add_finding "rbac: admin PUT round-trip → ${put_code:-?} (expect 2xx), body: $(head -c 200 "${tmp_put}" 2>/dev/null)"
+      probe_result "rbac-roundtrip" FAIL "admin PUT → ${put_code:-?} (expect 2xx)"
+      return
+      ;;
+  esac
+
+  reget_code="$(curl -s -o "${tmp_reget}" -w '%{http_code}' --max-time 15 \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" "${base}")"
+  if [[ "${reget_code}" != "200" ]]; then
+    add_finding "rbac: re-GET sau PUT → ${reget_code:-?}"
+    probe_result "rbac-roundtrip" FAIL "re-GET sau PUT → ${reget_code:-?}"
+    return
+  fi
+
+  if python3 -c '
+import json, sys
+a = json.load(open(sys.argv[1])); b = json.load(open(sys.argv[2]))
+ok = a.get("nameI18n") == b.get("nameI18n") and a.get("price") == b.get("price")
+sys.exit(0 if ok else 1)
+' "${tmp_get}" "${tmp_reget}" 2>/dev/null; then
+    probe_result "rbac-roundtrip" PASS "admin PUT → ${put_code}, re-GET nameI18n+price unchanged (idempotent)"
+  else
+    add_finding "rbac: round-trip MUTATE — re-GET nameI18n/price khác GET gốc"
+    probe_result "rbac-roundtrip" FAIL "re-GET nameI18n/price lệch GET gốc"
+  fi
+}
+
+# (f) Port-owner — process lạ (không phải docker) giữ port gate = FINDING stale-env
+probe_port_owner() {
+  local port pids pid cmd strays=0
+  for port in "${GATE_PORTS[@]}"; do
+    pids="$(lsof -nP -t -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+    [[ -n "${pids}" ]] || continue
+    for pid in ${pids}; do
+      cmd="$(ps -p "${pid}" -o comm= 2>/dev/null || true)"
+      case "${cmd}" in
+        com.docke|docker) : ;;  # docker-published (gateway :8080...) — expected
+        *)
+          strays=$(( strays + 1 ))
+          add_finding "stale-env: port ${port} giữ bởi PID ${pid} ${cmd:-?}"
+          ;;
+      esac
+    done
+  done
+  if (( strays == 0 )); then
+    probe_result "port-owner" PASS "${#GATE_PORTS[@]} port sạch (chỉ docker/rỗng)"
+  else
+    probe_result "port-owner" FAIL "${strays} process lạ giữ port (stale-env)"
+  fi
+}
+
 stage_probes() {
-  log "[stub] stage PROBES — NOT IMPLEMENTED (executor 2 / T8: image/login/cart/events/rbac/port-owner)"
-  return 0
+  log "[probes] collect-ALL — 6 probe (a→f), không fail-fast, verdict bảng cuối"
+  probe_minio_image
+  probe_login
+  probe_guest_cart
+  probe_events
+  probe_rbac
+  probe_port_owner
+
+  log "[probes] ── VERDICT TABLE (${PROBE_FAILS}/${PROBE_TOTAL} FAIL) ──"
+  local r
+  for r in ${PROBE_RESULTS[@]+"${PROBE_RESULTS[@]}"}; do
+    log "[probes]   ${r}"
+  done
+
+  if (( PROBE_FAILS > 0 )); then
+    log "[probes] FINDINGS (${#FINDINGS[@]}):"
+    for r in ${FINDINGS[@]+"${FINDINGS[@]}"}; do
+      log "[probes]   - ${r}"
+    done
+    die 6 "[probes] ${PROBE_FAILS}/${PROBE_TOTAL} probe FAIL — findings minh bạch (stack vẫn seeded)"
+  fi
+  log "[probes] ${PROBE_TOTAL}/${PROBE_TOTAL} PASS"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

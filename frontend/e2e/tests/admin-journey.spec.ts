@@ -186,4 +186,37 @@ test.describe('Admin journey — CRUD đầy đủ field (FI-407)', () => {
     await expect(page.locator('.admin-variant-row').first().locator('input').nth(4))
       .toHaveValue('44', { timeout: 15_000 });
   });
+
+  test('F — category CRUD round-trip: tạo → sửa tên → xóa (dọn rác)', async ({ page }) => {
+    await adminUiLogin(page);
+    const CAT = `E2E Danh Mục ${STAMP}`;
+    await page.goto(`${GATEWAY}/admin/categories`);
+    await page.getByRole('button', { name: 'Thêm danh mục' }).click();
+    await page.getByLabel('Tên (vi)').fill(CAT);
+    await page.getByLabel('Tên (en)').fill(`E2E Category ${STAMP}`);
+    await page.getByLabel('Slug (vi)').fill(`e2e-danh-muc-${STAMP}`);
+    await page.getByLabel('Slug (en)').fill(`e2e-category-${STAMP}`);
+    await page.getByLabel('Danh mục cha').selectOption({ label: '— Danh mục gốc —' });
+    await page.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByText('Đã tạo danh mục')).toBeVisible({ timeout: 15_000 });
+
+    const catRow = page.locator('[data-testid="category-row"]', { hasText: CAT }).first();
+    await expect(catRow).toBeVisible({ timeout: 15_000 });
+
+    // SỬA tên vi
+    catRow.getByRole('button', { name: 'Sửa', exact: true }).click();
+    await page.getByLabel('Tên (vi)').fill(`${CAT} (đã sửa)`);
+    await page.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByText('Đã cập nhật danh mục')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="category-row"]', { hasText: `${CAT} (đã sửa)` }).first())
+      .toBeVisible({ timeout: 15_000 });
+
+    // XÓA (modal confirm) — category mới không con/không product → xóa được
+    const renamedRow = page.locator('[data-testid="category-row"]', { hasText: `${CAT} (đã sửa)` }).first();
+    renamedRow.getByRole('button', { name: 'Xóa', exact: true }).click();
+    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await expect(
+      page.locator('[data-testid="category-row"]', { hasText: CAT })
+    ).toHaveCount(0, { timeout: 15_000 });
+  });
 });

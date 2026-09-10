@@ -40,13 +40,12 @@ export const dictionaries = {
     errorRetry: { vi: 'Thử lại', en: 'Try again' },
   },
   header: {
-    ticker: { vi: 'CHÍNH HÃNG · FREESHIP', en: 'OFFICIAL · FREESHIP' },
     cart: { vi: 'Giỏ hàng', en: 'Cart' },
     account: { vi: 'Tài khoản', en: 'Account' },
     categories: { vi: 'Danh mục', en: 'Categories' },
     newArrivals: { vi: 'Hàng mới', en: 'New arrivals' },
     bestSellers: { vi: 'Bán chạy', en: 'Best sellers' },
-    logo: { vi: 'Shop VN — trang chủ', en: 'Shop VN — home' },
+    logo: { vi: 'Wakii store — trang chủ', en: 'Wakii store — home' },
     quickNav: { vi: 'Danh mục nhanh', en: 'Quick categories' },
   },
   hero: {

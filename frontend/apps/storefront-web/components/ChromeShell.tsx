@@ -55,11 +55,23 @@ function SlotLogo(): ReactElement {
   const locale = useLocaleFromParams();
   return (
     <Link className="logo" href={localePath('/', locale)} aria-label={t(locale, 'header.logo')}>
-      <span className="logo-word">
-        ShopVN
-        <span className="logo-dot" aria-hidden="true" />
-      </span>
-      <span className="logo-ticker">{t(locale, 'header.ticker')}</span>
+      {/* Logo Wakii hướng B "Túi W" (docs/design/logo-wakii-final — SVG wordmark
+          outline, không phụ thuộc font). 2 img light/dark swap qua data-theme
+          trên <html> (css .logo-img--*); link home + aria-label giữ nguyên. */}
+      <img
+        className="logo-img logo-img--light"
+        src="/logo-horizontal-light.svg"
+        alt="Wakii store"
+        height={30}
+        width={124}
+      />
+      <img
+        className="logo-img logo-img--dark"
+        src="/logo-horizontal-dark.svg"
+        alt="Wakii store"
+        height={30}
+        width={124}
+      />
     </Link>
   );
 }

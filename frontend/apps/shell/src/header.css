@@ -32,8 +32,7 @@
 /* Logo wordmark — 26px/800 primary + chấm đỏ 9px (direction §2.1). */
 .shell-logo {
   display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
+  align-items: center;
   text-decoration: none;
   transition: opacity var(--dur-fast) var(--ease-out);
 }
@@ -42,20 +41,24 @@
   opacity: 0.85;
 }
 
-.shell-logo strong {
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  color: var(--c-primary);
+/* Logo Wakii (hướng B "Túi W" — docs/design/logo-wakii-final): SVG lockup
+   light/dark, swap theo data-theme trên <html> (ThemeToggle chrome). */
+.shell-logo-img {
+  height: 26px;
+  width: auto;
+  display: block;
 }
 
-.shell-logo::after {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-radius: var(--radius-full, 999px);
-  background: var(--c-primary);
+.shell-logo-img--dark {
+  display: none;
+}
+
+[data-theme='dark'] .shell-logo-img--light {
+  display: none;
+}
+
+[data-theme='dark'] .shell-logo-img--dark {
+  display: block;
 }
 
 /* Search — viền 2px primary luôn sẵn, focus-within ring tint + shadow-2. */

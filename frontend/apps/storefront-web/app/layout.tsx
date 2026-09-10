@@ -37,10 +37,10 @@ const beVietnamPro = Be_Vietnam_Pro({
  * runtime → đặt ở root để MỌI page (kể cả child generateMetadata) kế thừa. */
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  applicationName: 'ShopVN',
+  applicationName: 'Wakii store',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'ShopVN', statusBarStyle: 'default' },
-  icons: { apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'Wakii', statusBarStyle: 'default' },
+  icons: { icon: '/favicon.svg', apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {

@@ -4,11 +4,15 @@ import type { MetadataRoute } from 'next';
  * Web app manifest (SF-15) — Next serve /manifest.webmanifest. Màu từ tokens
  * (--c-primary #F53D2D / --c-bg #F5F5F5). start_url có locale prefix (route
  * thật /vi — gateway middleware rewrite '/' → '/vi').
+ *
+ * Logo Wakii (hướng B "Túi W" — docs/design/logo-wakii-final): 4 icon theo
+ * hand-off spec — any 192/512 (mark full màu nền trong suốt) + maskable
+ * 192/512 (biến thể knockout trắng, đã chốt safe-zone trong PNG).
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'ShopVN — Chợ sôi động',
-    short_name: 'ShopVN',
+    name: 'Wakii store — Chợ sôi động',
+    short_name: 'Wakii',
     description: 'Hàng nghìn sản phẩm chính hãng, giá tốt mỗi ngày.',
     start_url: '/vi',
     scope: '/',
@@ -18,6 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
       { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };

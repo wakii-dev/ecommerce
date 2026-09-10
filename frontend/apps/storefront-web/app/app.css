@@ -135,32 +135,25 @@ img {
   white-space: nowrap;
 }
 
-.logo-word {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--c-link);
-  letter-spacing: -0.5px;
-  display: inline-flex;
-  align-items: baseline;
+/* Logo Wakii (hướng B "Túi W" — docs/design/logo-wakii-final): SVG lockup
+   light/dark, swap theo data-theme trên <html> (ThemeToggle). SVG viewBox
+   198.2×48 — height 30 → width ≈124; để width auto qua attribute ratio. */
+.logo-img {
+  height: 30px;
+  width: auto;
+  display: block;
 }
 
-.logo-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--c-primary);
-  margin-left: 3px;
+.logo-img--dark {
+  display: none;
 }
 
-.logo-ticker {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--tint-primary-text);
-  background: var(--tint-primary-bg);
-  border: 1px solid var(--tint-primary-border);
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
+[data-theme='dark'] .logo-img--light {
+  display: none;
+}
+
+[data-theme='dark'] .logo-img--dark {
+  display: block;
 }
 
 /* Search bar — viền 2px primary (§2.1), flex trung tâm.
@@ -2809,19 +2802,11 @@ img {
    footer 2 cột, cat 3 / featured 2 / plp 2 / coupons 1 cột, pdp 1 cột,
    hero title 32 — block này chỉ bổ sung phần <600px còn thiếu. */
 @media (max-width: 600px) {
-  /* Header: logo co vừa (ticker ẩn), actions icon-only — label dùng mẫu
-     visually-hidden GIỮ tên a11y (display:none sẽ mất accessible name),
-     nút icon 40px + gap hẹp để logo + EN + 3 nút vừa hàng đầu 375px. */
+  /* Header: actions icon-only — label dùng mẫu visually-hidden GIỮ tên a11y
+     (display:none sẽ mất accessible name), nút icon 40px + gap hẹp để logo
+     Wakii + EN + 3 nút vừa hàng đầu 375px. */
   .header-main {
     gap: var(--space-3);
-  }
-
-  .logo-word {
-    font-size: 20px;
-  }
-
-  .logo-ticker {
-    display: none;
   }
 
   .header-actions {

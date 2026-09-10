@@ -58,7 +58,9 @@ spring:
           # thiếu trong predicate → 404 Whitelabel khi user đi qua gateway :8080
           # (language switcher link /en/, middleware locale routes /vi/**).
           # E2E không bắt được vì STOREFRONT env đi thẳng :3000.
-          predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/vi,/vi/**,/en,/en/**,/sitemap.xml,/robots.txt,/_next/**,/manifest.webmanifest,/sw.js,/icons/**,/apple-touch-icon.png" ]
+          # Logo Wakii (2026-09-10): + 2 SVG lockup header (docs/design/logo-wakii-final)
+          # — vắng trong predicate → gateway tự trả 404 JSON Spring.
+          predicates: [ "Path=/,/c/**,/p/**,/search,/coupons,/vi,/vi/**,/en,/en/**,/sitemap.xml,/robots.txt,/_next/**,/manifest.webmanifest,/sw.js,/icons/**,/apple-touch-icon.png,/logo-horizontal-light.svg,/logo-horizontal-dark.svg" ]
       # SF-6 (2026-09-06) un-comment block cart — KHÔNG StripPrefix (SF-4
       # precedent): cart-service controllers map FULL /api/cart/** khớp contract.
         - id: cart                                          # SF-6 · port 8083

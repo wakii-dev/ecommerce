@@ -109,6 +109,56 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/affiliate/me/loyalty:
+    get:
+      tags:
+        - affiliate
+      operationId: getMyLoyalty
+      summary: Điểm loyalty của user hiện tại
+      description: Balance + tổng điểm đã nhận (SF-14 — dashboard loyalty).
+      responses:
+        '200':
+          description: Tài khoản loyalty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoyaltyAccount'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/me/loyalty/ledger:
+    get:
+      tags:
+        - affiliate
+      operationId: listMyLoyaltyLedger
+      summary: Sổ điểm loyalty của user hiện tại
+      description: Mỗi entry là một biến động điểm (EARN/REDEEM/ADJUST); page 1-based.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          required: false
+          description: Số entry mỗi trang
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+      responses:
+        '200':
+          description: Page sổ điểm
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoyaltyLedgerPage'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/affiliate/track/click:
     post:
       tags:
@@ -217,6 +267,62 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates/{id}/suspend:
+    post:
+      tags:
+        - admin
+      operationId: suspendAffiliate
+      summary: Tạm ngưng affiliate (ngừng track)
+      description: ADDITIVE (FI-310) — chỉ APPROVED suspend được; SUSPENDED thì track click bỏ qua code.
+      parameters:
+        - $ref: '#/components/parameters/AffiliateId'
+      responses:
+        '200':
+          description: Hồ sơ đã SUSPENDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Hồ sơ không ở trạng thái APPROVED
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/affiliates/{id}/reactivate:
+    post:
+      tags:
+        - admin
+      operationId: reactivateAffiliate
+      summary: Kích hoạt lại affiliate (track lại)
+      description: ADDITIVE (FI-310) — chỉ SUSPENDED reactivate được; trở lại APPROVED.
+      parameters:
+        - $ref: '#/components/parameters/AffiliateId'
+      responses:
+        '200':
+          description: Hồ sơ đã APPROVED lại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateProfile'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Hồ sơ không ở trạng thái SUSPENDED
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/affiliate/admin/affiliates/{id}/rate:
     put:
       tags:
@@ -241,6 +347,75 @@ paths:
                 $ref: '#/components/schemas/AffiliateProfile'
         '400':
           description: Rate ngoài khoảng cho phép
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/loyalty:
+    get:
+      tags:
+        - admin
+      operationId: adminLookupLoyalty
+      summary: Tra cứu loyalty theo userId (admin)
+      description: Account + ledger gần đây của user — dùng cho admin console.
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          description: Id user cần tra cứu
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          required: false
+          description: Số entry ledger mỗi trang
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+      responses:
+        '200':
+          description: Account + ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLoyaltyLookup'
+        '401':
+          description: Chưa đăng nhập / token hết hạn
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/affiliate/admin/loyalty/adjust:
+    post:
+      tags:
+        - admin
+      operationId: adjustLoyaltyPoints
+      summary: Chỉnh điểm loyalty thủ công (admin)
+      description: Delta ± (âm = trừ điểm), kèm note; trả account sau adjust.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyAdjustRequest'
+      responses:
+        '200':
+          description: Đã adjust — account mới
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoyaltyAccount'
+        '400':
+          description: Payload không hợp lệ
           content:
             application/problem+json:
               schema:
@@ -382,6 +557,7 @@ components:
         - PENDING
         - APPROVED
         - REJECTED
+        - SUSPENDED
     AffiliatePending:
       type: object
       required:
@@ -564,3 +740,111 @@ components:
         remaining:
           type: integer
           description: Điểm còn lại của user
+    LoyaltyAccount:
+      type: object
+      description: Tài khoản loyalty của user (SF-14)
+      required:
+        - userId
+        - balance
+        - totalEarned
+      properties:
+        userId:
+          type: string
+          format: uuid
+        balance:
+          type: integer
+          description: Điểm hiện có
+        totalEarned:
+          type: integer
+          description: Tổng điểm đã nhận
+    LoyaltyLedgerType:
+      type: string
+      description: Loại biến động điểm — ADJUST là chỉnh tay bởi admin
+      enum:
+        - EARN
+        - REDEEM
+        - ADJUST
+    LoyaltyLedgerEntry:
+      type: object
+      required:
+        - id
+        - type
+        - points
+        - createdAt
+      properties:
+        id:
+          type: string
+        orderId:
+          type:
+            - string
+            - 'null'
+          description: Đơn gắn biến động — null khi ADJUST thủ công
+        type:
+          $ref: '#/components/schemas/LoyaltyLedgerType'
+        points:
+          type: integer
+          description: Điểm biến động (±)
+        note:
+          type: string
+          description: Ghi chú (vd lý do adjust)
+        createdAt:
+          type: string
+          format: date-time
+    LoyaltyLedgerPage:
+      type: object
+      description: Page chuẩn {items, page, size, total}
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoyaltyLedgerEntry'
+        page:
+          type: integer
+          description: Trang hiện tại (1-based)
+        size:
+          type: integer
+        total:
+          type: integer
+    AdminLoyaltyLookup:
+      type: object
+      description: Kết quả tra cứu loyalty theo userId (admin)
+      required:
+        - account
+        - ledger
+        - page
+        - size
+        - total
+      properties:
+        account:
+          $ref: '#/components/schemas/LoyaltyAccount'
+        ledger:
+          type: array
+          description: Ledger gần đây của user
+          items:
+            $ref: '#/components/schemas/LoyaltyLedgerEntry'
+        page:
+          type: integer
+          description: Trang hiện tại (1-based)
+        size:
+          type: integer
+        total:
+          type: integer
+    LoyaltyAdjustRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+        points:
+          type: integer
+          description: Delta ± (âm = trừ điểm)
+        note:
+          type: string
+          description: Lý do chỉnh điểm (log lại)

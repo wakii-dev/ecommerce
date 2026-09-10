@@ -444,6 +444,33 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/ordering/admin/orders/export.csv:
+    get:
+      tags: [admin]
+      operationId: adminExportOrdersCsv
+      summary: Xuat CSV toan bo don (admin)
+      description: |
+        Stream CSV (SF-13 A7b, ADR 0005) — BOM UTF-8 dau stream cho Excel VN.
+        Attachment filename orders-<yyyy-mm-dd>.csv.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: File CSV.
+          headers:
+            Content-Disposition:
+              description: attachment; filename="orders-<yyyy-mm-dd>.csv"
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                description: Noi dung CSV.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/ordering/admin/orders/{id}:
     get:
       tags: [admin]

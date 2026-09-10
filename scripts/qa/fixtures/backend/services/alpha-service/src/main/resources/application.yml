@@ -1,0 +1,4 @@
+# Fixture — alpha-service đọc LOG_URI với default localhost (pattern LOG_URI 9/9).
+# Dòng comment chứa placeholder phải bị BỎ: # uri: ${LOG_COMMENTED:http://localhost:9999}
+route:
+  uri: ${LOG_URI:http://localhost:8088}

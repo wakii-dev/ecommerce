@@ -120,6 +120,67 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/inventory/admin/stocks:
+    put:
+      tags: [admin]
+      operationId: setStock
+      summary: Upsert ton kho theo variant (admin, FI-397)
+      description: |
+        Form admin goi NGAY SAU save product cho tung variant — catalog admin
+        PUT variants KHONG sync stock (inventory so huu ton kho, writer-supply).
+        quantity 0 hop le (chot het hang).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetStockRequest'
+      responses:
+        '200':
+          description: Stock row sau upsert.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/inventory/admin/stocks/{variantId}:
+    get:
+      tags: [admin]
+      operationId: getStock
+      summary: Doc ton kho 1 variant (admin)
+      description: Form admin dung sau save de confirm.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stock row cua variant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Khong co stock row cho variant.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 components:
   securitySchemes:
     bearerAuth:
@@ -267,3 +328,39 @@ components:
         threshold:
           type: integer
           description: Nguong da ap dung cho dong nay.
+    SetStockRequest:
+      type: object
+      description: Body PUT /admin/stocks (FI-397) — upsert theo variant.
+      required: [variantId, quantity]
+      properties:
+        variantId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+          description: So luong moi (0 = chot het hang).
+        productId:
+          type: string
+          description: Denormalized nullable — writer-supply (FI-310).
+        productName:
+          type: string
+    Stock:
+      type: object
+      description: Row ton kho theo variant (pin §6.1.4).
+      required: [variantId, quantity, thresholdLow, updatedAt]
+      properties:
+        variantId:
+          type: string
+        quantity:
+          type: integer
+          description: Ton kha dung (available).
+        thresholdLow:
+          type: integer
+          description: Nguong canh bao ton kho thap.
+        productId:
+          type: [string, 'null']
+        productName:
+          type: [string, 'null']
+        updatedAt:
+          type: string
+          format: date-time

@@ -314,6 +314,49 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 | **P7** No-Fallback & Feature-Complete | Stripe keys tự lắp + E2E golden path FULL thật · Coupon CRUD A3 (GET list + toggle + FE form) · Honesty pass (zero dead link + registry ADR) | FI-369: 3/3 ✅ | 🚢 **[phase-7 released](https://github.com/wakii-dev/ecommerce/releases/tag/phase-7)** — merge [PR #9](https://github.com/wakii-dev/ecommerce/pull/9) |
 | **P5** Complete v1 | Convergence E2E · notification + essentials · RMA/GHN/loyalty · social/2FA/PWA/dark/chat | SF-10 + SF-13 + SF-14 + SF-15 |
 
+## 🧪 QA — fresh-boot harness (FI-406, QA Sweep SF-2)
+
+Tái tạo demo từ zero-state an toàn: **backup → wipe → build → up → seed → probes** —
+cơ chế DUY NHẤT bắt bug config-drift/data-lifecycle chỉ nổ ở fresh volume + boot
+100% container.
+
+```bash
+# ⚠️ DESTRUCTIVE — down -v XÓA pgdata/redis/mongo/minio (demo data + uploaded images).
+# Consent story-level: coordinator set confirm flag PER-RUN. KHÔNG có --force.
+QA_FRESH_BOOT_CONFIRM=1 make qa-fresh-boot
+```
+
+- **Gate kép:** thiếu confirm → exit 3; demo stack đang chạy / port 8080/3000/5173-5178/9099
+  bị giữ / disk <20GB / RAM VM <6GB → exit 3 (blast-radius per-volume in trước khi wipe:
+  `mongodata` event_log + `miniodata` uploaded images **MẤT VĨNH VIỄN** — không backup).
+- **Exit codes:** `0` OK · `3` gate refuse · `4` backup/seed fail · `5` build fail
+  (daemon wedge có hướng dẫn restart + resume `QA_FRESH_BOOT_RESUME=BUILD` — cần
+  `.run/qa-fresh-boot-wiped` từ run trước) · `6` probe fail (findings minh bạch, stack
+  vẫn seeded) · `7` UP health-gate fail (abort trước seed).
+- **Log:** `/tmp/qa-fresh-boot-<ts>.log` — timestamp từng stage + tổng thời gian.
+- **Backup:** `backups/qa-<ts>/<db>.sql.gz` (9 DB postgres — gitignored) + RESTORE-TEST
+  per-DB vào throwaway DB trước khi wipe được phép.
+
+### Runbook — restore từ backup
+
+```bash
+# 1. Bật infra + đợi postgres healthy
+docker compose up -d postgres   # đợi: docker inspect -f '{{.State.Health.Status}}' $(docker compose ps -q postgres)
+
+# 2. Tạo DB + restore từng dump (9 DB: db_affiliate db_catalog db_identity
+#    db_inventory db_notification db_ordering db_partner db_payment db_template)
+docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE db_catalog;"
+gunzip -c backups/qa-<ts>/db_catalog.sql.gz | docker compose exec -T postgres psql -U postgres -d db_catalog
+#    … lặp cho từng DB
+
+# 3. Lên full stack + seed lại phần không có trong postgres
+docker compose --profile full --profile stripe up -d --build
+make seed
+```
+
+> Lưu ý: mongo (event_log) + minio (uploaded images) **không có backup** — restore từ
+> backup không khôi phục được 2 phần này (seed/minio-init chỉ tạo lại khung).
+
 ## 📚 Tài liệu
 
 | | |
@@ -322,3 +365,11 @@ Release **từng phase một**: phase xong → tag + GitHub Release trên repo; 
 | 🧱 **Bracket** | [`docs/superpowers/brackets/fi310-ecommerce-platform.md`](docs/superpowers/brackets/fi310-ecommerce-platform.md) — 10 SF × 5 tier |
 | 📦 **Context packs** | [`docs/superpowers/contexts/`](docs/superpowers/contexts/) — spec slice per SF |
 | 🗂 **ADR** | `docs/adr/` — quyết định kiến trúc chi tiết (SF-10 hoàn thiện) |
+
+---
+
+## 🧪 QA static audit (SF-1 — FI-405)
+
+`make qa-audit` — 4 detector tĩnh (config-audit · s2s-auth-matrix · rbac-matrix · contracts-freshness), non-destructive (không docker/HTTP/.env), < 5 phút.
+Report: [`docs/superpowers/qa/report-sf1.md`](docs/superpowers/qa/report-sf1.md) — finding ID `CFG-xx` / `S2S-xx` / `RBAC-xx` / `CT-xx` (triage + fix = SF-4).
+Exit: `0` = 0 finding CHƯA fix · `1` = có finding chưa fix · `2` = script error (fail-loud).

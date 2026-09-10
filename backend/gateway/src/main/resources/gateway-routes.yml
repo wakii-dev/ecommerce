@@ -117,12 +117,14 @@ spring:
       # Next rewrites (next.config.mjs) để :8080 dùng được làm entry duy nhất
       # cả dev (HTML shell dev tham chiếu root-absolute /@vite/client…).
       # Shell :5173 chỉ chạm trực tiếp khi debug 2-origin (kill-switch).
+      # FI-408 (2026-09-10): + /login/2fa + /login/oauth/callback (SF-15) qua
+      # /login/** — trước đó Whitelabel 404. Cùng ngày: + dev assets Vite.
       # PREDICATE chỉ APPEND dev-only paths — profile full không đổi hành vi
       # (nginx serve dist, các path dev không bao giờ occur; /index.html trên
       # nginx = shell index gốc). Không filter — nginx/vite serve paths gốc.
         - id: shell-web                                   # SF-10 · shell :5173 / nginx
           uri: ${SHELL_WEB_ORIGIN:http://localhost:5173}
-          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/favicon.ico,/favicon.svg,/@vite/**,/@id/**,/@fs/**,/@react-refresh,/src/**,/node_modules/**,/index.html" ]
+          predicates: [ "Path=/cart,/cart/**,/checkout,/checkout/**,/account,/account/**,/admin,/admin/**,/order/confirmation,/login,/login/**,/register,/forgot-password,/reset-password,/remotes/**,/assets/**,/favicon.ico,/favicon.svg,/@vite/**,/@id/**,/@fs/**,/@react-refresh,/src/**,/node_modules/**,/index.html" ]
       #
       # SF-13 (2026-09-07): ảnh sản phẩm MinIO (A3) — /media/products/<file>
       # public (không cần public-paths: ngoài /api/** thì anyExchange permitAll);

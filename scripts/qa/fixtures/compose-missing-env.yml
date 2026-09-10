@@ -1,0 +1,26 @@
+# Fixture self-test case 1 — THIẾU ENV: alpha-service đọc ${LOG_URI:http://localhost:8088}
+# nhưng compose không set LOG_URI → trục (a) DANGEROUS. Các trục khác sạch.
+services:
+  postgres:
+    image: postgres:16
+    command: postgres -c max_connections=300
+    healthcheck:
+      test: pg_isready
+  alpha-service:
+    build:
+      context: .
+      dockerfile: backend/services/alpha-service/Dockerfile
+    environment:
+      OTHER_VAR: whatever   # inline comment phải được strip
+    healthcheck:
+      test: true
+  beta-service:
+    build:
+      context: .
+      dockerfile: backend/services/beta-service/Dockerfile
+    environment:
+      JWT_PUBLIC_KEY_PATH: /keys/jwt-public.pem
+    volumes:
+      - ./keys:/keys:ro
+    healthcheck:
+      test: true

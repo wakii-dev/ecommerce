@@ -48,16 +48,18 @@ test('user viết review → PENDING → admin duyệt (API) → PDP hiện + ba
   await expect(page.getByRole('button', { name: /Đăng nhập/ })).toBeHidden({ timeout: 15_000 });
   await page.goto(pdpUrl);
 
-  // CLEANUP state run trước: review (user, product) là UNIQUE — review E2E
-  // cũ (đã APPROVED) chặn viết lại (409 "Bạn đã đánh giá sản phẩm này rồi").
-  // Xoá review E2E cũ + review_eligibility giữ nguyên (badge vẫn xanh).
+  // CLEANUP state run trước: review (user, product) là UNIQUE — review cũ
+  // chặn viết lại (409 "Bạn đã đánh giá sản phẩm này rồi"). Xoá MỌI review
+  // cũ của user trên product này (FI-408: seed review "Âm hay, đeo êm" trên
+  // đúng product search-first → 409 — filter E2E-only trước đây không đủ)
+  // + review_eligibility giữ nguyên (badge vẫn xanh; make seed re-insert).
   {
     const { pgExec } = await import('../helpers/api');
     const slug = pdpUrl.split('/p/')[1]?.replace(/\/$/, '') ?? '';
     const pid = await pgExec('db_catalog', `SELECT id FROM products WHERE slug_vi='${slug}'`);
     if (pid) {
       const uid = await pgExec('db_identity', `SELECT id FROM users WHERE email='${DEMO_USER_EMAIL}'`);
-      await pgExec('db_catalog', `DELETE FROM reviews WHERE user_id='${uid}' AND product_id='${pid}' AND content LIKE 'E2E review%'`);
+      await pgExec('db_catalog', `DELETE FROM reviews WHERE user_id='${uid}' AND product_id='${pid}'`);
     }
   }
 

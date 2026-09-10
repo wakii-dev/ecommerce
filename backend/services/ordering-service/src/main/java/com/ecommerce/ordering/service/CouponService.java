@@ -143,10 +143,25 @@ public class CouponService {
         return coupons.save(coupon);
     }
 
-    /** Sửa — preserve used_count (domain {@code applyUpdate}); không thấy → 404 (controller map). */
+    /**
+     * Sửa — code TRÊN PATH là authority (QA-F2-03/FI-408: FE contract client
+     * strip path-param khỏi body → PUT từ UI đến KHÔNG có code trong body;
+     * validateAdmin(req) cũ đòi req.code() → 400 mọi lần edit từ UI). Path
+     * code phải hợp lệ format; body code NẾU có (non-blank) phải khớp path
+     * (case-insensitive, trimmed). Preserve used_count (domain {@code
+     * applyUpdate}); không thấy → 404 (controller map).
+     */
     public Coupon adminUpdate(String code, AdminCouponRequest req) {
-        validateAdmin(req);
-        Coupon coupon = coupons.findByCode(code == null ? "" : code.trim().toUpperCase(Locale.ROOT))
+        if (code == null || code.isBlank() || !code.trim().matches("[A-Za-z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException("code không hợp lệ (1-64 ký tự [A-Za-z0-9_-])");
+        }
+        String pathCode = code.trim();
+        if (req.code() != null && !req.code().isBlank()
+            && !req.code().trim().equalsIgnoreCase(pathCode)) {
+            throw new IllegalArgumentException("code trong body không khớp code trên path");
+        }
+        validateAdminRest(req);
+        Coupon coupon = coupons.findByCode(pathCode.toUpperCase(Locale.ROOT))
             .orElseThrow(() -> new EntityNotFoundException("Mã giảm giá không tồn tại"));
         coupon.applyUpdate(CouponType.valueOf(req.type()), req.value(), req.minOrderValue(),
             req.startsAt() == null ? coupon.getStartsAt() : req.startsAt(),
@@ -190,15 +205,25 @@ public class CouponService {
     }
 
     /**
-     * Validation §4.10: type ∈ {PERCENT, FIXED}; PERCENT value 1-100, FIXED > 0;
-     * window endsAt > startsAt; usageLimit null hoặc ≥ 1; minOrderValue ≥ 0.
-     * Sai → 400 (controller map ResponseStatusException).
+     * Validation §4.10 cho CREATE: code BẮT BUỘC trong body (POST không có
+     * path code — behavior giữ nguyên) + phần chung {@link #validateAdminRest}.
      */
     private void validateAdmin(AdminCouponRequest req) {
         if (req.code() == null || req.code().isBlank()
             || !req.code().trim().matches("[A-Za-z0-9_-]{1,64}")) {
             throw new IllegalArgumentException("code không hợp lệ (1-64 ký tự [A-Za-z0-9_-])");
         }
+        validateAdminRest(req);
+    }
+
+    /**
+     * Phần validation chung create/update: type ∈ {PERCENT, FIXED}; PERCENT
+     * value 1-100, FIXED > 0; window endsAt > startsAt; usageLimit null hoặc
+     * ≥ 1; minOrderValue ≥ 0. Sai → 400 (controller map ResponseStatusException).
+     * Code KHÔNG check ở đây — create đòi code trong body (validateAdmin),
+     * update lấy code từ path (adminUpdate — QA-F2-03).
+     */
+    private void validateAdminRest(AdminCouponRequest req) {
         CouponType type;
         try {
             type = CouponType.valueOf(req.type());

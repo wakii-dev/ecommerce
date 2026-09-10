@@ -73,9 +73,8 @@ partner:
     timeout-ms: ${PARTNER_ORDERING_TIMEOUT_MS:8000}
   catalog:
     base-url: ${PARTNER_CATALOG_BASE_URL:http://localhost:8082}
-    # GAP-3 interim: admin-by-id cần JWT ADMIN (rỗng → UUID detail trả 502 + nhắn
-    # "dùng slug"); giống CATALOG_API_TOKEN của ordering (REQUIREMENT-GAP FI-310).
-    admin-token: ${CATALOG_API_TOKEN:}
+    # UUID-lookup đi public by-id PUBLISHED-only (SF-4/FI-408 — GAP-3 interim
+    # admin-token đã xóa, không cần CATALOG_API_TOKEN nữa).
     timeout-ms: ${PARTNER_CATALOG_TIMEOUT_MS:5000}
   webhook:
     retry-base-ms: ${PARTNER_WEBHOOK_RETRY_BASE_MS:5000}

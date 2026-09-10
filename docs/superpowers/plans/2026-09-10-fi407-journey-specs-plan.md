@@ -162,12 +162,13 @@ git commit -m "test(qa): admin-journey skeleton + re-login helper mỗi section 
   /** Mở form thêm mới + fill TAB info (dùng chung B). Chọn category đầu tiên từ API. */
   async function fillInfoTab(page: import('@playwright/test').Page, categoryId: string): Promise<void> {
     // info tab (mặc định) — tên vi tự sinh slug; tên en qua sub-tab English
+    // (ui-kit Tabs render role="tab" — KHÔNG phải button ẩn danh; plan-critic P0-1)
     await page.getByLabel('Tên (vi)').fill(PRODUCT.nameVi);
     await page.locator('#p-desc').fill(PRODUCT.descVi);
-    await page.getByRole('button', { name: /English \(bỏ trống/ }).click();
+    await page.getByRole('tab', { name: /English \(bỏ trống/ }).click();
     await page.getByLabel('Tên (en)').fill(PRODUCT.nameEn);
     await page.locator('#p-desc-en').fill(PRODUCT.descEn);
-    await page.getByRole('button', { name: 'Tiếng Việt' }).click();
+    await page.getByRole('tab', { name: 'Tiếng Việt' }).click();
     await page.getByLabel('Thương hiệu').fill(PRODUCT.brand);
     await page.getByLabel('Danh mục').selectOption(categoryId);
     await page.getByRole('checkbox').check(); // "Chính hãng" — checkbox duy nhất của tab info
@@ -201,11 +202,14 @@ git commit -m "test(qa): admin-journey skeleton + re-login helper mỗi section 
     await row.locator('input').nth(2).fill(PRODUCT.variantOptions); // "Tùy chọn"
     await row.locator('input').nth(3).fill(PRODUCT.variantDelta); // "Chênh giá (₫)"
     await row.locator('input').nth(4).fill(PRODUCT.variantStock); // "Tồn kho"
-    // tab Ảnh — thêm 1 row URL (KHÔNG upload MinIO — env fresh không cam kết ảnh)
+    // tab Ảnh — thêm 1 row URL (KHÔNG upload MinIO — env fresh không cam kết ảnh).
+    // Label ảnh KHÔNG có htmlFor → locator theo vị trí input trong row
+    // (nth(0)=url, nth(1)=alt — pattern variant row; plan-critic P0-2)
     await page.getByRole('tab', { name: 'Ảnh' }).click();
     await page.getByRole('button', { name: /Thêm ảnh/ }).click();
-    await page.getByLabel('URL ảnh').fill(PRODUCT.imageUrl);
-    await page.getByLabel('Mô tả ảnh (alt)').fill(PRODUCT.imageAlt);
+    const imgRow = page.locator('.admin-variant-row').last();
+    await imgRow.locator('input').nth(0).fill(PRODUCT.imageUrl);
+    await imgRow.locator('input').nth(1).fill(PRODUCT.imageAlt);
 
     await page.getByRole('button', { name: 'Đăng bán' }).click();
     await expect(page.getByText('Đã tạo sản phẩm')).toBeVisible({ timeout: 15_000 });
@@ -235,13 +239,13 @@ git commit -m "test(qa): admin-journey skeleton + re-login helper mỗi section 
     // info vi
     await expect(page.getByLabel('Tên (vi)')).toHaveValue(PRODUCT.nameVi);
     await expect(page.locator('#p-desc')).toHaveValue(PRODUCT.descVi);
-    await expect(page.getByLabel('Slug (vi)')).not.toBeHidden();
+    await expect(page.getByLabel('Slug (vi)')).toHaveValue(/e2e-journey/); // slug auto từ tên (plan-critic P2-2)
     await expect(page.getByLabel('Thương hiệu')).toHaveValue(PRODUCT.brand);
-    // en qua sub-tab
-    await page.getByRole('button', { name: /English \(bỏ trống/ }).click();
+    // en qua sub-tab (role="tab" — plan-critic P0-1)
+    await page.getByRole('tab', { name: /English \(bỏ trống/ }).click();
     await expect(page.getByLabel('Tên (en)')).toHaveValue(PRODUCT.nameEn);
     await expect(page.locator('#p-desc-en')).toHaveValue(PRODUCT.descEn);
-    await page.getByRole('button', { name: 'Tiếng Việt' }).click();
+    await page.getByRole('tab', { name: 'Tiếng Việt' }).click();
     // official (checkbox duy nhất, checked)
     expect(await page.getByRole('checkbox').isChecked()).toBe(true);
     // SEO
@@ -260,10 +264,11 @@ git commit -m "test(qa): admin-journey skeleton + re-login helper mỗi section 
     await expect(row.locator('input').nth(2)).toHaveValue(PRODUCT.variantOptions);
     await expect(row.locator('input').nth(3)).toHaveValue(PRODUCT.variantDelta);
     await expect(row.locator('input').nth(4)).toHaveValue(PRODUCT.variantStock, { timeout: 15_000 }); // poll — availability async
-    // Ảnh
+    // Ảnh — row locator (label không htmlFor — plan-critic P0-2)
     await page.getByRole('tab', { name: 'Ảnh' }).click();
-    await expect(page.getByLabel('URL ảnh')).toHaveValue(PRODUCT.imageUrl);
-    await expect(page.getByLabel('Mô tả ảnh (alt)')).toHaveValue(PRODUCT.imageAlt);
+    const imgRow = page.locator('.admin-variant-row').first();
+    await expect(imgRow.locator('input').nth(0)).toHaveValue(PRODUCT.imageUrl);
+    await expect(imgRow.locator('input').nth(1)).toHaveValue(PRODUCT.imageAlt);
     // Ghi chú D17: variant nameEn KHÔNG round-trip (view trả name resolved — fallback vi) — không assert.
   });
 ```
@@ -520,8 +525,13 @@ test.describe('Data lifecycle — lớp 3/4/5 (FI-407)', () => {
     expect(payload.variantId, 'add-to-cart phải TỰ chọn default variant (không null/kẹt)')
       .toBe(defaultVariantId);
 
-    // login (merge-on-login) → giỏ merge guest→user
+    // login (merge-on-login) → chờ POST /api/cart/merge (fire ASYNC sau auth
+    // flip từ checkout-remote CartBadge; race với GET /cart — plan-critic P1)
     await uiLogin(page, user.email, user.password);
+    await page.waitForResponse(
+      (r) => r.url().includes('/api/cart/merge') && r.request().method() === 'POST',
+      { timeout: 10_000 }
+    );
     await page.goto(`${SHELL}/cart`);
     await expect(page.getByText('Nokia 110').first()).toBeVisible({ timeout: 15_000 });
 
@@ -626,8 +636,12 @@ export async function injectStaleGuestCart(input: {
     await page.goto(`${SHELL}/cart`);
     await expect(page.getByText('Nokia 110').first()).toBeVisible({ timeout: 15_000 });
 
-    // login → merge → user cart mang line stale
+    // login → chờ merge (plan-critic P1) → user cart mang line stale
     await uiLogin(page, user.email, user.password);
+    await page.waitForResponse(
+      (r) => r.url().includes('/api/cart/merge') && r.request().method() === 'POST',
+      { timeout: 10_000 }
+    );
     await page.goto(`${SHELL}/cart`);
     await expect(page.getByText('Nokia 110').first()).toBeVisible({ timeout: 15_000 });
 
@@ -677,7 +691,7 @@ git commit -m "test(qa): lifecycle lớp 3b — stale cart variantId null → l�
 ```typescript
   test('lớp 4 — admin edit form Nokia: stock input = inventory thật (50, không 0 ảo — fix FI-397)', async ({ page }) => {
     await adminUiLogin(page);
-    await page.goto(`${SHELL}/admin/products`);
+    await page.goto(`${GATEWAY}/admin/products`); // one-origin :8080 — nhất quán GATEWAY như admin-journey (plan-critic P2-3)
     await page.getByLabel('Tìm kiếm').fill('Nokia 110');
     await page.keyboard.press('Enter');
     await page.locator('tbody tr', { hasText: 'Nokia 110' }).first()
@@ -719,7 +733,7 @@ git commit -m "test(qa): lifecycle lớp 3b — stale cart variantId null → l�
   });
 ```
 
-- [ ] **Step 3: Chạy cả file** — Expected: **5 passed**.
+- [ ] **Step 3: Chạy cả file** — Expected: **6 passed** (2 test trước + 4 test mới của task này; plan-critic P0-3).
 - [ ] **Step 4: Commit**
 
 ```bash
@@ -734,11 +748,11 @@ git commit -m "test(qa): surfacing số thật (admin stock 50, giá base+delta,
 **Files:**
 - Create: `docs/superpowers/qa/report-sf3.md`
 
-- [ ] **Step 1: Full run cả 2 spec serial (lệnh chuẩn, cả 2 file)** — Expected: **11 passed** (6 admin-journey + 5 data-lifecycle), 0 failed/flaky ngoài retry policy.
+- [ ] **Step 1: Full run cả 2 spec serial (lệnh chuẩn, cả 2 file)** — Expected: **12 passed** (6 admin-journey + 6 data-lifecycle; plan-critic P0-3), 0 failed/flaky ngoài retry policy.
 - [ ] **Step 2: Evidence không đụng specs cũ**
 
 ```bash
-git diff --stat 276a5b1..HEAD -- frontend/e2e/tests/ | grep -v "admin-journey\|data-lifecycle" || echo "CLEAN — chỉ 2 spec mới"
+git diff --name-only 276a5b1..HEAD -- frontend/e2e/tests/ | grep -v "admin-journey\|data-lifecycle" || echo "CLEAN — chỉ 2 spec mới"
 git diff --name-only 276a5b1..HEAD -- frontend/e2e/helpers/env.ts frontend/e2e/helpers/api.ts frontend/e2e/helpers/checkout.ts frontend/e2e/playwright.config.ts scripts/qa/ | wc -l   # → 0
 ```
 

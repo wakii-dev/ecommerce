@@ -98,9 +98,9 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Bảng markdown regen marker block `s2s` trong report
 
 ### Task 8 — RBAC expected matrix closed list (executor B)
-- [ ] Scan SecurityConfigs `hasRole`/`hasAuthority` + `@PreAuthorize` + 12 admin controllers mappings (A8)
-- [ ] Matrix rows endpoint × guest/user/admin expected (401/403/2xx) — đóng, không "..."
-- [ ] Regen marker block `rbac` + drift → GAP
+- [x] Scan SecurityConfigs `hasRole`/`hasAuthority` + `@PreAuthorize` + 12 admin controllers mappings (A8) — **9 SecurityConfig · 12/12 controller kỳ vọng + 1 extra (InventoryQueryController low-stock — đúng spec) · 50 endpoint ADMIN**
+- [x] Matrix rows endpoint × guest/user/admin expected (401/403/2xx) — đóng, không "..." (kèm bảng @PreAuthorize non-admin + public roll-call; partner-api anyRequest-permitAll parse đúng — X-API-Key filter quyết)
+- [x] Regen marker block `rbac` + drift → GAP — **0 GAP · exit 0**
 
 ### Task 9 — --self-test fixture negative (executor A, sau T4)
 - [x] Fixtures: mini backend tree (2 service: 1 đọc `${LOG_URI:http://localhost:8088}`, 1 đọc `/keys/jwt-public.pem`) + 3 compose fixture (thiếu env / thiếu keys mount / max_connections=100) trong `scripts/qa/fixtures/`

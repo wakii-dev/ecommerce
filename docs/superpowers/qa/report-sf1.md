@@ -392,7 +392,91 @@ Drift check: enumerate 24 call-site ↔ curated 24 rows — 1:1 (0 stale, 0 miss
 <!-- /sf1:s2s -->
 
 <!-- sf1:rbac -->
-(chờ rbac-matrix.mjs ghi)
+### RBAC expected matrix — closed list (A8)
+
+Run 2026-09-10 01:15:28 UTC — static scan 9 SecurityConfig + @PreAuthorize + controllers. **50 endpoint ADMIN** (12 controllers kỳ vọng: 12/12 thấy + 1 extra ngoài list: inventory-service/InventoryQueryController) × 3 cột EXPECTED: guest→401 · user→403 · admin→2xx. Đóng list — không "...".
+
+**Matrix admin (50 endpoint) — cell = EXPECTED:**
+
+| service | endpoint | controller | guard nguồn | guest | user | admin |
+| --- | --- | --- | --- | --- | --- | --- |
+| affiliate-service | GET /api/affiliate/admin/affiliates | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | POST /api/affiliate/admin/affiliates/{id}/approve | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | PUT /api/affiliate/admin/affiliates/{id}/rate | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | POST /api/affiliate/admin/affiliates/{id}/reactivate | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | POST /api/affiliate/admin/affiliates/{id}/reject | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | POST /api/affiliate/admin/affiliates/{id}/suspend | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| affiliate-service | GET /api/affiliate/admin/loyalty | LoyaltyMeAdminController | @PreAuthorize:60 | 401 | 403 | 2xx |
+| affiliate-service | POST /api/affiliate/admin/loyalty/adjust | LoyaltyMeAdminController | @PreAuthorize:73 | 401 | 403 | 2xx |
+| affiliate-service | GET /api/affiliate/admin/stats | AdminAffiliateController | SecurityConfig:44 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/categories | AdminCategoryController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | POST /api/catalog/admin/categories | AdminCategoryController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | DELETE /api/catalog/admin/categories/{id} | AdminCategoryController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/categories/{id} | AdminCategoryController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | PUT /api/catalog/admin/categories/{id} | AdminCategoryController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/products | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | POST /api/catalog/admin/products | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | DELETE /api/catalog/admin/products/{id} | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/products/{id} | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | PUT /api/catalog/admin/products/{id} | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/products/export.csv | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | GET /api/catalog/admin/reviews | AdminReviewController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | POST /api/catalog/admin/reviews/{id}/approve | AdminReviewController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | POST /api/catalog/admin/reviews/{id}/reject | AdminReviewController | SecurityConfig:57 | 401 | 403 | 2xx |
+| catalog-service | POST /api/catalog/admin/uploads | AdminProductController | SecurityConfig:57 | 401 | 403 | 2xx |
+| identity-service | GET /admin/newsletter | AdminNewsletterController | SecurityConfig:60 | 401 | 403 | 2xx |
+| identity-service | GET /admin/users | AdminUserController | @PreAuthorize:27 | 401 | 403 | 2xx |
+| inventory-service | GET /inventory/admin/low-stock | InventoryQueryController | SecurityConfig:52 | 401 | 403 | 2xx |
+| inventory-service | PUT /inventory/admin/stocks | AdminStockController | SecurityConfig:52 | 401 | 403 | 2xx |
+| inventory-service | GET /inventory/admin/stocks/{variantId} | AdminStockController | SecurityConfig:52 | 401 | 403 | 2xx |
+| log-service | GET /api/log/admin/events | AdminEventController | SecurityConfig:40 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/coupons | AdminCouponController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/coupons | AdminCouponController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | DELETE /admin/coupons/{code} | AdminCouponController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | PUT /admin/coupons/{code} | AdminCouponController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/coupons/{code}/toggle | AdminCouponController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/orders | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/orders/{id} | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/orders/{id}/cancel | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/orders/{id}/deliver | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/orders/{id}/invoice | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/orders/{id}/ship | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/orders/export.csv | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/rma | AdminRmaController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/rma/{id}/approve | AdminRmaController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/rma/{id}/mark-received | AdminRmaController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/rma/{id}/refund | AdminRmaController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | POST /admin/rma/{id}/reject | AdminRmaController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/stats/orders-summary | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/stats/revenue-by-day | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+| ordering-service | GET /admin/stats/top-products | AdminOrderController | SecurityConfig:53 | 401 | 403 | 2xx |
+
+**@PreAuthorize KHÔNG admin** (đóng list, 0 — EXPECTED: tuỳ expression, guest/user 2xx nếu permitAll/anonymous):
+
+| service | endpoint | expression | ghi chú |
+| --- | --- | --- | --- |
+| — | — | — | 0 |
+
+**Public paths điểm danh (permitAll per SecurityConfig):**
+
+| service | permitAll patterns |
+| --- | --- |
+| affiliate-service | /api/affiliate/track/click · /api/affiliate/internal/** · /actuator/health/** · /actuator/info · /swagger-ui.html · /swagger-ui/** · /v3/api-docs/** |
+| cart-service | /actuator/** · /v3/api-docs/** · /swagger-ui/** · /swagger-ui.html · ** |
+| catalog-service | /api/catalog/products/** · /api/catalog/categories/** · /api/catalog/search/** · /api/catalog/products/** · /api/catalog/categories/** · /api/catalog… |
+| identity-service | /auth/register · /auth/login · /auth/refresh · /auth/logout · /password/** · /newsletter · /.well-known/jwks.json · /oauth/** · /.well-known/oauth-pr… |
+| inventory-service | /inventory/availability · /inventory/availability · /inventory/reservations/** · /actuator/** · /v3/api-docs/** · /swagger-ui/** · /swagger-ui.html |
+| log-service | /actuator/** · /v3/api-docs/** · /swagger-ui/** · /swagger-ui.html |
+| ordering-service | /orders/validate-coupon · /coupons/public · /shipping/methods · /actuator/health/** · /actuator/info · /swagger-ui.html · /swagger-ui/** · /v3/api-do… |
+| partner-api | ** |
+
+**Findings GAP (RBAC-xx — A11):**
+
+| ID | kind | chi tiết | evidence |
+| --- | --- | --- | --- |
+| — | — | 0 GAP | — |
+
+**Exit rbac-matrix: `0`** — legend: 0 = 0 finding CHƯA fix · 1 = ≥1 finding · 2 = script error. Static EXPECTED — live execute là harness SF-2 + triage SF-4.
 <!-- /sf1:rbac -->
 
 <!-- sf1:contracts -->

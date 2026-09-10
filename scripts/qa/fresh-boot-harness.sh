@@ -428,6 +428,11 @@ stage_up() {
   t0=$(date +%s)
   UP_DEADLINE=$(( t0 + UP_TOTAL_BUDGET ))
 
+  # JWT keys (FI-397 patch): identity + catalog bind-mount ./infra/keys — gitignored,
+  # worktree mới không có → sinh nếu thiếu (idempotent, precedent `make full`).
+  log "[up] make -s keys (JWT keypair nếu thiếu — identity/catalog mount ./infra/keys)"
+  make -s keys || die 7 "[up] make keys FAIL — không sinh được JWT keypair"
+
   log "[up] docker compose --profile full --profile stripe up -d"
   if ! "${COMPOSE[@]}" up -d; then
     die 7 "[up] compose up -d FAIL sau $(( $(date +%s) - t0 ))s"

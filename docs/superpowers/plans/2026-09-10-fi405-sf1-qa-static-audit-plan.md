@@ -75,8 +75,8 @@ Detector tầng rẻ thiếu: bug lớp 1 (config drift) + lớp 2 (s2s auth) ch
 - [x] Spot-check identity (`/keys/jwt-private.pem` ↔ `./infra/keys:/keys:ro`) = OK
 
 ### Task 3 — trục (c) compose value drift closed checklist (executor A)
-- [ ] Checklist A7: max_connections ≥ 110 · healthcheck per JVM service · bảng flag constant + rationale
-- [ ] Spot-check: postgres 300 = OK; flag ngoài bảng → WARN non-finding
+- [x] Checklist A7: max_connections ≥ 110 · healthcheck per JVM service · bảng flag constant + rationale
+- [x] Spot-check: postgres 300 = OK; flag ngoài bảng → WARN non-finding
 
 ### Task 4 — classify rule machine-checkable + FIXED registry (executor A)
 - [ ] Classify A1 trục (a): DANGEROUS/OK-alias-equivalence/WARN — WARN non-finding; FE-host whitelist

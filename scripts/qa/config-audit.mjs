@@ -413,6 +413,66 @@ function analyzeAxisB(compose, placeholders) {
   return rows.sort((a, b) => a.service.localeCompare(b.service) || a.var.localeCompare(b.var));
 }
 
+// ── Trục (c) — compose value drift, closed checklist (A7) ────────────────────
+// KHÔNG judgment runtime — chỉ 3 mục đóng:
+//   (1) postgres command: max_connections ≥ 110 (11 JVM pools × 10 Hikari)
+//   (2) mỗi JVM service có compose entry phải có healthcheck:
+//   (3) flag command ngoài bảng KNOWN_FLAGS → WARN (non-finding)
+// JVM service = build dockerfile nằm dưới backend/ (invoice là Python — loại).
+const KNOWN_FLAGS = {
+  max_connections: '11 JVM pools × 10 Hikari default — < 110 thì seed fail 53300 (9/9)',
+};
+const MIN_MAX_CONNECTIONS = 110;
+
+// Tách token command tôn trọng quote: `server /data --console-address ":9001"`
+function commandTokens(cmd) {
+  return cmd.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+}
+
+function analyzeAxisC(compose) {
+  const rows = [];
+  // (1) postgres max_connections
+  const pg = [...compose.values()].find((s) => s.name === 'postgres' || (s.image || '').startsWith('postgres:'));
+  if (pg) {
+    if (pg.command == null) {
+      rows.push({ service: 'postgres', check: 'max_connections', status: 'DANGEROUS', note: `postgres không có command: max_connections — default 100 < ${MIN_MAX_CONNECTIONS}`, evidence: 'compose service postgres · command:' });
+    } else {
+      const toks = commandTokens(pg.command);
+      let found = null;
+      for (let t = 0; t < toks.length; t++) {
+        const m = toks[t].match(/^(?:--)?max_connections=(\d+)$/);
+        if (m) { found = Number(m[1]); break; }
+        if (toks[t] === '-c' && toks[t + 1]) {
+          const m2 = toks[t + 1].match(/^max_connections=(\d+)$/);
+          if (m2) { found = Number(m2[1]); break; }
+        }
+      }
+      if (found == null)
+        rows.push({ service: 'postgres', check: 'max_connections', status: 'DANGEROUS', note: `command không chứa max_connections — default 100 < ${MIN_MAX_CONNECTIONS}`, evidence: `command: ${pg.command}` });
+      else if (found >= MIN_MAX_CONNECTIONS)
+        rows.push({ service: 'postgres', check: 'max_connections', status: 'OK', note: `${found} ≥ ${MIN_MAX_CONNECTIONS}`, evidence: `command: ${pg.command}` });
+      else
+        rows.push({ service: 'postgres', check: 'max_connections', status: 'DANGEROUS', note: `${found} < ${MIN_MAX_CONNECTIONS} — 11 JVM pools sẽ cạn connection`, evidence: `command: ${pg.command}` });
+    }
+  }
+  // (2)+(3) quét mọi service: flag lạ → WARN; JVM thiếu healthcheck → DANGEROUS
+  for (const svc of compose.values()) {
+    if (svc.command != null) {
+      for (const tok of commandTokens(svc.command)) {
+        if (/^-[A-Za-z]$/.test(tok)) continue; // single-char flag-passer (vd `postgres -c`) — không có ngữ nghĩa checklist đóng
+        const m = tok.match(/^--?([A-Za-z_][A-Za-z0-9_-]*)(?:=(.*))?$/);
+        if (!m) continue; // positional (postgres, server, /data...) — bỏ
+        const flag = m[1];
+        if (KNOWN_FLAGS[flag]) continue; // đã checklist ở (1)
+        rows.push({ service: svc.name, check: `flag:${flag}`, status: 'WARN', note: 'flag ngoài bảng audit (KNOWN_FLAGS) — WARN non-finding, review tay', evidence: `command: ${svc.command}` });
+      }
+    }
+    const isJvm = (svc.dockerfile || '').startsWith('backend/');
+    if (isJvm && !svc.healthcheck)
+      rows.push({ service: svc.name, check: 'healthcheck', status: 'DANGEROUS', note: 'JVM service có compose entry nhưng thiếu healthcheck: — full-mode không có signal unhealthy/restart', evidence: `build dockerfile: ${svc.dockerfile}` });
+  }
+  return rows.sort((a, b) => a.service.localeCompare(b.service) || a.check.localeCompare(b.check));
+}
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
@@ -445,6 +505,12 @@ function main() {
   console.log(`\n== Trục (b): ${axisB.length} path-requirement, ${axisB.filter((r) => r.status === 'DANGEROUS').length} DANGEROUS ==`);
   for (const r of axisB)
     console.log(`   [${r.status}] ${r.service} · ${r.var} · eff=${r.envVal != null ? r.envVal : maskValue(r.var, r.default)} — ${r.note}\n      ↳ ${r.evidence}`);
+
+  // ── Trục (c) — closed checklist ──────────────────────────────────────────
+  const axisC = analyzeAxisC(compose);
+  console.log(`\n== Trục (c): ${axisC.length} check, ${axisC.filter((r) => r.status === 'DANGEROUS').length} DANGEROUS, ${axisC.filter((r) => r.status === 'WARN').length} WARN (non-finding) ==`);
+  for (const r of axisC)
+    console.log(`   [${r.status}] ${r.service} · ${r.check} — ${r.note}\n      ↳ ${r.evidence}`);
 }
 
 try { main(); } catch (e) {

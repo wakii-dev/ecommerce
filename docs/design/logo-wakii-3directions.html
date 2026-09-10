@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wakii store — 3 hướng logo (draft chờ chọn)</title>
+<!--
+  WAKII STORE · LOGO DIRECTIONS DRAFT — prototype thuần, chưa phải asset final.
+  Context rút từ design tokens thật của repo:
+    frontend/packages/ui-kit/src/styles/tokens.css  (--c-primary #F53D2D,
+    --grad-cta 90deg #F53D2D→#FF7A45, --c-accent #FFD839, --c-success #26AA99,
+    dark: bg #121212 / surface #1E1E1E / text #F5F5F5, dark link #FF6B54)
+  Font: Be Vietnam Pro (400–800, OFL — đã là font hệ thống của site, subset vietnamese)
+        + Baloo 2 (OFL, subset vietnamese) cho hướng C.
+  MỞ FILE NÀY CÓ MẠNG để Google Fonts load đúng; offline vẫn xem được bằng font hệ thống.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#F53D2D; --primary-hover:#CB1B00; --coral:#FF7A45; --gold:#FFD839;
+    --teal:#26AA99; --dark-link:#FF6B54;
+    --page-bg:#F5F5F5; --surface:#FFFFFF; --ink:#212121; --muted:#757575; --border:#EEEEEE;
+    --dark-bg:#121212; --dark-surface:#1E1E1E; --dark-text:#F5F5F5; --dark-muted:#9E9E9E; --dark-border:#2C2C2C;
+    --font:'Be Vietnam Pro',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--page-bg);color:var(--ink);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 32px 96px}
+
+  /* ── page header ─────────────────────────────── */
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--primary)}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin:8px 0 6px}
+  .lede{color:var(--muted);font-size:14px;max-width:640px}
+  .lede b{color:var(--ink);font-weight:600}
+  nav.dirs{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+  nav.dirs a{text-decoration:none;font-size:12px;font-weight:600;color:var(--ink);background:var(--surface);
+    border:1px solid var(--border);border-radius:4px;padding:7px 14px;transition:border-color .14s}
+  nav.dirs a:hover{border-color:var(--primary);color:var(--primary)}
+
+  /* ── section card ────────────────────────────── */
+  section.dir{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:36px;overflow:hidden}
+  .dir-head{display:flex;align-items:baseline;gap:14px;padding:26px 32px 0}
+  .dir-glyph{font-size:13px;font-weight:800;color:var(--primary);border:1.5px solid var(--primary);border-radius:4px;padding:1px 8px}
+  .dir-head h2{font-size:21px;font-weight:800;letter-spacing:-.01em}
+  .dir-tag{font-size:12px;color:var(--muted)}
+  .dir-body{padding:18px 32px 32px}
+
+  .cols{display:grid;grid-template-columns:1.7fr 1fr;gap:28px;margin:6px 0 22px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .why h3{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .why ul{list-style:none}
+  .why li{font-size:13.5px;color:var(--ink);padding-left:16px;position:relative;margin-bottom:7px}
+  .why li::before{content:"";position:absolute;left:0;top:9px;width:7px;height:7px;border-radius:2px;background:var(--primary)}
+  .why li b{font-weight:700}
+  .pal{display:flex;flex-direction:column;gap:6px}
+  .swatch{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted)}
+  .chip{width:34px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.08);flex:none}
+  .swatch code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--ink)}
+
+  /* demo canvases — scope lại --ink/--muted theo nền, wordmark bên trong ăn theo */
+  .demo{border-radius:6px;padding:44px 24px;display:flex;align-items:center;justify-content:center;min-height:150px}
+  .demo-light{--ink:#212121;--muted:#757575;background:var(--surface);border:1px solid var(--border)}
+  .demo-dark{--ink:#F5F5F5;--muted:#9E9E9E;background:var(--dark-surface);margin-top:10px}
+  .demo-label{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+
+  /* ── wordmarks (HTML text — gradient w bằng background-clip) ── */
+  .wordmark{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .wordmark .main{font-weight:800;font-size:58px;letter-spacing:-.015em;line-height:1;color:var(--ink,inherit)}
+  .wordmark .sub{font-size:13px;font-weight:600;letter-spacing:.42em;text-transform:uppercase;color:var(--muted,inherit)}
+  .w-grad{background:linear-gradient(90deg,var(--primary),var(--coral));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .wm-c .main{font-family:'Baloo 2',var(--font);font-weight:700;letter-spacing:0}
+  .wm-c .sub{font-weight:500;letter-spacing:.3em;text-transform:none;font-size:14px}
+  /* hướng B: wordmark thường + mark đứng cạnh */
+  .lockup{display:flex;align-items:center;gap:18px}
+  .lockup .wordmark .main{font-weight:700;font-size:54px;letter-spacing:-.01em}
+  .lockup .wordmark .sub{font-weight:500;letter-spacing:.28em;text-transform:none;font-size:15px}
+
+  /* ── mark scale row + favicon tab mockup ─────── */
+  .marks{display:flex;align-items:flex-end;gap:28px;margin-top:26px;flex-wrap:wrap}
+  .markcell{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .markcell span{font-size:11px;color:var(--muted);font-weight:500}
+  .tabstrip{display:flex;align-items:flex-end;gap:6px;padding:10px 12px 0;border-radius:10px 10px 0 0;flex:1;min-width:300px}
+  .tabstrip.light{background:#DEE3EA}
+  .tabstrip.dark{background:#202124;margin-top:12px}
+  .tab{display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px 8px 0 0;padding:7px 14px 7px 10px;min-width:200px}
+  .tab.dark{background:#35363A}
+  .tab em{font-style:normal;font-size:11.5px;color:#3C4043;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tab.dark em{color:#E8EAED}
+  .tab i{font-style:normal;color:#9AA0A6;font-size:12px;margin-left:4px}
+
+  .risk{font-size:12.5px;color:var(--muted);margin-top:20px;padding-top:14px;border-top:1px dashed var(--border)}
+  .risk b{color:var(--ink)}
+
+  /* ── comparison ──────────────────────────────── */
+  section.compare{margin-top:44px}
+  section.compare h2{font-size:18px;font-weight:800;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;background:#FAFAFA}
+  tr:last-child td{border-bottom:none}
+  td b{font-weight:700}
+  .ok{color:#1F7A45;font-weight:600} .warn{color:#9A5B00;font-weight:600}
+  .note{font-size:12.5px;color:var(--muted);margin-top:18px;max-width:720px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══ PAGE HEADER ══════════════════════════════ -->
+  <header>
+    <div class="eyebrow">Rebrand · Shop VN → Wakii store · draft chờ chọn hướng</div>
+    <h1>Wakii store — 3 hướng logo</h1>
+    <p class="lede">Ba cấu trúc khác biệt (không phải ba biến thể màu): <b>A · wordmark thuần</b>,
+      <b>B · mark + wordmark</b>, <b>C · monogram 2 mảnh</b>. Mỗi hướng đo trên cùng một thước:
+      logo ngang trên light/dark (đúng token #FFFFFF / #1E1E1E của site), mark ở 64·32·16px,
+      và render thật 16px trong mockup tab trình duyệt.</p>
+    <nav class="dirs">
+      <a href="#dir-a">A · Nhịp chợ</a>
+      <a href="#dir-b">B · Túi W</a>
+      <a href="#dir-c">C · Hai mảnh</a>
+      <a href="#compare">So sánh nhanh</a>
+    </nav>
+  </header>
+
+  <!-- ══ HƯỚNG A ══════════════════════════════════ -->
+  <section class="dir" id="dir-a">
+    <div class="dir-head">
+      <span class="dir-glyph">A</span>
+      <h2>Nhịp chợ</h2>
+      <span class="dir-tag">wordmark thuần · kế thừa 100% palette hiện có</span>
+    </div>
+    <div class="dir-body">
+      <div class="cols">
+        <div class="why">
+          <h3>Ý tưởng</h3>
+          <ul>
+            <li><b>Tên là logo</b> — không symbol. Chữ <b>w</b> mở đầu mang gradient CTA
+              (#F53D2D→#FF7A45) trùng với nút "Mua ngay": nhìn logo là thấy nút mua.</li>
+            <li>Nhịp 3 nét dọc của "<b>kii</b>" tạo tiết tấu — chính là chất
+              "Chợ Sôi Động" của design system hiện tại (hướng FI-310/FI-390).</li>
+            <li>Lowercase + Be Vietnam Pro 800 (font đã có trong repo, OFL) — trẻ, gần gũi
+              kiểu shopee/tiktok, chi phí transition từ "Shop VN" thấp nhất.</li>
+            <li>Favicon: chữ w trắng trên badge gradient — cùng ngôn ngữ với wordmark.</li>
+          </ul>
+        </div>
+        <div class="pal">
+          <h3 style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Palette — từ tokens</h3>
+          <div class="swatch"><span class="chip" style="background:linear-gradient(90deg,#F53D2D,#FF7A45)"></span><code>#F53D2D → #FF7A45</code> --grad-cta</div>
+          <div class="swatch"><span class="chip" style="background:#212121"></span><code>#212121</code> --c-text (chữ)</div>
+          <div class="swatch"><span class="chip" style="background:#757575"></span><code>#757575</code> --c-text-muted ("STORE")</div>
+        </div>
+      </div>
+
+      <div class="demo-label">Logo ngang · light (surface #FFF)</div>
+      <div class="demo demo-light">
+        <div class="wordmark">
+          <span class="main"><span class="w-grad">w</span>akii</span>
+          <span class="sub">Store</span>
+        </div>
+      </div>
+      <div class="demo-label">Logo ngang · dark (surface #1E1E1E)</div>
+      <div class="demo demo-dark">
+        <div class="wordmark">
+          <span class="main"><span class="w-grad">w</span>akii</span>
+          <span class="sub">Store</span>
+        </div>
+      </div>
+
+      <div class="demo-label">Mark — 64 · 32 · 16px thật + favicon trong tab</div>
+      <div class="marks">
+        <div class="markcell">
+          <svg width="64" height="64" viewBox="0 0 48 48" role="img" aria-label="Wakii mark A 64px">
+            <defs><linearGradient id="ga-m64" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <rect width="48" height="48" rx="8" fill="url(#ga-m64)"/>
+            <text x="24" y="34.5" text-anchor="middle" font-family="'Be Vietnam Pro',sans-serif" font-weight="800" font-size="31" fill="#fff">w</text>
+          </svg>
+          <span>64</span>
+        </div>
+        <div class="markcell">
+          <svg width="32" height="32" viewBox="0 0 48 48" role="img" aria-label="Wakii mark A 32px">
+            <defs><linearGradient id="ga-m32" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <rect width="48" height="48" rx="8" fill="url(#ga-m32)"/>
+            <text x="24" y="34.5" text-anchor="middle" font-family="'Be Vietnam Pro',sans-serif" font-weight="800" font-size="31" fill="#fff">w</text>
+          </svg>
+          <span>32</span>
+        </div>
+        <div class="markcell">
+          <svg width="16" height="16" viewBox="0 0 48 48" role="img" aria-label="Wakii mark A 16px">
+            <defs><linearGradient id="ga-m16" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <rect width="48" height="48" rx="8" fill="url(#ga-m16)"/>
+            <text x="24" y="34.5" text-anchor="middle" font-family="'Be Vietnam Pro',sans-serif" font-weight="800" font-size="31" fill="#fff">w</text>
+          </svg>
+          <span>16</span>
+        </div>
+        <div class="tabstrip light">
+          <div class="tab">
+            <svg width="16" height="16" viewBox="0 0 48 48">
+              <defs><linearGradient id="ga-t1" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+              <rect width="48" height="48" rx="8" fill="url(#ga-t1)"/>
+              <text x="24" y="34.5" text-anchor="middle" font-family="'Be Vietnam Pro',sans-serif" font-weight="800" font-size="31" fill="#fff">w</text>
+            </svg>
+            <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+          </div>
+        </div>
+      </div>
+      <div class="tabstrip dark">
+        <div class="tab dark">
+          <svg width="16" height="16" viewBox="0 0 48 48">
+            <defs><linearGradient id="ga-t2" x1="0" y1="0" x2="48" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <rect width="48" height="48" rx="8" fill="url(#ga-t2)"/>
+            <text x="24" y="34.5" text-anchor="middle" font-family="'Be Vietnam Pro',sans-serif" font-weight="800" font-size="31" fill="#fff">w</text>
+          </svg>
+          <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+        </div>
+      </div>
+
+      <p class="risk"><b>Cân nhắc:</b> wordmark thuần thiếu "biểu tượng" riêng cho app icon /
+        hợp tác hiển thị chỉ có 1 ô vuông — badge w ở trên chính là bản mark gói kèm.
+        Đây là hướng an toàn & rẻ nhất để rebrand.</p>
+    </div>
+  </section>
+
+  <!-- ══ HƯỚNG B ══════════════════════════════════ -->
+  <section class="dir" id="dir-b">
+    <div class="dir-head">
+      <span class="dir-glyph">B</span>
+      <h2>Túi W</h2>
+      <span class="dir-tag">mark + wordmark · góc gần vuông đúng radius system</span>
+    </div>
+    <div class="dir-body">
+      <div class="cols">
+        <div class="why">
+          <h3>Ý tưởng</h3>
+          <ul>
+            <li>Nếp gấp trước túi <b>chính là chữ W</b> — mark chỉ mang một ý duy nhất,
+              không phải "túi rồi đắp chữ vào".</li>
+            <li>Túi <b>góc cạnh, bo 5px</b> theo hệ radius gần-vuông của site (2/4/8px) —
+              đối lập có chủ đích với túi mềm bo tròn của Shopee để không bị lẫn.</li>
+            <li>Kế thừa nguyên palette CTA (#F53D2D→#FF7A45): mark và nút "Mua ngay" cùng một
+              gradient, transition từ "Shop VN" không vỡ nhận diện.</li>
+            <li>16px: silhouette túi đỏ + vệt W trắng vẫn đọc — vệt trắng dày 5/48 ≈ 1.8px.</li>
+          </ul>
+        </div>
+        <div class="pal">
+          <h3 style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Palette — từ tokens</h3>
+          <div class="swatch"><span class="chip" style="background:linear-gradient(140deg,#F53D2D,#FF7A45)"></span><code>#F53D2D → #FF7A45</code> --grad-cta (thân túi)</div>
+          <div class="swatch"><span class="chip" style="background:#FFFFFF;border-color:#eee"></span><code>#FFFFFF</code> --c-surface (nếp W)</div>
+          <div class="swatch"><span class="chip" style="background:#212121"></span><code>#212121</code> --c-text (wordmark)</div>
+        </div>
+      </div>
+
+      <div class="demo-label">Logo ngang · light (surface #FFF)</div>
+      <div class="demo demo-light">
+        <div class="lockup">
+          <svg width="76" height="76" viewBox="0 0 48 48" role="img" aria-label="Wakii mark B">
+            <defs><linearGradient id="gb-lk" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-lk)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-lk)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="wordmark">
+            <span class="main">Wakii</span>
+            <span class="sub">store</span>
+          </div>
+        </div>
+      </div>
+      <div class="demo-label">Logo ngang · dark (surface #1E1E1E)</div>
+      <div class="demo demo-dark">
+        <div class="lockup">
+          <svg width="76" height="76" viewBox="0 0 48 48" role="img" aria-label="Wakii mark B dark">
+            <defs><linearGradient id="gb-lk2" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-lk2)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-lk2)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="wordmark">
+            <span class="main">Wakii</span>
+            <span class="sub">store</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-label">Mark — 64 · 32 · 16px thật + favicon trong tab</div>
+      <div class="marks">
+        <div class="markcell">
+          <svg width="64" height="64" viewBox="0 0 48 48" role="img" aria-label="Wakii mark B 64px">
+            <defs><linearGradient id="gb-m64" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-m64)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-m64)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>64</span>
+        </div>
+        <div class="markcell">
+          <svg width="32" height="32" viewBox="0 0 48 48" role="img" aria-label="Wakii mark B 32px">
+            <defs><linearGradient id="gb-m32" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-m32)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-m32)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>32</span>
+        </div>
+        <div class="markcell">
+          <svg width="16" height="16" viewBox="0 0 48 48" role="img" aria-label="Wakii mark B 16px">
+            <defs><linearGradient id="gb-m16" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-m16)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-m16)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>16</span>
+        </div>
+        <div class="tabstrip light">
+          <div class="tab">
+            <svg width="16" height="16" viewBox="0 0 48 48">
+              <defs><linearGradient id="gb-t1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+              <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-t1)" stroke-width="4" stroke-linecap="round"/>
+              <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-t1)"/>
+              <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+          </div>
+        </div>
+      </div>
+      <div class="tabstrip dark">
+        <div class="tab dark">
+          <svg width="16" height="16" viewBox="0 0 48 48">
+            <defs><linearGradient id="gb-t2" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#F53D2D"/><stop offset="1" stop-color="#FF7A45"/></linearGradient></defs>
+            <path d="M17 15 v-2.5 a7 7 0 0 1 14 0 V15" fill="none" stroke="url(#gb-t2)" stroke-width="4" stroke-linecap="round"/>
+            <rect x="7" y="15" width="34" height="26" rx="5" fill="url(#gb-t2)"/>
+            <path d="M15 23 l4.5 11 L24 24.5 28.5 34 33 23" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+        </div>
+      </div>
+
+      <p class="risk"><b>Cân nhắc:</b> "túi" là biểu tượng marketplace phổ biến — sự khác biệt
+        nằm ở nếp W lồng vào thân túi và góc gần vuông; nếu chọn hướng này cần giữ kỷ luật đó
+        khi tinh chỉnh, đừng bo tròn mềm theo thói quen.</p>
+    </div>
+  </section>
+
+  <!-- ══ HƯỚNG C ══════════════════════════════════ -->
+  <section class="dir" id="dir-c">
+    <div class="dir-head">
+      <span class="dir-glyph">C</span>
+      <h2>Hai mảnh</h2>
+      <span class="dir-tag">monogram trần · palette mới từ chính dark tokens</span>
+    </div>
+    <div class="dir-body">
+      <div class="cols">
+        <div class="why">
+          <h3>Ý tưởng</h3>
+          <ul>
+            <li>W vẽ thành <b>2 mảnh V lồng nhau</b>: teal (mảnh trái) + coral (mảnh phải),
+              gặp nhau ở đỉnh giữa — marketplace là nơi <b>người bán và người mua gặp nhau</b>.</li>
+            <li><b>Không badge</b> — monogram trần đặt được lên mọi nền, đóng dấu mộc,
+              watermark ảnh sản phẩm, splash screen.</li>
+            <li>Palette mới <b>không phát minh màu lạ</b>: teal #26AA99 = --c-success,
+              coral #FF6B54 = --c-link dark — hai màu đã sống trong tokens, giờ được nâng lên
+              làm cặp chủ đạo. Phân dòng thị trường: Shopee đỏ cam đơn sắc, Tiki xanh dương —
+              cặp teal×coral chưa ai giữ.</li>
+            <li>Mạnh nhất ở 16px: 4 vạch dày 2 màu, không phụ thuộc chi tiết nhỏ.</li>
+          </ul>
+        </div>
+        <div class="pal">
+          <h3 style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Palette — mới (từ dark tokens)</h3>
+          <div class="swatch"><span class="chip" style="background:#26AA99"></span><code>#26AA99</code> --c-success → teal mảnh trái</div>
+          <div class="swatch"><span class="chip" style="background:#FF6B54"></span><code>#FF6B54</code> dark --c-link → coral mảnh phải</div>
+          <div class="swatch"><span class="chip" style="background:#212121"></span><code>#212121</code> / <code>#F5F5F5</code> chữ theo theme</div>
+        </div>
+      </div>
+
+      <div class="demo-label">Logo ngang · light (surface #FFF)</div>
+      <div class="demo demo-light">
+        <div class="wordmark wm-c">
+          <svg width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Wakii mark C" style="align-self:center;margin-right:4px">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="main">Wakii</span>
+          <span class="sub">store</span>
+        </div>
+      </div>
+      <div class="demo-label">Logo ngang · dark (surface #1E1E1E)</div>
+      <div class="demo demo-dark">
+        <div class="wordmark wm-c">
+          <svg width="58" height="58" viewBox="0 0 48 48" role="img" aria-label="Wakii mark C dark" style="align-self:center;margin-right:4px">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="main">Wakii</span>
+          <span class="sub">store</span>
+        </div>
+      </div>
+
+      <div class="demo-label">Mark — 64 · 32 · 16px thật + favicon trong tab</div>
+      <div class="marks">
+        <div class="markcell">
+          <svg width="64" height="64" viewBox="0 0 48 48" role="img" aria-label="Wakii mark C 64px">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>64</span>
+        </div>
+        <div class="markcell">
+          <svg width="32" height="32" viewBox="0 0 48 48" role="img" aria-label="Wakii mark C 32px">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>32</span>
+        </div>
+        <div class="markcell">
+          <svg width="16" height="16" viewBox="0 0 48 48" role="img" aria-label="Wakii mark C 16px">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>16</span>
+        </div>
+        <div class="tabstrip light">
+          <div class="tab">
+            <svg width="16" height="16" viewBox="0 0 48 48">
+              <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+          </div>
+        </div>
+      </div>
+      <div class="tabstrip dark">
+        <div class="tab dark">
+          <svg width="16" height="16" viewBox="0 0 48 48">
+            <path d="M7 11 L15.5 37 L24 15" stroke="#26AA99" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 15 L32.5 37 L41 11" stroke="#FF6B54" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <em>Wakii store — Chợ sôi động mỗi ngày</em><i>×</i>
+        </div>
+      </div>
+
+      <p class="risk"><b>Cân nhắc:</b> chi phí rebrand cao nhất — chọn C nghĩa là cả site chuyển
+        khỏi đỏ cam #F53D2D sang cặp teal×coral (tokens, CTA, badge, pill...), không chỉ đổi logo.
+        Đổi lại nó tạo khoảng cách nhận diện lớn nhất so với quá khứ "Shop VN".</p>
+    </div>
+  </section>
+
+  <!-- ══ SO SÁNH ══════════════════════════════════ -->
+  <section class="compare" id="compare">
+    <h2>So sánh nhanh</h2>
+    <table>
+      <thead><tr>
+        <th>Hướng</th><th>Cấu trúc</th><th>Đọc ở 16px</th><th>Khớp hệ hiện có</th><th>Chi phí áp dụng</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><b>A · Nhịp chợ</b></td>
+          <td>Wordmark thuần + badge w cho icon</td>
+          <td><span class="ok">Tốt</span> — w trắng trên gradient</td>
+          <td><span class="ok">100%</span> — đúng font + palette tokens</td>
+          <td><span class="ok">Thấp nhất</span> — đổi chữ là xong</td>
+        </tr>
+        <tr>
+          <td><b>B · Túi W</b></td>
+          <td>Mark túi-nếp-W + wordmark</td>
+          <td><span class="ok">Tốt</span> — silhouette túi + vệt trắng</td>
+          <td><span class="ok">Cao</span> — gradient CTA + radius gần-vuông</td>
+          <td><span class="ok">Thấp</span> — palette không đổi</td>
+        </tr>
+        <tr>
+          <td><b>C · Hai mảnh</b></td>
+          <td>Monogram trần 2 mảnh + wordmark</td>
+          <td><span class="ok">Tốt nhất</span> — 4 vạch dày 2 màu</td>
+          <td><span class="warn">Một phần</span> — cần thêm cặp teal×coral vào tokens</td>
+          <td><span class="warn">Cao nhất</span> — remap màu toàn site</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">Chọn một hướng (hoặc ghép — ví dụ "mark B + wordmark A") rồi trả lời;
+      hướng được chọn sẽ được hoàn thiện thành design direction + asset SVG final
+      (favicon.svg / icon-192 / icon-512 / maskable) bàn giao cho dev thay thế bộ icons hiện có
+      trong <code>frontend/apps/storefront-web/public/icons/</code>.</p>
+  </section>
+
+</div>
+</body>
+</html>

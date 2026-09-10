@@ -1,3 +1,14 @@
 {
-  "findings": []
+  "findings": [
+    {
+      "id": "CFG-A-identity-service-IDENTITY_OAUTH_PUBLIC_BASE_URL",
+      "evidence": "False-positive machine-rule (SF-4 FI-408): giá trị dùng cho OAuth callback URL (OAuthProperties.java:21 — publicBaseUrl + /api/identity/oauth/{provider}/callback) mà BROWSER theo redirect, không phải server-side call — localhost:8080 = one-origin entry FI-400 là đúng cho local demo. Providers Google/Facebook hiện TẮT (không client key — OAUTH_*_CLIENT_ID rỗng) nên var chưa phát huy; nếu bật key, giá trị localhost:8080 vẫn đúng vì browser-facing.",
+      "date": "2026-09-10"
+    },
+    {
+      "id": "CFG-B-invoice-service-DejaVuSans.ttf",
+      "evidence": "False-positive machine-rule (SF-4 FI-408): INVOICE_FONT_PATH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf KHÔNG cần volume — font nằm SẴN trong image qua apt fonts-dejavu-core (services/invoice-service/Dockerfile RUN apt-get install fonts-dejavu-core). Evidence: docker run --rm --entrypoint ls ecommerce-invoice-service → '-rw-r--r-- 759720 Aug 10 2023 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'. Detector chỉ soi volume-mount, không thấy image-layer.",
+      "date": "2026-09-10"
+    }
+  ]
 }

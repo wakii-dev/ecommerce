@@ -20,6 +20,11 @@ cd "${REPO_ROOT}" || exit 1
 
 TS="$(date +%Y%m%d-%H%M%S)"
 LOG="/tmp/qa-fresh-boot-${TS}.log"
+# Security P2: tên dự đoán được + tee -a có thể theo symlink pre-planted trên máy
+# multi-user → nếu tồn tại (kể cả symlink), rơi sang mktemp an toàn (vẫn prefix pack).
+if [[ -e "${LOG}" || -L "${LOG}" ]]; then
+  LOG="$(mktemp "${TMPDIR:-/tmp}/qa-fresh-boot-${TS}.XXXXXX.log")"
+fi
 RUN_DIR="${REPO_ROOT}/.run"
 LOCK_DIR="${RUN_DIR}/qa-fresh-boot.lock"
 MARKER="${RUN_DIR}/qa-fresh-boot-wiped"
@@ -61,6 +66,8 @@ cleanup() {
     # rm -rf (không rmdir) — lock dir chứa file owner
     rm -rf "${LOCK_DIR}"
   fi
+  # Security P2: dọn tmp probe (chứa response có accessToken) cả khi Ctrl-C giữa probes
+  probe_tmps_rm 2>/dev/null || true
   log "[done] exit=${rc} · total elapsed $(( $(date +%s) - START_EPOCH ))s · log=${LOG}"
   # Flush tee trước khi exit: đóng fd → tee thấy EOF → flush + exit → wait về 0.
   # (wait TRỰC TIẾP khi chưa đóng fd = deadlock — write-end của pipe do script giữ)

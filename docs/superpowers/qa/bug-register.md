@@ -52,6 +52,8 @@ Script `/tmp/sf4-rbac-live.py` (parse bảng report-sf1 sf1:rbac → 50 endpoint
 
 _(rỗng — mọi finding pattern-đã-biết đã fix. 1 OBS ngoài scope: revenue-by-day 500 khi data rỗng — không thuộc 5 lớp, không fix tự do; đăng epic comment cho user quyết.)_
 
+**Security-audit (M14)**: FINDINGS P0:0 · P1:0 · P2:2 — seed.sh shell-interpolation gia cố (`:179` psql -c interpolation, `:160` slug filename sanitize, `/tmp` guessable path) — first-party trust, non-blocking, verdict "an toàn để merge"; vá khi file được chạm tiếp. OBS trước-tồn-tại ngoài diff: compose default password service-account (hygiene riêng).
+
 ## 5. Coverage note (gate KHÔNG re-audit những gì detector chưa phủ)
 
 - config-audit: 3 trục tĩnh (env/volume/compose-checklist) — KHÔNG phủ runtime-only drift (QA-F2-02 property-mismatch: detector so tên env, không resolve relaxed-binding/indicator property) → runtime cover bởi harness tier-2.
@@ -66,5 +68,24 @@ _(rỗng — mọi finding pattern-đã-biết đã fix. 1 OBS ngoài scope: rev
 - `docs/superpowers/qa/fresh-boot-run-log-20260910-155942.log` — harness log run 15:59 (die 6 probes, HTTP:403 instrument lộ).
 - `docs/superpowers/qa/fresh-boot-run-console-20260910.log` — console cùng run.
 - `docs/superpowers/qa/t3b-rbac-live.tsv` — 50×3 verdict từng cell.
-- Journeys 13/13: `pnpm --filter @ecommerce/e2e exec playwright test tests/admin-journey.spec.ts tests/data-lifecycle.spec.ts` — `13 passed (32.7s)` @16:35 trên env fresh 15:59 + seed re-login fix (output inline ở Linear comment FI-408).
+- **Journeys 13/13 (raw) — lần 1 @16:35 standalone `13 passed (32.7s)`; lần 2 @17:45 bên trong legacy full-suite (nguồn `/tmp/sf4-e2e-full-final2.log`, verifier trích nguyên văn):**
+
+```
+✓ admin-journey A — admin login UI → products list mở
+✓ admin-journey B — tạo product ĐẦY ĐỦ field → Đăng bán → thấy trong list
+✓ admin-journey C — round-trip reopen: MỌI field giữ đúng (stock = availability thật)
+✓ admin-journey D — edit giá 469000 + stock 44 → giữ đúng
+✓ admin-journey E — coupon round-trip tạo/toggle/xóa
+✓ admin-journey E-edit — coupon SỬA round-trip (regression-lock FI-408)
+✓ admin-journey F — category CRUD round-trip
+✓ data-lifecycle 3a — Nokia default-variant → merge → COD checkout CONFIRMED
+✓ data-lifecycle 3b — stale cart variantId null → lỗi rõ ràng, không 500
+✓ data-lifecycle 4 — PDP Biti's 799.000₫ = base + delta
+✓ data-lifecycle 4 — PDP không "Đã bán" từ ratingCount
+✓ data-lifecycle 4 — admin form stock = inventory THẬT
+✓ data-lifecycle 5 — fresh-state + chunks hash + SW lock
+```
+
 - `/tmp` logs khác (macOS sẽ dọn): die-7 12:59 `/tmp/qa-fresh-boot-20260910-125931.log`, die-7 14:09 `/tmp/qa-fresh-boot-20260910-140932.log`, die-4 13:57 `/tmp/qa-fresh-boot-20260910-135752.log` — mốc then chốt đã inline bảng §2.
+
+**Verifier note (M14)**: PARTIAL-PASS 4/5 — AC2 PARTIAL (wipe-cap 3/3 boundary vs "×2 green" literal; journeys green 2× verified raw; honesty note §5). P2 bổ sung: T3b có 3 cell admin=500 (uploads/loyalty/revenue-by-day — dummy-payload business error, authz-PASS đúng rule ≠401/403).

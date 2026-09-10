@@ -7,7 +7,7 @@
 > Exit semantics chung 4 script: 0 = 0 finding CHƯA fix · 1 = ≥1 finding CHƯA fix · 2 = script error.
 
 <!-- sf1:summary -->
-**config-audit** run 2026-09-10 00:43:47 UTC — compose `docker-compose.yml` · backend `backend`
+**config-audit** run 2026-09-10 00:45:57 UTC — compose `docker-compose.yml` · backend `backend`
 
 | Trục | Kiểm | DANGEROUS | UNFIXED | FIXED (registry) | WARN (non-finding) |
 | --- | --- | --- | --- | --- | --- |

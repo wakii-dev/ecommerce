@@ -6,6 +6,11 @@
 
 Storefront lấy cảm hứng UX từ [tiki.vn](https://tiki.vn) · Thanh toán Stripe test · Checkout saga phân tán
 
+> **English:** full-featured e-commerce platform — Spring Boot 3
+> microservices + React/Vite microfrontends (Module Federation),
+> distributed checkout saga (Redis + RabbitMQ), Stripe payments,
+> search on Elasticsearch, storefront UX inspired by tiki.vn.
+
 ![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F) ![Next.js](https://img.shields.io/badge/Next.js-SSR%2FISR-000000) ![React](https://img.shields.io/badge/React-18-61DAFB) ![Vite MF](https://img.shields.io/badge/Vite-Module%20Federation-646CFF) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3-FF6600) ![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248) ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8-005571) ![Stripe](https://img.shields.io/badge/Stripe-test-635BFF)
 
 🎉 **GA v1.1** — story [FI-310](https://linear.app/my-app-hoivu/issue/FI-310) (15/15 SF) + **[FI-366 QA & Polish](https://linear.app/my-app-hoivu/issue/FI-366)** (full-suite xanh lần đầu) · [📊 Tiến độ](#-tiến-độ-story) · [🚢 Release plan](#-release-plan--5-phases)
